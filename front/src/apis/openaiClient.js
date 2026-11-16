@@ -5,7 +5,7 @@
 // `"useOpenAISdk": true` in front.json switches back to the official SDK, which
 // is then loaded on demand so it never weighs on the default bundle.
 import { createFetchClient } from "./fetchClient";
-import { getApiKey } from "./authHeaders";
+import { getApiKey, getFakeAuthHeaders } from "./authHeaders";
 
 // Resolve the backend endpoint from config
 export function resolveBaseURL() {
@@ -37,10 +37,12 @@ const createSdkClient = (timeout) => {
   }
   const client = sdkPromise.then(({ default: OpenAI }) => {
     const apiKey = getApiKey();
+    const defaultHeaders = { ...getFakeAuthHeaders() };
+    if (!apiKey) defaultHeaders.Authorization = null;
     return new OpenAI({
       baseURL: resolveBaseURL(),
       apiKey: apiKey || "not-needed",
-      ...(apiKey ? {} : { defaultHeaders: { Authorization: null } }),
+      ...(Object.keys(defaultHeaders).length ? { defaultHeaders } : {}),
       dangerouslyAllowBrowser: true,
       timeout,
     });

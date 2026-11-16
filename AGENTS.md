@@ -191,7 +191,7 @@ inside `db/`. UI strings and i18n keys say topic.
 `VITE_DEFAULT_SETTINGS`, `VITE_TITLE_GENERATION_MODEL`, `VITE_MEMORY_GENERATION_MODEL`,
 `VITE_PROPOSAL_GENERATION_MODEL`, `VITE_ANNOUNCEMENT`, `VITE_USE_OPENAI_SDK`,
 `VITE_OPENCODE_SERVER_URL`, `VITE_OPENCODE_SERVER_USERNAME`,
-`VITE_OPENCODE_SERVER_PASSWORD`, `VITE_AGENT_SERVICE_URL`, `VITE_MODULE_*`. Consequences: **a new
+`VITE_OPENCODE_SERVER_PASSWORD`, `VITE_AGENT_SERVICE_URL`, `VITE_FAKE_AUTH_HEADERS`, `VITE_MODULE_*`. Consequences: **a new
 config key requires editing `front/vite.config.js` too**, and a config change requires a dev-server
 restart. Read values via `import.meta.env.VITE_*`; they arrive as strings, hence the
 `=== "true"` comparisons.
@@ -210,6 +210,16 @@ its `set-by-backend` placeholder, which `back` ignores but a direct endpoint rej
 config for the local stack in `saia/saia-engine/local-testing`; run
 `CONFIG_LOCATION=../secrets/front-local-conf.json npm run dev` from `front/` to use it. Direct mode
 has no `/bridge/*`, no MCP gateway and no Arcana Tools: those routes exist only in `back`.
+
+`fakeAuthHeaders` maps to `VITE_FAKE_AUTH_HEADERS` (a JSON string) and is merged into every
+`authHeaders()` result; the SDK path passes the same object as `defaultHeaders` with
+`Authorization: null` when no API key is set, because the SDK otherwise always sends one. It exists
+for a direct engine whose Chat AI compatibility routes
+under `/assumes_behind_oidc` expect the `oidc_claim_*` headers that Apache/`auth_openidc` injects.
+The browser is then impersonating that user, so the key must stay out of a deployment. When
+`backendPath` is absolute, `vite.config.js` proxies `/assumes_behind_oidc` to its origin in dev and
+preview, so a relative `userDataPath` such as `/assumes_behind_oidc/user` stays same-origin and needs
+no engine CORS change.
 
 Feature modules are gated this way — `VITE_MODULE_TOOLS`, `VITE_MODULE_FEEDBACK`,
 `VITE_MODULE_CHOICES`, `VITE_MODULE_AGENT` (the browser agent), `VITE_MODULE_AGENTS` (the sidebar

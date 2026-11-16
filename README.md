@@ -113,6 +113,7 @@ The `front` service uses the following configurable attributes in `front.json`:
 - `modelsPath`: Path to get list of available models from. Simply set to `<backendPath>/models` if unsure
 - `userDataPath`: (Optional) Path to get user data. Simply set to `<backendPath>/user` if unsure
 - `apiKey`: (Optional) Bearer token sent to `backendPath`, `modelsPath` and `userDataPath`. Leave it out when the OIDC proxy authenticates the user, as in the default setup. It exists for endpoints that the browser may call directly, such as a SAIA engine (see [Calling a SAIA Engine Directly](#calling-a-saia-engine-directly-local-testing)). Vite compiles it into the bundle, so treat it as public
+- `fakeAuthHeaders`: (Optional) Object of extra headers sent with direct API calls (`backendPath`, `modelsPath`, `userDataPath`, chat, files, speech). It exists for a direct SAIA engine whose Chat AI compatibility routes under `/assumes_behind_oidc` expect the `oidc_claim_*` headers that Apache/`auth_openidc` normally adds. Setting it makes the browser impersonate that identity, so only use it against a local or test engine whose protected routes are not otherwise reachable; never set it in a deployment. The values are compiled into the bundle
 - `agentServiceUrl`: (Optional) Base URL of the [SAIA agent service](agent-service/README.md). When set, a new agent in the sidebar is created through that service instead of pointing at a hand-configured `opencodeServe` URL: the service starts one OpenCode backend per user/agent and the UI talks to its proxy. Removing the agent also deletes it in the service
 - `opencodeServerUrl` / `opencodeServerUsername` / `opencodeServerPassword`: (Optional) Defaults for a direct OpenCode server connection. They are still used when `agentServiceUrl` is unset or the service toggle is turned off in the add-agent window
 - `default`: Default settings for new conversations, including default `model` with `model.id` and `model.name`, as well as `top_p` and `temperature`.
@@ -140,8 +141,20 @@ If you wish to customize the list of available models, you must create a path th
 ```json
 "backendPath": "http://localhost:10000/public/v1",
 "modelsPath": "http://localhost:10000/public/v1/models",
-"apiKey": "35c1e0a9f8d24b6f9c0a1e2d3f4a5b6c"
+"userDataPath": "/assumes_behind_oidc/user",
+"apiKey": "35c1e0a9f8d24b6f9c0a1e2d3f4a5b6c",
+"fakeAuthHeaders": {
+  "oidc_claim_goe_id": "local-fake-1",
+  "oidc_claim_uid": "local-fake",
+  "oidc_claim_o": "GWD",
+  "oidc_claim_ou": "GWDG",
+  "oidc_claim_email": "local-fake@example.org",
+  "oidc_claim_given_name": "Sample",
+  "oidc_claim_family_name": "User"
+}
 ```
+
+`/assumes_behind_oidc` is the engine's Chat AI compatibility app, the `back` replacement (`chat_ai_ui_back.py`). It expects the `oidc_claim_*` headers that Apache/`auth_openidc` injects, so `fakeAuthHeaders` supplies them. The dev and preview servers proxy that path to the origin of `backendPath`, which keeps the call same-origin; a static build needs the same route from your web server, and a deployment already routes it through Apache. The first request creates an engine user from the claims; the seeded `tester` is a LOCAL account without a `goe_id`, so a different uid is used. The profile tab then shows this identity. It has none of `tester`'s model grants, which does not matter here because chat and models still use `/public/v1` with the API key. `fakeAuthHeaders` is test-only: it lets the browser impersonate an OIDC user, so never set it when the engine's protected routes are reachable in production.
 
 Start the local stack, then run `front` with that config file:
 
@@ -150,7 +163,7 @@ docker compose -f saia/saia-engine/local-testing/compose.yml up -d --build
 cd front && CONFIG_LOCATION=../secrets/front-local-conf.json npm run dev
 ```
 
-The file ships with the local test settings: the fixed dev key from the stack's `.env.example`, `bridge/local-echo-1` as the default and title/memory/proposal model, `agentServiceUrl` pointing at the local [agent service](agent-service/README.md), and all UI modules switched on. The echo models answer every prompt with `local-echo-1 says: …`, including the title prompt, so chat titles look odd there; set `titleGenerationModel` (and the memory/proposal keys) to a model from the selector to change that. There is no `userDataPath`, because the engine's public API has no `/user` route; the UI simply has no profile or usage data. `back`-only features — MCP, the OpenCode agent bridge (`/bridge/*`) and Arcana Tools — still have no route in this mode, and document conversion still needs the engine's docling-serve backend (the browser-side conversion in Chat preferences works without it).
+The file ships with the local test settings: the fixed dev key from the stack's `.env.example`, `bridge/local-echo-1` as the default and title/memory/proposal model, `agentServiceUrl` pointing at the local [agent service](agent-service/README.md), the fake OIDC claims for the profile, and all UI modules switched on. The echo models answer every prompt with `local-echo-1 says: …`, including the title prompt, so chat titles look odd there; set `titleGenerationModel` (and the memory/proposal keys) to a model from the selector to change that. `back`-only features — MCP, the OpenCode agent bridge (`/bridge/*`) and Arcana Tools — still have no route in this mode, and document conversion still needs the engine's docling-serve backend (the browser-side conversion in Chat preferences works without it).
 
 The Agents sidebar is wired to the agent service, not to a fixed `opencodeServerUrl`. Start it before adding an agent:
 

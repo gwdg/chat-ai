@@ -109,6 +109,16 @@ try {
       // the value: config output ends up in logs and terminals.
       process.env["VITE_API_KEY"] = value;
       console.log("API key configured:", Boolean(value));
+    } else if (key == "fakeAuthHeaders") {
+      // Fixed identity headers for a direct endpoint, e.g. the oidc_claim_*
+      // headers the engine's /assumes_behind_oidc app expects. This makes the
+      // browser impersonate that user, so only use it against a local/test
+      // endpoint. Header names are logged, values are not.
+      process.env["VITE_FAKE_AUTH_HEADERS"] = JSON.stringify(value);
+      console.log(
+        "Fake auth headers:",
+        value && typeof value === "object" ? Object.keys(value).join(", ") : "none"
+      );
     } else if (key == "default") {
       process.env["VITE_DEFAULT_SETTINGS"] = JSON.stringify(value);
       console.log("Default settings:", JSON.stringify(value));
@@ -166,6 +176,23 @@ try {
 } catch (error) {
   console.error("Failed to load config.json:", error);
   process.exit(1);
+}
+
+// The engine's Chat AI compatibility app lives under /assumes_behind_oidc and is
+// same-origin with the front in a deployment (Apache routes both). In local
+// development the front is on :8080 and the engine on :10000, so proxy that path
+// to the configured backend origin. A relative backendPath is already
+// same-origin and needs no proxy.
+let oidcProxy;
+try {
+  oidcProxy = {
+    "/assumes_behind_oidc": {
+      target: new URL(process.env["VITE_BACKEND_ENDPOINT"]).origin,
+      changeOrigin: true,
+    },
+  };
+} catch {
+  oidcProxy = undefined;
 }
 
 // pi's tool modules, and some of their dependencies, import Node built-ins at load time even
@@ -256,9 +283,11 @@ export default defineConfig({
   server: {
     port: port,
     open: false,
+    ...(oidcProxy ? { proxy: oidcProxy } : {}),
   },
   preview: {
     port: port,
     open: false,
+    ...(oidcProxy ? { proxy: oidcProxy } : {}),
   },
 });

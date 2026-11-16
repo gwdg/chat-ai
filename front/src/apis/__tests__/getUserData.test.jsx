@@ -31,4 +31,24 @@ describe("getUserData", () => {
       headers: { Authorization: "Bearer local-dev-key" },
     });
   });
+
+  it("sends the configured fake identity headers", async () => {
+    vi.stubEnv("VITE_USERDATA_ENDPOINT", "/assumes_behind_oidc/user");
+    vi.stubEnv("VITE_API_KEY", "");
+    vi.stubEnv(
+      "VITE_FAKE_AUTH_HEADERS",
+      JSON.stringify({ oidc_claim_uid: "local-fake" })
+    );
+    const fetchMock = vi.fn(async () =>
+      new Response('{"username":"local-fake"}', {
+        headers: { "content-type": "application/json" },
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(getUserData()).resolves.toEqual({ username: "local-fake" });
+    expect(fetchMock).toHaveBeenCalledWith("/assumes_behind_oidc/user", {
+      headers: { oidc_claim_uid: "local-fake" },
+    });
+  });
 });

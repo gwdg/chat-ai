@@ -54,4 +54,23 @@ describe("createBackendClient", () => {
     expect(options.apiKey).toBe("local-dev-key");
     expect(options.defaultHeaders).toBeUndefined();
   });
+
+  it("sends fake identity headers through the SDK", async () => {
+    vi.stubEnv("VITE_BACKEND_ENDPOINT", "http://backend.test");
+    vi.stubEnv("VITE_USE_OPENAI_SDK", "true");
+    vi.stubEnv("VITE_API_KEY", "");
+    vi.stubEnv(
+      "VITE_FAKE_AUTH_HEADERS",
+      JSON.stringify({ oidc_claim_uid: "local-fake" })
+    );
+
+    await createBackendClient().chat.completions.create({});
+    const options = OpenAI.mock.calls.at(-1)[0];
+    // The SDK needs a placeholder key, but Authorization must stay absent.
+    expect(options.apiKey).toBe("not-needed");
+    expect(options.defaultHeaders).toEqual({
+      oidc_claim_uid: "local-fake",
+      Authorization: null,
+    });
+  });
 });
