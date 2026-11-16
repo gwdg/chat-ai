@@ -21,3 +21,14 @@ export const setAgentBridgeEnabled = (agent, enabled, workspaces = []) => {
       : {}),
   });
 };
+
+/**
+ * A bridge that failed to start cannot provide access, so access is switched off instead of
+ * leaving an enabled switch in front of a dead bridge. A dropped socket does not come through
+ * here: `useAgentBridge` retries that one by itself. Returns whether anything was switched off.
+ */
+export const disableAgentBridgeAfterFailure = (agent, workspaces = []) => {
+  if (!agent?.id || !isAgentBridgeEnabled(agent)) return false;
+  setAgentBridgeEnabled(agent, false, workspaces);
+  return true;
+};

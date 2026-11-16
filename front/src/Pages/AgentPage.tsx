@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useCallback } from "react";
+import { useEffect, useMemo, useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams, useSearchParams } from "react-router";
 
@@ -10,7 +10,10 @@ import AgentConversation from "../components/Agent/AgentConversation";
 import AgentFilesPanel from "../components/Agent/AgentFilesPanel";
 import FilePreviewPanel from "../components/DocumentPanel/FilePreviewPanel";
 import { useAgent } from "../agents/agentStore";
-import { isAgentBridgeEnabled } from "../agents/agentBridgeAccess";
+import {
+  disableAgentBridgeAfterFailure,
+  isAgentBridgeEnabled,
+} from "../agents/agentBridgeAccess";
 import {
   fetchAgentSessions,
   switchAgentSession,
@@ -91,9 +94,9 @@ export default function AgentPage() {
     () => (workspaceId ? createWorkspaceRootProvider(workspaceId) : null),
     [workspaceId],
   );
-  // The bridge runs from this page; its switch and options live in the composer's workspace
-  // popover (components/Agent/AgentWorkspaceButton.jsx), so nothing here reads its state.
-  useAgentBridge({
+  // The bridge runs from this page; its switch, status and options live in the composer's
+  // workspace popover (components/Agent/AgentWorkspaceButton.jsx).
+  const bridge = useAgentBridge({
     agent,
     workspaceId,
     writable: agent?.bridgeWritable === true,
@@ -102,6 +105,22 @@ export default function AgentPage() {
     providers,
     rootProvider,
   });
+  // Reason of a bridge that could not start. Access is switched off in that case, so the hook
+  // reports "off" afterwards; the popover still shows why until access is turned on again.
+  const [bridgeFailure, setBridgeFailure] = useState("");
+
+  useEffect(() => {
+    if (!agent) return;
+    if (bridge.status === "error") {
+      if (disableAgentBridgeAfterFailure(agent, workspaces)) {
+        setBridgeFailure(bridge.error || t("agents.bridge.not_working"));
+      }
+      return;
+    }
+    if (bridge.status === "online" || bridge.status === "connecting") {
+      setBridgeFailure("");
+    }
+  }, [agent, bridge.status, bridge.error, workspaces, t]);
 
   const sidebarState = useMemo(
     () => ({ id: "", title: "", messages: [], folderId: null, settings: { model: "" } }),
@@ -141,6 +160,10 @@ export default function AgentPage() {
                 agent={agent}
                 modelsData={modelsData}
                 onOpenFile={openConversationFile}
+                bridgeStatus={bridge.status}
+                bridgeError={bridge.error}
+                bridgeFailure={bridgeFailure}
+                bridgeUnavailable={bridge.unavailable}
               />
             ) : (
               <div className="flex flex-1 items-center justify-center text-sm text-base-content/60">

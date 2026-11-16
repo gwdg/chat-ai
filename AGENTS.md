@@ -1206,17 +1206,28 @@ capabilities, source/mount read-only flags, and IndexedDB/local/Arcana behavior 
 The agent page's workspace access is an explicit switch (`bridgeEnabled`) in the composer's
 workspace popover (`components/Agent/AgentWorkspaceButton.jsx`, through
 `agents/agentBridgeAccess.js`); the left file panel is only the file browser and shows no bridge
-section. The same popover holds the write and MCP toggles and the "Use for the bridge" choice of
-which attached workspace is exposed. Without the switch no bridge starts and the agent gets no tool;
-turning it on picks `bridgeWorkspaceId` or the first workspace, and a bridge start failure is
-reported as a toast because no panel prints it any more. Existing agents keep access on only because
-the reader falls back to `!!bridgeWorkspaceId`. The same entry stores `bridgeWorkspaceId`,
-`bridgeWritable`, and `bridgeMcp` in localStorage; `bridgeWorkspaceId` is per agent, not per
-session. While a
+section. The popover starts with a live status row: green "Agent bridge working" while the socket is
+online, red while it is offline or failed, and a muted "off" while access is switched off. The same
+popover holds the write and MCP toggles and the "Use for the bridge" choice of which attached
+workspace is exposed. Without the switch no bridge starts and the agent gets no tool; turning it on
+picks `bridgeWorkspaceId` or the first workspace. A bridge start failure is reported as a toast
+because no panel prints it any more, and `AgentPage` then switches access off
+(`disableAgentBridgeAfterFailure`) so an enabled switch never sits in front of a dead bridge; a
+dropped socket does not do that, because `useAgentBridge` retries it after 3 s. Existing agents keep
+access on only because the reader falls back to `!!bridgeWorkspaceId`. The same entry stores
+`bridgeWorkspaceId`, `bridgeWritable`, and `bridgeMcp` in localStorage; `bridgeWorkspaceId` is per
+agent, not per session. While a
 bridge is active the page warns that the tab must stay open, sets a warning title when hidden,
 shows a toast on return, and registers `beforeunload`. In production behind SAIA, the initial
 invocation must be able to spawn the sidecar and open the outbound WebSocket; the back must be
 reachable from the agent host, optionally through `bridgePublicUrl` in `back.json`.
+
+`POST <VITE_BACKEND_ENDPOINT>/bridge/sessions` is the first call. A 404 or 405 there means the
+deployment has no bridge route at all (only `back` serves `/bridge/*`; a direct engine such as the
+`saia/saia-engine/local-testing` stack answers 404), so the hook sets `unavailable` with the URL and
+status instead of retrying: the popover shows "Agent bridge not available", the endpoint, and
+disables the switch. Any other non-OK status stays a normal failure. Direct mode therefore cannot
+use the bridge by design, and the UI says so rather than reporting a broken bridge.
 
 ### 4.28 The local-files skill is documentation, not installation
 

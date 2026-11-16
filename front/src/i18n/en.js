@@ -1728,6 +1728,19 @@ export default {
       disabled_hint:
         "Off. The agent cannot see workspace files. Turn access on to provide the reverse proxy for this agent.",
       use_workspace: "Use for the bridge",
+      working: "Agent bridge working",
+      connecting: "Agent bridge connecting…",
+      not_working: "Agent bridge not working",
+      off: "Agent bridge off",
+      unavailable: "Agent bridge not available",
+      unavailable_detail: "No bridge endpoint at {{url}} (HTTP {{status}}).",
+      unavailable_hint:
+        "This deployment does not provide the agent bridge. Only the Chat AI back service serves /bridge/*; a directly addressed engine does not.",
+      offline_hint:
+        "The browser lost its connection to the bridge. It reconnects automatically.",
+      disabled_after_failure:
+        "Access was switched off because the bridge could not start. Turn it on to try again.",
+      options: "Options",
       writable: "Allow writes",
       mcp: "Local MCP tools",
       keep_open: "Keep this tab open. Workspace and MCP tools are available only while the browser is connected.",

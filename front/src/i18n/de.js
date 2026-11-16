@@ -1752,6 +1752,19 @@ export default {
       disabled_hint:
         "Aus. Der Agent sieht keine Dateien aus Arbeitsbereichen. Schalten Sie den Zugriff ein, um den Reverse-Proxy für diesen Agenten bereitzustellen.",
       use_workspace: "Für die Brücke verwenden",
+      working: "Agenten-Brücke aktiv",
+      connecting: "Agenten-Brücke verbindet …",
+      not_working: "Agenten-Brücke funktioniert nicht",
+      off: "Agenten-Brücke aus",
+      unavailable: "Agenten-Brücke nicht verfügbar",
+      unavailable_detail: "Kein Brücken-Endpunkt unter {{url}} (HTTP {{status}}).",
+      unavailable_hint:
+        "Diese Installation bietet keine Agenten-Brücke. Nur der Chat-AI-Dienst back stellt /bridge/* bereit; ein direkt angesprochenes Engine-Angebot dagegen nicht.",
+      offline_hint:
+        "Der Browser hat die Verbindung zur Brücke verloren. Sie verbindet sich automatisch neu.",
+      disabled_after_failure:
+        "Der Zugriff wurde ausgeschaltet, weil die Brücke nicht starten konnte. Schalten Sie ihn wieder ein, um es erneut zu versuchen.",
+      options: "Optionen",
       writable: "Schreiben erlauben",
       mcp: "Lokale MCP-Werkzeuge",
       keep_open: "Lassen Sie diesen Tab geöffnet. Arbeitsbereichs- und MCP-Werkzeuge sind nur verfügbar, solange der Browser verbunden ist.",

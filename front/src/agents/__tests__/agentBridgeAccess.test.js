@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { addAgent, getAgent } from "../agentStore";
 import {
+  disableAgentBridgeAfterFailure,
   isAgentBridgeEnabled,
   setAgentBridgeEnabled,
 } from "../agentBridgeAccess";
@@ -52,5 +53,40 @@ describe("agent bridge access", () => {
       bridgeEnabled: false,
       bridgeWorkspaceId: "ws-2",
     });
+  });
+
+  it("switches access off after a bridge failure and keeps the workspace", () => {
+    addAgent({
+      id: "bridge-agent-3",
+      name: "Three",
+      sessionId: "s1",
+      bridgeEnabled: true,
+      bridgeWorkspaceId: "ws-2",
+    });
+
+    expect(
+      disableAgentBridgeAfterFailure(getAgent("bridge-agent-3"), workspaces),
+    ).toBe(true);
+
+    expect(getAgent("bridge-agent-3")).toMatchObject({
+      bridgeEnabled: false,
+      bridgeWorkspaceId: "ws-2",
+    });
+  });
+
+  it("does nothing after a failure while access is already off", () => {
+    addAgent({
+      id: "bridge-agent-4",
+      name: "Four",
+      sessionId: "s1",
+      bridgeEnabled: false,
+      bridgeWorkspaceId: "ws-1",
+    });
+    const before = getAgent("bridge-agent-4");
+
+    expect(
+      disableAgentBridgeAfterFailure(getAgent("bridge-agent-4"), workspaces),
+    ).toBe(false);
+    expect(getAgent("bridge-agent-4")).toEqual(before);
   });
 });

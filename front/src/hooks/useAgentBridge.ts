@@ -19,6 +19,18 @@ import { useToast } from "./useToast";
 
 type BridgeStatus = "off" | "connecting" | "online" | "offline" | "error";
 
+/** The backend answers 404/405 on `/bridge/sessions`: this deployment has no bridge. */
+class BridgeUnavailableError extends Error {
+  readonly url: string;
+  readonly status: number;
+
+  constructor(url: string, status: number) {
+    super(`No bridge endpoint at ${url} (HTTP ${status})`);
+    this.url = url;
+    this.status = status;
+  }
+}
+
 type BridgeInput = {
   agent: any;
   workspaceId?: string | null;
@@ -102,6 +114,7 @@ export function useAgentBridge({
   const rootRef = useRef(rootProvider);
   const [status, setStatus] = useState<BridgeStatus>("off");
   const [error, setError] = useState("");
+  const [unavailable, setUnavailable] = useState(false);
   const [tabAway, setTabAway] = useState(false);
 
   notifyRef.current = notifyError;
@@ -292,8 +305,10 @@ export function useAgentBridge({
     const start = async () => {
       setStatus("connecting");
       setError("");
+      setUnavailable(false);
       try {
-        const response = await fetch(`${bridgeBase()}/bridge/sessions`, {
+        const sessionUrl = `${bridgeBase()}/bridge/sessions`;
+        const response = await fetch(sessionUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -303,6 +318,11 @@ export function useAgentBridge({
             mcp,
           }),
         });
+        if (response.status === 404 || response.status === 405) {
+          // Only `back` serves `/bridge/*`. A direct engine endpoint answers this URL itself
+          // with 404, which means the deployment simply has no bridge to start.
+          throw new BridgeUnavailableError(sessionUrl, response.status);
+        }
         if (!response.ok) throw new Error(`Bridge session failed (${response.status})`);
         session = await response.json();
         if (cancelled) return;
@@ -336,13 +356,23 @@ export function useAgentBridge({
         if (!cancelled) connectSocket(session.wsUrl);
       } catch (reason) {
         if (!cancelled) {
+          const missing = reason instanceof BridgeUnavailableError;
           const message = reason instanceof Error ? reason.message : String(reason);
+          const detail = missing
+            ? tRef.current("agents.bridge.unavailable_detail", {
+                url: reason.url,
+                status: reason.status,
+              })
+            : message;
+          setUnavailable(missing);
           setStatus("error");
-          setError(message);
+          setError(detail);
           // The file panel used to print this; it has no bridge section any more, so report the
           // failure where the user is instead of leaving the switch silently ineffective.
           notifyRef.current(
-            tRef.current("agents.bridge.start_failed", { message }),
+            missing
+              ? detail
+              : tRef.current("agents.bridge.start_failed", { message }),
           );
         }
       }
@@ -388,5 +418,5 @@ export function useAgentBridge({
     };
   }, [agent, workspaceId, writable, mcp, mcpServers]);
 
-  return { status, error, tabAway };
+  return { status, error, tabAway, unavailable };
 }

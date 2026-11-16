@@ -31,8 +31,13 @@ const agent = {
   bridgeWorkspaceId: "ws-1",
 };
 
-const openPanel = async (overrides = {}) => {
-  render(<AgentWorkspaceButton agent={{ ...agent, ...overrides }} />);
+const openPanel = async (agentOverrides = {}, props = {}) => {
+  render(
+    <AgentWorkspaceButton
+      agent={{ ...agent, ...agentOverrides }}
+      {...props}
+    />,
+  );
   fireEvent.click(screen.getByRole("button", { name: "Workspace" }));
   return screen.findByRole("switch", { name: "Agent workspace access" });
 };
@@ -124,5 +129,78 @@ describe("AgentWorkspaceButton", () => {
     await waitFor(() =>
       expect(mocks.detach).toHaveBeenCalledWith("ws-1", "agent-1"),
     );
+  });
+
+  it("reports a working bridge in green", async () => {
+    mocks.links = [{ workspaceId: "ws-1" }];
+    await openPanel({}, { bridgeStatus: "online" });
+
+    const status = screen.getByRole("status");
+    expect(status).toHaveTextContent("Agent bridge working");
+    expect(status.querySelector(".status-success")).not.toBeNull();
+  });
+
+  it("reports a failing bridge in red with its reason", async () => {
+    mocks.links = [{ workspaceId: "ws-1" }];
+    await openPanel(
+      {},
+      { bridgeStatus: "error", bridgeError: "Bridge session failed (502)" },
+    );
+
+    const status = screen.getByRole("status");
+    expect(status).toHaveTextContent("Agent bridge not working");
+    expect(status.querySelector(".status-error")).not.toBeNull();
+    expect(
+      screen.getByText("Bridge session failed (502)"),
+    ).toBeInTheDocument();
+  });
+
+  it("stays red and off after a bridge that could not start", async () => {
+    // The page switched access off because the bridge failed; the switch reflects that and
+    // the popover keeps the reason instead of pretending everything is fine.
+    mocks.links = [{ workspaceId: "ws-1" }];
+    const toggle = await openPanel(
+      { bridgeEnabled: false },
+      { bridgeFailure: "Bridge session failed (502)" },
+    );
+
+    expect(toggle).not.toBeChecked();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Agent bridge not working",
+    );
+    expect(
+      screen.getByText(/Access was switched off because the bridge could not start/),
+    ).toBeInTheDocument();
+  });
+
+  it("reports an idle bridge when access is off", async () => {
+    await openPanel(
+      { bridgeEnabled: false },
+      { bridgeStatus: "online" },
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent("Agent bridge off");
+  });
+
+  it("locks access when the deployment has no agent bridge", async () => {
+    // A direct engine answers /bridge/sessions with 404, so the switch must not pretend a
+    // retry could work.
+    const toggle = await openPanel(
+      { bridgeEnabled: false },
+      {
+        bridgeStatus: "error",
+        bridgeUnavailable: true,
+        bridgeFailure:
+          "No bridge endpoint at http://localhost:10000/public/v1/bridge/sessions (HTTP 404).",
+      },
+    );
+
+    expect(toggle).toBeDisabled();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Agent bridge not available",
+    );
+    expect(
+      screen.getByText(/Only the Chat AI back service serves/),
+    ).toBeInTheDocument();
   });
 });
