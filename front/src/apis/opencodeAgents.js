@@ -1,5 +1,10 @@
 // Client for a local `opencode serve` instance. The browser talks to the server directly;
 // opencode allows CORS from the app origin and protects the API with HTTP basic auth.
+import {
+  reportAgentConflict,
+  serviceErrorDetails,
+} from "./agentService";
+
 const DEFAULT_SERVER_URL = "http://127.0.0.1:9000";
 const DEFAULT_SERVER_USERNAME = "opencode";
 
@@ -34,6 +39,24 @@ async function rawRequest(agent, path, init = {}) {
       throw new Error("The opencode server rejected the password.");
     }
     const detail = await response.text().catch(() => "");
+    // A service-managed agent is proxied through the agent service. A 409 with
+    // its conflict code means the service will not serve that row at all (for
+    // example after a restart marked it failed), which no retry can fix.
+    if (response.status === 409 && agent?.serviceAgentId) {
+      const service = serviceErrorDetails(detail);
+      const isServiceConflict =
+        service.code === "conflict" ||
+        service.agentId === agent.serviceAgentId;
+      if (isServiceConflict) {
+        reportAgentConflict({
+          serviceAgentId: agent.serviceAgentId,
+          agentId: agent.id,
+          code: service.code,
+          status: service.status,
+          message: service.detail,
+        });
+      }
+    }
     throw new Error(
       `opencode server responded with ${response.status}${detail ? `: ${detail.slice(0, 200)}` : ""}`,
     );

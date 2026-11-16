@@ -1754,6 +1754,9 @@ export default {
     remove: "Agent entfernen",
     clear_history: "Agent-Verlauf löschen",
     removed_locally: "Agent lokal entfernt; sein Server war nicht erreichbar oder die Anmeldung ist fehlgeschlagen.",
+    service_conflict_removed:
+      "Der Agent {{name}} wurde entfernt: Der Agent-Dienst kann ihn nicht mehr ausführen ({{status}}). Fügen Sie einen neuen Agenten hinzu, um fortzufahren.",
+    service_conflict_unknown: "unbrauchbarer Zustand",
     workspaces: "Arbeitsbereich",
     workspaces_hint:
       "Verknüpfen Sie diesen Agenten mit Arbeitsbereichen. Der erste verknüpfte Arbeitsbereich wird aktiv, sofern kein anderer ausgewählt ist.",

@@ -1731,6 +1731,9 @@ export default {
     remove: "Remove agent",
     clear_history: "Clear agent history",
     removed_locally: "Agent removed locally; its server could not be reached or authenticated.",
+    service_conflict_removed:
+      "Agent {{name}} was removed: the agent service can no longer run it ({{status}}). Add a new agent to continue.",
+    service_conflict_unknown: "unusable state",
     workspaces: "Workspace",
     workspaces_hint:
       "Attach this agent to workspaces. The first attached workspace becomes the active bridge unless another is selected.",

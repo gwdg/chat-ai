@@ -980,6 +980,16 @@ agent interrupts its running session first, then deletes the OpenCode session; t
 dropped only after that succeeds; if the server is unreachable or rejects authentication, the local
 agent entry can still be removed.
 
+A service-managed agent is removed when the service answers `409` with `code: "conflict"`: that row
+cannot be served, and no retry repairs it. `apis/opencodeAgents.js` reports it through
+`chatai:agent-service-conflict` (service-managed agents only), and
+`components/Others/AgentConflictWatcher.jsx` deletes the service agent, removes the local entry,
+leaves `/agent/<id>` for `/chat` and shows a longer-lived toast. Direct agents (no `serviceAgentId`)
+and proxied OpenCode 409s without the service's `code`/`agent_id` are ignored, as is a
+`starting`/`stopping` status: the service revives a `failed` row on the next request, and deleting a
+healthy agent during a transition would be worse. `DELETE /agents/<id>` keeps the agent's workdir;
+only the row and its conversation→session mappings go away.
+
 
 ### 4.27 The browser-to-OpenCode bridge keeps workspace data in the browser
 

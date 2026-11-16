@@ -12,6 +12,61 @@ export const hasAgentService = () => Boolean(agentServiceUrl());
 export const serviceOpencodeUrl = (agentId) =>
   `${agentServiceUrl()}/agents/${encodeURIComponent(agentId)}/opencode`;
 
+/** Emitted when the service answers 409 for an agent the browser cannot use. */
+export const AGENT_SERVICE_CONFLICT_EVENT = "chatai:agent-service-conflict";
+
+/**
+ * The fields the service puts beside `detail` in an error body.
+ *
+ * It answers JSON with a stable `code`, and a conflict names the agent and the
+ * status of its row (`{"detail": "...", "code": "conflict", "agent_id": "...",
+ * "status": "failed"}`). Proxied OpenCode errors are not the service's own, so
+ * they do not carry those fields.
+ */
+export const serviceErrorDetails = (raw) => {
+  let body = null;
+  try {
+    body = raw ? JSON.parse(raw) : null;
+  } catch {
+    body = null;
+  }
+  return {
+    body,
+    detail: body?.detail || body?.message || raw,
+    code: body?.code ?? null,
+    status: body?.status ?? null,
+    agentId: body?.agent_id ?? null,
+  };
+};
+
+/**
+ * Tell the app that a service-managed agent cannot be used.
+ *
+ * The service reports `conflict` for a row it will not serve (a failed or
+ * terminated instance). Nothing in this client can repair that, so the listener
+ * removes the agent instead of retrying a dead proxy on every poll.
+ */
+export function reportAgentConflict({
+  serviceAgentId,
+  agentId = null,
+  code = null,
+  status = null,
+  message = "",
+}) {
+  if (typeof window === "undefined" || !serviceAgentId) return;
+  window.dispatchEvent(
+    new CustomEvent(AGENT_SERVICE_CONFLICT_EVENT, {
+      detail: {
+        serviceAgentId,
+        agentId,
+        code,
+        status,
+        message: String(message ?? ""),
+      },
+    }),
+  );
+}
+
 async function request(path, init = {}) {
   const base = agentServiceUrl();
   if (!base) throw new Error("The agent service is not configured.");
@@ -24,18 +79,24 @@ async function request(path, init = {}) {
   });
   if (!response.ok) {
     const raw = await response.text().catch(() => "");
-    let body = null;
-    try {
-      body = raw ? JSON.parse(raw) : null;
-    } catch {
-      body = null;
+    const details = serviceErrorDetails(raw);
+    if (response.status === 409 && details.code === "conflict" && details.agentId) {
+      reportAgentConflict({
+        serviceAgentId: details.agentId,
+        code: details.code,
+        status: details.status,
+        message: details.detail,
+      });
     }
-    const detail = body?.detail || body?.message || raw;
-    throw new Error(
+    const error = new Error(
       `agent service responded with ${response.status}${
-        detail ? `: ${String(detail).slice(0, 200)}` : ""
+        details.detail ? `: ${String(details.detail).slice(0, 200)}` : ""
       }`,
     );
+    error.status = response.status;
+    error.code = details.code;
+    error.body = details.body;
+    throw error;
   }
   if (response.status === 204) return null;
   return response.json();

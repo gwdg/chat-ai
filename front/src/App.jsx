@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import PublicRoute from "./Route/PublicRoute";
 import { BrowserRouter } from "react-router";
+import AgentConflictWatcher from "./components/Others/AgentConflictWatcher";
 import { ToastProvider } from "./components/Others/ToastProvider";
 import { ModalProvider } from "./modals/ModalContext";
 import { FeatureGuideProvider } from "./context/FeatureGuideContext";
@@ -43,6 +44,7 @@ function App() {
   return (
     <BrowserRouter key={i18n.language}>
       <ToastProvider/>
+      <AgentConflictWatcher />
       <ModalProvider>
         <FeatureGuideProvider>
           <PublicRoute />
