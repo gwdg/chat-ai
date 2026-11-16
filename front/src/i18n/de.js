@@ -1759,7 +1759,7 @@ export default {
       unavailable: "Agenten-Brücke nicht verfügbar",
       unavailable_detail: "Kein Brücken-Endpunkt unter {{url}} (HTTP {{status}}).",
       unavailable_hint:
-        "Diese Installation bietet keine Agenten-Brücke. Nur der Chat-AI-Dienst back stellt /bridge/* bereit; ein direkt angesprochenes Engine-Angebot dagegen nicht.",
+        "Diese Installation bietet keine Agenten-Brücke. Sie wird vom Chat-AI-Dienst back (/bridge/*) oder vom SAIA-Agenten-Dienst (/agents/<id>/bridge) bereitgestellt.",
       offline_hint:
         "Der Browser hat die Verbindung zur Brücke verloren. Sie verbindet sich automatisch neu.",
       disabled_after_failure:

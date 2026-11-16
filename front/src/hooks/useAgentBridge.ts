@@ -4,6 +4,7 @@ import { useSelector } from "react-redux";
 
 import { callMcpServerTool, listMcpServerTools } from "../agent/mcp";
 import type { Vfs } from "../agent/vfs";
+import { AGENT_SERVICE_PATH } from "../apis/agentService";
 import {
   addOpencodeMcpServer,
   connectOpencodeMcpServer,
@@ -46,8 +47,32 @@ const BACKEND = String(import.meta.env.VITE_BACKEND_ENDPOINT || "").replace(
   "",
 );
 
-const bridgeBase = () =>
-  BACKEND || (typeof window !== "undefined" ? window.location.origin : "");
+/**
+ * Where the bridge routes live.
+ *
+ * An agent owned by the SAIA agent service is served by that service on the
+ * app's own origin (`/agents/<id>/bridge/...`), which is what a SAIA deployment
+ * has. A direct OpenCode agent falls back to the configured backend, where
+ * `back` serves the same protocol at `/bridge`. The service URL stays relative
+ * so the page origin decides where the browser connects, not the backend config.
+ */
+const bridgeBase = (agent: any) =>
+  agent?.serviceAgentId
+    ? `${AGENT_SERVICE_PATH}/${encodeURIComponent(agent.serviceAgentId)}`
+    : BACKEND || (typeof window !== "undefined" ? window.location.origin : "");
+
+/**
+ * The service returns the browser leg as a path; a WebSocket needs an absolute
+ * URL. Absolute URLs from `back` are passed through unchanged.
+ */
+const socketUrl = (url: string) => {
+  if (!url || /^wss?:\/\//i.test(url)) return url;
+  const origin =
+    typeof window !== "undefined"
+      ? `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}`
+      : "";
+  return `${origin}${url.startsWith("/") ? url : `/${url}`}`;
+};
 
 const SIDECAR_COMMAND = (() => {
   const raw = import.meta.env.VITE_OPENCODE_BRIDGE_SIDECAR_COMMAND;
@@ -307,7 +332,7 @@ export function useAgentBridge({
       setError("");
       setUnavailable(false);
       try {
-        const sessionUrl = `${bridgeBase()}/bridge/sessions`;
+        const sessionUrl = `${bridgeBase(agent)}/bridge/sessions`;
         const response = await fetch(sessionUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -353,7 +378,7 @@ export function useAgentBridge({
           });
         }
         await connectOpencodeMcpServer(agent, mcpName);
-        if (!cancelled) connectSocket(session.wsUrl);
+        if (!cancelled) connectSocket(socketUrl(session.wsUrl));
       } catch (reason) {
         if (!cancelled) {
           const missing = reason instanceof BridgeUnavailableError;
@@ -410,7 +435,7 @@ export function useAgentBridge({
         void removeOpencodeMcpServer(agent, mcpName).catch(() => {});
       }
       if (session?.id && session?.token) {
-        void fetch(`${bridgeBase()}/bridge/sessions/${session.id}`, {
+        void fetch(`${bridgeBase(agent)}/bridge/sessions/${session.id}`, {
           method: "DELETE",
           headers: { Authorization: `Bearer ${session.token}` },
         }).catch(() => {});

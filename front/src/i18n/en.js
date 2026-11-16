@@ -1735,7 +1735,7 @@ export default {
       unavailable: "Agent bridge not available",
       unavailable_detail: "No bridge endpoint at {{url}} (HTTP {{status}}).",
       unavailable_hint:
-        "This deployment does not provide the agent bridge. Only the Chat AI back service serves /bridge/*; a directly addressed engine does not.",
+        "This deployment does not provide the agent bridge. It is served by the Chat AI back service (/bridge/*) or by the SAIA agent service (/agents/<id>/bridge).",
       offline_hint:
         "The browser lost its connection to the bridge. It reconnects automatically.",
       disabled_after_failure:

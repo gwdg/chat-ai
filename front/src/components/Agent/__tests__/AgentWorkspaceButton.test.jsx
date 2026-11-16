@@ -200,7 +200,7 @@ describe("AgentWorkspaceButton", () => {
       "Agent bridge not available",
     );
     expect(
-      screen.getByText(/Only the Chat AI back service serves/),
+      screen.getByText(/served by the Chat AI back service/),
     ).toBeInTheDocument();
   });
 });

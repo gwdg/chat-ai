@@ -264,6 +264,8 @@ export default defineConfig(({ mode }) => {
           "/agents": {
             target: AGENT_SERVICE_DEV_TARGET,
             changeOrigin: true,
+            // The browser bridge keeps a WebSocket open under this prefix.
+            ws: true,
           },
         }
       : {}),

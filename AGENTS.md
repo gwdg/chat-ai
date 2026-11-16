@@ -218,7 +218,9 @@ its `set-by-backend` placeholder, which `back` ignores but a direct endpoint rej
 `userDataPath` is unset instead of calling an undefined URL. `secrets/front-local-conf.json` is the
 config for the local stack in `saia/saia-engine/local-testing`; run
 `CONFIG_LOCATION=../secrets/front-local-conf.json npm run dev` from `front/` to use it. Direct mode
-has no `/bridge/*`, no MCP gateway and no Arcana Tools: those routes exist only in `back`.
+has no `/bridge/*`, no MCP gateway and no Arcana Tools: those routes exist only in `back`. The agent
+bridge is the exception: a service-managed agent uses the agent service under `/agents/<id>/bridge`
+(§4.27).
 
 `fakeAuthHeaders` maps to `VITE_FAKE_AUTH_HEADERS` (a JSON string) and is merged into every
 `authHeaders()` result; the SDK path passes the same object as `defaultHeaders` with
@@ -1185,18 +1187,28 @@ only the row and its conversation→session mappings go away.
 
 The agent workspace bridge lets OpenCode read the user's selected workspace and bridged local MCP
 servers without uploading files. The browser is the data plane: `hooks/useAgentBridge.ts` opens an
-outbound WebSocket to the back service. The agent side is a local stdio MCP sidecar
+outbound WebSocket to the bridge host. The agent side is a local stdio MCP sidecar
 (`back/bridge-sidecar.mjs`) started by OpenCode from `opencodeBridgeSidecarCommand`; it opens its own
-outbound WebSocket to the back. The back pairs browser and sidecar by run id, so OpenCode never needs
-an inbound endpoint. If no sidecar command is configured, the hook retains the older remote-MCP
-registration through `/experimental/mcp/:name` for compatibility.
+outbound WebSocket to the bridge host. The host pairs browser and sidecar by run id, so OpenCode
+never needs an inbound endpoint. If no sidecar command is configured, the hook falls back to the
+remote-MCP endpoint (`mcpUrl`).
 
-Back routes: `POST /bridge/sessions` creates a session and returns browser/agent tokens and URLs,
-`WS /bridge/ws` attaches the browser, `WS /bridge/agent` attaches the sidecar, `POST /bridge/mcp/:id`
-remains as the fallback MCP endpoint, and `DELETE /bridge/sessions/:id` tears it down. Tool calls are
-relayed to the browser and answered over the browser WebSocket. If the browser is disconnected, the
-sidecar still lists tools but calls return an `isError` content result with `BRIDGE_OFFLINE` so the
-agent can continue with OpenCode's own tools.
+Two hosts speak the same protocol. `back` serves it at `/bridge/*`. A service-managed agent
+(`serviceAgentId`, §4.26) uses the SAIA agent service instead, at `/agents/<id>/bridge/*` on the app
+origin, because a SAIA deployment has no `back`. The agent service is a single process that already
+owns the user's OpenCode, which is what the pairing needs: **`saia-engine` cannot host it** — its
+uvicorn runs `cpu_count() + 1` workers, so the browser and agent sockets land in different processes
+and every call times out. Do not move the registry there without shared state.
+
+Routes (both hosts): `POST .../bridge/sessions` creates a session and returns browser/agent tokens
+and URLs, `WS .../bridge/ws` attaches the browser, `WS .../bridge/agent` attaches the sidecar,
+`POST .../bridge/mcp/:id` is the fallback MCP endpoint, and `DELETE .../bridge/sessions/:id` tears it
+down. Tool calls are relayed to the browser and answered over the browser WebSocket. If the browser
+is disconnected, the sidecar still lists tools but calls return an `isError` content result with
+`BRIDGE_OFFLINE` so the agent can continue with OpenCode's own tools. The agent service returns the
+browser leg as a path (the page origin completes it) and the agent leg plus `mcpUrl` as absolute
+URLs, since the agent process must reach them; they default to the request base URL and
+`AGENT_SERVICE_BRIDGE_AGENT_URL` overrides them.
 
 The bridge exposes `workspace_list`, `workspace_stat`, `workspace_read`, and, only when the agent's
 write toggle is on, `workspace_write`, `workspace_mkdir`, `workspace_remove`. Local MCP tools are
@@ -1218,16 +1230,19 @@ access on only because the reader falls back to `!!bridgeWorkspaceId`. The same 
 `bridgeWorkspaceId`, `bridgeWritable`, and `bridgeMcp` in localStorage; `bridgeWorkspaceId` is per
 agent, not per session. While a
 bridge is active the page warns that the tab must stay open, sets a warning title when hidden,
-shows a toast on return, and registers `beforeunload`. In production behind SAIA, the initial
-invocation must be able to spawn the sidecar and open the outbound WebSocket; the back must be
-reachable from the agent host, optionally through `bridgePublicUrl` in `back.json`.
+shows a toast on return, and registers `beforeunload`. In production, the initial invocation must be
+able to spawn the sidecar and open the outbound WebSocket; the bridge host must be reachable from the
+agent host (through `AGENT_SERVICE_BRIDGE_AGENT_URL` for the agent service, `bridgePublicUrl` in
+`back.json` for `back`).
 
-`POST <VITE_BACKEND_ENDPOINT>/bridge/sessions` is the first call. A 404 or 405 there means the
-deployment has no bridge route at all (only `back` serves `/bridge/*`; a direct engine such as the
-`saia/saia-engine/local-testing` stack answers 404), so the hook sets `unavailable` with the URL and
-status instead of retrying: the popover shows "Agent bridge not available", the endpoint, and
+The first call is `POST <bridge base>/bridge/sessions`, where the base is `/agents/<serviceAgentId>`
+for a service-managed agent and `VITE_BACKEND_ENDPOINT` for a direct one. A 404 or 405 means that
+base has no bridge route (a direct engine such as the `saia/saia-engine/local-testing` stack answers
+404, and so does an agent service older than the bridge), so the hook sets `unavailable` with the URL
+and status instead of retrying: the popover shows "Agent bridge not available", the endpoint, and
 disables the switch. Any other non-OK status stays a normal failure. Direct mode therefore cannot
-use the bridge by design, and the UI says so rather than reporting a broken bridge.
+use the bridge, and the UI says so rather than reporting a broken bridge. The gateway must forward
+the `Upgrade` header on `/agents/*`; this is the only WebSocket the UI opens.
 
 ### 4.28 The local-files skill is documentation, not installation
 
