@@ -302,7 +302,7 @@ export default {
     badge: "End-to-end encrypted",
     encrypted_with: "Encrypted with “{{key}}”",
     description:
-      "Bind a model to the public key of its encryption node. Every request you send through that model is then sealed in this browser; the server only sees ciphertext. The key itself never leaves the provider out of band, so import it from a trusted source.",
+      "End-to-end encryption is an extra layer on top of the transport encryption that already protects every request. With a key bound, your message is additionally sealed in this browser and stays ciphertext all the way to the machine that runs the model — usually a GPU — so the servers in between, including this platform, cannot read it. Each key is distributed out of band, not by the model host, so import it only from a source you trust.",
     keys_title: "Encryption keys",
     no_keys: "No keys yet. Import one below.",
     invalid_key: "Not a valid 32-byte X25519 public key",
@@ -372,7 +372,7 @@ export default {
     models_title: "Model encryption",
     models_keyed: "{{count}} encrypted",
     models_description:
-      "A model listed in a key's \"Applies to models\" sends only ciphertext. Models without a key keep sending in cleartext. If a bound key is missing or invalid, requests for its models are blocked instead of falling back to cleartext.",
+      "A model listed in a key's \"Applies to models\" adds the extra encryption layer on top of the transport encryption. Models without a key keep using the normal transport encryption. If a bound key is missing or invalid, requests for its models are blocked instead of silently dropping the extra layer.",
     models_filtered_hint:
       "Only models bound to a key and models used by an internal feature are listed.",
     models_empty:

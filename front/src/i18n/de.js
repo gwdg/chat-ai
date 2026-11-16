@@ -312,7 +312,7 @@ export default {
     badge: "Ende-zu-Ende verschlüsselt",
     encrypted_with: "Verschlüsselt mit „{{key}}“",
     description:
-      "Verknüpfen Sie ein Modell mit dem öffentlichen Schlüssel seines Verschlüsselungsknotens. Jede Anfrage über dieses Modell wird dann in diesem Browser versiegelt; der Server sieht nur Geheimtext. Der Schlüssel wird nicht vom Anbieter geladen, sondern außerhalb des Kanals verteilt – importieren Sie ihn aus einer vertrauenswürdigen Quelle.",
+      "Ende-zu-Ende-Verschlüsselung ist eine zusätzliche Ebene über der Transportverschlüsselung, die jede Anfrage ohnehin schützt. Mit einem gebundenen Schlüssel wird Ihre Nachricht zusätzlich in diesem Browser versiegelt und bleibt Geheimtext bis zu der Maschine, die das Modell ausführt – in der Regel eine GPU. Die dazwischenliegenden Server, auch diese Plattform, können sie daher nicht lesen. Jeder Schlüssel wird außerhalb des Kanals verteilt, nicht vom Modell-Host, importieren Sie ihn deshalb nur aus einer vertrauenswürdigen Quelle.",
     keys_title: "Verschlüsselungsschlüssel",
     no_keys: "Noch keine Schlüssel. Importieren Sie unten einen.",
     invalid_key: "Kein gültiger 32-Byte-X25519-Public-Key",
@@ -384,7 +384,7 @@ export default {
     models_title: "Modellverschlüsselung",
     models_keyed: "{{count}} verschlüsselt",
     models_description:
-      "Ein Modell, das unter \"Gilt für Modelle\" eines Schlüssels aufgeführt ist, sendet nur Geheimtext. Modelle ohne Schlüssel senden weiterhin im Klartext. Fehlt ein gebundener Schlüssel oder ist er ungültig, werden Anfragen für seine Modelle blockiert statt auf Klartext zurückzufallen.",
+      "Ein Modell, das unter \"Gilt für Modelle\" eines Schlüssels aufgeführt ist, erhält die zusätzliche Verschlüsselungsebene über der Transportverschlüsselung. Modelle ohne Schlüssel nutzen weiterhin die normale Transportverschlüsselung. Fehlt ein gebundener Schlüssel oder ist er ungültig, werden Anfragen für seine Modelle blockiert, statt die zusätzliche Ebene stillschweigend wegzulassen.",
     models_filtered_hint:
       "Nur mit einem Schlüssel verbundene Modelle und Modelle, die eine interne Funktion verwendet, werden aufgelistet.",
     models_empty:

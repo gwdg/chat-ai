@@ -1273,7 +1273,7 @@ export function createMetaToolRunner({
             ? userSettings.e2ee_models
             : {};
         if (!keys.length) {
-          return "No end-to-end encryption keys are configured. Models without a key are sent in cleartext.";
+          return "No end-to-end encryption keys are configured. Models without a key use the platform's normal transport encryption, without the extra end-to-end layer.";
         }
         return keys
           .map((key) => {
