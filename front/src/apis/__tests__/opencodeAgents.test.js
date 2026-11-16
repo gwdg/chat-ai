@@ -1,7 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AGENT_SERVICE_CONFLICT_EVENT } from "../agentService";
-import { DIRECT_AGENT_BLOCKED, getOpencodeInfo } from "../opencodeAgents";
+import {
+  DIRECT_AGENT_BLOCKED,
+  getOpencodeInfo,
+  listOpencodeSessionChildren,
+} from "../opencodeAgents";
 
 const access = vi.hoisted(() => ({ direct: true }));
 
@@ -96,6 +100,72 @@ describe("opencodeAgents conflict reporting", () => {
       /opencode server responded with 500/,
     );
     expect(conflicts).toEqual([]);
+  });
+});
+
+describe("opencodeAgents session children", () => {
+  const directAgent = { id: "direct", serverUrl: "http://127.0.0.1:9000" };
+
+  it("uses the parent filter that current OpenCode supports", async () => {
+    const fetch = vi.fn(async () =>
+      jsonResponse({
+        data: [
+          { id: "child-1", parentID: "parent-1" },
+          { id: "child-2", parentID: "parent-1" },
+        ],
+      }),
+    );
+    vi.stubGlobal("fetch", fetch);
+
+    const children = await listOpencodeSessionChildren(directAgent, "parent-1");
+
+    expect(children.map((child) => child.id)).toEqual(["child-1", "child-2"]);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch.mock.calls[0][0]).toBe(
+      "http://127.0.0.1:9000/api/session?parentID=parent-1&limit=200",
+    );
+  });
+
+  it("returns no children when the parent has none", async () => {
+    const fetch = vi.fn(async () => jsonResponse({ data: [] }));
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(
+      listOpencodeSessionChildren(directAgent, "parent-1"),
+    ).resolves.toEqual([]);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("falls back to the children endpoint when the filter is ignored", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({ data: [{ id: "other-root", parentID: null }] }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({ data: [{ id: "child-1", parentID: "parent-1" }] }),
+      );
+    vi.stubGlobal("fetch", fetch);
+
+    const children = await listOpencodeSessionChildren(directAgent, "parent-1");
+
+    expect(children.map((child) => child.id)).toEqual(["child-1"]);
+    expect(fetch.mock.calls[1][0]).toBe(
+      "http://127.0.0.1:9000/api/session/parent-1/children",
+    );
+  });
+
+  it("falls back when the server rejects the filter", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ message: "bad query" }, 400))
+      .mockResolvedValueOnce(jsonResponse({ data: [{ id: "child-1" }] }));
+    vi.stubGlobal("fetch", fetch);
+
+    const children = await listOpencodeSessionChildren(directAgent, "parent-1");
+
+    expect(children.map((child) => child.id)).toEqual(["child-1"]);
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 });
 

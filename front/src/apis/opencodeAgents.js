@@ -129,19 +129,32 @@ export async function listOpencodeSessions(agent) {
 }
 
 export async function listOpencodeSessionChildren(agent, sessionId) {
+  const parentId = String(sessionId);
+  // Current OpenCode filters the session list by parentID; `/session/<id>/children` is gone
+  // and answers 404 there. Older servers only have the dedicated endpoint, so try the filter
+  // first and fall back when the server ignored it.
   try {
-    const result = await request(
+    const listed = await request(
       agent,
-      `/session/${encodeURIComponent(sessionId)}/children`,
+      `/session?parentID=${encodeURIComponent(parentId)}&limit=200`,
     );
-    return result?.data ?? result ?? [];
+    const sessions = listed?.data ?? listed;
+    if (
+      Array.isArray(sessions) &&
+      sessions.every(
+        (session) => (session.parentID || session.parentId) === parentId,
+      )
+    ) {
+      return sessions;
+    }
   } catch {
-    const result = await request(
-      agent,
-      `/session?parentID=${encodeURIComponent(sessionId)}&limit=200`,
-    );
-    return result?.data ?? result ?? [];
+    // Fall through to the dedicated endpoint.
   }
+  const result = await request(
+    agent,
+    `/session/${encodeURIComponent(parentId)}/children`,
+  );
+  return result?.data ?? result ?? [];
 }
 
 export async function createOpencodeSession(agent, title) {

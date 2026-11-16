@@ -896,8 +896,11 @@ remote ids as a value.
 error). Each agent row expands into its OpenCode sessions grouped by the workspaces the agent is
 attached to, with the sessions attached to each workspace and a final "Not in a workspace" group for
 the rest; the active `sessionId` is stored on the
-local agent entry, while the session list is read from `GET /api/session` plus
-`GET /api/session/:id/children` by `agents/agentSessions.js`. Child sessions are the subagent
+local agent entry, while the session list is read from `GET /api/session` by
+`agents/agentSessions.js`. Children are fetched with
+`GET /api/session?parentID=<id>&limit=200`; current OpenCode (2.3) no longer serves
+`/api/session/:id/children` and answers it with 404, so that endpoint is only the fallback for
+older servers. Child sessions are the subagent
 sessions OpenCode creates; they are shown nested in the same list and can be opened like a
 top-level session. The + action creates a new session and makes it active. `AgentList` and the
 workspace Agents panel refetch every 10s (or immediately on the
