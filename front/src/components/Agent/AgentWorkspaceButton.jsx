@@ -87,6 +87,7 @@ export default function AgentWorkspaceButton({ agent }) {
                 setAgentBridgeEnabled(agent, event.target.checked, workspaces)
               }
               aria-label={t("agents.bridge.title")}
+              data-guide="agent-bridge-toggle"
             />
           </div>
           <p className="mt-1 text-[11px] leading-relaxed text-base-content/60">
@@ -102,34 +103,82 @@ export default function AgentWorkspaceButton({ agent }) {
           <div className="mt-2 flex max-h-56 flex-col gap-0.5 overflow-y-auto">
             {workspaces.map((workspace) => {
               const selected = attached.has(workspace.id);
-              const active = accessOn && agent.bridgeWorkspaceId === workspace.id;
+              // The page falls back to the first workspace, so the badge has to follow the same
+              // rule while the agent has no explicit choice yet.
+              const active =
+                accessOn &&
+                (agent.bridgeWorkspaceId ?? workspaces[0]?.id) === workspace.id;
               return (
-                <button
-                  key={workspace.id}
-                  type="button"
-                  onClick={() => void toggle(workspace.id)}
-                  aria-pressed={selected}
-                  className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition ${
-                    selected
-                      ? "bg-accent/10 text-accent"
-                      : "text-base-content hover:bg-base-200"
-                  }`}
-                >
-                  <span className="flex h-5 w-5 items-center justify-center rounded border border-base-300">
-                    {selected && <Check size={12} />}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate">
-                    {workspace.name}
-                  </span>
-                  {active && (
-                    <span className="badge badge-accent badge-xs">
-                      {t("agents.workspace_active")}
+                <div key={workspace.id} className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => void toggle(workspace.id)}
+                    aria-pressed={selected}
+                    className={`flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition ${
+                      selected
+                        ? "bg-accent/10 text-accent"
+                        : "text-base-content hover:bg-base-200"
+                    }`}
+                  >
+                    <span className="flex h-5 w-5 items-center justify-center rounded border border-base-300">
+                      {selected && <Check size={12} />}
                     </span>
-                  )}
-                </button>
+                    <span className="min-w-0 flex-1 truncate">
+                      {workspace.name}
+                    </span>
+                  </button>
+                  {/* One workspace is exposed to the agent at a time; this chooses which. */}
+                  {selected &&
+                    accessOn &&
+                    (active ? (
+                      <span className="badge badge-accent badge-xs shrink-0">
+                        {t("agents.workspace_active")}
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateAgent(agent.id, {
+                            bridgeWorkspaceId: workspace.id,
+                          })
+                        }
+                        className="btn btn-ghost btn-xs shrink-0"
+                      >
+                        {t("agents.bridge.use_workspace")}
+                      </button>
+                    ))}
+                </div>
               );
             })}
           </div>
+          {accessOn && (
+            <div className="mt-2 flex flex-col gap-1 border-t border-base-300 pt-2 text-[11px]">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-xs"
+                  checked={agent?.bridgeWritable === true}
+                  onChange={(event) =>
+                    updateAgent(agent.id, {
+                      bridgeWritable: event.target.checked,
+                    })
+                  }
+                />
+                {t("agents.bridge.writable")}
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-xs"
+                  checked={agent?.bridgeMcp === true}
+                  onChange={(event) =>
+                    updateAgent(agent.id, { bridgeMcp: event.target.checked })
+                  }
+                />
+                {t("agents.bridge.mcp")}
+              </label>
+            </div>
+          )}
           {!workspaces.length && (
             <p className="mt-2 text-[11px] text-base-content/50">
               {t("agents.workspaces_empty")}

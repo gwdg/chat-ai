@@ -9,11 +9,8 @@ import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
 import AgentConversation from "../components/Agent/AgentConversation";
 import AgentFilesPanel from "../components/Agent/AgentFilesPanel";
 import FilePreviewPanel from "../components/DocumentPanel/FilePreviewPanel";
-import { updateAgent, useAgent } from "../agents/agentStore";
-import {
-  isAgentBridgeEnabled,
-  setAgentBridgeEnabled,
-} from "../agents/agentBridgeAccess";
+import { useAgent } from "../agents/agentStore";
+import { isAgentBridgeEnabled } from "../agents/agentBridgeAccess";
 import {
   fetchAgentSessions,
   switchAgentSession,
@@ -23,7 +20,6 @@ import { useUpdateUserData } from "../hooks/useUpdateUserData";
 import { useOpencodeFilePreview } from "../hooks/useOpencodeFilePreview";
 import { useAgentBridge } from "../hooks/useAgentBridge";
 import {
-  useWorkspace,
   useWorkspaceList,
   useWorkspaceMounts,
   useWorkspaceSources,
@@ -88,7 +84,6 @@ export default function AgentPage() {
   const bridgeWorkspaceId =
     agent?.bridgeWorkspaceId ?? workspaces[0]?.id ?? null;
   const workspaceId = bridgeEnabled ? bridgeWorkspaceId : null;
-  const workspace = useWorkspace(workspaceId ?? undefined);
   const sources = useWorkspaceSources(workspaceId ?? undefined);
   const mounts = useWorkspaceMounts(workspaceId ?? undefined);
   const { providers } = useWorkspaceProviders(sources);
@@ -96,7 +91,9 @@ export default function AgentPage() {
     () => (workspaceId ? createWorkspaceRootProvider(workspaceId) : null),
     [workspaceId],
   );
-  const bridge = useAgentBridge({
+  // The bridge runs from this page; its switch and options live in the composer's workspace
+  // popover (components/Agent/AgentWorkspaceButton.jsx), so nothing here reads its state.
+  useAgentBridge({
     agent,
     workspaceId,
     writable: agent?.bridgeWritable === true,
@@ -105,13 +102,6 @@ export default function AgentPage() {
     providers,
     rootProvider,
   });
-
-  // Turning access on picks the active workspace (or the first one) so the bridge can start
-  // right away; turning it off stops the bridge without forgetting the selection.
-  const setBridgeEnabled = (enabled: boolean) => {
-    if (!agent) return;
-    setAgentBridgeEnabled(agent, enabled, workspaces);
-  };
 
   const sidebarState = useMemo(
     () => ({ id: "", title: "", messages: [], folderId: null, settings: { model: "" } }),
@@ -143,26 +133,6 @@ export default function AgentPage() {
               agent={agent}
               onOpenFile={toggleFile}
               onShowText={openText}
-              workspaces={workspaces}
-              workspaceId={workspaceId}
-              workspaceName={workspace?.name}
-              bridgeStatus={bridge.status}
-              bridgeError={bridge.error}
-              bridgeEnabled={bridgeEnabled}
-              bridgeWritable={agent?.bridgeWritable === true}
-              bridgeMcp={agent?.bridgeMcp === true}
-              onBridgeEnabledChange={setBridgeEnabled}
-              onWorkspaceChange={(nextWorkspaceId) =>
-                updateAgent(agent.id, {
-                  bridgeWorkspaceId: nextWorkspaceId || null,
-                })
-              }
-              onBridgeWritableChange={(value) =>
-                updateAgent(agent.id, { bridgeWritable: value })
-              }
-              onBridgeMcpChange={(value) =>
-                updateAgent(agent.id, { bridgeMcp: value })
-              }
             />
           )}
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">

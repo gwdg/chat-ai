@@ -1203,12 +1203,16 @@ write toggle is on, `workspace_write`, `workspace_mkdir`, `workspace_remove`. Lo
 exposed as `mcp_list_servers`, `mcp_list_tools`, and `mcp_call` only when its toggle is on; headers
 and tokens stay in the browser. Workspace operations go through `WorkspaceAgentVfs`, so provider
 capabilities, source/mount read-only flags, and IndexedDB/local/Arcana behavior stay authoritative.
-The agent page's workspace access is an explicit switch (`bridgeEnabled`), rendered in the file
-panel and in the composer's workspace popover, both through `agents/agentBridgeAccess.js`.
-Without it no bridge starts and the agent gets no tool; turning it on picks `bridgeWorkspaceId`
-or the first workspace. Existing agents keep access on only because the reader falls back to
-`!!bridgeWorkspaceId`. The same entry stores `bridgeWorkspaceId`, `bridgeWritable`, and `bridgeMcp`
-in localStorage; `bridgeWorkspaceId` is per agent, not per session. While a
+The agent page's workspace access is an explicit switch (`bridgeEnabled`) in the composer's
+workspace popover (`components/Agent/AgentWorkspaceButton.jsx`, through
+`agents/agentBridgeAccess.js`); the left file panel is only the file browser and shows no bridge
+section. The same popover holds the write and MCP toggles and the "Use for the bridge" choice of
+which attached workspace is exposed. Without the switch no bridge starts and the agent gets no tool;
+turning it on picks `bridgeWorkspaceId` or the first workspace, and a bridge start failure is
+reported as a toast because no panel prints it any more. Existing agents keep access on only because
+the reader falls back to `!!bridgeWorkspaceId`. The same entry stores `bridgeWorkspaceId`,
+`bridgeWritable`, and `bridgeMcp` in localStorage; `bridgeWorkspaceId` is per agent, not per
+session. While a
 bridge is active the page warns that the tab must stay open, sets a warning title when hidden,
 shows a toast on return, and registers `beforeunload`. In production behind SAIA, the initial
 invocation must be able to spawn the sidecar and open the outbound WebSocket; the back must be

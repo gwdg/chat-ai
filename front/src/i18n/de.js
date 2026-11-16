@@ -374,8 +374,8 @@ export default {
     },
     agent_workspace_access: {
       title: "Einem Agenten Zugriff auf Arbeitsbereichsdateien geben",
-      step1: "Öffnen Sie einen Agenten. Das Dateifenster links beginnt mit dem Arbeitsbereich-Zugriff.",
-      step2: "Schalten Sie den Schalter ein, um den Reverse-Proxy für diesen Agenten bereitzustellen. Wählen Sie den Arbeitsbereich, erlauben Sie Schreibzugriff, wenn der Agent Dateien ändern darf, und lassen Sie diesen Tab geöffnet, während der Agent arbeitet.",
+      step1: "Öffnen Sie einen Agenten. Das Fenster links ist sein Dateibrowser.",
+      step2: "Öffnen Sie die Arbeitsbereich-Schaltfläche neben dem Eingabefeld und schalten Sie den Arbeitsbereich-Zugriff ein, um den Reverse-Proxy für diesen Agenten bereitzustellen. Verbinden Sie einen Arbeitsbereich, wählen Sie, welchen die Brücke nutzt, erlauben Sie Schreibzugriff, wenn der Agent Dateien ändern darf, und lassen Sie diesen Tab geöffnet, während der Agent arbeitet.",
     },
     catalog: {
       open: "Tutorials durchsuchen",
@@ -1749,21 +1749,14 @@ export default {
     bridge: {
       title: "Arbeitsbereich-Zugriff",
       none: "Keine Arbeitsbereich-Brücke",
-      workspace: "Arbeitsbereich",
-      select_workspace: "Arbeitsbereich auswählen",
       disabled_hint:
         "Aus. Der Agent sieht keine Dateien aus Arbeitsbereichen. Schalten Sie den Zugriff ein, um den Reverse-Proxy für diesen Agenten bereitzustellen.",
-      needs_workspace:
-        "Erstellen oder verbinden Sie zuerst einen Arbeitsbereich, dann schalten Sie den Zugriff ein.",
+      use_workspace: "Für die Brücke verwenden",
       writable: "Schreiben erlauben",
       mcp: "Lokale MCP-Werkzeuge",
       keep_open: "Lassen Sie diesen Tab geöffnet. Arbeitsbereichs- und MCP-Werkzeuge sind nur verfügbar, solange der Browser verbunden ist.",
       tab_warning: "Die Agenten-Brücke benötigt diesen Tab. Arbeitsbereichs- und MCP-Werkzeuge sind möglicherweise nicht verfügbar, bis Sie zurückkehren.",
-      status_off: "Aus",
-      status_connecting: "Verbinde",
-      status_online: "Verbunden",
-      status_offline: "Browser offline",
-      status_error: "Brückenfehler",
+      start_failed: "Die Arbeitsbereich-Brücke konnte nicht gestartet werden: {{message}}",
     },
     spawn: "Agent starten",
     add_title: "Agent hinzufügen",

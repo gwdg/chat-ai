@@ -53,18 +53,6 @@ export default function AgentFilesPanel({
   agent,
   onOpenFile,
   onShowText,
-  workspaces = [],
-  workspaceId = null,
-  workspaceName = "",
-  bridgeStatus = "off",
-  bridgeError = "",
-  bridgeEnabled = false,
-  bridgeWritable = false,
-  bridgeMcp = false,
-  onBridgeEnabledChange,
-  onWorkspaceChange,
-  onBridgeWritableChange,
-  onBridgeMcpChange,
 }) {
   const { t } = useTranslation();
   const { notifySuccess, notifyError } = useToast();
@@ -321,15 +309,6 @@ export default function AgentFilesPanel({
     }
   };
 
-  const bridgeBadge =
-    bridgeStatus === "online"
-      ? "badge-success"
-      : bridgeStatus === "connecting"
-        ? "badge-warning"
-        : bridgeStatus === "off"
-          ? "badge-ghost"
-          : "badge-error";
-
   const newFileEditor = creatingFile ? (
     <div className="flex items-center gap-1 border-b border-base-300 px-2 py-1.5">
       <input
@@ -369,94 +348,6 @@ export default function AgentFilesPanel({
         className="hidden"
         onChange={uploadFiles}
       />
-      <div className="space-y-1 border-b border-base-300 p-2">
-        <div className="flex items-center gap-1">
-          <span className="min-w-0 flex-1 truncate text-[10px] font-semibold uppercase tracking-wider text-base-content/50">
-            {t("agents.bridge.title")}
-          </span>
-          {bridgeEnabled && (
-            <span className={`badge badge-xs ${bridgeBadge}`}>
-              {t(`agents.bridge.status_${bridgeStatus}`)}
-            </span>
-          )}
-          <input
-            type="checkbox"
-            role="switch"
-            className="toggle toggle-xs toggle-accent"
-            checked={bridgeEnabled}
-            disabled={!workspaces.length}
-            onChange={(event) =>
-              onBridgeEnabledChange?.(event.target.checked)
-            }
-            aria-label={t("agents.bridge.title")}
-            data-guide="agent-bridge-toggle"
-          />
-        </div>
-        {!workspaces.length ? (
-          <p className="text-[10px] leading-snug text-base-content/50">
-            {t("agents.bridge.needs_workspace")}
-          </p>
-        ) : !bridgeEnabled ? (
-          <p className="text-[10px] leading-snug text-base-content/50">
-            {t("agents.bridge.disabled_hint")}
-          </p>
-        ) : (
-          <>
-            <select
-              value={workspaceId ?? ""}
-              onChange={(event) => onWorkspaceChange?.(event.target.value)}
-              aria-label={t("agents.bridge.workspace")}
-              className="select select-bordered select-xs w-full"
-            >
-              {!workspaceId && (
-                <option value="">{t("agents.bridge.select_workspace")}</option>
-              )}
-              {workspaces.map((workspace) => (
-                <option key={workspace.id} value={workspace.id}>
-                  {workspace.name}
-                </option>
-              ))}
-            </select>
-            <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px]">
-              <label className="flex items-center gap-1">
-                <input
-                  type="checkbox"
-                  className="checkbox checkbox-xs"
-                  checked={bridgeWritable}
-                  onChange={(event) =>
-                    onBridgeWritableChange?.(event.target.checked)
-                  }
-                />
-                {t("agents.bridge.writable")}
-              </label>
-              <label className="flex items-center gap-1">
-                <input
-                  type="checkbox"
-                  className="checkbox checkbox-xs"
-                  checked={bridgeMcp}
-                  onChange={(event) =>
-                    onBridgeMcpChange?.(event.target.checked)
-                  }
-                />
-                {t("agents.bridge.mcp")}
-              </label>
-            </div>
-            <p className="text-[10px] leading-snug text-warning">
-              {t("agents.bridge.keep_open")}
-            </p>
-            {workspaceName && (
-              <p className="truncate text-[10px] text-base-content/50">
-                {workspaceName}
-              </p>
-            )}
-            {bridgeError && (
-              <p className="break-words text-[10px] text-error">
-                {bridgeError}
-              </p>
-            )}
-          </>
-        )}
-      </div>
       <div className="flex items-center gap-1 border-b border-base-300 px-2 py-1.5">
         <input
           value={query}

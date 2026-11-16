@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -30,17 +30,6 @@ import AgentFilesPanel from "../AgentFilesPanel";
 const agent = { id: "agent-1", name: "Example agent" };
 const workspaces = [{ id: "ws-1", name: "Example project" }];
 
-const renderPanel = (props = {}) =>
-  render(
-    <AgentFilesPanel
-      agent={agent}
-      workspaces={workspaces}
-      onOpenFile={vi.fn()}
-      onShowText={vi.fn()}
-      {...props}
-    />,
-  );
-
 beforeEach(() => {
   mocks.list.mockReset();
   mocks.find.mockReset();
@@ -49,52 +38,27 @@ beforeEach(() => {
   mocks.read.mockRejectedValue(new Error("not found"));
 });
 
-describe("AgentFilesPanel workspace access", () => {
-  it("switches agent workspace access on and off", () => {
-    const onBridgeEnabledChange = vi.fn();
-    renderPanel({ bridgeEnabled: false, onBridgeEnabledChange });
-
-    const toggle = screen.getByRole("switch", {
-      name: "Agent workspace access",
-    });
-    expect(toggle).not.toBeChecked();
-    expect(
-      screen.getByText(/The agent cannot see workspace files/),
-    ).toBeInTheDocument();
-
-    fireEvent.click(toggle);
-
-    expect(onBridgeEnabledChange).toHaveBeenCalledWith(true);
-  });
-
-  it("shows the workspace settings only while access is on", () => {
-    const { rerender } = renderPanel({ bridgeEnabled: false });
-    expect(screen.queryByLabelText("Workspace")).not.toBeInTheDocument();
-
-    rerender(
+describe("AgentFilesPanel", () => {
+  it("keeps workspace access out of the file panel", () => {
+    // The switch, the workspace choice and the write/MCP options live in the composer's
+    // workspace popover, so the panel is only the file browser.
+    render(
       <AgentFilesPanel
         agent={agent}
         workspaces={workspaces}
         bridgeEnabled
-        workspaceId="ws-1"
-        bridgeWritable
         onOpenFile={vi.fn()}
         onShowText={vi.fn()}
       />,
     );
 
-    expect(screen.getByLabelText("Workspace")).toHaveValue("ws-1");
-    expect(screen.getByLabelText("Allow writes")).toBeChecked();
-  });
-
-  it("cannot be switched on without a workspace", () => {
-    renderPanel({ workspaces: [], bridgeEnabled: false });
-
     expect(
-      screen.getByRole("switch", { name: "Agent workspace access" }),
-    ).toBeDisabled();
+      screen.queryByRole("switch", { name: "Agent workspace access" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Allow writes")).not.toBeInTheDocument();
     expect(
-      screen.getByText(/Create or attach a workspace first/),
-    ).toBeInTheDocument();
+      document.querySelector('[data-guide="agent-bridge-toggle"]'),
+    ).toBeNull();
+    expect(document.querySelector('[data-guide="agent-files"]')).not.toBeNull();
   });
 });

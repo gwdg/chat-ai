@@ -336,8 +336,14 @@ export function useAgentBridge({
         if (!cancelled) connectSocket(session.wsUrl);
       } catch (reason) {
         if (!cancelled) {
+          const message = reason instanceof Error ? reason.message : String(reason);
           setStatus("error");
-          setError(reason instanceof Error ? reason.message : String(reason));
+          setError(message);
+          // The file panel used to print this; it has no bridge section any more, so report the
+          // failure where the user is instead of leaving the switch silently ineffective.
+          notifyRef.current(
+            tRef.current("agents.bridge.start_failed", { message }),
+          );
         }
       }
     };

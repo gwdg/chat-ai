@@ -364,8 +364,8 @@ export default {
     },
     agent_workspace_access: {
       title: "Give an agent access to workspace files",
-      step1: "Open an agent. The left file panel starts with Agent workspace access.",
-      step2: "Turn the switch on to provide the reverse proxy for this agent. Pick the workspace, allow writes if the agent may change files, and keep this tab open while the agent works.",
+      step1: "Open an agent. The left panel is its file browser.",
+      step2: "Open the workspace button next to the prompt box and turn Agent workspace access on to provide the reverse proxy for this agent. Attach a workspace, choose which one the bridge uses, allow writes if the agent may change files, and keep this tab open while the agent works.",
     },
     catalog: {
       open: "Browse tutorials",
@@ -1725,21 +1725,14 @@ export default {
     bridge: {
       title: "Agent workspace access",
       none: "No workspace bridge",
-      workspace: "Workspace",
-      select_workspace: "Select a workspace",
       disabled_hint:
         "Off. The agent cannot see workspace files. Turn access on to provide the reverse proxy for this agent.",
-      needs_workspace:
-        "Create or attach a workspace first, then turn on access.",
+      use_workspace: "Use for the bridge",
       writable: "Allow writes",
       mcp: "Local MCP tools",
       keep_open: "Keep this tab open. Workspace and MCP tools are available only while the browser is connected.",
       tab_warning: "The agent bridge needs this tab to stay connected. Workspace and MCP tools may stop until you return.",
-      status_off: "Off",
-      status_connecting: "Connecting",
-      status_online: "Connected",
-      status_offline: "Browser offline",
-      status_error: "Bridge error",
+      start_failed: "Could not start the workspace bridge: {{message}}",
     },
     spawn: "Spawn agent",
     add_title: "Add agent",

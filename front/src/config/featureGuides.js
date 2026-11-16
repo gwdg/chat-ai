@@ -251,7 +251,7 @@ export const featureGuides = {
   agent_workspace_access: {
     titleKey: "feature_guide.agent_workspace_access.title",
     prompt:
-      "Open an agent and switch on Agent workspace access in its file panel. While it is on, Chat AI keeps a reverse proxy (the agent bridge) to the browser open, so the agent can list, read and optionally write the selected workspace's files.",
+      "Open an agent, then open the workspace button next to its prompt box and switch on Agent workspace access. While it is on, Chat AI keeps a reverse proxy (the agent bridge) to the browser open, so the agent can list, read and optionally write the files of the workspace chosen there.",
     keywords: [
       "agent workspace access",
       "agent bridge",
@@ -266,7 +266,7 @@ export const featureGuides = {
         textKey: "feature_guide.agent_workspace_access.step1",
       },
       {
-        target: '[data-guide="agent-bridge-toggle"]',
+        target: '[data-guide="agent-workspaces"]',
         textKey: "feature_guide.agent_workspace_access.step2",
       },
     ],
