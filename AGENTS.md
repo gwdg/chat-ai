@@ -199,12 +199,17 @@ restart. Read values via `import.meta.env.VITE_*`; they arrive as strings, hence
 `apiKey` is optional and maps to `VITE_API_KEY`. When it is empty the app sends **no** Authorization
 header and the OIDC proxy authenticates the user, as before. When it is set, `apis/authHeaders.js`
 adds `Authorization: Bearer <key>` to the chat client (`fetchClient.js`), the SDK path in
-`openaiClient.js`, and the direct `fetch` calls (`getModelsData`, `getUserData`, `processFile`,
-`generateAudio`). That is only for endpoints without the OIDC proxy, e.g. a SAIA engine's
-`/public/v1`; the key ships inside the bundle. `getUserData` returns `null` when `userDataPath` is
-unset instead of calling an undefined URL. `secrets/front-local-conf.json` is the config for the
-local stack in `saia/saia-engine/local-testing`; run `CONFIG_LOCATION=../secrets/front-local-conf.json
-npm run dev` from `front/` to use it.
+`openaiClient.js`, the direct `fetch` calls (`getModelsData`, `getUserData`, `processFile`,
+`generateAudio`), and the browser agent's model calls and tool requests (`agentApiKey` /
+`agentRequestHeaders` in `apis/agentEndpoints.ts`, used by `agent/runAgent.ts`,
+`agent/arcanaTools.ts` and the agent tools). That is only for endpoints without the OIDC proxy, e.g.
+a SAIA engine's `/public/v1`; the key ships inside the bundle. Without a key the agent still sends
+its `set-by-backend` placeholder, which `back` ignores but a direct endpoint rejects with
+`Invalid API key` (it checks for a 32-character token). `getUserData` returns `null` when
+`userDataPath` is unset instead of calling an undefined URL. `secrets/front-local-conf.json` is the
+config for the local stack in `saia/saia-engine/local-testing`; run
+`CONFIG_LOCATION=../secrets/front-local-conf.json npm run dev` from `front/` to use it. Direct mode
+has no `/bridge/*`, no MCP gateway and no Arcana Tools: those routes exist only in `back`.
 
 Feature modules are gated this way — `VITE_MODULE_TOOLS`, `VITE_MODULE_FEEDBACK`,
 `VITE_MODULE_CHOICES`, `VITE_MODULE_AGENT` (the browser agent), `VITE_MODULE_AGENTS` (the sidebar

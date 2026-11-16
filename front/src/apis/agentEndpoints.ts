@@ -1,10 +1,18 @@
 // Upstream calls used by the agent's tools. They go to the same backend as plain chat
 // (backendPath), which adds the credentials. Agent mode is switched on by front.json modules.agent.
 import getModelDefaults from "../config/getModelDefaults";
+import { authHeaders, getApiKey } from "./authHeaders";
 import { resolveBaseURL } from "./openaiClient";
 
 export const agentEndpoint = () => resolveBaseURL().replace(/\/$/, "");
 export const isAgentEnabled = () => import.meta.env.VITE_MODULE_AGENT === "true";
+
+// pi-ai insists on a key. `back` ignores it and adds the real one, so the placeholder only has
+// to be non-empty. A direct endpoint (a SAIA engine) checks it, so the configured key wins.
+const PROXY_KEY = "set-by-backend";
+export const agentApiKey = () => getApiKey() || PROXY_KEY;
+/** Request headers for the agent's own upstream calls (auth plus caller headers). */
+export const agentRequestHeaders = () => authHeaders();
 // Arcana in agent mode runs in the SAIA gateway. On unless front.json sets agentGatewayTools
 // to false, in which case agent requests reach the plain chat endpoint without gateway fields. Web search is an
 // agent tool of its own (agent/tools.ts) and does not need the gateway.
@@ -28,11 +36,12 @@ export function modelSupportsTools(model: { id?: string; name?: string } | undef
 const blob = (data: Uint8Array, type = "") => new Blob([data as Uint8Array<ArrayBuffer>], { type });
 
 async function post(path: string, body: BodyInit, json = false, signal?: AbortSignal) {
+  const headers = { ...(json ? { "Content-Type": "application/json" } : {}), ...agentRequestHeaders() };
   const response = await fetch(`${agentEndpoint()}${path}`, {
     method: "POST",
     body,
     signal,
-    headers: json ? { "Content-Type": "application/json" } : undefined,
+    headers: Object.keys(headers).length ? headers : undefined,
   });
   if (!response.ok) throw new Error(`${path} failed: ${response.status} ${(await response.text()).slice(0, 500)}`);
   return response;

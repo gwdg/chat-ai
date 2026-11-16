@@ -1,7 +1,17 @@
-import { agentEndpoint } from "../apis/agentEndpoints";
+import { agentEndpoint, agentRequestHeaders } from "../apis/agentEndpoints";
 
 async function request(path: string, init?: RequestInit) {
-  const response = await fetch(`${agentEndpoint()}${path}`, init);
+  const auth = agentRequestHeaders();
+  const requestInit = Object.keys(auth).length
+    ? {
+        ...init,
+        headers: {
+          ...(init?.headers as Record<string, string> | undefined),
+          ...auth,
+        },
+      }
+    : init;
+  const response = await fetch(`${agentEndpoint()}${path}`, requestInit);
   if (!response.ok) {
     const text = await response.text().catch(() => "");
     throw new Error(text || `Arcana Tools request failed (${response.status})`);

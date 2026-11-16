@@ -8,7 +8,7 @@ import "./shims/globals";
 import { Agent, type AgentMessage } from "@earendil-works/pi-agent-core";
 import { createModels, createProvider, type Model } from "@earendil-works/pi-ai";
 import { openAICompletionsApi } from "@earendil-works/pi-ai/api/openai-completions.lazy";
-import { agentEndpoint, agentGatewayTools, markToolless, modelSupportsTools } from "../apis/agentEndpoints";
+import { agentApiKey, agentEndpoint, agentGatewayTools, markToolless, modelSupportsTools } from "../apis/agentEndpoints";
 import { onAbortRequest, reasoningParams } from "../apis/chatCompletions";
 import { loadFileMeta, saveFile } from "../db";
 import { getFileType } from "../utils/attachments";
@@ -26,8 +26,6 @@ import { WorkspaceAgentVfs } from "../workspace/agentVfs";
 import { getChatWorkspaceBundle } from "../workspace/agentBridge";
 
 const PROVIDER = "chat-ai";
-// pi-ai insists on a key; the backend ignores it and adds the real one.
-const PROXY_KEY = "set-by-backend";
 
 const AGENT_PROMPT = `You have a virtual filesystem rooted at "/" that belongs to this conversation. There is no shell.
 Files the user attaches are placed under ${ARTEFACTS}/; documents and audio come with a converted text variant next to them.
@@ -310,7 +308,7 @@ export async function runAgentTurn({
       id: PROVIDER,
       name: "Chat AI",
       baseUrl: agentEndpoint(),
-      auth: { apiKey: { name: "Chat AI", resolve: async () => ({ auth: { apiKey: PROXY_KEY } }) } },
+      auth: { apiKey: { name: "Chat AI", resolve: async () => ({ auth: { apiKey: agentApiKey() } }) } },
       models: [model],
       api: openAICompletionsApi(),
     }),

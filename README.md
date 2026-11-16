@@ -150,7 +150,7 @@ cd front && CONFIG_LOCATION=../secrets/front-local-conf.json npm run dev
 
 The file ships with the local test settings: the fixed dev key from the stack's `.env.example`, `bridge/local-echo-1` as the default and title/memory/proposal model, and the modules that need `back` (tools, feedback, choices, agent, agents, Arcana, speech) switched off. The echo models answer every prompt with `local-echo-1 says: …`, including the title prompt, so chat titles look odd there; set `titleGenerationModel` (and the memory/proposal keys) to a model from the selector to change that. There is no `userDataPath`, because the engine's public API has no `/user` route; the UI simply has no profile or usage data. `back`-only features — the OpenCode agent bridge, MCP and Arcana Tools — are unavailable in this mode, and document conversion still needs the engine's docling-serve backend (the browser-side conversion in Chat preferences works without it).
 
-Two things to keep in mind: the key is compiled into the bundle, so this is a local development setup, not a deployment pattern, and the engine's `/public/v1` routes are rate-limited per key just like any other client.
+Two things to keep in mind: the key is compiled into the bundle, so this is a local development setup, not a deployment pattern, and the engine's `/public/v1` routes are rate-limited per key just like any other client. Module switches can be turned back on: the browser agent (`modules.agent`) works against a direct endpoint because it sends `apiKey` as its bearer token, but MCP, the agent bridge (`/bridge/*`) and Arcana Tools remain `back`-only routes.
 
 ## Serving a Static Build (Apache / Nginx)
 

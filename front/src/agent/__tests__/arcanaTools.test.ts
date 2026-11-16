@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../apis/agentEndpoints", () => ({
   agentEndpoint: () => "http://backend.test",
+  agentRequestHeaders: () => ({}),
 }));
 
 import {
