@@ -11,6 +11,10 @@ import AgentFilesPanel from "../components/Agent/AgentFilesPanel";
 import WorkspaceFilePanel from "../components/Workspace/WorkspaceFilePanel";
 import { updateAgent, useAgent } from "../agents/agentStore";
 import {
+  isAgentBridgeEnabled,
+  setAgentBridgeEnabled,
+} from "../agents/agentBridgeAccess";
+import {
   fetchAgentSessions,
   switchAgentSession,
 } from "../agents/agentSessions";
@@ -65,7 +69,10 @@ export default function AgentPage() {
     });
   }, [agent, focusedFilePath, openFile]);
   const workspaces = useWorkspaceList();
-  const workspaceId = agent?.bridgeWorkspaceId ?? null;
+  const bridgeEnabled = isAgentBridgeEnabled(agent);
+  const bridgeWorkspaceId =
+    agent?.bridgeWorkspaceId ?? workspaces[0]?.id ?? null;
+  const workspaceId = bridgeEnabled ? bridgeWorkspaceId : null;
   const workspace = useWorkspace(workspaceId ?? undefined);
   const sources = useWorkspaceSources(workspaceId ?? undefined);
   const mounts = useWorkspaceMounts(workspaceId ?? undefined);
@@ -83,6 +90,13 @@ export default function AgentPage() {
     providers,
     rootProvider,
   });
+
+  // Turning access on picks the active workspace (or the first one) so the bridge can start
+  // right away; turning it off stops the bridge without forgetting the selection.
+  const setBridgeEnabled = (enabled: boolean) => {
+    if (!agent) return;
+    setAgentBridgeEnabled(agent, enabled, workspaces);
+  };
 
   const sidebarState = useMemo(
     () => ({ id: "", title: "", messages: [], folderId: null, settings: { model: "" } }),
@@ -119,8 +133,10 @@ export default function AgentPage() {
               workspaceName={workspace?.name}
               bridgeStatus={bridge.status}
               bridgeError={bridge.error}
+              bridgeEnabled={bridgeEnabled}
               bridgeWritable={agent?.bridgeWritable === true}
               bridgeMcp={agent?.bridgeMcp === true}
+              onBridgeEnabledChange={setBridgeEnabled}
               onWorkspaceChange={(nextWorkspaceId) =>
                 updateAgent(agent.id, {
                   bridgeWorkspaceId: nextWorkspaceId || null,

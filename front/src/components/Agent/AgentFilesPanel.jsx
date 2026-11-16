@@ -58,8 +58,10 @@ export default function AgentFilesPanel({
   workspaceName = "",
   bridgeStatus = "off",
   bridgeError = "",
+  bridgeEnabled = false,
   bridgeWritable = false,
   bridgeMcp = false,
+  onBridgeEnabledChange,
   onWorkspaceChange,
   onBridgeWritableChange,
   onBridgeMcpChange,
@@ -372,27 +374,49 @@ export default function AgentFilesPanel({
           <span className="min-w-0 flex-1 truncate text-[10px] font-semibold uppercase tracking-wider text-base-content/50">
             {t("agents.bridge.title")}
           </span>
-          {workspaceId && (
+          {bridgeEnabled && (
             <span className={`badge badge-xs ${bridgeBadge}`}>
               {t(`agents.bridge.status_${bridgeStatus}`)}
             </span>
           )}
+          <input
+            type="checkbox"
+            role="switch"
+            className="toggle toggle-xs toggle-accent"
+            checked={bridgeEnabled}
+            disabled={!workspaces.length}
+            onChange={(event) =>
+              onBridgeEnabledChange?.(event.target.checked)
+            }
+            aria-label={t("agents.bridge.title")}
+            data-guide="agent-bridge-toggle"
+          />
         </div>
-        <select
-          value={workspaceId ?? ""}
-          onChange={(event) => onWorkspaceChange?.(event.target.value)}
-          aria-label={t("agents.bridge.workspace")}
-          className="select select-bordered select-xs w-full"
-        >
-          <option value="">{t("agents.bridge.none")}</option>
-          {workspaces.map((workspace) => (
-            <option key={workspace.id} value={workspace.id}>
-              {workspace.name}
-            </option>
-          ))}
-        </select>
-        {workspaceId && (
+        {!workspaces.length ? (
+          <p className="text-[10px] leading-snug text-base-content/50">
+            {t("agents.bridge.needs_workspace")}
+          </p>
+        ) : !bridgeEnabled ? (
+          <p className="text-[10px] leading-snug text-base-content/50">
+            {t("agents.bridge.disabled_hint")}
+          </p>
+        ) : (
           <>
+            <select
+              value={workspaceId ?? ""}
+              onChange={(event) => onWorkspaceChange?.(event.target.value)}
+              aria-label={t("agents.bridge.workspace")}
+              className="select select-bordered select-xs w-full"
+            >
+              {!workspaceId && (
+                <option value="">{t("agents.bridge.select_workspace")}</option>
+              )}
+              {workspaces.map((workspace) => (
+                <option key={workspace.id} value={workspace.id}>
+                  {workspace.name}
+                </option>
+              ))}
+            </select>
             <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px]">
               <label className="flex items-center gap-1">
                 <input

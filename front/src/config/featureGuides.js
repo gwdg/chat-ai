@@ -248,6 +248,29 @@ export const featureGuides = {
       },
     ],
   },
+  agent_workspace_access: {
+    titleKey: "feature_guide.agent_workspace_access.title",
+    prompt:
+      "Open an agent and switch on Agent workspace access in its file panel. While it is on, Chat AI keeps a reverse proxy (the agent bridge) to the browser open, so the agent can list, read and optionally write the selected workspace's files.",
+    keywords: [
+      "agent workspace access",
+      "agent bridge",
+      "workspace access",
+      "agent files",
+      "reverse proxy",
+      "allow writes",
+    ],
+    steps: [
+      {
+        target: '[data-guide="agent-files"]',
+        textKey: "feature_guide.agent_workspace_access.step1",
+      },
+      {
+        target: '[data-guide="agent-bridge-toggle"]',
+        textKey: "feature_guide.agent_workspace_access.step2",
+      },
+    ],
+  },
   attach_media: {
     titleKey: "feature_guide.attach_media.title",
     prompt:
@@ -1528,7 +1551,7 @@ export const FEATURE_CATEGORIES = {
     "summarize_conversation",
     "close_chat",
   ],
-  workspace: ["workspace_overview", "manage_chat_data", "pin_workspace", "pin_agent", "workspace_clone", "workspace_upload", "workspace_multiselect", "arcana_filesystem", "attach_from_workspace", "remote_agents", "agent_recovery", "close_group_sessions"],
+  workspace: ["workspace_overview", "manage_chat_data", "pin_workspace", "pin_agent", "workspace_clone", "workspace_upload", "workspace_multiselect", "arcana_filesystem", "attach_from_workspace", "remote_agents", "agent_recovery", "close_group_sessions", "agent_workspace_access"],
   personas: ["chat_with_persona"],
   settings: [
     "settings_overview",

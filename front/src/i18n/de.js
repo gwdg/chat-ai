@@ -372,6 +372,11 @@ export default {
       step1: "Klappen Sie einen Agenten auf, um seine Sitzungen nach Arbeitsbereich gruppiert und unter „Nicht in einem Arbeitsbereich“ zu sehen.",
       step2: "Das Papierkorb-Symbol in der Gruppenüberschrift schließt alle Sitzungen dieser Gruppe. Laufende Antworten werden zuerst unterbrochen, und Sie müssen die Aktion in einem Dialog bestätigen, bevor eine Sitzung entfernt wird.",
     },
+    agent_workspace_access: {
+      title: "Einem Agenten Zugriff auf Arbeitsbereichsdateien geben",
+      step1: "Öffnen Sie einen Agenten. Das Dateifenster links beginnt mit dem Arbeitsbereich-Zugriff.",
+      step2: "Schalten Sie den Schalter ein, um den Reverse-Proxy für diesen Agenten bereitzustellen. Wählen Sie den Arbeitsbereich, erlauben Sie Schreibzugriff, wenn der Agent Dateien ändern darf, und lassen Sie diesen Tab geöffnet, während der Agent arbeitet.",
+    },
     catalog: {
       open: "Tutorials durchsuchen",
       close: "Tutorials ausblenden",
@@ -1744,6 +1749,11 @@ export default {
       title: "Arbeitsbereich-Zugriff",
       none: "Keine Arbeitsbereich-Brücke",
       workspace: "Arbeitsbereich",
+      select_workspace: "Arbeitsbereich auswählen",
+      disabled_hint:
+        "Aus. Der Agent sieht keine Dateien aus Arbeitsbereichen. Schalten Sie den Zugriff ein, um den Reverse-Proxy für diesen Agenten bereitzustellen.",
+      needs_workspace:
+        "Erstellen oder verbinden Sie zuerst einen Arbeitsbereich, dann schalten Sie den Zugriff ein.",
       writable: "Schreiben erlauben",
       mcp: "Lokale MCP-Werkzeuge",
       keep_open: "Lassen Sie diesen Tab geöffnet. Arbeitsbereichs- und MCP-Werkzeuge sind nur verfügbar, solange der Browser verbunden ist.",

@@ -17,12 +17,19 @@ import {
   useWorkspaceList,
 } from "../../db/workspaceDb";
 import { updateAgent } from "../../agents/agentStore";
+import {
+  isAgentBridgeEnabled,
+  setAgentBridgeEnabled,
+} from "../../agents/agentBridgeAccess";
 
 export default function AgentWorkspaceButton({ agent }) {
   const { t } = useTranslation();
   const workspaces = useWorkspaceList();
   const links = useAgentWorkspaceLinks(agent?.id);
   const attached = new Set(links.map((link) => link.workspaceId));
+  // The bridge only runs while access is switched on; this is the same switch as in the
+  // agent's file panel, so it stays reachable on small screens.
+  const accessOn = isAgentBridgeEnabled(agent);
 
   const toggle = async (workspaceId) => {
     if (attached.has(workspaceId)) {
@@ -66,16 +73,36 @@ export default function AgentWorkspaceButton({ agent }) {
           anchor="bottom"
           className="z-[60] max-h-[70vh] w-72 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-xl border border-base-300 bg-base-100 p-3 shadow-xl"
         >
-          <p className="text-sm font-medium">{t("agents.workspaces")}</p>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm font-medium">
+              {t("agents.bridge.title")}
+            </span>
+            <input
+              type="checkbox"
+              role="switch"
+              className="toggle toggle-xs toggle-accent"
+              checked={accessOn}
+              disabled={!workspaces.length}
+              onChange={(event) =>
+                setAgentBridgeEnabled(agent, event.target.checked, workspaces)
+              }
+              aria-label={t("agents.bridge.title")}
+            />
+          </div>
           <p className="mt-1 text-[11px] leading-relaxed text-base-content/60">
-            {workspaces.length
-              ? t("agents.workspaces_hint")
-              : t("workspace.empty_sidebar_title")}
+            {!workspaces.length
+              ? t("workspace.empty_sidebar_title")
+              : accessOn
+                ? t("agents.workspaces_hint")
+                : t("agents.bridge.disabled_hint")}
+          </p>
+          <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-base-content/50">
+            {t("agents.workspaces")}
           </p>
           <div className="mt-2 flex max-h-56 flex-col gap-0.5 overflow-y-auto">
             {workspaces.map((workspace) => {
               const selected = attached.has(workspace.id);
-              const active = agent.bridgeWorkspaceId === workspace.id;
+              const active = accessOn && agent.bridgeWorkspaceId === workspace.id;
               return (
                 <button
                   key={workspace.id}
@@ -108,7 +135,7 @@ export default function AgentWorkspaceButton({ agent }) {
               {t("agents.workspaces_empty")}
             </p>
           )}
-          {attached.size > 0 && (
+          {attached.size > 0 && accessOn && (
             <p className="mt-2 text-[10px] leading-snug text-warning">
               {t("agents.bridge.keep_open")}
             </p>

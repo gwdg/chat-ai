@@ -362,6 +362,11 @@ export default {
       step1: "Expand an agent to see its sessions grouped by workspace and under “Not in a workspace”.",
       step2: "The trash icon in the group header closes every session of that group. Running turns are interrupted first, and you must confirm the action in a dialog before any session is removed.",
     },
+    agent_workspace_access: {
+      title: "Give an agent access to workspace files",
+      step1: "Open an agent. The left file panel starts with Agent workspace access.",
+      step2: "Turn the switch on to provide the reverse proxy for this agent. Pick the workspace, allow writes if the agent may change files, and keep this tab open while the agent works.",
+    },
     catalog: {
       open: "Browse tutorials",
       close: "Hide tutorials",
@@ -1720,6 +1725,11 @@ export default {
       title: "Agent workspace access",
       none: "No workspace bridge",
       workspace: "Workspace",
+      select_workspace: "Select a workspace",
+      disabled_hint:
+        "Off. The agent cannot see workspace files. Turn access on to provide the reverse proxy for this agent.",
+      needs_workspace:
+        "Create or attach a workspace first, then turn on access.",
       writable: "Allow writes",
       mcp: "Local MCP tools",
       keep_open: "Keep this tab open. Workspace and MCP tools are available only while the browser is connected.",
