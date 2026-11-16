@@ -5,6 +5,7 @@ import { GitBranch } from "lucide-react";
 import WorkspaceRootBrowser from "../Workspace/WorkspaceRootBrowser";
 import {
   findOpencodeFiles,
+  isAgentServerUnavailable,
   listOpencodeFiles,
   readOpencodeFile,
   runOpencodeShellAndWait,
@@ -62,6 +63,11 @@ export default function AgentFilesPanel({
   const [gitLoading, setGitLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  // The agent server did not answer with the OpenCode API at all (it is down
+  // and a gateway returned an HTML error page, or the request failed). There is
+  // no file list to show then, so the panel hides itself entirely instead of
+  // printing a JSON parse error; the poll brings it back when the server does.
+  const [unavailable, setUnavailable] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [creatingFile, setCreatingFile] = useState(false);
   const [newFileName, setNewFileName] = useState("");
@@ -82,10 +88,18 @@ export default function AgentFilesPanel({
       try {
         const rows = await listOpencodeFiles(agent, nextPath);
         if (requestId !== requestRef.current) return;
+        setUnavailable(false);
         setEntries(rows.map((row) => toRootEntry(agent.id, row)));
         if (silent) setError("");
       } catch (reason) {
         if (requestId !== requestRef.current) return;
+        if (isAgentServerUnavailable(reason)) {
+          setUnavailable(true);
+          setEntries([]);
+          setError("");
+          return;
+        }
+        setUnavailable(false);
         if (!silent) {
           setError(reason instanceof Error ? reason.message : String(reason));
           setEntries([]);
@@ -335,6 +349,9 @@ export default function AgentFilesPanel({
       </button>
     </div>
   ) : null;
+
+  // No hooks may run after this point.
+  if (unavailable) return null;
 
   return (
     <div

@@ -1078,7 +1078,10 @@ workspace root file browser) and reads/writes the OpenCode project filesystem th
 `GET /api/fs/list`, `GET /api/fs/read/<path>`, `POST /api/experimental/fs/write` and
 `GET /api/fs/find`. Its file list polls the current directory every 5 s while the page is visible,
 searches through `/api/fs/find`, and refreshes on navigation, upload, new file, or an explicit
-refresh. The
+refresh. When the server does not answer with the OpenCode API at all — a gateway HTML page
+(also with status 200), 502/503/504 or a network failure — `rawRequest` reports
+`AGENT_SERVER_UNAVAILABLE` and the panel renders nothing instead of printing a JSON parse error;
+the 5 s poll brings it back once the server answers again. The
 `FilePreviewPanel` preview is rendered by `AgentPage` to the right of the chat, not beside the
 file list. A `read` or `write` tool card in the conversation carries a file card below the step that
 opens that file in the same right-hand panel (`AgentAssistantParts` takes `onOpenFile` from

@@ -22,6 +22,30 @@ const DEFAULT_SERVER_USERNAME = "opencode";
 export const DIRECT_AGENT_BLOCKED =
   "Direct agent connections are only available when Chat AI runs locally. In a deployment, agents run through the agent service (SAIA).";
 
+/**
+ * The server did not answer with the OpenCode API at all.
+ *
+ * A deployment answers on the app's own origin, so a service that is down (or a
+ * gateway that cannot reach it) replies with an HTML error page — sometimes even
+ * with status 200. Parsing that as JSON produced `Unexpected token '<'`, which
+ * told a user nothing; callers get this error instead and can decide to hide the
+ * affected UI.
+ */
+export const AGENT_SERVER_UNAVAILABLE = "The agent server is unavailable.";
+
+/** True for the "no API behind this URL" error, as opposed to an API error. */
+export const isAgentServerUnavailable = (error) =>
+  error?.code === "AGENT_SERVER_UNAVAILABLE";
+
+const unavailableError = (detail) => {
+  const error = new Error(AGENT_SERVER_UNAVAILABLE);
+  error.code = "AGENT_SERVER_UNAVAILABLE";
+  if (detail) error.cause = detail;
+  return error;
+};
+
+const looksLikeHtml = (text) => /^\s*(?:<!doctype|<html|<\?xml)/i.test(text);
+
 export const opencodeDefaults = () => ({
   serverUrl: import.meta.env.VITE_OPENCODE_SERVER_URL || DEFAULT_SERVER_URL,
   username:
@@ -50,19 +74,31 @@ async function rawRequest(agent, path, init = {}) {
   if (!directAgentAccessAllowed() && !isServiceManagedAgent(agent)) {
     throw new Error(DIRECT_AGENT_BLOCKED);
   }
-  const response = await fetch(`${baseUrl(agent)}/api${path}`, {
-    ...init,
-    headers: {
-      ...(init.body ? { "Content-Type": "application/json" } : {}),
-      ...authHeaders(agent),
-      ...init.headers,
-    },
-  });
+  let response;
+  try {
+    response = await fetch(`${baseUrl(agent)}/api${path}`, {
+      ...init,
+      headers: {
+        ...(init.body ? { "Content-Type": "application/json" } : {}),
+        ...authHeaders(agent),
+        ...init.headers,
+      },
+    });
+  } catch (reason) {
+    // An abort is the caller's own signal, not a server problem.
+    if (init.signal?.aborted || reason?.name === "AbortError") throw reason;
+    throw unavailableError(reason);
+  }
   if (!response.ok) {
     if (response.status === 401) {
       throw new Error("The opencode server rejected the password.");
     }
     const detail = await response.text().catch(() => "");
+    // A gateway in front of the agent service answers with its own error page
+    // when the service is down; that is not an OpenCode API error.
+    if (looksLikeHtml(detail) || [502, 503, 504].includes(response.status)) {
+      throw unavailableError(`HTTP ${response.status}`);
+    }
     // A service-managed agent is proxied through the agent service. A 409 with
     // its conflict code means the service will not serve that row at all (for
     // example after a restart marked it failed), which no retry can fix.
@@ -88,10 +124,27 @@ async function rawRequest(agent, path, init = {}) {
   return response;
 }
 
+/**
+ * Parse a JSON body, but treat a non-JSON answer as "no API here" instead of
+ * letting `JSON.parse` leak a syntax error to the user.
+ */
+async function parseJson(response) {
+  const text = await response.text().catch(() => "");
+  if (!text.trim()) return null;
+  if (looksLikeHtml(text)) {
+    throw unavailableError(`HTTP ${response.status} served HTML`);
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw unavailableError(`HTTP ${response.status} served invalid JSON`);
+  }
+}
+
 async function request(agent, path, init = {}) {
   const response = await rawRequest(agent, path, init);
   if (response.status === 204) return null;
-  return response.json();
+  return parseJson(response);
 }
 
 export async function getOpencodeInfo(agent) {
@@ -200,7 +253,7 @@ export async function writeOpencodeFile(
     },
   );
   if (response.status === 204) return null;
-  return response.json();
+  return parseJson(response);
 }
 
 export async function getOpencodeDiff(agent, sessionId) {

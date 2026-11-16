@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -13,6 +13,8 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("../../../apis/opencodeAgents", () => ({
   findOpencodeFiles: (...args) => mocks.find(...args),
+  isAgentServerUnavailable: (error) =>
+    error?.code === "AGENT_SERVER_UNAVAILABLE",
   listOpencodeFiles: (...args) => mocks.list(...args),
   readOpencodeFile: (...args) => mocks.read(...args),
   runOpencodeShellAndWait: (...args) => mocks.shell(...args),
@@ -60,5 +62,40 @@ describe("AgentFilesPanel", () => {
       document.querySelector('[data-guide="agent-bridge-toggle"]'),
     ).toBeNull();
     expect(document.querySelector('[data-guide="agent-files"]')).not.toBeNull();
+  });
+
+  it("hides the file list while the agent server is unavailable", async () => {
+    mocks.list.mockRejectedValueOnce(
+      Object.assign(new Error("The agent server is unavailable."), {
+        code: "AGENT_SERVER_UNAVAILABLE",
+      }),
+    );
+
+    const { container, rerender } = render(
+      <AgentFilesPanel
+        agent={agent}
+        workspaces={workspaces}
+        onOpenFile={vi.fn()}
+        onShowText={vi.fn()}
+      />,
+    );
+
+    // No panel, and no JSON parse error standing in for a file list.
+    await waitFor(() => expect(container).toBeEmptyDOMElement());
+    expect(screen.queryByText(/Unexpected token/)).not.toBeInTheDocument();
+
+    // The next successful load brings it back.
+    rerender(
+      <AgentFilesPanel
+        agent={{ id: "agent-2", name: "Recovered agent" }}
+        workspaces={workspaces}
+        onOpenFile={vi.fn()}
+        onShowText={vi.fn()}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(document.querySelector('[data-guide="agent-files"]')).not.toBeNull(),
+    );
   });
 });

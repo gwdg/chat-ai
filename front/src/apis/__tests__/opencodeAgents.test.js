@@ -2,9 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AGENT_SERVICE_CONFLICT_EVENT } from "../agentService";
 import {
+  AGENT_SERVER_UNAVAILABLE,
   DIRECT_AGENT_BLOCKED,
   getOpencodeInfo,
+  isAgentServerUnavailable,
+  listOpencodeFiles,
   listOpencodeSessionChildren,
+  subscribeOpencodeEvents,
 } from "../opencodeAgents";
 
 const access = vi.hoisted(() => ({ direct: true }));
@@ -220,5 +224,82 @@ describe("opencodeAgents direct access guard", () => {
     await expect(
       getOpencodeInfo({ id: "direct", serverUrl: "http://127.0.0.1:9000" }),
     ).resolves.toBeDefined();
+  });
+});
+
+describe("opencodeAgents unavailable server", () => {
+  const directAgent = { id: "direct", serverUrl: "http://127.0.0.1:9000" };
+
+  it("reports an HTML answer as unavailable instead of a JSON syntax error", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response('<!doctype html><html><body>Bad gateway</body></html>', {
+            status: 200,
+            headers: { "content-type": "text/html" },
+          }),
+      ),
+    );
+
+    const error = await listOpencodeFiles(directAgent).catch((reason) => reason);
+
+    expect(isAgentServerUnavailable(error)).toBe(true);
+    expect(error.message).toBe(AGENT_SERVER_UNAVAILABLE);
+    expect(error.message).not.toMatch(/Unexpected token/);
+  });
+
+  it("maps a gateway 502 page to unavailable", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response("<html><body>Service Unavailable</body></html>", {
+            status: 502,
+            headers: { "content-type": "text/html" },
+          }),
+      ),
+    );
+
+    await expect(listOpencodeFiles(directAgent)).rejects.toMatchObject({
+      code: "AGENT_SERVER_UNAVAILABLE",
+    });
+  });
+
+  it("maps a network failure to unavailable but leaves aborts alone", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new TypeError("Failed to fetch");
+      }),
+    );
+    await expect(listOpencodeFiles(directAgent)).rejects.toMatchObject({
+      code: "AGENT_SERVER_UNAVAILABLE",
+    });
+
+    const abort = Object.assign(new Error("aborted"), { name: "AbortError" });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw abort;
+      }),
+    );
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      subscribeOpencodeEvents(directAgent, () => {}, controller.signal),
+    ).rejects.toBe(abort);
+  });
+
+  it("still returns the file list from a JSON answer", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => jsonResponse({ data: [{ path: "hello.py" }] })),
+    );
+
+    await expect(listOpencodeFiles(directAgent)).resolves.toEqual([
+      { path: "hello.py" },
+    ]);
+    expect(isAgentServerUnavailable(new Error("other"))).toBe(false);
   });
 });
