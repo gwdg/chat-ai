@@ -410,6 +410,9 @@ export default {
     },
     models_blocked: "Key missing or invalid",
     not_encrypted: "Not encrypted",
+    model_not_offered: "Not in model list",
+    model_not_offered_hint:
+      "An internal feature is configured to use this model, but the deployment's model list does not contain it, so no key can be bound to it here.",
   },
   mcp_confirmation: {
     title: "Run MCP tool?",

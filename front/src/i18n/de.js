@@ -423,6 +423,9 @@ export default {
     },
     models_blocked: "Schlüssel fehlt oder ist ungültig",
     not_encrypted: "Nicht verschlüsselt",
+    model_not_offered: "Nicht in der Modellliste",
+    model_not_offered_hint:
+      "Ein internes Feature ist für dieses Modell konfiguriert, aber die Modellliste des Deployments enthält es nicht; hier kann ihm kein Schlüssel zugeordnet werden.",
   },
   mcp_confirmation: {
     title: "MCP-Werkzeug ausführen?",

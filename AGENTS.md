@@ -1379,7 +1379,10 @@ unreachable endpoint keeps the key out. The model table is read-only and lists o
 a key plus models used by an internal feature, which `src/e2ee/modelUsage.js` resolves from
 `VITE_TITLE_GENERATION_MODEL`, `VITE_MEMORY_GENERATION_MODEL`, `VITE_PROPOSAL_GENERATION_MODEL`
 (Choices), `VITE_EXPLAIN_IMAGE_MODEL` (agent) and the user's default model for conversation
-summaries (falling back to `VITE_DEFAULT_SETTINGS.model.id`). Each row reports encrypted (with its
+summaries (falling back to `VITE_DEFAULT_SETTINGS.model.id`). A feature model that the deployment's
+`/models` does not contain is still listed, marked "Not in model list", because otherwise a wrong
+`VITE_EXPLAIN_IMAGE_MODEL` (or a bridge-prefixed copy of the id) would silently remove that function
+from the table and hide that its requests are unprotected. Each row reports encrypted (with its
 key's label, printed only when the key has a name of its own: an imported key is otherwise labelled
 with the model names it applies to, which would repeat the row title), blocked (the bound key is
 missing or invalid), or not encrypted, plus the feature labels (`titles`, `memory`, `proposals`,

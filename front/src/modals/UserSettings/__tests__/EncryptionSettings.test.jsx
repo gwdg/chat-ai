@@ -312,6 +312,36 @@ describe("EncryptionSettings model status", () => {
     expect(screen.queryByText("Qwen A")).toBeNull();
   });
 
+  it("keeps a feature model visible when the deployment does not offer it", () => {
+    // The vision model of the browser agent: configured (or the built-in
+    // fallback), but this model list does not contain it. It must not vanish
+    // from the table, because then nothing would show that its requests are
+    // unprotected.
+    vi.stubEnv("VITE_MODULE_AGENT", "true");
+    vi.stubEnv("VITE_EXPLAIN_IMAGE_MODEL", "gemma-4-31b-it");
+
+    renderWith(makeStore());
+
+    expect(screen.getByText("gemma-4-31b-it")).toBeInTheDocument();
+    expect(screen.getByText("Image analysis")).toBeInTheDocument();
+    expect(screen.getByText("Not in model list")).toBeInTheDocument();
+    expect(screen.queryByText("Not encrypted")).toBeNull();
+  });
+
+  it("marks a listed feature model as unencrypted instead", () => {
+    // The same function with the model in the list: the row is the normal
+    // unencrypted one and carries no "not in model list" badge.
+    vi.stubEnv("VITE_MODULE_AGENT", "true");
+    vi.stubEnv("VITE_EXPLAIN_IMAGE_MODEL", "mistral-b");
+
+    renderWith(makeStore());
+
+    expect(screen.getByText("Mistral B")).toBeInTheDocument();
+    expect(screen.getByText("Image analysis")).toBeInTheDocument();
+    expect(screen.getByText("Not encrypted")).toBeInTheDocument();
+    expect(screen.queryByText("Not in model list")).toBeNull();
+  });
+
   it("hides an internal model once its key works", () => {
     vi.stubEnv("VITE_MEMORY_GENERATION_MODEL", "mistral-b");
     const store = makeStore();

@@ -130,11 +130,39 @@ export default function EncryptionSettings({ modelsData }) {
   // the extra layer even though a feature uses them in the background (titles,
   // memory, proposals, summaries, image analysis). A model with a working key
   // is already protected and therefore not listed.
-  const unencryptedModels = models.filter(
-    (model) =>
-      usage.has(model.id) &&
-      !usableKey(findKeyForAssignment(keys, assignments[model.id])),
-  );
+  //
+  // A feature model that the deployment's model list does not contain is kept
+  // as a row of its own. Without that, a feature simply disappears from this
+  // table when its id is wrong (a bridge-prefixed copy, a typo in
+  // `explainImageModel`) or when the app is pointed at an endpoint that serves
+  // a different set, and nothing would tell the user that those requests are
+  // unprotected.
+  const functionModels = useMemo(() => {
+    const encrypted = (modelId) =>
+      usableKey(findKeyForAssignment(keys, assignments[modelId]));
+    const listed = models
+      .filter((model) => usage.has(model.id) && !encrypted(model.id))
+      .map((model) => ({
+        id: model.id,
+        name: model.name || model.id,
+        features: usage.get(model.id) ?? [],
+        missing: false,
+      }));
+    const absent = [...usage.keys()]
+      .filter(
+        (modelId) =>
+          !encrypted(modelId) &&
+          !models.some((model) => model.id === modelId),
+      )
+      .sort()
+      .map((modelId) => ({
+        id: modelId,
+        name: modelId,
+        features: usage.get(modelId) ?? [],
+        missing: true,
+      }));
+    return [...listed, ...absent];
+  }, [models, usage, keys, assignments]);
 
   // Count every model whose binding resolves to a usable key. A binding can
   // outlive a model list (an imported conversation, a different deployment),
@@ -964,7 +992,7 @@ export default function EncryptionSettings({ modelsData }) {
 
         {models.length === 0 ? (
           <p className="text-xs text-base-content/60">{t("common.loading")}</p>
-        ) : unencryptedModels.length === 0 ? (
+        ) : functionModels.length === 0 ? (
           <p className="text-xs text-base-content/60">{t("e2ee.models_empty")}</p>
         ) : (
           <>
@@ -972,9 +1000,9 @@ export default function EncryptionSettings({ modelsData }) {
               {t("e2ee.models_description")}
             </p>
             <ul className="flex flex-col divide-y divide-base-300 rounded-lg border border-base-300">
-              {unencryptedModels.map((model) => {
+              {functionModels.map((model) => {
                 const assigned = assignments[model.id];
-                const features = usage.get(model.id) ?? [];
+                const features = model.features;
                 return (
                   <li
                     key={model.id}
@@ -1001,7 +1029,14 @@ export default function EncryptionSettings({ modelsData }) {
                         ))}
                       </span>
                     </span>
-                    {assigned ? (
+                    {model.missing ? (
+                      <span
+                        className="badge badge-warning badge-sm"
+                        title={t("e2ee.model_not_offered_hint")}
+                      >
+                        {t("e2ee.model_not_offered")}
+                      </span>
+                    ) : assigned ? (
                       <span
                         className="badge badge-error badge-sm"
                         title={t("e2ee.invalid_key")}
