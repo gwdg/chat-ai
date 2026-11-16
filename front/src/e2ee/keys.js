@@ -185,7 +185,12 @@ export async function readKeyFolder(handle) {
     const fileName = text(item.name);
     if (!fileName.toLowerCase().endsWith(".pub")) continue;
     try {
-      const key = keyEntryFromText(await item.text(), {
+      // A real `FileSystemFileHandle` exposes the bytes through `getFile()`;
+      // it has no `text()` of its own. Calling `text()` on the handle rejected
+      // every file of a picked folder, so read the File first.
+      const file =
+        typeof item.getFile === "function" ? await item.getFile() : item;
+      const key = keyEntryFromText(await file.text(), {
         name: fileName.slice(0, -".pub".length),
         source: "folder",
       });

@@ -266,7 +266,14 @@ describe("readKeyFolder", () => {
       for (const entry of entries) yield entry;
     },
   });
-  const file = (name, text) => ({ kind: "file", name, text: async () => text });
+  // A real FileSystemFileHandle has `kind`, `name` and `getFile()`; it does not
+  // have `text()`. The fakes mirror that so a regression to `item.text()` fails
+  // here instead of rejecting every file of a real folder.
+  const file = (name, text) => ({
+    kind: "file",
+    name,
+    getFile: async () => ({ text: async () => text }),
+  });
 
   it("reads every .pub file, validates it and names the key by its stem", async () => {
     const result = await readKeyFolder(
@@ -312,5 +319,24 @@ describe("readKeyFolder", () => {
     ]);
     expect(result.errors[0].reason).toMatch(/canonical base64url/);
     expect(result.errors[1].reason).toMatch(/32 bytes/);
+  });
+
+  it("reports a file whose contents cannot be read", async () => {
+    const result = await readKeyFolder(
+      folder([
+        {
+          kind: "file",
+          name: "locked.pub",
+          getFile: async () => {
+            throw new Error("Permission denied");
+          },
+        },
+      ]),
+    );
+
+    expect(result.files).toEqual([]);
+    expect(result.errors).toEqual([
+      { fileName: "locked.pub", reason: "Permission denied" },
+    ]);
   });
 });

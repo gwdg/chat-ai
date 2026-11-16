@@ -450,12 +450,17 @@ describe("EncryptionSettings published keys", () => {
     const key = freshKey();
     const handle = {
       values: async function* values() {
+        // Mirrors a real FileSystemFileHandle: getFile(), no text().
         yield {
           kind: "file",
           name: "qwen-a.pub",
-          text: async () => `${key}\n`,
+          getFile: async () => ({ text: async () => `${key}\n` }),
         };
-        yield { kind: "file", name: "notes.txt", text: async () => key };
+        yield {
+          kind: "file",
+          name: "notes.txt",
+          getFile: async () => ({ text: async () => key }),
+        };
       },
     };
     const picker = vi.fn(async () => handle);
@@ -496,12 +501,12 @@ describe("EncryptionSettings published keys", () => {
         yield {
           kind: "file",
           name: "qwen-a.pub",
-          text: async () => key,
+          getFile: async () => ({ text: async () => key }),
         };
         yield {
           kind: "file",
           name: "broken.pub",
-          text: async () => "not a key",
+          getFile: async () => ({ text: async () => "not a key" }),
         };
       },
     };
