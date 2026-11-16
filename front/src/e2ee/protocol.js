@@ -127,15 +127,24 @@ export function keyId(publicKey) {
 export function parsePublicKey(text) {
   const raw = String(text ?? "").trim();
   if (!raw) throw new E2eeKeyError("The public key is empty.");
+  const cleaned = raw.replace(/\s+/g, "");
   let bytes;
   try {
-    bytes = b64d(raw.replace(/\s+/g, ""));
+    bytes = b64d(cleaned);
   } catch {
     throw new E2eeKeyError("The public key is not valid base64url text.");
   }
   if (bytes.length !== 32) {
     throw new E2eeKeyError(
       `An X25519 public key is 32 bytes, got ${bytes.length}.`,
+    );
+  }
+  // The published form is exactly 43 base64url characters. Accepting the
+  // standard alphabet or padding here would store a key the node never
+  // published, so every import path goes through this canonical check.
+  if (b64e(bytes) !== cleaned) {
+    throw new E2eeKeyError(
+      "The public key is not canonical base64url text (43 characters from A-Z, a-z, 0-9, - and _).",
     );
   }
   return bytes;

@@ -357,6 +357,17 @@ export default {
     directory_imported: "Imported {{count}} keys",
     directory_hint:
       "make -C encryption keys writes this file: every model's public key and binding in one document. Each key is still verified before it is stored.",
+    choose_folder: "Choose key folder…",
+    folder_hint:
+      "Reads every .pub file in a local folder. Files that are not valid public keys are reported and skipped.",
+    folder_imported: "Imported {{count}} keys, bound {{bound}} models",
+    folder_partial:
+      "Imported {{count}} keys ({{bound}} models). Skipped {{skipped}} file(s): {{files}}",
+    folder_empty: "No .pub files in that folder.",
+    folder_no_valid: "No valid public key in that folder ({{count}} file(s) rejected).",
+    folder_unsupported:
+      "This browser cannot open a folder here. Use the directory URL instead, or open the app over HTTPS or localhost.",
+    folder_error: "Could not read the folder: {{reason}}",
     import_error: "Could not import the key.",
     models_title: "Model encryption",
     models_keyed: "{{count}} encrypted",
@@ -719,7 +730,7 @@ export default {
       step1: "Open your user settings.",
       step2: "Choose the Encryption tab.",
       step3:
-        "Import the model's public key: paste it, choose a .pub file, load it from a URL, or import a whole key directory.",
+        "Import the model's public key: paste it, choose a .pub file, load it from a URL, import a key directory, or pick a local folder and read every .pub file in it.",
       step_published:
         "Or load the keys the deployment publishes: the key base URL is prefilled from the configuration, and Load keys for all models imports and verifies every published .pub file.",
       step4:

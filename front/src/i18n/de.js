@@ -369,6 +369,17 @@ export default {
     directory_imported: "{{count}} Schlüssel importiert",
     directory_hint:
       "make -C encryption keys schreibt diese Datei: Public Key und Bindung jedes Modells in einem Dokument. Jeder Schlüssel wird weiterhin vor dem Speichern geprüft.",
+    choose_folder: "Schlüsselordner wählen…",
+    folder_hint:
+      "Liest alle .pub-Dateien in einem lokalen Ordner. Dateien, die keine gültigen Public Keys sind, werden gemeldet und übersprungen.",
+    folder_imported: "{{count}} Schlüssel importiert, {{bound}} Modelle gebunden",
+    folder_partial:
+      "{{count}} Schlüssel importiert ({{bound}} Modelle). {{skipped}} Datei(en) übersprungen: {{files}}",
+    folder_empty: "Keine .pub-Dateien in diesem Ordner.",
+    folder_no_valid: "Kein gültiger Public Key in diesem Ordner ({{count}} Datei(en) abgelehnt).",
+    folder_unsupported:
+      "Dieser Browser kann hier keinen Ordner öffnen. Nutze stattdessen die Verzeichnis-URL oder öffne die App über HTTPS bzw. localhost.",
+    folder_error: "Der Ordner konnte nicht gelesen werden: {{reason}}",
     import_error: "Der Schlüssel konnte nicht importiert werden.",
     models_title: "Modellverschlüsselung",
     models_keyed: "{{count}} verschlüsselt",
@@ -736,7 +747,7 @@ export default {
       step1: "Öffnen Sie Ihre Benutzereinstellungen.",
       step2: "Wählen Sie den Tab Verschlüsselung.",
       step3:
-        "Importieren Sie den Public Key des Modells: einfügen, .pub-Datei wählen, aus einer URL laden oder ein ganzes Schlüsselverzeichnis importieren.",
+        "Importieren Sie den Public Key des Modells: einfügen, .pub-Datei wählen, aus einer URL laden, ein Schlüsselverzeichnis importieren oder einen lokalen Ordner wählen und alle .pub-Dateien darin einlesen.",
       step_published:
         "Oder laden Sie die vom Deployment veröffentlichten Schlüssel: Die Basis-URL ist aus der Konfiguration vorbelegt, und „Schlüssel für alle Modelle laden“ importiert und prüft jede veröffentlichte .pub-Datei.",
       step4:

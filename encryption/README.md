@@ -163,6 +163,29 @@ node, then publish the new public key.
    request against its own model before it is stored, so a wrong or stale key
    never reaches a chat.
 
+### Importing a local folder instead of publishing
+
+When the keys are not served over HTTP yet, keep the output of `make keys`
+(*including* `keys.json`) in a local folder and import it directly:
+
+- **Directory → Choose key folder…** opens the browser's folder picker
+  (`showDirectoryPicker({ mode: "read" })`) and reads every top-level `*.pub`
+  file. A file is bound to the model whose `publishedKeyFileName(model.id)`
+  equals the file name, so the generated names line up without any extra
+  configuration. `keys.json` itself is not needed on this path.
+- Every file is validated before it is used: the published form is exactly 43
+  base64url characters (`A-Z`, `a-z`, `0-9`, `-`, `_`), decoding to 32 bytes,
+  with no standard-alphabet `+`/`/` and no padding. Comments and surrounding
+  whitespace are allowed; a file that fails the check is reported and skipped
+  while the remaining files still import.
+- Each key that is bound to a model still goes through the same sealed test
+  request before it is stored, exactly like the URL import. A key that the node
+  does not accept is never saved.
+
+The folder picker needs a secure context (`https://` or `localhost`). On a plain
+`http://` LAN address the tab says so and points at the Directory URL import
+instead.
+
 ## Security notes
 
 - A `.key` file is the node's private key. `keys/.gitignore` excludes `*.key`

@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   Download,
   FolderDown,
+  FolderOpen,
   KeyRound,
   Link2,
   Lock,
@@ -28,6 +29,7 @@ import {
   fetchKeyFromUrl,
   mergeKeyImport,
   publicKeyFileText,
+  readKeyFolder,
 } from "../../e2ee/keys";
 import {
   modelKeyName,
@@ -38,6 +40,7 @@ import { internalModelUsage } from "../../e2ee/modelUsage";
 import {
   DEFAULT_KEY_BASE_URL,
   fetchPublishedKeyTexts,
+  publishedKeyFileName,
 } from "../../e2ee/publishedKeys";
 import { findKeyForAssignment, usableKey } from "../../e2ee/registry";
 import { verifyKeyForModel } from "../../e2ee/verify";
@@ -243,6 +246,86 @@ export default function EncryptionSettings({ modelsData }) {
       }
       notifySuccess(t("e2ee.directory_imported", { count: result.keys.length }));
       resetForm();
+    });
+
+  // A local folder of generated `.pub` files: every file is validated, the ones
+  // that parse are stored, and each is bound to the model whose published file
+  // name it carries. A file that is not a key is reported and skipped.
+  const handleFolder = () =>
+    run(async () => {
+      if (typeof globalThis.showDirectoryPicker !== "function") {
+        throw new Error(t("e2ee.folder_unsupported"));
+      }
+      let handle;
+      try {
+        handle = await globalThis.showDirectoryPicker({ mode: "read" });
+      } catch (caught) {
+        // The picker throws AbortError when the user dismisses the dialog.
+        if (caught?.name === "AbortError") return;
+        throw new Error(
+          t("e2ee.folder_error", {
+            reason: caught?.message || t("e2ee.import_error"),
+          }),
+        );
+      }
+
+      const { files, errors } = await readKeyFolder(handle);
+      if (!files.length) {
+        throw new Error(
+          errors.length
+            ? t("e2ee.folder_no_valid", { count: errors.length })
+            : t("e2ee.folder_empty"),
+        );
+      }
+
+      // A file name is the model id processed by publishedKeyFileName(), so the
+      // mapping back is a lookup over the models this deployment offers.
+      const imported = new Map();
+      const pairs = [];
+      for (const { fileName, key } of files) {
+        const matched = models.filter(
+          (model) => publishedKeyFileName(model.id) === fileName,
+        );
+        for (const model of matched) pairs.push({ key, model });
+        imported.set(key.id, {
+          key,
+          name: matched[0]?.name || key.name,
+        });
+      }
+
+      // Same rule as every other import: a key bound to a model is stored only
+      // after a sealed request to that model succeeds.
+      await verifyPairs(pairs);
+
+      for (const { key, name } of imported.values()) {
+        dispatch(addE2eeKey({ ...key, name }));
+      }
+      for (const { key, model } of pairs) {
+        dispatch(setE2eeModelKey({ modelId: model.id, keyId: key.id }));
+      }
+      // Only one toast can be active at a time (the hook ignores a second one),
+      // so a partial import is reported as a single, longer-lived message.
+      if (errors.length) {
+        notifyError(
+          t("e2ee.folder_partial", {
+            count: imported.size,
+            bound: pairs.length,
+            skipped: errors.length,
+            files: errors
+              .slice(0, 3)
+              .map((error) => `${error.fileName}: ${error.reason}`)
+              .join("; "),
+          }),
+          8000,
+        );
+      } else {
+        notifySuccess(
+          t("e2ee.folder_imported", {
+            count: imported.size,
+            bound: pairs.length,
+          }),
+        );
+      }
     });
 
   // The one-click path for a deployment that publishes its own node keys: one
@@ -679,6 +762,20 @@ export default function EncryptionSettings({ modelsData }) {
               <p className="text-xs text-base-content/60">
                 {t("e2ee.directory_hint")}
               </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className="btn btn-sm btn-ghost"
+                  onClick={handleFolder}
+                  disabled={busy}
+                >
+                  <FolderOpen className="h-4 w-4" aria-hidden="true" />
+                  {t("e2ee.choose_folder")}
+                </button>
+                <span className="text-xs text-base-content/60">
+                  {t("e2ee.folder_hint")}
+                </span>
+              </div>
             </>
           )}
 

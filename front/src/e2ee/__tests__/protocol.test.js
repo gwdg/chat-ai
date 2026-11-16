@@ -92,6 +92,19 @@ describe("parsePublicKey", () => {
     expect(() => parsePublicKey("not base64!")).toThrow(E2eeKeyError);
     expect(() => parsePublicKey(b64e(new Uint8Array(31)))).toThrow(E2eeKeyError);
   });
+
+  it("rejects a key that is not canonical base64url", () => {
+    // 32 bytes of 0xff encode to 43 underscores; the same bytes in the standard
+    // alphabet (and any padding) must not be accepted as a published key.
+    const canonical = b64e(new Uint8Array(32).fill(0xff));
+    expect(Array.from(parsePublicKey(canonical))).toEqual(
+      Array.from(new Uint8Array(32).fill(0xff)),
+    );
+    expect(() => parsePublicKey(canonical.replace(/_/g, "/"))).toThrow(
+      /canonical base64url/,
+    );
+    expect(() => parsePublicKey(`${canonical}=`)).toThrow(/canonical base64url/);
+  });
 });
 
 describe("sealRequest / openRequest", () => {

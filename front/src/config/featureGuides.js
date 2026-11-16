@@ -1029,7 +1029,7 @@ export const featureGuides = {
   e2ee: {
     titleKey: "feature_guide.e2ee.title",
     prompt:
-      "Encrypt a model end to end: open user settings, choose the Encryption tab, import the public key of an encryption-capable model (load the keys published under the configured key directory for all models at once, or paste one, choose a .pub file, load it from a URL, or import a key directory), then bind the model to that key. The model shows a lock and every request through it is encrypted in this browser.",
+      "Encrypt a model end to end: open user settings, choose the Encryption tab, import the public key of an encryption-capable model (load the keys published under the configured key directory for all models at once, or paste one, choose a .pub file, load it from a URL, import a key directory, or pick a local folder and read every .pub file in it), then bind the model to that key. The model shows a lock and every request through it is encrypted in this browser.",
     keywords: [
       "encryption",
       "end-to-end encryption",

@@ -446,6 +446,107 @@ describe("EncryptionSettings published keys", () => {
     expect(settings(store).e2ee_keys.map((key) => key.id)).toEqual(["key-1"]);
   });
 
+  it("imports the .pub files of a chosen folder and binds them by file name", async () => {
+    const key = freshKey();
+    const handle = {
+      values: async function* values() {
+        yield {
+          kind: "file",
+          name: "qwen-a.pub",
+          text: async () => `${key}\n`,
+        };
+        yield { kind: "file", name: "notes.txt", text: async () => key };
+      },
+    };
+    const picker = vi.fn(async () => handle);
+    vi.stubGlobal("showDirectoryPicker", picker);
+    const store = makeStore();
+    renderSettings(store);
+
+    fireEvent.click(screen.getByRole("button", { name: "Key directory" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /Choose key folder/ }),
+    );
+
+    await waitFor(() => {
+      expect(toast.notifySuccess).toHaveBeenCalled();
+    });
+    expect(picker).toHaveBeenCalledWith({ mode: "read" });
+
+    const keys = settings(store).e2ee_keys;
+    expect(keys).toHaveLength(1);
+    expect(keys[0]).toMatchObject({
+      publicKey: key,
+      name: "Qwen A",
+      source: "folder",
+    });
+    expect(settings(store).e2ee_models).toEqual({ "qwen-a": keys[0].id });
+    expect(verify.verifyKeyForModel).toHaveBeenCalledTimes(1);
+    expect(verify.verifyKeyForModel).toHaveBeenCalledWith(
+      expect.objectContaining({ modelId: "qwen-a" }),
+    );
+    // notes.txt is not a .pub file, so it is neither imported nor reported.
+    expect(toast.notifyError).not.toHaveBeenCalled();
+  });
+
+  it("skips and reports a .pub file that is not a valid key", async () => {
+    const key = freshKey();
+    const handle = {
+      values: async function* values() {
+        yield {
+          kind: "file",
+          name: "qwen-a.pub",
+          text: async () => key,
+        };
+        yield {
+          kind: "file",
+          name: "broken.pub",
+          text: async () => "not a key",
+        };
+      },
+    };
+    vi.stubGlobal("showDirectoryPicker", vi.fn(async () => handle));
+    const store = makeStore();
+    renderSettings(store);
+
+    fireEvent.click(screen.getByRole("button", { name: "Key directory" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /Choose key folder/ }),
+    );
+
+    await waitFor(() => {
+      expect(toast.notifyError).toHaveBeenCalled();
+    });
+
+    // The valid file still imports; the broken one is named in the message.
+    const keys = settings(store).e2ee_keys;
+    expect(keys).toHaveLength(1);
+    expect(keys[0]).toMatchObject({ publicKey: key, source: "folder" });
+    expect(settings(store).e2ee_models).toEqual({ "qwen-a": keys[0].id });
+    expect(toast.notifyError).toHaveBeenCalledWith(
+      expect.stringContaining("broken.pub"),
+      8000,
+    );
+    expect(toast.notifySuccess).not.toHaveBeenCalled();
+  });
+
+  it("explains when the browser cannot open a folder", async () => {
+    const store = makeStore();
+    renderSettings(store);
+
+    fireEvent.click(screen.getByRole("button", { name: "Key directory" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /Choose key folder/ }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        /cannot open a folder/,
+      );
+    });
+    expect(settings(store).e2ee_keys).toEqual([]);
+  });
+
   it("reports a directory that publishes no usable key", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => notFound));
     const store = makeStore();

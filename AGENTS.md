@@ -1405,6 +1405,14 @@ Regenerating it keeps existing pairs;
 `make list` reports a missing/invalid manifest, a model bound to an unknown key id, and a `.pub` the
 manifest does not list.
 
+The Directory tab can also read a local folder directly: `readKeyFolder()` (`e2ee/keys.js`) takes the
+handle from `showDirectoryPicker({ mode: "read" })`, reads the top-level `*.pub` files, and binds each
+one to the model whose `publishedKeyFileName(model.id)` equals the file name. A file that is not a
+canonical key is reported and skipped, the rest still import, and every key bound to a model is
+verified with one sealed request before it is stored. `parsePublicKey()` accepts only the published
+form — 43 base64url characters, no standard-alphabet `+`/`/` and no padding — so paste, file, URL,
+directory and folder imports all reject the same malformed text.
+
 `encryption/Makefile` wraps the same script for a host without this checkout's tooling
 (`make -C encryption keys|dry-run|force|list|test`, variables `NODE`, `OUT`, `CONFIG`,
 `MODELS_URL`, `API_KEY`, `HEADER_FLAGS`). It needs GNU make and Node 18+ and resolves its own

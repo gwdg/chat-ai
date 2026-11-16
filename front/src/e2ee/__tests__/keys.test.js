@@ -9,13 +9,15 @@ import {
   mergeKeyImport,
   parseKeyDirectory,
   publicKeyFileText,
+  readKeyFolder,
 } from "../keys";
 
 const publicKeyBytes = x25519.getPublicKey(x25519.utils.randomSecretKey());
 const publicKey = b64e(publicKeyBytes);
-const otherPublicKey = b64e(
-  x25519.getPublicKey(x25519.utils.randomSecretKey()),
+const otherPublicKeyBytes = x25519.getPublicKey(
+  x25519.utils.randomSecretKey(),
 );
+const otherPublicKey = b64e(otherPublicKeyBytes);
 const kid = keyId(publicKeyBytes);
 
 const response = (body, init = {}) =>
@@ -255,5 +257,60 @@ describe("mergeKeyImport", () => {
       mergeKeyImport([{ id: "", publicKey }], [{ id: "node-a", publicKey }]),
     ).toHaveLength(1);
     expect(mergeKeyImport(undefined, [])).toEqual([]);
+  });
+});
+
+describe("readKeyFolder", () => {
+  const folder = (entries) => ({
+    values: async function* values() {
+      for (const entry of entries) yield entry;
+    },
+  });
+  const file = (name, text) => ({ kind: "file", name, text: async () => text });
+
+  it("reads every .pub file, validates it and names the key by its stem", async () => {
+    const result = await readKeyFolder(
+      folder([
+        file("qwen-a.pub", `${publicKey}\n`),
+        file("b.pub", `# Node B\n${otherPublicKey}\n`),
+        file("upper.PUB", `${publicKey}\n`),
+        file("notes.txt", publicKey),
+        { kind: "directory", name: "nested" },
+      ]),
+    );
+
+    expect(result.errors).toEqual([]);
+    expect(result.files.map((entry) => entry.fileName)).toEqual([
+      "b.pub",
+      "qwen-a.pub",
+      "upper.PUB",
+    ]);
+    expect(result.files[0].key).toMatchObject({
+      name: "b",
+      publicKey: otherPublicKey,
+      source: "folder",
+      id: `key-${keyId(otherPublicKeyBytes)}`,
+    });
+    expect(result.files[1].key.publicKey).toBe(publicKey);
+    expect(result.files[1].key.name).toBe("qwen-a");
+  });
+
+  it("skips a file that is not a canonical 43-character base64url key", async () => {
+    const canonical = b64e(new Uint8Array(32).fill(0xff));
+    const result = await readKeyFolder(
+      folder([
+        file("good.pub", canonical),
+        file("standard.pub", canonical.replace(/_/g, "/")),
+        file("short.pub", b64e(new Uint8Array(31))),
+      ]),
+    );
+
+    expect(result.files.map((entry) => entry.fileName)).toEqual(["good.pub"]);
+    expect(result.errors.map((error) => error.fileName)).toEqual([
+      "standard.pub",
+      "short.pub",
+    ]);
+    expect(result.errors[0].reason).toMatch(/canonical base64url/);
+    expect(result.errors[1].reason).toMatch(/32 bytes/);
   });
 });

@@ -162,6 +162,45 @@ export async function fetchKeyDirectory(url, { fetchImpl = (...args) => globalTh
   return { keys: resolved.map(({ key }) => key), models };
 }
 
+/**
+ * Reads every `.pub` file in a local directory chosen with
+ * `showDirectoryPicker()`.
+ *
+ * The folder is validated file by file with the same canonical key check as the
+ * other import paths: a file that is not a 43-character base64url X25519 public
+ * key is reported in `errors` and skipped, so one stray file cannot abort the
+ * import. `files` carries the parsed key and the file name, which the caller
+ * maps back to a model id.
+ *
+ * @returns {Promise<{
+ *   files: Array<{ fileName: string, key: object }>,
+ *   errors: Array<{ fileName: string, reason: string }>,
+ * }>}
+ */
+export async function readKeyFolder(handle) {
+  const files = [];
+  const errors = [];
+  for await (const item of handle.values()) {
+    if (item?.kind !== "file") continue;
+    const fileName = text(item.name);
+    if (!fileName.toLowerCase().endsWith(".pub")) continue;
+    try {
+      const key = keyEntryFromText(await item.text(), {
+        name: fileName.slice(0, -".pub".length),
+        source: "folder",
+      });
+      files.push({ fileName, key });
+    } catch (error) {
+      errors.push({
+        fileName,
+        reason: error?.message || "Not a public key.",
+      });
+    }
+  }
+  files.sort((a, b) => a.fileName.localeCompare(b.fileName));
+  return { files, errors };
+}
+
 /** The text a `.pub` download contains. */
 export function publicKeyFileText(entry) {
   const name = text(entry?.name);
