@@ -208,8 +208,8 @@ export const featureGuides = {
   remote_agents: {
     titleKey: "feature_guide.remote_agents.title",
     prompt:
-      "Spawn a remote agent from the Agents section in the sidebar. Agents run on GWDG infrastructure; expand an agent to switch between its sessions and subagent sessions, or use + to create a new session.",
-    keywords: ["agent", "agents", "remote agent", "hpc project", "gwdg infrastructure", "agent session", "subagent", "new session"],
+      "Spawn a remote agent from the Agents section in the sidebar. An agent runs either on the GWDG HPC agentic service, where you pick one of your HPC projects, or on an OpenCode server you connect with its URL and password. Expand an agent to switch between its sessions and subagent sessions, or use + to create a new session.",
+    keywords: ["agent", "agents", "remote agent", "hpc project", "gwdg infrastructure", "external opencode server", "agent session", "subagent", "new session"],
     steps: [
       {
         target: '[data-guide="agents-spawn"]',

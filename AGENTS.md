@@ -811,7 +811,10 @@ several sources can appear side by side in one workspace; the workspace browser 
 mount list. `workspace_chats` is the
 many-to-many chat link: a chat can be attached to any number of workspaces, shown under the
 workspace in the sidebar and in the workspace's Chats panel, and toggled from the `Workspace` icon
-left of the Local tools icon in the prompt box. `workspace_agents` is the matching many-to-many link
+left of the Local tools icon in the prompt box. The `+` on a workspace row in the sidebar and the
+`+` in the workspace page's Chats panel both start a new chat that is linked right away; an
+existing chat is linked with the link control in the workspace page's Chats panel, not from the
+sidebar row. `workspace_agents` is the matching many-to-many link
 between workspaces and localStorage-backed agent entries; the workspace page's Agents panel attaches
 or detaches them, and links whose agent no longer exists are removed when that page loads.
 `workspace_agent_sessions` (Dexie v13) is the session-level link: it stores
@@ -1012,11 +1015,14 @@ searches through `/api/fs/find`, and refreshes on navigation, upload, new file, 
 refresh. The
 `WorkspaceFilePanel` preview is rendered by `AgentPage` to the right of the chat, not beside the
 file list. The sidebar's `+` opens
-`modals/Agent/AddAgentModal`, which offers a name and the placeholder HPC project list. The row's
+`modals/Agent/AddAgentModal`, which offers a name and one connection choice: the GWDG HPC agentic
+service (with the placeholder HPC project list) or an external OpenCode agent server (with its URL
+and password). The choice is a pair of `tabs-box` buttons, one per mode; the fields below it belong
+to the selected mode. An agent created either way stores `local: true` (a service agent keeps the
+flag it already had), because `CreateWorkspaceModal` and `db/workspaceDb.ts` gate the agent-files
+source on `local !== false`. The row's
 vertical menu edits (`agentEdit`, all creation fields; changing the server or password opens a new
-session) or removes the agent. The creation form has a `local` toggle; only local agents show the
-editable OpenCode server URL and password (non-local agents use the `front.json` defaults), and the
-HPC project selector is shown only for non-local agents. Adding an agent calls the local `opencode serve` HTTP API through
+session) or removes the agent. Adding an agent calls the local `opencode serve` HTTP API through
 `apis/opencodeAgents.js`: `GET /api/info` verifies the server, `POST /api/session` creates the chat
 session, and `AgentConversation` sends `POST /api/session/:id/prompt` and polls
 `GET /api/session/:id/message?order=asc` until an `idle` message appears. It also exposes the
@@ -1065,10 +1071,10 @@ service, which in a deployment sits behind SAIA. `apis/agentAccess.js` is the po
 bracketed or not), and `isServiceManagedAgent()` is "the agent carries a `serviceAgentId`".
 `apis/opencodeAgents.js#rawRequest` enforces it for every request, so a direct agent outside local
 access throws `DIRECT_AGENT_BLOCKED` without touching the network. `AddAgentModal` mirrors the policy
-outside local access: it hides the service toggle, the local toggle, the server URL/password fields
-and the HPC project selector, and shows `agents.service_forced_hint`. Saving an existing direct
-agent there migrates it to the service (creates the service agent, stores its proxy prefix, drops
-the basic-auth password). There is no config flag that bypasses this; a LAN/IP deployment counts as
+outside local access: it replaces the connection choice with `agents.service_forced_hint`, forces the
+service mode and hides the server URL/password fields, so an existing direct agent is migrated when
+it is saved (creates the service agent, stores its proxy prefix, drops the basic-auth password).
+There is no config flag that bypasses this; a LAN/IP deployment counts as
 deployment.
 
 The [SAIA agent service](agent-service/README.md) has **no config key**: the browser always calls it
@@ -1081,8 +1087,8 @@ when it was created: `opencodeAgents.js#baseUrl()` derives it from `serviceAgent
 follows the current deployment. Because no gateway runs locally, `vite.config.js` proxies `/agents`
 to `http://127.0.0.1:8090` (override with the `AGENT_SERVICE_DEV_PROXY` environment variable) but
 only in `development` mode; a production build and a gateway-fronted preview never contain it. The
-service toggle in the add-agent window only appears with local access, where it is the way back to a
-direct server.
+connection choice in the add-agent window only appears with local access, where its external-server
+mode is the way back to a direct server.
 `AgentList`'s remove action also calls `DELETE /agents/<id>` when `serviceAgentId` is set, so
 removing the row frees the container/process; a `404` counts as already removed. The rest of the
 OpenCode client (`apis/opencodeAgents.js`) is unchanged because the proxy forwards `/api/*`

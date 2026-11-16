@@ -353,7 +353,7 @@ export default {
     },
     remote_agents: {
       title: "Spawn a remote agent",
-      step1: "Use the + button in the Agents section to add an agent and select its HPC project.",
+      step1: "Use the + button in the Agents section to add an agent. Pick the GWDG HPC agentic service and its HPC project, or connect an OpenCode server.",
       step2: "Agents appear in the list; click one to open its chat on the right.",
       step3: "Expand an agent with the chevron to see each workspace with the sessions attached there, plus sessions that are not in a workspace. Click a session to switch, use + to create one, or open the ... menu to rename, detach or close it.",
     },
@@ -1749,9 +1749,11 @@ export default {
     options: "Agent options",
     pin_action: "Pin agent",
     unpin_action: "Unpin agent",
-    add_hint: "Select one of the HPC projects available to you.",
-    local: "Local agent",
-    use_service: "Run through the agent service",
+    connection_label: "Connection",
+    mode_service: "GWDG HPC agentic service",
+    mode_external: "OpenCode server",
+    hpc_project_hint: "Select one of the HPC projects available to you.",
+    default_name: "OpenCode agent",
     service_hint:
       "The agent service starts an OpenCode container for this agent and stops it when you remove the agent. No server URL or password is needed.",
     service_forced_hint:

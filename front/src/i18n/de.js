@@ -363,7 +363,7 @@ export default {
     },
     remote_agents: {
       title: "Einen Remote-Agenten starten",
-      step1: "Verwenden Sie die +-Schaltfläche im Bereich Agenten, um einen Agenten hinzuzufügen und sein HPC-Projekt auszuwählen.",
+      step1: "Verwenden Sie die +-Schaltfläche im Bereich Agenten, um einen Agenten hinzuzufügen. Wählen Sie den GWDG HPC-Agenten-Dienst und sein HPC-Projekt oder verbinden Sie einen OpenCode-Server.",
       step2: "Agenten erscheinen in der Liste; klicken Sie auf einen, um seinen Chat rechts zu öffnen.",
       step3: "Klappen Sie einen Agenten über das Chevron auf, um jeden Arbeitsbereich mit den zugeordneten Sitzungen sowie Sitzungen ohne Arbeitsbereich zu sehen. Klicken Sie eine Sitzung zum Wechseln an, erstellen Sie mit + eine neue oder öffnen Sie das ...-Menü zum Umbenennen, Entfernen oder Schließen.",
     },
@@ -1773,9 +1773,11 @@ export default {
     options: "Agent-Optionen",
     pin_action: "Agenten anheften",
     unpin_action: "Agenten nicht mehr anheften",
-    add_hint: "Wählen Sie eines der HPC-Projekte aus, die Ihnen zur Verfügung stehen.",
-    local: "Lokaler Agent",
-    use_service: "Über den Agenten-Dienst ausführen",
+    connection_label: "Verbindung",
+    mode_service: "GWDG HPC-Agenten-Dienst",
+    mode_external: "OpenCode-Server",
+    hpc_project_hint: "Wählen Sie eines der HPC-Projekte aus, die Ihnen zur Verfügung stehen.",
+    default_name: "OpenCode-Agent",
     service_hint:
       "Der Agenten-Dienst startet für diesen Agenten einen OpenCode-Container und beendet ihn, wenn Sie den Agenten entfernen. Eine Server-URL oder ein Passwort ist nicht nötig.",
     service_forced_hint:

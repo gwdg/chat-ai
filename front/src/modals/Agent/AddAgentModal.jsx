@@ -18,6 +18,10 @@ import { directAgentAccessAllowed } from "../../apis/agentAccess";
 // Placeholder project list; the real projects will come from the GWDG backend.
 const PROJECT_COUNT = 3;
 
+// The two connection kinds this dialog offers: an agent running on the GWDG HPC
+// agentic service, or an OpenCode server the user runs and points at itself.
+const CONNECTION_MODES = ["service", "external"];
+
 export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
   const { t } = useTranslation();
   const editing = Boolean(agent?.id);
@@ -34,19 +38,19 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
   const [projectId, setProjectId] = useState(
     agent?.projectId ?? projects[0]?.id ?? "",
   );
-  const [local, setLocal] = useState(agent?.local !== false);
-  // New agents run through the service (the default deployment path); an
-  // existing agent keeps the mode it was created with so editing never migrates
-  // it silently.
-  const [useService, setUseService] = useState(
-    agent?.serviceAgentId ? true : !agent,
+  // New agents run on the GWDG HPC agentic service (the default deployment
+  // path); an existing agent keeps the mode it was created with so editing never
+  // migrates it silently.
+  const [mode, setMode] = useState(
+    agent ? (agent.serviceAgentId ? "service" : "external") : "service",
   );
   // Direct `opencode serve` connections are a local-only affordance. Outside a
   // locally opened Chat AI every agent must run through the service behind SAIA,
-  // so the direct mode is not offered and an existing direct agent is migrated
-  // when it is saved.
+  // so the external server is not offered and an existing direct agent is
+  // migrated when it is saved.
   const directAllowed = directAgentAccessAllowed();
-  const serviceMode = useService || !directAllowed;
+  const connectionMode = directAllowed ? mode : "service";
+  const serviceMode = connectionMode === "service";
   const [serverUrl, setServerUrl] = useState(
     agent?.serverUrl ?? defaults.serverUrl,
   );
@@ -58,24 +62,21 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
   const project = projects.find((item) => item.id === projectId);
 
   const submit = async () => {
-    if (!project || saving) return;
+    if (saving || (serviceMode && !project)) return;
     setSaving(true);
     setError("");
-    const effectiveServerUrl = local
-      ? serverUrl.trim()
-      : defaults.serverUrl;
-    const effectivePassword = local ? password : defaults.password;
     let next = {
       ...(agent ?? {}),
       id: agent?.id ?? newId(),
-      projectId: project.id,
-      name: name.trim() || project.name,
-      local,
-      serverUrl: effectiveServerUrl,
+      name: name.trim() || project?.name || t("agents.default_name"),
+      // `local` is no longer a user choice: an external server is always
+      // configured here, while a service agent keeps the flag it had so
+      // features that gate on `local !== false` are unaffected.
+      local: serviceMode ? agent?.local !== false : true,
+      serverUrl: serverUrl.trim(),
       username: agent?.username ?? defaults.username,
-      password: effectivePassword,
-      passwordSource:
-        effectivePassword === defaults.password ? "config" : "custom",
+      password,
+      passwordSource: password === defaults.password ? "config" : "custom",
     };
     let createdServiceId = null;
     let replacedServiceId = null;
@@ -91,6 +92,7 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
       }
       next = {
         ...next,
+        projectId: project.id,
         serviceAgentId,
         serviceManaged: true,
         username: defaults.username,
@@ -98,8 +100,12 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
         passwordSource: "service",
       };
     } else {
-      const { serviceAgentId: _id, serviceManaged: _managed, ...direct } =
-        next;
+      const {
+        serviceAgentId: _id,
+        serviceManaged: _managed,
+        projectId: _project,
+        ...direct
+      } = next;
       next = direct;
       if (agent?.serviceAgentId) replacedServiceId = agent.serviceAgentId;
     }
@@ -113,7 +119,7 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
         await getOpencodeInfo(next);
         const session = await createOpencodeSession(
           next,
-          `${next.name || project.name} agent`,
+          `${next.name || project?.name || ""} agent`,
         );
         patch = { ...next, sessionId: session.id };
       }
@@ -143,28 +149,38 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} titleKey="agents.add_title">
       <div className="flex flex-col gap-3 pb-2 text-sm">
-        <p className="text-xs text-base-content/70">{t("agents.add_hint")}</p>
-        {directAllowed && (
-          <label className="flex items-center gap-2 text-xs">
-            <input
-              type="checkbox"
-              className="toggle toggle-sm"
-              checked={useService}
-              onChange={(event) => setUseService(event.target.checked)}
-            />
-            {t("agents.use_service")}
-          </label>
-        )}
-        {!serviceMode && (
-          <label className="flex items-center gap-2 text-xs">
-            <input
-              type="checkbox"
-              className="toggle toggle-sm"
-              checked={local}
-              onChange={(event) => setLocal(event.target.checked)}
-            />
-            {t("agents.local")}
-          </label>
+        {directAllowed ? (
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-base-content/70">
+              {t("agents.connection_label")}
+            </span>
+            <div
+              role="group"
+              aria-label={t("agents.connection_label")}
+              className="tabs tabs-box tabs-sm grid min-h-10 grid-cols-2"
+            >
+              {CONNECTION_MODES.map((option) => {
+                const selected = option === connectionMode;
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setMode(option)}
+                    className={`tab h-auto min-w-0 whitespace-normal px-2 py-2 text-center text-xs font-medium leading-tight ${
+                      selected ? "tab-active text-accent!" : ""
+                    }`}
+                  >
+                    {t(`agents.mode_${option}`)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <p className="text-[11px] leading-relaxed text-base-content/60">
+            {t("agents.service_forced_hint")}
+          </p>
         )}
         <label className="flex flex-col gap-1">
           <span className="text-xs font-medium text-base-content/70">
@@ -178,34 +194,34 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
           />
         </label>
         {serviceMode && (
-          <p className="text-[11px] leading-relaxed text-base-content/50">
-            {t("agents.service_hint")}
-          </p>
+          <>
+            <div className="flex flex-col gap-1">
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-base-content/70">
+                  {t("agents.hpc_project_label")}
+                </span>
+                <select
+                  value={projectId}
+                  onChange={(event) => setProjectId(event.target.value)}
+                  className="select select-bordered w-full"
+                >
+                  {projects.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p className="text-[11px] leading-relaxed text-base-content/50">
+                {t("agents.hpc_project_hint")}
+              </p>
+            </div>
+            <p className="text-[11px] leading-relaxed text-base-content/50">
+              {t("agents.service_hint")}
+            </p>
+          </>
         )}
-        {!directAllowed && (
-          <p className="text-[11px] leading-relaxed text-base-content/60">
-            {t("agents.service_forced_hint")}
-          </p>
-        )}
-        {!serviceMode && !local && (
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-base-content/70">
-              {t("agents.hpc_project_label")}
-            </span>
-            <select
-              value={projectId}
-              onChange={(event) => setProjectId(event.target.value)}
-              className="select select-bordered w-full"
-            >
-              {projects.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        {!serviceMode && local && (
+        {!serviceMode && (
           <>
             <label className="flex flex-col gap-1">
               <span className="text-xs font-medium text-base-content/70">
@@ -244,7 +260,7 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
             type="button"
             className="btn btn-accent"
             onClick={submit}
-            disabled={!project || saving}
+            disabled={saving || (serviceMode && !project)}
           >
             {saving
               ? t("agents.connecting")
