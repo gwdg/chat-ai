@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { configureStore } from "@reduxjs/toolkit";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { x25519 } from "@noble/curves/ed25519.js";
 
 import userSettingsReducer from "../../../Redux/reducers/userSettingsReducer";
@@ -192,6 +192,10 @@ describe("EncryptionSettings model status", () => {
       </Provider>,
     );
 
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("marks a bound model as encrypted and offers no per-model key picker", () => {
     const store = makeStore();
     store.dispatch({
@@ -208,7 +212,8 @@ describe("EncryptionSettings model status", () => {
     expect(screen.getByText("End-to-end encrypted")).toBeInTheDocument();
     // The key's label appears in the key list and in the model row.
     expect(screen.getAllByText("Node A").length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText("Not encrypted")).toBeInTheDocument();
+    // An unencrypted plain chat model is hidden.
+    expect(screen.queryByText("Not encrypted")).toBeNull();
     // Bindings come from the key's "Applies to models" list; the table is
     // read-only, so there is no select to assign a key per model.
     expect(screen.queryByRole("combobox")).toBeNull();
@@ -230,5 +235,29 @@ describe("EncryptionSettings model status", () => {
     expect(screen.getByText("Key missing or invalid")).toBeInTheDocument();
     // A broken key encrypts nothing, so the model is not counted as encrypted.
     expect(screen.getByText("0 encrypted")).toBeInTheDocument();
+  });
+
+  it("lists an internal-service model and names the feature", () => {
+    vi.stubEnv("VITE_MEMORY_GENERATION_MODEL", "mistral-b");
+    const store = makeStore();
+
+    renderWith(store);
+
+    expect(screen.getByText("Mistral B")).toBeInTheDocument();
+    expect(screen.getByText("Used for")).toBeInTheDocument();
+    expect(screen.getByText("Memory")).toBeInTheDocument();
+    expect(screen.getByText("Not encrypted")).toBeInTheDocument();
+    // The plain chat model without a key stays out of the list.
+    expect(screen.queryByText("Qwen A")).toBeNull();
+  });
+
+  it("shows an empty state when nothing is encrypted or used internally", () => {
+    const store = makeStore();
+
+    renderWith(store);
+
+    expect(
+      screen.getByText(/No model is encrypted yet or used by an internal feature/),
+    ).toBeInTheDocument();
   });
 });

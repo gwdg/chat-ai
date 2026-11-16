@@ -342,7 +342,18 @@ export default {
     models_keyed: "{{count}} encrypted",
     models_description:
       "A model listed in a key's \"Applies to models\" sends only ciphertext. Models without a key keep sending in cleartext. If a bound key is missing or invalid, requests for its models are blocked instead of falling back to cleartext.",
-    models_no_keys: "Add a key and list the models it applies to.",
+    models_filtered_hint:
+      "Only models bound to a key and models used by an internal feature are listed.",
+    models_empty:
+      "No model is encrypted yet or used by an internal feature.",
+    used_for: "Used for",
+    features: {
+      titles: "Titles",
+      memory: "Memory",
+      proposals: "Proposals",
+      summaries: "Summaries",
+      image_analysis: "Image analysis",
+    },
     models_blocked: "Key missing or invalid",
     not_encrypted: "Not encrypted",
   },

@@ -1358,9 +1358,15 @@ binds it to the models named on import. The add-key form has no free-form name: 
 labels the key with those model names (or its fingerprint); unknown entries are reported and
 skipped. Every key is verified before it is stored: `src/e2ee/verify.js` sends one sealed one-token
 request per bound model and requires a sealed answer, so a wrong key, a non-E2EE model or an
-unreachable endpoint keeps the key out. The model table is read-only and reports each model as
-encrypted (with its key's label), blocked (the bound key is missing or invalid), or not encrypted;
-bindings change by removing the key and importing it again. Storage is Redux `user_settings.e2ee_keys` / `e2ee_models` (persist
+unreachable endpoint keeps the key out. The model table is read-only and lists only models bound to
+a key plus models used by an internal feature, which `src/e2ee/modelUsage.js` resolves from
+`VITE_TITLE_GENERATION_MODEL`, `VITE_MEMORY_GENERATION_MODEL`, `VITE_PROPOSAL_GENERATION_MODEL`
+(Choices), `VITE_EXPLAIN_IMAGE_MODEL` (agent) and the user's default model for conversation
+summaries (falling back to `VITE_DEFAULT_SETTINGS.model.id`). Each row reports encrypted (with its
+key's label), blocked (the bound key is missing or invalid), or not encrypted, plus the feature
+labels (`titles`, `memory`, `proposals`, `summaries`, `image_analysis`). Bindings change by removing
+the key and importing it again. The OpenCode agent is not part of the list: it selects a model per
+session and its model calls do not pass through the browser's E2EE wrapper. Storage is Redux `user_settings.e2ee_keys` / `e2ee_models` (persist
 version 10 + migration 10); `importUserSettings` keeps only the public fields and drops bindings to
 unknown keys. The Meta chat exposes the state through `get_user_settings` and `list_e2ee_keys`, and
 `E2EE_ASSIGN` proposes/reverts a binding through `MetaActionCard` (it never imports a key). The

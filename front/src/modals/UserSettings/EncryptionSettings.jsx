@@ -14,6 +14,8 @@ import {
 import {
   addE2eeKey,
   removeE2eeKey,
+  selectConversationSummaries,
+  selectDefaultModel,
   selectE2eeKeys,
   selectE2eeModels,
   setE2eeModelKey,
@@ -30,6 +32,7 @@ import {
   parseModelTokens,
   resolveModelTokens,
 } from "../../e2ee/modelBindings";
+import { internalModelUsage } from "../../e2ee/modelUsage";
 import { findKeyForAssignment, usableKey } from "../../e2ee/registry";
 import { verifyKeyForModel } from "../../e2ee/verify";
 import { authHeaders } from "../../apis/authHeaders";
@@ -65,9 +68,27 @@ export default function EncryptionSettings({ modelsData }) {
     [modelsData],
   );
 
+  // Internal features (titles, memory, proposals, image analysis) send a
+  // request without the user picking that model in a chat, so their models are
+  // listed even while unencrypted. Everything else only appears once a key is
+  // bound to it.
+  const defaultModel = useSelector(selectDefaultModel);
+  const summariesEnabled = useSelector(selectConversationSummaries);
+  const usage = useMemo(
+    () =>
+      internalModelUsage(import.meta.env, {
+        defaultModelId: defaultModel?.id ?? "",
+        summaries: summariesEnabled,
+      }),
+    [defaultModel, summariesEnabled],
+  );
+  const visibleModels = models.filter(
+    (model) => assignments[model.id] || usage.has(model.id),
+  );
+
   // Count only bindings that resolve to a usable key: an assigned key that is
   // missing or invalid blocks the model instead of encrypting it.
-  const keyedCount = models.filter((model) =>
+  const keyedCount = visibleModels.filter((model) =>
     usableKey(findKeyForAssignment(keys, assignments[model.id])),
   ).length;
 
@@ -459,27 +480,48 @@ export default function EncryptionSettings({ modelsData }) {
         <p className="text-xs leading-relaxed text-base-content/70">
           {t("e2ee.models_description")}
         </p>
+        <p className="text-xs text-base-content/60">
+          {t("e2ee.models_filtered_hint")}
+        </p>
 
-        {keys.length === 0 ? (
-          <p className="text-xs text-base-content/60">{t("e2ee.models_no_keys")}</p>
-        ) : models.length === 0 ? (
+        {models.length === 0 ? (
           <p className="text-xs text-base-content/60">{t("common.loading")}</p>
+        ) : visibleModels.length === 0 ? (
+          <p className="text-xs text-base-content/60">{t("e2ee.models_empty")}</p>
         ) : (
           <ul className="flex flex-col divide-y divide-base-300 rounded-lg border border-base-300">
-            {models.map((model) => {
+            {visibleModels.map((model) => {
               const assigned = assignments[model.id];
               const entry = findKeyForAssignment(keys, assigned);
               const usable = usableKey(entry);
+              const features = usage.get(model.id) ?? [];
               return (
                 <li
                   key={model.id}
                   className="flex flex-wrap items-center gap-3 px-3 py-2"
                 >
-                  <span className="flex min-w-0 flex-1 items-center gap-1.5">
-                    <span className="truncate text-sm text-base-content">
-                      {model.name || model.id}
+                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <span className="truncate text-sm text-base-content">
+                        {model.name || model.id}
+                      </span>
+                      <E2eeLock modelId={model.id} size={13} />
                     </span>
-                    <E2eeLock modelId={model.id} size={13} />
+                    {features.length > 0 && (
+                      <span className="flex flex-wrap items-center gap-1">
+                        <span className="text-[0.7rem] text-base-content/50">
+                          {t("e2ee.used_for")}
+                        </span>
+                        {features.map((feature) => (
+                          <span
+                            key={feature}
+                            className="badge badge-ghost badge-xs"
+                          >
+                            {t(`e2ee.features.${feature}`)}
+                          </span>
+                        ))}
+                      </span>
+                    )}
                   </span>
                   {/* Read-only: a key's "Applies to models" list sets the
                       binding, this table only reports the resulting state. */}

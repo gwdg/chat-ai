@@ -353,8 +353,18 @@ export default {
     models_keyed: "{{count}} verschlüsselt",
     models_description:
       "Ein Modell, das unter \"Gilt für Modelle\" eines Schlüssels aufgeführt ist, sendet nur Geheimtext. Modelle ohne Schlüssel senden weiterhin im Klartext. Fehlt ein gebundener Schlüssel oder ist er ungültig, werden Anfragen für seine Modelle blockiert statt auf Klartext zurückzufallen.",
-    models_no_keys:
-      "Fügen Sie einen Schlüssel hinzu und geben Sie die Modelle an, für die er gilt.",
+    models_filtered_hint:
+      "Nur mit einem Schlüssel verbundene Modelle und Modelle, die eine interne Funktion verwendet, werden aufgelistet.",
+    models_empty:
+      "Noch kein Modell ist verschlüsselt oder wird von einer internen Funktion verwendet.",
+    used_for: "Verwendet für",
+    features: {
+      titles: "Titel",
+      memory: "Gedächtnis",
+      proposals: "Vorschläge",
+      summaries: "Zusammenfassungen",
+      image_analysis: "Bildanalyse",
+    },
     models_blocked: "Schlüssel fehlt oder ist ungültig",
     not_encrypted: "Nicht verschlüsselt",
   },
