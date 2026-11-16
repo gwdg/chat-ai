@@ -862,7 +862,11 @@ All three previews — workspace browser, agent file list/panel and chat attachm
 data?, loading?, error?, onOpenPath? }`; `hooks/useConversationFilePreview.js` builds that shape for a
 stored conversation file (media from `useFileBase64`, text from `useFileContent`). A new file type
 belongs in `FilePreviewContent`, not in one of the call sites: otherwise the same file would look
-different in a workspace and in a chat.
+different in a workspace and in a chat. A `.md` file is rendered with `MarkdownRenderer`
+(`isLoading={false}`), the same component as a chat message, so headings, tables, KaTeX and the
+fence renderers (mermaid, typst, latex, highlighted code) look identical; empty text keeps the
+`<pre>` fallback. Because it reads Redux and uses `useNavigate` for internal links, tests that
+preview markdown need a `react-redux` mock and a router (`MemoryRouter`).
 
 Switching to another file must not reuse the previous one's bytes: `FilePreviewPanel` keys the
 content by the preview's own key (`fileId` for chat), media is only rendered once `url` belongs to

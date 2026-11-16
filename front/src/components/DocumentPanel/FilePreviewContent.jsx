@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import Papa from "papaparse";
 
 import AudioPlayer from "./AudioPlayer";
+import MarkdownRenderer from "../Conversation/MessageAssistant/MarkdownRenderer";
 import SandboxedHtmlPreview from "../Others/SandboxedHtmlPreview";
 import { getFileType } from "../../utils/attachments";
 
@@ -322,6 +323,13 @@ export default function FilePreviewContent({
           })}
         </div>
       );
+    }
+
+    // Markdown goes through the chat's own renderer, so a .md file looks exactly like the
+    // same text in a message: headings, tables, KaTeX, and the same fence renderers
+    // (mermaid, typst, latex, code highlighting).
+    if (fileType === "markdown" && text.trim()) {
+      return <MarkdownRenderer isLoading={false}>{text}</MarkdownRenderer>;
     }
 
     return (

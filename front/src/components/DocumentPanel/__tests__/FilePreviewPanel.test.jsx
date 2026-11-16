@@ -1,12 +1,24 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
+
+// The markdown branch renders through the chat's MarkdownRenderer, which reads the HTML
+// preferences from Redux.
+vi.mock("react-redux", () => ({
+  useSelector: (selector) =>
+    selector({ user_settings: {}, interface_settings: {} }),
+}));
 
 import FilePreviewPanel from "../FilePreviewPanel";
 
 // Workspace, agent and chat previews all render this panel, so the shared renderer has
 // to cover the shapes each of them produces.
 const renderPanel = (preview, props = {}) =>
-  render(<FilePreviewPanel preview={preview} onClose={() => {}} {...props} />);
+  render(
+    <MemoryRouter>
+      <FilePreviewPanel preview={preview} onClose={() => {}} {...props} />
+    </MemoryRouter>
+  );
 
 describe("FilePreviewPanel", () => {
   it("renders CSV text as a table", () => {
@@ -19,6 +31,21 @@ describe("FilePreviewPanel", () => {
       screen.getByRole("columnheader", { name: "name" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("cell", { name: "beta" })).toBeInTheDocument();
+  });
+
+  it("renders markdown with the chat's renderer", () => {
+    renderPanel({
+      entry: { name: "notes.md", mime: "text/markdown" },
+      text: "# Notes\n\nSome **bold** text and a [link](https://example.org).",
+    });
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Notes" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("bold").tagName).toBe("STRONG");
+    expect(screen.getByRole("link", { name: "link" })).toBeInTheDocument();
+    // Not the raw fallback dump.
+    expect(document.querySelector("pre")).toBeNull();
   });
 
   it("renders an image from the entry's url", () => {

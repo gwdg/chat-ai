@@ -2,6 +2,12 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import ChatFilePreviewPanel from "../ChatFilePreviewPanel";
+// A markdown attachment renders through the chat's MarkdownRenderer, which reads Redux.
+vi.mock("react-redux", () => ({
+  useSelector: (selector) =>
+    selector({ user_settings: {}, interface_settings: {} }),
+}));
+
 import { saveFileReady } from "../../../db";
 
 // Switching from one attachment to another must never reuse the previous file's bytes.
