@@ -9,7 +9,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { Check, ChevronRight } from "lucide-react";
-import { Workspace } from "@carbon/icons-react";
+import { Workspace, DataBase } from "@carbon/icons-react";
 
 import Tooltip from "../Others/Tooltip";
 import WorkspaceSettings from "../Workspace/WorkspaceSettings";
@@ -34,8 +34,9 @@ function ManageDataRow({ label, onSelect }) {
         close();
         onSelect();
       }}
-      className="flex w-full items-center gap-1.5 rounded-lg py-1 pl-6 pr-1 text-left text-xs font-medium text-base-content transition hover:bg-base-200"
+      className="flex w-full items-center gap-2 rounded-lg py-1 pl-1 pr-1 text-left text-xs font-medium text-base-content transition hover:bg-base-200"
     >
+      <DataBase size={16} className="shrink-0 text-accent" />
       <span className="min-w-0 flex-1 truncate">{label}</span>
       <ChevronRight size={12} className="shrink-0 text-base-content/40" />
     </button>
