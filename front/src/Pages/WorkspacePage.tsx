@@ -77,6 +77,7 @@ import {
 import type { RootEntry } from "../workspace/workspaceRoot";
 import { useWorkspaceProviders } from "../workspace/useWorkspaceProviders";
 import { planTransfer } from "../workspace/transferPlanner";
+import { entriesForAction } from "../workspace/selection";
 import { runTransfer } from "../workspace/transfer";
 import { uploadLocalFiles } from "../workspace/upload";
 import { baseName, joinPath, normalizePath, parentPath } from "../workspace/paths";
@@ -1459,51 +1460,61 @@ export default function WorkspacePage() {
   const requestTransfer = ({
     fromSourceId,
     toSourceId,
-    entry,
+    entries,
     targetDir,
     intent = "auto",
   }: {
     fromSourceId: string;
     toSourceId: string;
-    entry: WorkspaceFileEntry;
+    entries: WorkspaceFileEntry[];
     targetDir: string;
     intent?: "auto" | "move" | "copy";
   }) => {
     const from = providerFor(fromSourceId);
     const to = providerFor(toSourceId);
-    if (!from || !to) return;
-    if ((entry as { mount?: unknown }).mount) {
+    if (!from || !to || entries.length === 0) return;
+    if (entries.some((entry) => (entry as { mount?: unknown }).mount)) {
       notifyError(t("workspace.cannot_move_mount"));
       return;
     }
     const sameSource = fromSourceId === toSourceId;
-    if (
-      sameSource &&
-      entry.kind === "file" &&
-      parentPath(entry.path) === normalizePath(targetDir)
-    ) {
+    const target = normalizePath(targetDir);
+    // Items already in the destination folder would only be renamed onto
+    // themselves, so they are left where they are.
+    const moving = entries.filter(
+      (entry) =>
+        !(
+          sameSource &&
+          entry.kind === "file" &&
+          parentPath(entry.path) === target
+        ),
+    );
+    if (moving.length === 0) return;
+    const plans = moving.map((entry) =>
+      planTransfer({
+        intent,
+        sameSource,
+        sourceKind: from.kind,
+        targetKind: to.kind,
+        entries: [entry],
+        sourcePath: entry.path,
+        targetPath: joinPath(targetDir, entry.name),
+        sourceCapabilities: from.capabilities,
+        targetCapabilities: to.capabilities,
+        freeBytes: quotas[toSourceId]?.free,
+      }),
+    );
+    const blocked = plans.find((plan) => plan.blocked);
+    if (blocked) {
+      notifyError(blocked.warnings[0] || t("workspace.transfer_blocked"));
       return;
     }
-    const plan = planTransfer({
-      intent,
-      sameSource,
-      sourceKind: from.kind,
-      targetKind: to.kind,
-      entries: [entry],
-      sourcePath: entry.path,
-      targetPath: joinPath(targetDir, entry.name),
-      sourceCapabilities: from.capabilities,
-      targetCapabilities: to.capabilities,
-      freeBytes: quotas[toSourceId]?.free,
-    });
-    if (plan.blocked) {
-      notifyError(plan.warnings[0] || t("workspace.transfer_blocked"));
-      return;
-    }
+    // `intent` decides the strategy, so every plan in the batch agrees.
+    const strategy = plans[0].strategy;
     if (
       activeMount?.readOnly &&
       fromSourceId === selectedSourceId &&
-      plan.strategy === "move"
+      strategy === "move"
     ) {
       notifyError(t("workspace.mount_read_only_error"));
       return;
@@ -1514,7 +1525,7 @@ export default function WorkspacePage() {
       notifyError(t("workspace.source_read_only_error"));
       return;
     }
-    if (fromSourceRow?.readOnly && plan.strategy === "move") {
+    if (fromSourceRow?.readOnly && strategy === "move") {
       notifyError(t("workspace.source_read_only_error"));
       return;
     }
@@ -1524,29 +1535,32 @@ export default function WorkspacePage() {
         : (sources.find((source) => source.id === sourceId)?.label ?? "");
     const fromLabel = labelFor(fromSourceId);
     const toLabel = labelFor(toSourceId);
-    if (plan.requiresConfirmation) {
+    const run = () =>
+      void executeTransfer({
+        fromSourceId,
+        toSourceId,
+        entries: moving,
+        targetDir,
+        strategy,
+      });
+    if (plans.some((plan) => plan.requiresConfirmation)) {
       openModal("workspaceTransfer", {
-        plan,
+        plan: {
+          strategy,
+          itemCount: moving.length,
+          totalBytes: plans.reduce((sum, plan) => sum + plan.totalBytes, 0),
+          requiresConfirmation: true,
+          requiresDelete: plans.some((plan) => plan.requiresDelete),
+          blocked: false,
+          warnings: [...new Set(plans.flatMap((plan) => plan.warnings))],
+        },
         fromLabel,
         toLabel,
-        onConfirm: () =>
-          executeTransfer({
-            fromSourceId,
-            toSourceId,
-            entries: [entry],
-            targetDir,
-            strategy: plan.strategy,
-          }),
+        onConfirm: run,
       });
       return;
     }
-    void executeTransfer({
-      fromSourceId,
-      toSourceId,
-      entries: [entry],
-      targetDir,
-      strategy: plan.strategy,
-    });
+    run();
   };
 
   const onDrop = (
@@ -1561,10 +1575,15 @@ export default function WorkspacePage() {
     if (!raw) return;
     try {
       const payload = JSON.parse(raw);
+      const entries: WorkspaceFileEntry[] = Array.isArray(payload.entries)
+        ? payload.entries
+        : payload.entry
+          ? [payload.entry]
+          : [];
       requestTransfer({
         fromSourceId: payload.sourceId,
         toSourceId,
-        entry: payload.entry,
+        entries,
         targetDir,
       });
     } catch {
@@ -2145,6 +2164,9 @@ export default function WorkspacePage() {
                         canDragEntry={(entry) => entry.local && !entry.mount}
                         onDragStart={(entry, event) => {
                           if (!entry.local || entry.mount) return;
+                          // A drag that starts on a selected row carries the
+                          // whole selection.
+                          const dragged = entriesForAction(entry, selectedEntries);
                           setDraggingEntry({
                             sourceId: entry.sourceId,
                             entry,
@@ -2153,7 +2175,7 @@ export default function WorkspacePage() {
                             "application/x-chat-ai-workspace",
                             JSON.stringify({
                               sourceId: entry.sourceId,
-                              entry,
+                              entries: dragged,
                             }),
                           );
                           event.dataTransfer.effectAllowed = "move";
@@ -2279,6 +2301,9 @@ export default function WorkspacePage() {
                       }
                       canDragEntry={() => true}
                       onDragStart={(entry, event) => {
+                        // A drag that starts on a selected row carries the
+                        // whole selection.
+                        const dragged = entriesForAction(entry, selectedEntries);
                         setDraggingEntry({
                           sourceId: selectedSourceId!,
                           entry,
@@ -2287,7 +2312,7 @@ export default function WorkspacePage() {
                           "application/x-chat-ai-workspace",
                           JSON.stringify({
                             sourceId: selectedSourceId,
-                            entry,
+                            entries: dragged,
                           }),
                         );
                         event.dataTransfer.effectAllowed = "move";
@@ -2365,8 +2390,13 @@ export default function WorkspacePage() {
                               type="button"
                               onClick={(event) => {
                                 event.stopPropagation();
-                                openModal("workspaceMoveTo", {
+                                // A selected row moves the whole selection.
+                                const list = entriesForAction(
                                   entry,
+                                  selectedEntries,
+                                );
+                                openModal("workspaceMoveTo", {
+                                  entries: list,
                                   sources: sources.filter(
                                     (candidate) =>
                                       candidate.id !== selectedSourceId &&
@@ -2377,7 +2407,7 @@ export default function WorkspacePage() {
                                     requestTransfer({
                                       fromSourceId: selectedSourceId!,
                                       toSourceId: targetId,
-                                      entry,
+                                      entries: list,
                                       targetDir: "/",
                                       intent: "move",
                                     }),

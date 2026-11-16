@@ -822,6 +822,9 @@ selectable) and `canDeleteSourceEntry` entries in a source view — and select-a
 Bulk delete confirms once and removes each entry with `provider.remove`, reporting per-entry
 failures. Bulk move opens `MoveToModal` with the entries and then the transfer confirmation with an
 aggregated `planTransfer`; it always uses the move strategy and reuses `runTransfer` per entry.
+A drag or the row-level "Move to…" action that starts on an entry of the current selection carries
+the whole selection (`workspace/selection.ts#entriesForAction`); an entry outside the selection acts
+on itself. `requestTransfer` therefore takes `entries[]` and checks every entry before confirming.
 `MoveToModal` must call `onClose` before `onSelect`, because `onSelect` opens that confirmation
 modal and closing afterwards dismissed it again.
 
