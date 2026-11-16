@@ -854,8 +854,11 @@ holds for chat attachments: they open in the docked `ChatFilePreviewPanel`
 using `useFile`'s `data`, which is written to state separately from the metadata and produced an
 empty download when the button was clicked before the bytes arrived. `ChatPage` and `MetaChatPage`
 render the panel beside their content column and hide their own side panel while it is open.
-Clicking the same attachment again closes it: `Attachment` calls `toggleFilePreview`. A tree folder
-that contains a
+Clicking the same attachment again closes it: `Attachment` calls `toggleFilePreview`. Switching to
+another file must not reuse the previous one's bytes: the panel keys `ChatFilePreview` by `fileId`,
+and `useFileMeta` / `useFile` / `useFileBase64` / `useFileContent` reset their state when the id
+changes — otherwise the old data URL is rendered inside an `<img>` and shows "Failed to load image".
+A tree folder that contains a
 `.git` directory gets a Git button; the workspace preview parses `.git/logs/HEAD` (falling back to
 the branch reflog) without a shell,
 while the agent file panel runs `git log --stat` through the OpenCode shell and falls back to the

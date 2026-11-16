@@ -65,7 +65,11 @@ export default function ChatFilePreviewPanel() {
       }
     >
       <div className="min-h-0 flex-1 overflow-auto p-4">
-        <ChatFilePreview fileId={preview.fileId} file={file} />
+        <ChatFilePreview
+          key={preview.fileId}
+          fileId={preview.fileId}
+          file={file}
+        />
       </div>
     </PanelShell>
   );

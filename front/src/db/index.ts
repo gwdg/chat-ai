@@ -1410,6 +1410,8 @@ export function useFileMeta(fileId : string) {
       setFile(null);
       return;
     }
+    // A new id must not keep showing the previous file while it loads.
+    setFile(null);
     let cancelled = false;
     async function checkUntilReady() {
       while (!cancelled) {
@@ -1437,8 +1439,12 @@ export function useFile(fileId : string) {
   useEffect(() => {
     if (!fileId) {
       setFile(null);
+      setData(null);
       return;
     }
+    // A new id must not keep showing the previous file while it loads.
+    setFile(null);
+    setData(null);
     let cancelled = false;
     async function checkMetaUntilReady() {
       while (!cancelled) {
@@ -1479,6 +1485,9 @@ export function useFileBase64(fileId: string) {
       setBase64(null);
       return;
     }
+    // A new id must not keep the previous file's data URL, which an <img> would try
+    // to decode and report as a broken image.
+    setBase64(null);
     let cancelled = false;
     async function checkUntilReady() {
       while (!cancelled) {
@@ -1518,6 +1527,8 @@ export function useFileContent(fileId: string, encoding: string = "utf-8") {
       setContent(null);
       return;
     }
+    // A new id must not keep showing the previous file while it loads.
+    setContent(null);
 
     let cancelled = false;
 

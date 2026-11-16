@@ -118,12 +118,21 @@ const DocxViewer = ({ data }) => {
   );
 };
 
+const LoadingBox = () => (
+  <div className="h-24 animate-pulse rounded bg-base-200" />
+);
+
 // The body of a chat file preview. It is rendered by the docked ChatFilePreviewPanel;
 // the file is read by id, never from the metadata hook's separately loaded bytes.
 export default function ChatFilePreview({ fileId, file: metaFile }) {
   const { t } = useTranslation();
 
   const [loadError, setLoadError] = useState(null);
+
+  // A media element that failed for the previous file must not keep that error.
+  useEffect(() => {
+    setLoadError(null);
+  }, [fileId]);
   const { file: loadedFile, data } = useFile(fileId);
   const base64 = useFileBase64(fileId); // TODO only load if important
   const textContent = useFileContent(fileId);
@@ -148,6 +157,7 @@ export default function ChatFilePreview({ fileId, file: metaFile }) {
     const fileType = getFileType(file);
     // Audio Player
     if (fileType === "audio") {
+      if (!base64) return <LoadingBox />;
       return (
         <div className="flex justify-center items-center min-h-[400px]">
           <AudioPlayer file={file} dataURL={base64} />
@@ -156,6 +166,9 @@ export default function ChatFilePreview({ fileId, file: metaFile }) {
     }
     // Image Viewer
     if (fileType === "image") {
+      // Until the bytes belong to this file, an <img> would decode the previous
+      // file's data URL and report a broken image.
+      if (!base64) return <LoadingBox />;
       return (
         <div className="flex justify-center">
           <img
@@ -169,6 +182,7 @@ export default function ChatFilePreview({ fileId, file: metaFile }) {
     }
     // Video Player
     if (fileType === "video") {
+      if (!base64) return <LoadingBox />;
       return (
         <div className="flex justify-center">
           <video
