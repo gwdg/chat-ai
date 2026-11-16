@@ -185,10 +185,16 @@ These are the things that are not guessable from the file tree.
 
 `version` is in the root reducer but is not in the persist whitelist.
 
-Redux is persisted with a `version` + `migrations` map (`Redux/store/migrations.jsx`), and only a
-five-action whitelist is mirrored across tabs via `redux-state-sync`: `SET_ADV`, `RESET_ALL`,
-`MIGRATE`, `SET_COUNT`, `user_settings/importUserSettings`. Adding a persisted key means adding it to
-`whitelist` **and** `getDefaultState()` in `Redux/store/store.jsx`.
+Redux is persisted with a `version` + `migrations` map (`Redux/store/migrations.jsx`). Which actions
+are mirrored across tabs is decided by `Redux/store/stateSync.js`: every `user_settings/*` action
+plus `SET_ADV`, `RESET_ALL`, `MIGRATE` and `SET_COUNT`. This is not optional book-keeping:
+redux-persist rewrites the whole persisted state from every tab on every action, so a tab that does
+not receive a `user_settings` mutation keeps a stale copy and writes it back. A server added in one
+tab then disappears on the next reload of the other (the regression test is
+`e2e/tests/mcp-persistence.spec.ts`), and the same holds for memories, memory groups and E2EE keys.
+`interface_settings/*` is not synced, so its persisted keys still have that stale-tab exposure.
+Adding a persisted key means adding it to `persistConfig.whitelist` **and** `getDefaultState()` in
+`Redux/store/store.jsx`.
 
 ### 4.2 The conversation data flow
 

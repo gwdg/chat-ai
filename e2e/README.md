@@ -15,6 +15,7 @@ Each user scenario is its own readable file in `tests/`, so it can be run alone:
 | --- | --- |
 | `chat-send.spec.ts` | type a prompt, send it, see the streamed answer |
 | `chat-persistence.spec.ts` | reload and find the exchange still there |
+| `mcp-persistence.spec.ts` | a configured MCP server survives a reload, also with a second tab open |
 | `model-selector.spec.ts` | switch the conversation model |
 | `theme-toggle.spec.ts` | toggle dark mode and keep it after a reload |
 | `language-toggle.spec.ts` | switch the interface to German |
