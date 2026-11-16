@@ -4,19 +4,48 @@ import {
   PopoverButton,
   PopoverPanel,
   Transition,
+  useClose,
 } from "@headlessui/react";
 import { useTranslation } from "react-i18next";
 import { Check } from "lucide-react";
-import { Workspace } from "@carbon/icons-react";
+import { DataBase, Workspace } from "@carbon/icons-react";
 
 import Tooltip from "../Others/Tooltip";
 import WorkspaceSettings from "../Workspace/WorkspaceSettings";
+import { useModal } from "../../modals/ModalContext";
+import { storageAccessEnabled } from "../../agent/storageAccess";
 import {
   attachWorkspaceChat,
   detachWorkspaceChat,
   useChatWorkspaces,
   useWorkspaceList,
 } from "../../db/workspaceDb";
+
+// Inside the popover so `useClose` can dismiss it before the modal opens.
+function ManageDataRow({ localState }) {
+  const { t } = useTranslation();
+  const close = useClose();
+  const { openModal } = useModal();
+
+  return (
+    <div className="mt-3 border-t border-base-300 pt-2">
+      <button
+        type="button"
+        data-guide="manage-data"
+        onClick={() => {
+          close();
+          openModal("manageData", { localState });
+        }}
+        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content transition hover:bg-base-200"
+      >
+        <DataBase size={16} className="shrink-0 text-accent" />
+        <span className="min-w-0 flex-1 truncate">
+          {t("workspace.manage_data")}
+        </span>
+      </button>
+    </div>
+  );
+}
 
 export default function WorkspaceAttachButton({ localState, setLocalState }) {
   const { t } = useTranslation();
@@ -34,6 +63,19 @@ export default function WorkspaceAttachButton({ localState, setLocalState }) {
       void attachWorkspaceChat(workspaceId, conversationId);
     }
   };
+
+  // "Access storage" is the first level of the workspace menu: it decides whether the model can
+  // touch any of these files at all. The Manage data view only reports the resulting state.
+  const storageOn = storageAccessEnabled(localState?.settings);
+  const setStorage = (enabled) =>
+    setLocalState((prev) => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        tools: { ...prev.settings?.tools, browser_storage: enabled },
+      },
+      flush: true,
+    }));
 
   return (
     <Popover className="relative flex">
@@ -66,6 +108,26 @@ export default function WorkspaceAttachButton({ localState, setLocalState }) {
               ? t("workspace.chat_workspaces_hint")
               : t("workspace.empty_sidebar_title")}
           </p>
+          <div className="mt-2 flex items-start justify-between gap-3 rounded-lg border border-base-300 bg-base-200/40 px-2.5 py-2">
+            <div className="min-w-0">
+              <p className="text-xs font-medium">
+                {t("workspace.access_storage")}
+              </p>
+              <p className="mt-0.5 text-[10px] leading-relaxed text-base-content/60">
+                {storageOn
+                  ? t("workspace.access_storage_hint")
+                  : t("workspace.access_storage_off_hint")}
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              data-guide="access-storage"
+              className="toggle toggle-success toggle-sm mt-0.5 shrink-0"
+              checked={storageOn}
+              onChange={(event) => setStorage(event.target.checked)}
+              aria-label={t("workspace.access_storage")}
+            />
+          </div>
           <div className="mt-2 flex max-h-56 flex-col gap-0.5 overflow-y-auto">
             {workspaces.map((workspace) => {
               const selected = attached.has(workspace.id);
@@ -100,6 +162,7 @@ export default function WorkspaceAttachButton({ localState, setLocalState }) {
               setLocalState={setLocalState}
             />
           </div>
+          <ManageDataRow localState={localState} />
         </PopoverPanel>
       </Transition>
     </Popover>

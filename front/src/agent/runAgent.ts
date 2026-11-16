@@ -21,6 +21,7 @@ import { beginMcpConfirmationSession } from "./mcpConfirmation";
 import { createTools } from "./tools";
 import { createConnectedAgentTools, type ConnectedAgentContext } from "./connectedAgentTools";
 import { createWorkspaceTools, type WorkspaceToolContext } from "./workspaceTools";
+import { storageAccessEnabled, storageToolSettings } from "./storageAccess";
 import { type Change, observe } from "./vfs";
 import { getWorkspace, listMounts } from "./workspace";
 import { WorkspaceAgentVfs } from "../workspace/agentVfs";
@@ -35,7 +36,7 @@ Every file you write is shown to the user in the chat, so do not repeat a file's
 
 const NO_TOOLS_PROMPT = "You cannot call tools in this conversation. The text of attached text and document files is included in the message; other attachments are referenced by name only, so do not claim to have read those.";
 
-const NO_BROWSER_STORAGE_PROMPT = "The user has turned off browser storage for this conversation, so you cannot read or write local workspace files and have no file tools. The text of attached text and document files is included in the message; attachments whose text could not be extracted are referenced by name only, so do not claim to have read those.";
+const NO_BROWSER_STORAGE_PROMPT = "The user has turned off access to storage for this conversation, so you cannot read or write files and have no file tools. The text of attached text and document files is included in the message; attachments whose text could not be extracted are referenced by name only, so do not claim to have read those.";
 
 const ARCANA_TOOLS_PROMPT = "Arcana Tools is enabled. Use these tools to inspect Arcana collections, manage their files, check or start indexing, and manage sharing. Ask the user for explicit confirmation before deleting files or an index, changing sharing, or uploading and replacing files unless they already asked for that exact change.";
 
@@ -263,7 +264,9 @@ export async function runAgentTurn({
   const spec: ModelSpec = typeof settings.model === "string" ? { id: settings.model } : settings.model;
   const external = isExternalModel(spec);
   const useTools = modelSupportsTools(spec);
-  const browserStorage = settings.tools?.browser_storage === true;
+  // Access storage is the master switch: with it off the model gets no data-access tools at all,
+  // even when a local folder is mounted or the chat is attached to a workspace.
+  const browserStorage = storageAccessEnabled(settings);
   // `arcana_v2` and `remote_file_access` are the old names of this toggle.
   const arcanaTools =
     settings.tools?.arcana_tools === true ||
@@ -289,17 +292,16 @@ export async function runAgentTurn({
   const workspace = observe(agentStorage, (change: Change) => {
     if (change.kind === "write" && !change.path.startsWith(`${ARTEFACTS}/`)) written.add(change.path);
   });
-  // A mounted folder or an attached workspace provides storage for the file tools.
+  // Mounted folders show up in the prompt and count as local storage while access storage is on.
   const mounts = [
     ...listMounts(conversationId),
     ...(attachedWorkspace?.mounts.map(({ mount }) => mount.path) ?? []),
   ];
-  const storageAccess = browserStorage || mounts.length > 0 || !!attachedWorkspace;
 
   // Audio files by upload path, sent as audio to models that take it
   const audio = spec.input?.includes("audio") ? new Map<string, InputAudio>() : null;
-  // `storageAccess` alone is not enough: a model without tool support cannot read the files either.
-  const conversation = await toAgentMessages(conversationId, agentStorage, uiMessages.filter((m) => m.role !== "system"), spec, vision, audio, useTools && storageAccess);
+  // `browserStorage` alone is not enough: a model without tool support cannot read the files either.
+  const conversation = await toAgentMessages(conversationId, agentStorage, uiMessages.filter((m) => m.role !== "system"), spec, vision, audio, useTools && browserStorage);
   const prompt = conversation.pop();
   if (!prompt || prompt.role !== "user") throw new Error("Nothing to send");
 
@@ -372,16 +374,17 @@ export async function runAgentTurn({
   );
 
   const tools = useTools
-    ? createTools(workspace, {
-        vision,
-        enabled: attachedWorkspace
-          ? { ...settings.tools, browser_storage: true, write_access: true }
-          : settings.tools,
-        hasLocalFolder: mounts.length > 0 || !!attachedWorkspace,
-      })
+    ? createTools(
+        workspace,
+        storageToolSettings(settings, {
+          vision,
+          attachedWorkspace: !!attachedWorkspace,
+          hasMounts: mounts.length > 0,
+        }),
+      )
     : [];
   let workspaceContext: WorkspaceToolContext | null = null;
-  if (useTools) {
+  if (useTools && browserStorage) {
     try {
       const workspaceTools = await createWorkspaceTools(
         conversationId,
@@ -395,7 +398,7 @@ export async function runAgentTurn({
     }
   }
   let connectedAgentContext: ConnectedAgentContext | null = null;
-  if (useTools) {
+  if (useTools && browserStorage) {
     try {
       const connected = await createConnectedAgentTools(
         conversationId,
@@ -428,7 +431,7 @@ export async function runAgentTurn({
       systemPrompt: [
         systemPrompt,
         useTools
-          ? storageAccess
+          ? browserStorage
             ? AGENT_PROMPT
             : NO_BROWSER_STORAGE_PROMPT
           : NO_TOOLS_PROMPT,
@@ -449,9 +452,9 @@ export async function runAgentTurn({
                 )}. They are available through connected_agents_status, connected_agent_list_sessions, connected_agent_history, connected_agent_switch_session, connected_agent_remove_session, connected_agent_files, connected_agent_read_file, and connected_agent_fetch_file. Access is limited to those agents and to the sessions attached to this chat's workspace; use connected_agent_list_sessions to see them, connected_agent_switch_session to change the active session, connected_agent_remove_session only when the user explicitly asks to remove one, and connected_agent_fetch_file for images, PDFs, and other binary files. Never claim to see sessions that are not listed.`
             : "This chat is attached to a workspace, but no agents are attached to it. If the user asks about an agent, use connected_agents_status to check, then say that no agent is attached to this workspace. Do not claim to know or see one."
           : "",
-        useTools && storageAccess && mounts.length ? `The user's folders are mounted at: ${mounts.join(", ")}.` : "",
+        useTools && browserStorage && mounts.length ? `The user's folders are mounted at: ${mounts.join(", ")}.` : "",
         useTools &&
-        storageAccess &&
+        browserStorage &&
         !attachedWorkspace &&
         settings.tools?.write_access !== true
           ? "The user has turned off writing and editing files: you can read files but not change them."

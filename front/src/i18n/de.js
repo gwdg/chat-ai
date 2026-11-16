@@ -324,6 +324,12 @@ export default {
       step3: "Durchsuchen Sie hier die Dateien. Ziehen Sie eine Datei auf eine andere Quelle zum Kopieren; mit Alt zum Verschieben.",
       step4: "Verknüpfen Sie einen Agenten und wählen Sie die Sitzungen, die zu diesem Arbeitsbereich gehören; hier neu erstellte Sitzungen werden automatisch zugeordnet.",
     },
+    manage_chat_data: {
+      title: "Dateien eines Chats verwalten",
+      step1: "Auf Speicher zugreifen ist standardmäßig an und steht oben im Arbeitsbereich-Menü. Schalten Sie es aus, erhält das Modell keine Dateiwerkzeuge; Anhänge werden weiterhin in die Nachricht aufgenommen, sofern möglich.",
+      step2: "Wählen Sie Daten verwalten, um die Dateien hinter diesem Schalter zu sehen. Einem Arbeitsbereich zugeordnete Chats verlinken dorthin, wo das Dateisystem angezeigt wird; Chats ohne Arbeitsbereich durchsuchen die für den Chat in diesem Browser gespeicherten Dateien.",
+      step3: "Laden Sie die Dateien des Chats hier hoch, erstellen, benennen Sie sie um, laden Sie sie herunter oder löschen Sie sie.",
+    },
     workspace_clone: {
       title: "Git-Repository importieren",
       step1: "Öffnen Sie „Arbeitsbereich erstellen“, wählen Sie „Git-Repository klonen“, einen lokalen Agenten und prüfen Sie die Speicher-/Manifest-Bestätigung.",
@@ -2018,6 +2024,17 @@ export default {
     chat_workspaces: "Arbeitsbereich",
     chat_workspaces_empty: "Dieser Chat ist keinem Arbeitsbereich zugeordnet.",
     chat_workspaces_hint: "Verknüpfen Sie diesen Chat mit einem oder mehreren Arbeitsbereichen.",
+    manage_data: "Daten verwalten",
+    manage_data_workspace_hint:
+      "Dieser Chat ist einem Arbeitsbereich zugeordnet. Seine Dateien werden im Arbeitsbereich verwaltet.",
+    access_storage: "Auf Speicher zugreifen",
+    access_storage_hint:
+      "Das Modell darf die Dateien dieses Chats und seiner verknüpften Arbeitsbereiche lesen und schreiben.",
+    access_storage_off_hint:
+      "Das Modell erhält keine Dateiwerkzeuge. Anhänge werden weiterhin in die Nachricht aufgenommen, sofern ihr Text lesbar ist.",
+    chat_files: "Dateien in diesem Chat",
+    chat_files_hint:
+      "Nur in diesem Browser für diesen Chat gespeichert. Das Modell schreibt hier, wenn kein Arbeitsbereich verknüpft ist.",
     settings_title: "Arbeitsbereich-Einstellungen",
     attach_from_workspace: "Aus Arbeitsbereich anhängen",
     attach_from_workspace_hint:

@@ -168,15 +168,23 @@ into the nested shape the UI uses. Raw table access (`db.messages`, `db.content_
 
 ### 4.3 Dexie migrations
 
-`db/index.ts` is at **version 16**. A new *indexed* field needs a new `this.version(n).stores({...})`
+`db/index.ts` is at **version 17**. A new *indexed* field needs a new `this.version(n).stores({...})`
 block plus an `.upgrade()` that backfills existing rows — this is how `folderId` (v3),
 `hasFirstPrompt` (v4), `lastOpenedAt` (v5), the workspace tables (v6-v8),
 `workspace_file_references` (v9), the default Arcana filesystem source (v10), the default
 browser source with the shared browser tree (v11), the `arcana_v2` → `arcana_tools` tool-toggle
-rename (v15), and the per-workspace browser tree (v16) were added. A field that is only stored and never
+rename (v15), the per-workspace browser tree (v16), and the `tools.browser_storage` default flip
+(v17) were added. A field that is only stored and never
 queried needs **no** version bump; Dexie keeps unindexed properties on the row as-is. A version
 bump and `.upgrade()` are still appropriate when existing rows need a backfill. Never edit an
 existing version block: users have live databases.
+
+"Access storage" is `tools.browser_storage`, kept under that name for existing chats, exports and
+the Meta chat, and it is **on by default** (`agent/storageAccess.ts`). v17 rewrites the old opt-in
+`false` of existing conversations to `true`, so after that upgrade an explicit `false` always means
+the user switched it off. With it off the model gets no data-access tools at all, even when a
+folder is mounted or the chat is attached to a workspace; Arcana, MCP and codemode keep their own
+toggles.
 
 ### 4.4 "folder" in code == "topic" in the UI
 
@@ -831,6 +839,17 @@ modal and closing afterwards dismissed it again.
 The prompt box's Workspace popover (`WorkspaceAttachButton`) also holds the agent settings that
 apply to workspace files: the codemode toggle (`tools.codemode`) and the tool-call limit
 (`settings.max_tool_calls`). GWDG Tools no longer renders either.
+
+"Manage data" (the row at the bottom of the prompt box's Workspace popover →
+`modals/Chat/ManageDataModal.jsx`) is the per-chat view of the same files. An attached chat links
+to each of its workspaces (the workspace page owns the file system); a chat without a workspace
+browses its own OPFS tree
+(`conversations/<conversationId>`) through `ConversationStorageProvider`
+(`workspace/providers/conversation.ts`), rendered with the shared `WorkspaceRootBrowser`. The
+"Access storage" switch is the first row of that popover, not of the modal: it writes
+`tools.browser_storage` through the live `Prompt` state, and the modal only reports its result
+(with a warning when it is off), because the modal gets a snapshot of `localState` when it opens.
+Both paths are independent of `VITE_MODULE_AGENT`.
 
 The `workspace_overview` feature guide targets `[data-guide="workspace-add-source"]`,
 `workspace-sources` and `workspace-files`.

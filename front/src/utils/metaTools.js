@@ -143,7 +143,7 @@ export function buildConversationSettingsSummary(settings = {}) {
   const enabledTools = Object.entries(tools)
     .filter(([, enabled]) => enabled)
     .map(([name]) => name);
-  const browserStorage = tools.browser_storage === true;
+  const browserStorage = tools.browser_storage !== false;
   const memoryOverride =
     settings.memory_mode_override === "default" ||
     settings.memory_mode_override === undefined
@@ -182,7 +182,7 @@ export function buildConversationSettingsSummary(settings = {}) {
         ? ` (${enabledTools.join(", ")})`
         : ""
     }`,
-    `browser storage ${browserStorage ? "enabled" : "disabled"}`,
+    `storage access ${browserStorage ? "enabled" : "disabled"}`,
     `arcana ${arcanaId || "none"}`,
     `MCP local ${tools.mcp ? "enabled" : "disabled"}, remote ${remoteMcpEnabled(settings) ? "enabled" : "disabled"}${mcpDescription ? ` (${mcpDescription})` : ""}`,
   ].join("; ");

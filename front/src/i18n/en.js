@@ -314,6 +314,12 @@ export default {
       step3: "Browse the files here. Drag a file onto another source to copy it; hold Alt for a move.",
       step4: "Attach an agent and pick the sessions that belong to this workspace; new sessions created here are attached automatically.",
     },
+    manage_chat_data: {
+      title: "Manage the files of a chat",
+      step1: "Access storage is on by default and sits at the top of the Workspace menu. Switch it off to give the model no file tools at all; attachments are still included in the message where possible.",
+      step2: "Choose Manage data to see the files behind this switch. A chat attached to a workspace links to that workspace, where the file system is shown; a chat without a workspace browses the files kept in this browser for the chat.",
+      step3: "Upload, create, rename, download and delete the chat's files here.",
+    },
     workspace_clone: {
       title: "Import a Git repository",
       step1: "Open Create workspace, choose Clone Git repository, select a local agent, and review the storage/manifest confirmation.",
@@ -1992,6 +1998,17 @@ export default {
     chat_workspaces: "Workspace",
     chat_workspaces_empty: "This chat is not attached to a workspace.",
     chat_workspaces_hint: "Attach this chat to one or more workspaces.",
+    manage_data: "Manage data",
+    manage_data_workspace_hint:
+      "This chat is attached to a workspace. Its files are managed in the workspace.",
+    access_storage: "Access storage",
+    access_storage_hint:
+      "The model may read and write the files of this chat and of its attached workspaces.",
+    access_storage_off_hint:
+      "The model gets no file tools. Attachments are still included in the message where their text can be read.",
+    chat_files: "Files in this chat",
+    chat_files_hint:
+      "Kept in this browser for this chat only. The model writes here when no workspace is attached.",
     settings_title: "Workspace settings",
     attach_from_workspace: "Attach from workspace",
     attach_from_workspace_hint:

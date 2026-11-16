@@ -356,6 +356,16 @@ export class AppDB extends Dexie {
     // point that workspace's file references at its copy, then drop the shared
     // rows. Provenance was lost in v11, so the copy is the safest isolation.
     this.version(16).stores({}).upgrade(isolateWorkspaceBrowserStorage);
+
+    // "Access storage" is on by default now. Every chat created before the switch existed stored
+    // the old opt-in default (`browser_storage: false`), which would otherwise read as an explicit
+    // opt-out and silently take the file tools away from existing conversations.
+    this.version(17).stores({}).upgrade(async (tx) => {
+      const conversations = tx.table('conversations');
+      await conversations.toCollection().modify((conversation) => {
+        enableStorageAccess(conversation?.settings);
+      });
+    });
   }
 }
 
@@ -435,6 +445,20 @@ export function migrateLegacyToolKeys(settings: any) {
   }
   delete tools.arcana_v2;
   delete tools.remote_file_access;
+  return settings;
+}
+
+/**
+ * Sets the storage switch of a conversation to the new default. Runs inside the
+ * Dexie v17 upgrade transaction: the old default was `false` (opt-in), so every
+ * existing row would otherwise look like an explicit opt-out.
+ */
+export function enableStorageAccess(settings: any) {
+  const tools = settings?.tools;
+  if (!tools || typeof tools !== 'object' || Array.isArray(tools)) return settings;
+  if (tools.browser_storage === undefined || tools.browser_storage === false) {
+    tools.browser_storage = true;
+  }
   return settings;
 }
 

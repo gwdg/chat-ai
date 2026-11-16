@@ -130,6 +130,12 @@ export function openWorkspaceMenu() {
   }
 }
 
+export function openChatWorkspaces() {
+  if (!find('[data-guide="manage-data"]')) {
+    click('[data-guide="chat-workspaces"]');
+  }
+}
+
 export function openAgentMenu() {
   if (!find('[data-guide="pin-agent-menu-item"]')) {
     click('[data-guide="agent-menu"]');

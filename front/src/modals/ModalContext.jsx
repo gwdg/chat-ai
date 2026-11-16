@@ -35,6 +35,7 @@ import MigrateDataModal from "./Alert/MigrateDataModal";
 import McpServerNameModal from "./Alert/McpServerNameModal";
 import ConversationConflict from "./Chat/ConversationConflict";
 import SummarizeChatModal from "./Chat/SummarizeChatModal";
+import ManageDataModal from "./Chat/ManageDataModal";
 
 import { useDispatch, useStore } from "react-redux";
 import { selectWarning } from "../Redux/reducers/interfaceSettingsSlice";
@@ -253,6 +254,9 @@ export function ModalProvider({ children }) {
       )}
       {modalType === "summarizeChat" && (
         <SummarizeChatModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "manageData" && (
+        <ManageDataModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {modalType === "unsentFiles" && (
         <UnsentFilesModal isOpen onClose={closeModal} {...modalProps} />

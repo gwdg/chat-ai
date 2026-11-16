@@ -8,6 +8,7 @@ import {
   mcpConfigured,
   openAgentMenu,
   openAgentRecovery,
+  openChatWorkspaces,
   openConversationMenu,
   openConversationSettings,
   openSearch,
@@ -47,6 +48,39 @@ export const featureGuides = {
       {
         target: '[data-guide="workspace-agents"]',
         textKey: "feature_guide.workspace_overview.step4",
+      },
+    ],
+  },
+  manage_chat_data: {
+    titleKey: "feature_guide.manage_chat_data.title",
+    prompt:
+      "Open the Workspace menu in the prompt box. Access storage sits at the top: it is on by default and with it off the model gets no file tools. Manage data shows where this chat keeps its files: a chat attached to a workspace links to that workspace, where its file system is shown; a chat without a workspace browses the files stored in this browser for the chat.",
+    keywords: [
+      "manage data",
+      "access storage",
+      "chat files",
+      "browser storage",
+      "opfs",
+      "file system",
+      "storage off",
+    ],
+    steps: [
+      {
+        target: '[data-guide="access-storage"]',
+        textKey: "feature_guide.manage_chat_data.step1",
+        prepare: openChatWorkspaces,
+      },
+      {
+        target: '[data-guide="manage-data"]',
+        textKey: "feature_guide.manage_chat_data.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: [
+          '[data-guide="manage-data-files"]',
+          '[data-guide="manage-data-workspace"]',
+        ],
+        textKey: "feature_guide.manage_chat_data.step3",
       },
     ],
   },
@@ -1494,7 +1528,7 @@ export const FEATURE_CATEGORIES = {
     "summarize_conversation",
     "close_chat",
   ],
-  workspace: ["workspace_overview", "pin_workspace", "pin_agent", "workspace_clone", "workspace_upload", "workspace_multiselect", "arcana_filesystem", "attach_from_workspace", "remote_agents", "agent_recovery", "close_group_sessions"],
+  workspace: ["workspace_overview", "manage_chat_data", "pin_workspace", "pin_agent", "workspace_clone", "workspace_upload", "workspace_multiselect", "arcana_filesystem", "attach_from_workspace", "remote_agents", "agent_recovery", "close_group_sessions"],
   personas: ["chat_with_persona"],
   settings: [
     "settings_overview",
