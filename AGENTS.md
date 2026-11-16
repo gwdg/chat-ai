@@ -770,7 +770,11 @@ puts into the chat VFS. They are registered whenever the chat has a `workspace_c
 model supports tools, even while no agent is attached.
 `agent/prepare.ts` writes attachments and their converted variants under `/artefacts` in the
 attached workspace root (or the conversation OPFS when no workspace is linked); the agent VFS keeps
-`/uploads` routed to the conversation OPFS for legacy paths.
+`/uploads` routed to the conversation OPFS for legacy paths. `agent/writtenFiles.ts` turns every
+other file the agent writes during a turn into a conversation file and reports it as a
+`{ type: "file", fileId }` content item of the assistant message, so a "create a png and show me"
+turn renders a clickable attachment. `/artefacts` writes are the user's inputs and never attached
+back; a path written twice keeps one attachment.
 
 **A chat's files always live in its own OPFS tree at `chats/<conversation id>**
 (`workspace/chatStorage.ts`). Attaching a chat to a workspace never copies or moves them: the

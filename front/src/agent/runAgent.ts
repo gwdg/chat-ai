@@ -10,9 +10,10 @@ import { createModels, createProvider, type Model } from "@earendil-works/pi-ai"
 import { openAICompletionsApi } from "@earendil-works/pi-ai/api/openai-completions.lazy";
 import { agentApiKey, agentEndpoint, agentGatewayTools, markToolless, modelSupportsTools } from "../apis/agentEndpoints";
 import { onAbortRequest, reasoningParams } from "../apis/chatCompletions";
-import { loadFileMeta, saveFile } from "../db";
+import { loadFileMeta } from "../db";
 import { getFileType } from "../utils/attachments";
 import { ARTEFACTS, prepareAttachment, uploadPath } from "./prepare";
+import { createWrittenFiles } from "./writtenFiles";
 import { addGatewayFields, gatewayFetch, gatewayRequestFields, nameResults, toAgentMessage } from "./gateway";
 import { attachmentsNote, hasReadableText, type AttachmentEntry } from "./attachmentContext";
 import i18n from "../i18n";
@@ -294,11 +295,9 @@ export async function runAgentTurn({
         attachedWorkspace.mounts,
       )
     : storage;
-  // Files written under ARTEFACTS are inputs (uploads and their converted variants), not results to show
-  const written = new Set<string>();
-  const workspace = observe(agentStorage, (change: Change) => {
-    if (change.kind === "write" && !change.path.startsWith(`${ARTEFACTS}/`)) written.add(change.path);
-  });
+  // Files the agent writes outside /artefacts become attachments of its reply.
+  const written = createWrittenFiles(conversationId, agentStorage);
+  const workspace = observe(agentStorage, (change: Change) => written.observe(change));
   // Mounted folders show up in the prompt and count as local storage while access storage is on.
   const mounts = [
     ...listMounts(conversationId),
@@ -482,27 +481,11 @@ export async function runAgentTurn({
     },
   });
 
-  // Files the agent wrote, by path. A file written twice keeps one place in the message.
-  const files = new Map<string, string>();
-  const saveWritten = async () => {
-    for (const path of [...written]) {
-      written.delete(path);
-      try {
-        const bytes = await workspace.readFile(path);
-        const name = path.split("/").pop() || "file";
-        const file = new File([bytes as Uint8Array<ArrayBuffer>], name, { type: guessType(name) });
-        files.set(path, saveFile(conversationId, file));
-      } catch (error) {
-        console.warn(`Could not attach ${path}:`, error);
-      }
-    }
-  };
-
   const done: AgentMessage[] = [];
   let streaming: AgentMessage | undefined;
   const snapshot = (): TurnUpdate => {
     const agentMessages = streaming ? [...done, streaming] : [...done];
-    return { agentMessages, text: agentText(agentMessages), files: [...files.values()].map((fileId) => ({ type: "file", fileId })) };
+    return { agentMessages, text: agentText(agentMessages), files: written.items() };
   };
 
   let error: string | undefined;
@@ -525,7 +508,7 @@ export async function runAgentTurn({
         }
         break;
       case "tool_execution_end":
-        await saveWritten();
+        await written.save();
         break;
       default:
         return;
@@ -539,7 +522,7 @@ export async function runAgentTurn({
   } finally {
     stopListening();
   }
-  await saveWritten();
+  await written.save();
 
   const usage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
   for (const message of done) {
@@ -563,26 +546,3 @@ const DEFAULT_MAX_TOOL_CALLS = 10;
 const TOOL_LIMIT_REASON = "Tool limit exceeded for this response. The user can increase tool limits.";
 
 const NO_TOOL_CALLING = /tool[- ]choice|tool-call-parser|does not support tool|tools? (is|are) not supported/i;
-
-const TYPES: Record<string, string> = {
-  png: "image/png",
-  jpg: "image/jpeg",
-  jpeg: "image/jpeg",
-  gif: "image/gif",
-  webp: "image/webp",
-  svg: "image/svg+xml",
-  mp3: "audio/mpeg",
-  wav: "audio/wav",
-  ogg: "audio/ogg",
-  opus: "audio/ogg",
-  pdf: "application/pdf",
-  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  md: "text/markdown",
-  csv: "text/csv",
-  json: "application/json",
-  html: "text/html",
-  txt: "text/plain",
-};
-
-const guessType = (name: string) => TYPES[name.split(".").pop()?.toLowerCase() ?? ""] ?? "text/plain";

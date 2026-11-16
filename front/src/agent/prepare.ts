@@ -11,9 +11,9 @@ import { getWorkspace } from "./workspace";
 import { getChatWorkspaceId } from "../db/workspaceDb";
 import { workspaceBrowserStorageId } from "../workspace/browserStorage";
 import { getSourceBlob, getSourceNode, writeSourceFile } from "../db/workspaceVfs";
+import { ARTEFACTS, uploadPath } from "./artefacts";
 
-export const ARTEFACTS = "/artefacts";
-export const uploadPath = (fileId: string, name: string) => `${ARTEFACTS}/${fileId.slice(0, 8)}/${name}`;
+export { ARTEFACTS, uploadPath };
 
 export type PrepareStatus = "converting" | "transcribing";
 
