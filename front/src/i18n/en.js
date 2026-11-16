@@ -976,7 +976,7 @@ export default {
     label_mcp_server: "MCP Server",
     label_write_access: "Allow write",
     label_browser_storage: "Browser storage",
-    label_codemode: "Codemode",
+    label_codemode: "Browser agent",
     label_create_docx: "Word document",
     tools_requires_browser_storage: "Enable browser storage or share a local folder first",
     tools_requires_workspace: "Attach a workspace first",
@@ -2024,7 +2024,7 @@ export default {
     chat_files: "Files in this chat",
     chat_files_hint:
       "Kept in this browser for this chat only. The model writes here when no workspace is attached.",
-    settings_title: "Workspace settings",
+    settings_title: "Local agent",
     attach_from_workspace: "Attach from workspace",
     attach_from_workspace_hint:
       "Pick a file from an attached workspace and add it to this message.",

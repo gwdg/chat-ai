@@ -29,7 +29,8 @@ describe("WorkspaceSettings", () => {
       />,
     );
 
-    const codemode = screen.getByRole("button", { name: /codemode/i });
+    expect(screen.getByText("Local agent")).toBeInTheDocument();
+    const codemode = screen.getByRole("button", { name: /browser agent/i });
     expect(codemode.className).toContain("border-success");
 
     fireEvent.click(codemode);
@@ -48,7 +49,7 @@ describe("WorkspaceSettings", () => {
     );
 
     expect(
-      screen.queryByRole("button", { name: /codemode/i }),
+      screen.queryByRole("button", { name: /browser agent/i }),
     ).not.toBeInTheDocument();
     expect(
       screen.getByText("Limit tool calls per response"),

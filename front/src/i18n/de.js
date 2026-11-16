@@ -990,7 +990,7 @@ export default {
     label_mcp_server: "MCP-Server",
     label_write_access: "Schreiben erlauben",
     label_browser_storage: "Browserspeicher",
-    label_codemode: "Codemode",
+    label_codemode: "Browser-Agent",
     label_create_docx: "Word-Dokument",
     tools_requires_browser_storage: "Zuerst den Browserspeicher aktivieren oder einen lokalen Ordner freigeben",
     tools_requires_workspace: "Zuerst einen Arbeitsbereich verknüpfen",
@@ -2050,7 +2050,7 @@ export default {
     chat_files: "Dateien in diesem Chat",
     chat_files_hint:
       "Nur in diesem Browser für diesen Chat gespeichert. Das Modell schreibt hier, wenn kein Arbeitsbereich verknüpft ist.",
-    settings_title: "Arbeitsbereich-Einstellungen",
+    settings_title: "Lokaler Agent",
     attach_from_workspace: "Aus Arbeitsbereich anhängen",
     attach_from_workspace_hint:
       "Wählen Sie eine Datei aus einem verknüpften Arbeitsbereich und fügen Sie sie dieser Nachricht hinzu.",

@@ -70,7 +70,7 @@ describe("MountFolderButton bulk actions", () => {
 
     expect(screen.getByRole("button", { name: /word document/i })).toBeDisabled();
     expect(screen.getByRole("button", { name: /analyze images/i })).toBeDisabled();
-    expect(screen.getByRole("button", { name: /codemode/i })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: /browser agent/i })).not.toBeDisabled();
   });
 
   it("enables file tools when a workspace is attached", () => {
