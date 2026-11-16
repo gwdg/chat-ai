@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { liveQuery } from "dexie";
 
 import { db } from "../index";
 import {
@@ -403,6 +404,40 @@ describe("workspace database", () => {
 
     expect(await db.workspace_sources.get(sourceId)).toBeUndefined();
     expect(await db.workspace_nodes.get(file.id)).toBeDefined();
+  });
+
+  it("stores a folder handle before the local source becomes visible", async () => {
+    const workspaceId = await createWorkspace("Local");
+    const sourceId = "local-handle-source";
+    const handle = { name: "Folder", kind: "directory" };
+    let handleAtFirstSighting;
+
+    // This is what the workspace page does: it connects every source a live query reports.
+    const subscription = liveQuery(() => db.workspace_sources.toArray()).subscribe({
+      next: async (sources) => {
+        if (!sources.some((source) => source.id === sourceId)) return;
+        if (handleAtFirstSighting !== undefined) return;
+        handleAtFirstSighting = (await getSourceHandle(sourceId)) ?? null;
+      },
+    });
+
+    try {
+      await addSource({
+        id: sourceId,
+        workspaceId,
+        kind: "local",
+        label: "Folder",
+        config: { handleKey: "" },
+        handle,
+      });
+
+      await vi.waitFor(() =>
+        expect(handleAtFirstSighting).not.toBeUndefined(),
+      );
+      expect(handleAtFirstSighting).toEqual(handle);
+    } finally {
+      subscription.unsubscribe();
+    }
   });
 
   it("stores folder handles and deletes sources with the workspace", async () => {

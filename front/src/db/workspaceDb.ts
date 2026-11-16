@@ -425,8 +425,13 @@ export async function addSource(input: AddSourceInput): Promise<string> {
     createdAt: now(),
     lastModified: now(),
   };
-  await db.workspace_sources.add(source);
-  if (input.handle) await saveSourceHandle(id, input.handle);
+  // Write the folder handle before the source row, in one transaction: a live query connects a
+  // provider as soon as the source exists, and a local provider without its handle would report
+  // a missing folder before the handle write finishes.
+  await db.transaction("rw", db.workspace_sources, db.workspace_handles, async () => {
+    if (input.handle) await saveSourceHandle(id, input.handle);
+    await db.workspace_sources.add(source);
+  });
   await db.workspaces.update(input.workspaceId, { lastModified: now() });
   return id;
 }
