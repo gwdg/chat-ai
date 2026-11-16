@@ -56,10 +56,12 @@ const BACKEND = String(import.meta.env.VITE_BACKEND_ENDPOINT || "").replace(
  * `back` serves the same protocol at `/bridge`. The service URL stays relative
  * so the page origin decides where the browser connects, not the backend config.
  */
-const bridgeBase = (agent: any) =>
+export const bridgeBaseFor = (agent: any, backend: string) =>
   agent?.serviceAgentId
     ? `${AGENT_SERVICE_PATH}/${encodeURIComponent(agent.serviceAgentId)}`
-    : BACKEND || (typeof window !== "undefined" ? window.location.origin : "");
+    : backend || (typeof window !== "undefined" ? window.location.origin : "");
+
+const bridgeBase = (agent: any) => bridgeBaseFor(agent, BACKEND);
 
 /**
  * The service returns the browser leg as a path; a WebSocket needs an absolute
@@ -86,6 +88,18 @@ const SIDECAR_COMMAND = (() => {
     return null;
   }
 })();
+
+/**
+ * Whether the bridge talks MCP through the local stdio sidecar instead of the HTTP
+ * fallback.
+ *
+ * The sidecar is a local affordance: its command is a path next to the browser's own
+ * OpenCode, and it is spawned by that process. A service-managed agent runs its OpenCode
+ * in the agent service, where this path does not exist, so it must use the service's
+ * `mcpUrl` — the same `opencodeBridgeSidecarCommand` in `front.json` cannot serve both.
+ */
+export const wantsSidecar = (command: string[] | null, agent: any) =>
+  !!command?.length && !agent?.serviceAgentId;
 
 const stubVfs: Vfs = {
   readFile: async () => {
@@ -152,8 +166,11 @@ export function useAgentBridge({
 
   useEffect(() => {
     if (!agent?.id || !workspaceId) {
+      // Idle means idle: a "this deployment has no bridge" verdict belongs to the attempt it
+      // was learned from, so it must not outlive the workspace that was detached since.
       setStatus("off");
       setError("");
+      setUnavailable(false);
       return;
     }
     let cancelled = false;
@@ -352,7 +369,7 @@ export function useAgentBridge({
         session = await response.json();
         if (cancelled) return;
         mcpName = `chatai-bridge-${String(session.id).slice(0, 8)}`;
-        if (SIDECAR_COMMAND && session.agentWsUrl && session.agentToken) {
+        if (wantsSidecar(SIDECAR_COMMAND, agent) && session.agentWsUrl && session.agentToken) {
           const scopes = [
             "workspace",
             writable ? "write" : "",

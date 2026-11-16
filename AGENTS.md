@@ -1193,6 +1193,14 @@ outbound WebSocket to the bridge host. The host pairs browser and sidecar by run
 never needs an inbound endpoint. If no sidecar command is configured, the hook falls back to the
 remote-MCP endpoint (`mcpUrl`).
 
+The sidecar is a **direct-agent** transport only (`wantsSidecar()`): its command is a path next to
+the browser's own OpenCode, and a service-managed agent runs OpenCode in the agent service, where
+that path does not exist. Service agents therefore always use `mcpUrl` over HTTP, so one
+`opencodeBridgeSidecarCommand` in `front.json` cannot break a SAIA deployment. `mcpUrl` and
+`agentWsUrl` are absolute and built from the request base URL, so the address the agent process must
+reach is `AGENT_SERVICE_BRIDGE_AGENT_URL` when the gateway's public URL is not reachable from inside
+the agent service.
+
 Two hosts speak the same protocol. `back` serves it at `/bridge/*`. A service-managed agent
 (`serviceAgentId`, §4.26) uses the SAIA agent service instead, at `/agents/<id>/bridge/*` on the app
 origin, because a SAIA deployment has no `back`. The agent service is a single process that already

@@ -18,7 +18,7 @@ vi.mock("../../apis/opencodeAgents", () => ({
   removeOpencodeMcpServer: vi.fn(async () => {}),
 }));
 
-import { useAgentBridge } from "../useAgentBridge";
+import { bridgeBaseFor, useAgentBridge, wantsSidecar } from "../useAgentBridge";
 
 const props = {
   agent: { id: "agent-1", name: "Example agent" },
@@ -89,6 +89,53 @@ describe("useAgentBridge", () => {
     expect(fetchMock.mock.calls[0][0]).toBe(
       `${window.location.origin}/bridge/sessions`,
     );
+  });
+
+  it("forgets an unavailable deployment once nothing is exposed any more", async () => {
+    // Detaching the last workspace must not leave a red "not available" behind: with no
+    // workspace there is no bridge to report on at all.
+    vi.stubGlobal("fetch", respond(404));
+
+    const { result, rerender } = renderHook(
+      ({ workspaceId }: { workspaceId: string | null }) =>
+        useAgentBridge({ ...props, workspaceId }),
+      { initialProps: { workspaceId: "ws-1" } },
+    );
+
+    await waitFor(() => expect(result.current.unavailable).toBe(true));
+
+    rerender({ workspaceId: null });
+
+    await waitFor(() => expect(result.current.status).toBe("off"));
+    expect(result.current.unavailable).toBe(false);
+    expect(result.current.error).toBe("");
+  });
+
+  it("keeps the local sidecar away from service-managed agents", () => {
+    // The sidecar command is a path in the user's OpenCode install. A service agent runs
+    // OpenCode inside the agent service, which uses the HTTP fallback (mcpUrl) instead.
+    const command = ["/usr/bin/node", "/opt/chat-ai/bridge-sidecar.mjs"];
+
+    expect(wantsSidecar(command, { id: "local-1" })).toBe(true);
+    expect(
+      wantsSidecar(command, { id: "local-1", serviceAgentId: "svc-1" }),
+    ).toBe(false);
+    expect(wantsSidecar(null, { id: "local-1" })).toBe(false);
+  });
+
+  it("routes the session call to back for a local agent and to the service for a SAIA agent", () => {
+    // Local agents talk to back at the backend root; a service-managed agent uses the
+    // service prefix on the page origin, so a changed deployment cannot pin it elsewhere.
+    expect(bridgeBaseFor({ id: "local-1" }, "http://localhost:8081")).toBe(
+      "http://localhost:8081",
+    );
+    expect(
+      bridgeBaseFor(
+        { id: "local-1", serviceAgentId: "svc-1" },
+        "http://localhost:8081",
+      ),
+    ).toBe("/agents/svc-1");
+    expect(bridgeBaseFor({ id: "local-1" }, "")).toBe(window.location.origin);
   });
 
   it("keeps other failures as a broken bridge", async () => {
