@@ -1,16 +1,15 @@
 // Client for the SAIA agent service (agent-service/). It owns one OpenCode
 // backend per frontend user, so the browser never has to reach a machine that
-// runs the agent directly. An agent created here stores the service's proxy
-// prefix as its `serverUrl`; the OpenCode client then talks to
-// `<service>/agents/<id>/opencode/api/...` unchanged.
+// runs the agent directly. The browser calls the service on the app's own
+// origin: the SAIA gateway routes `/agents/*` to it. An agent created here
+// stores `/agents/<id>/opencode` as its proxy prefix, and the OpenCode client
+// then talks to `<prefix>/api/...` unchanged.
 
-export const agentServiceUrl = () =>
-  String(import.meta.env.VITE_AGENT_SERVICE_URL || "").replace(/\/+$/, "");
-
-export const hasAgentService = () => Boolean(agentServiceUrl());
+/** The service's routes on the app origin, served by the SAIA gateway. */
+export const AGENT_SERVICE_PATH = "/agents";
 
 export const serviceOpencodeUrl = (agentId) =>
-  `${agentServiceUrl()}/agents/${encodeURIComponent(agentId)}/opencode`;
+  `${AGENT_SERVICE_PATH}/${encodeURIComponent(agentId)}/opencode`;
 
 /** Emitted when the service answers 409 for an agent the browser cannot use. */
 export const AGENT_SERVICE_CONFLICT_EVENT = "chatai:agent-service-conflict";
@@ -68,9 +67,7 @@ export function reportAgentConflict({
 }
 
 async function request(path, init = {}) {
-  const base = agentServiceUrl();
-  if (!base) throw new Error("The agent service is not configured.");
-  const response = await fetch(`${base}${path}`, {
+  const response = await fetch(path, {
     ...init,
     headers: {
       ...(init.body ? { "Content-Type": "application/json" } : {}),

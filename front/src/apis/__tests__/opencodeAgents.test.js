@@ -13,7 +13,7 @@ vi.mock("../agentAccess", async (importOriginal) => ({
 const serviceAgent = {
   id: "local-1",
   serviceAgentId: "service-1",
-  serverUrl: "http://agent-service:8090/agents/service-1/opencode",
+  serverUrl: "/agents/service-1/opencode",
 };
 
 const serviceConflict = {
@@ -113,9 +113,35 @@ describe("opencodeAgents direct access guard", () => {
 
   it("still reaches a service-managed agent outside local access", async () => {
     access.direct = false;
-    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse({ version: "1" })));
+    const fetch = vi.fn(async () => jsonResponse({ version: "1" }));
+    vi.stubGlobal("fetch", fetch);
 
     await expect(getOpencodeInfo(serviceAgent)).resolves.toBeDefined();
+
+    // The service path is fixed on the app origin; a stored URL from an older
+    // local config cannot point the browser at another host.
+    expect(fetch).toHaveBeenCalledWith(
+      "/agents/service-1/opencode/api/info",
+      expect.anything(),
+    );
+  });
+
+  it("derives the service path even when the stored URL is a stale host", async () => {
+    access.direct = false;
+    const fetch = vi.fn(async () => jsonResponse({ version: "1" }));
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(
+      getOpencodeInfo({
+        id: "local-1",
+        serviceAgentId: "service-1",
+        serverUrl: "http://localhost:8090/agents/service-1/opencode",
+      }),
+    ).resolves.toBeDefined();
+    expect(fetch).toHaveBeenCalledWith(
+      "/agents/service-1/opencode/api/info",
+      expect.anything(),
+    );
   });
 
   it("allows a direct agent when Chat AI runs locally", async () => {

@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createServiceAgent,
   deleteServiceAgent,
-  hasAgentService,
   serviceOpencodeUrl,
 } from "../agentService";
 
@@ -12,25 +11,18 @@ const jsonResponse = (body, status = 200) =>
     headers: { "content-type": "application/json" },
   });
 
-const setServiceUrl = (value) => {
-  vi.stubEnv("VITE_AGENT_SERVICE_URL", value);
-};
-
 beforeEach(() => {
-  setServiceUrl("http://agent-service:8090/");
   vi.unstubAllGlobals();
 });
 
 afterEach(() => {
-  vi.unstubAllEnvs();
   vi.unstubAllGlobals();
 });
 
 describe("agentService", () => {
-  it("is disabled without a configured URL", () => {
-    setServiceUrl("");
-    expect(hasAgentService()).toBe(false);
+  it("addresses the service on the app origin, so no service URL is needed", () => {
     expect(serviceOpencodeUrl("abc")).toBe("/agents/abc/opencode");
+    expect(serviceOpencodeUrl("a/b")).toBe("/agents/a%2Fb/opencode");
   });
 
   it("creates an agent and returns the OpenCode proxy URL", async () => {
@@ -47,7 +39,7 @@ describe("agentService", () => {
     const created = await createServiceAgent({ name: "Research" });
 
     expect(fetch).toHaveBeenCalledWith(
-      "http://agent-service:8090/agents",
+      "/agents",
       expect.objectContaining({ method: "POST" }),
     );
     expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({
@@ -55,7 +47,7 @@ describe("agentService", () => {
     });
     expect(created).toEqual({
       serviceAgentId: "agent-1",
-      serverUrl: "http://agent-service:8090/agents/agent-1/opencode",
+      serverUrl: "/agents/agent-1/opencode",
       serviceStatus: "running",
     });
   });
@@ -80,7 +72,7 @@ describe("agentService", () => {
     vi.stubGlobal("fetch", fetch);
     await deleteServiceAgent("agent-1");
     expect(fetch).toHaveBeenCalledWith(
-      "http://agent-service:8090/agents/agent-1",
+      "/agents/agent-1",
       expect.objectContaining({ method: "DELETE" }),
     );
 

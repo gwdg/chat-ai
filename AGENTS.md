@@ -199,7 +199,7 @@ inside `db/`. UI strings and i18n keys say topic.
 `VITE_DEFAULT_SETTINGS`, `VITE_TITLE_GENERATION_MODEL`, `VITE_MEMORY_GENERATION_MODEL`,
 `VITE_PROPOSAL_GENERATION_MODEL`, `VITE_ANNOUNCEMENT`, `VITE_USE_OPENAI_SDK`,
 `VITE_OPENCODE_SERVER_URL`, `VITE_OPENCODE_SERVER_USERNAME`,
-`VITE_OPENCODE_SERVER_PASSWORD`, `VITE_AGENT_SERVICE_URL`, `VITE_FAKE_AUTH_HEADERS`, `VITE_MODULE_*`. Consequences: **a new
+`VITE_OPENCODE_SERVER_PASSWORD`, `VITE_FAKE_AUTH_HEADERS`, `VITE_MODULE_*`. Consequences: **a new
 config key requires editing `front/vite.config.js` too**, and a config change requires a dev-server
 restart. Read values via `import.meta.env.VITE_*`; they arrive as strings, hence the
 `=== "true"` comparisons.
@@ -1021,18 +1021,23 @@ bracketed or not), and `isServiceManagedAgent()` is "the agent carries a `servic
 `apis/opencodeAgents.js#rawRequest` enforces it for every request, so a direct agent outside local
 access throws `DIRECT_AGENT_BLOCKED` without touching the network. `AddAgentModal` mirrors the policy
 outside local access: it hides the service toggle, the local toggle, the server URL/password fields
-and the HPC project selector, shows `agents.service_forced_hint`, and disables "Add agent" with
-`agents.service_required` when no service is configured. Saving an existing direct agent there
-migrates it to the service (creates the service agent, stores its proxy prefix, drops the basic-auth
-password). There is no config flag that bypasses this; a LAN/IP deployment counts as deployment.
+and the HPC project selector, and shows `agents.service_forced_hint`. Saving an existing direct
+agent there migrates it to the service (creates the service agent, stores its proxy prefix, drops
+the basic-auth password). There is no config flag that bypasses this; a LAN/IP deployment counts as
+deployment.
 
-When `agentServiceUrl` is set (`VITE_AGENT_SERVICE_URL`, see
-[`agent-service/`](agent-service/README.md)), `AddAgentModal` defaults to a service-managed agent:
-it `POST`s `/agents` on the service, stores the returned id as `serviceAgentId` and the proxy prefix
-`<service>/agents/<id>/opencode` as `serverUrl`, and stores no basic-auth password (the proxy adds
-the backend credentials). In a deployment `agentServiceUrl` must be the SAIA gateway path that
-forwards `/agents/*` to the service, never the service's own port. The service toggle in that window
-only appears with local access, where it is the way back to a direct server.
+The [SAIA agent service](agent-service/README.md) has **no config key**: the browser always calls it
+at `/agents` on the app's own origin, which the SAIA gateway routes to the service. `AddAgentModal`
+defaults to a service-managed agent: it `POST`s `/agents`, stores the returned id as
+`serviceAgentId` and `/agents/<id>/opencode` as `serverUrl`, and stores no basic-auth password (the
+proxy adds the backend credentials). A service-managed agent is not pinned to the `serverUrl` stored
+when it was created: `opencodeAgents.js#baseUrl()` derives it from `serviceAgentId` via
+`agentService.js#serviceOpencodeUrl()` (fixed `AGENT_SERVICE_PATH` `/agents`), so an existing agent
+follows the current deployment. Because no gateway runs locally, `vite.config.js` proxies `/agents`
+to `http://127.0.0.1:8090` (override with the `AGENT_SERVICE_DEV_PROXY` environment variable) but
+only in `development` mode; a production build and a gateway-fronted preview never contain it. The
+service toggle in the add-agent window only appears with local access, where it is the way back to a
+direct server.
 `AgentList`'s remove action also calls `DELETE /agents/<id>` when `serviceAgentId` is set, so
 removing the row frees the container/process; a `404` counts as already removed. The rest of the
 OpenCode client (`apis/opencodeAgents.js`) is unchanged because the proxy forwards `/api/*`

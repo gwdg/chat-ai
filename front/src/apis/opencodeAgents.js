@@ -1,8 +1,11 @@
-// Client for a local `opencode serve` instance. The browser talks to the server directly;
-// opencode allows CORS from the app origin and protects the API with HTTP basic auth.
+// Client for an `opencode serve` instance. A local one is called directly;
+// opencode allows CORS from the app origin and protects the API with HTTP basic
+// auth. In a deployment the same client talks to the agent service's per-agent
+// proxy (`<gateway>/agents/<id>/opencode`), which is why only the base URL differs.
 import {
   reportAgentConflict,
   serviceErrorDetails,
+  serviceOpencodeUrl,
 } from "./agentService";
 import {
   directAgentAccessAllowed,
@@ -27,7 +30,12 @@ export const opencodeDefaults = () => ({
 });
 
 const baseUrl = (agent) =>
-  String(agent?.serverUrl || DEFAULT_SERVER_URL).replace(/\/+$/, "");
+  // A service-managed agent is served by the agent service on this origin; the
+  // `serverUrl` stored at creation is only a display value, so a changed
+  // deployment or a copied config cannot pin the browser to another host.
+  isServiceManagedAgent(agent)
+    ? serviceOpencodeUrl(agent.serviceAgentId)
+    : String(agent?.serverUrl || DEFAULT_SERVER_URL).replace(/\/+$/, "");
 
 const authHeaders = (agent) => {
   const username = agent?.username || DEFAULT_SERVER_USERNAME;
@@ -37,7 +45,9 @@ const authHeaders = (agent) => {
 };
 
 async function rawRequest(agent, path, init = {}) {
-  if (!isServiceManagedAgent(agent) && !directAgentAccessAllowed()) {
+  // Outside a locally opened Chat AI only the agent service may be used, and it
+  // is always the app's own origin: a direct OpenCode server is never contacted.
+  if (!directAgentAccessAllowed() && !isServiceManagedAgent(agent)) {
     throw new Error(DIRECT_AGENT_BLOCKED);
   }
   const response = await fetch(`${baseUrl(agent)}/api${path}`, {

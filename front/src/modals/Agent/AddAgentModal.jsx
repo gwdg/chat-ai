@@ -12,7 +12,6 @@ import {
 import {
   createServiceAgent,
   deleteServiceAgent,
-  hasAgentService,
 } from "../../apis/agentService";
 import { directAgentAccessAllowed } from "../../apis/agentAccess";
 
@@ -36,11 +35,11 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
     agent?.projectId ?? projects[0]?.id ?? "",
   );
   const [local, setLocal] = useState(agent?.local !== false);
-  const serviceAvailable = hasAgentService();
-  // A new agent uses the service when one is configured; an existing agent
-  // keeps the mode it was created with so editing never migrates it silently.
+  // New agents run through the service (the default deployment path); an
+  // existing agent keeps the mode it was created with so editing never migrates
+  // it silently.
   const [useService, setUseService] = useState(
-    agent?.serviceAgentId ? true : !agent && serviceAvailable,
+    agent?.serviceAgentId ? true : !agent,
   );
   // Direct `opencode serve` connections are a local-only affordance. Outside a
   // locally opened Chat AI every agent must run through the service behind SAIA,
@@ -48,8 +47,6 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
   // when it is saved.
   const directAllowed = directAgentAccessAllowed();
   const serviceMode = useService || !directAllowed;
-  const serviceMissing =
-    serviceMode && !serviceAvailable && !agent?.serviceAgentId;
   const [serverUrl, setServerUrl] = useState(
     agent?.serverUrl ?? defaults.serverUrl,
   );
@@ -61,7 +58,7 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
   const project = projects.find((item) => item.id === projectId);
 
   const submit = async () => {
-    if (!project || saving || serviceMissing) return;
+    if (!project || saving) return;
     setSaving(true);
     setError("");
     const effectiveServerUrl = local
@@ -147,7 +144,7 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
     <BaseModal isOpen={isOpen} onClose={onClose} titleKey="agents.add_title">
       <div className="flex flex-col gap-3 pb-2 text-sm">
         <p className="text-xs text-base-content/70">{t("agents.add_hint")}</p>
-        {directAllowed && (serviceAvailable || agent?.serviceAgentId) && (
+        {directAllowed && (
           <label className="flex items-center gap-2 text-xs">
             <input
               type="checkbox"
@@ -186,16 +183,8 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
           </p>
         )}
         {!directAllowed && (
-          <p
-            className={
-              serviceMissing
-                ? "text-[11px] leading-relaxed text-error"
-                : "text-[11px] leading-relaxed text-base-content/60"
-            }
-          >
-            {serviceMissing
-              ? t("agents.service_required")
-              : t("agents.service_forced_hint")}
+          <p className="text-[11px] leading-relaxed text-base-content/60">
+            {t("agents.service_forced_hint")}
           </p>
         )}
         {!serviceMode && !local && (
@@ -255,7 +244,7 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
             type="button"
             className="btn btn-accent"
             onClick={submit}
-            disabled={!project || saving || serviceMissing}
+            disabled={!project || saving}
           >
             {saving
               ? t("agents.connecting")

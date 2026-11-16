@@ -1769,8 +1769,6 @@ export default {
       "Der Agenten-Dienst startet für diesen Agenten einen OpenCode-Container und beendet ihn, wenn Sie den Agenten entfernen. Eine Server-URL oder ein Passwort ist nicht nötig.",
     service_forced_hint:
       "Im Deployment laufen Agenten über den Agenten-Dienst (SAIA). Direkte OpenCode-Verbindungen sind nur möglich, wenn Chat AI lokal läuft.",
-    service_required:
-      "Agenten laufen hier über den Agenten-Dienst (SAIA), der aber nicht konfiguriert ist. Wenden Sie sich an Ihre Administration.",
     hpc_project_label: "HPC-Projekt",
     server_url_label: "opencode-Server",
     server_password_label: "Server-Passwort",

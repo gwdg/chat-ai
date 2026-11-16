@@ -13,7 +13,6 @@ const apiMocks = vi.hoisted(() => ({
 }));
 
 const serviceMocks = vi.hoisted(() => ({
-  available: false,
   create: vi.fn(),
   remove: vi.fn(),
 }));
@@ -42,7 +41,6 @@ vi.mock("../../../apis/opencodeAgents", () => ({
   createOpencodeSession: (...args) => apiMocks.createSession(...args),
 }));
 vi.mock("../../../apis/agentService", () => ({
-  hasAgentService: () => serviceMocks.available,
   createServiceAgent: (...args) => serviceMocks.create(...args),
   deleteServiceAgent: (...args) => serviceMocks.remove(...args),
 }));
@@ -52,7 +50,6 @@ beforeEach(() => {
   apiMocks.createSession.mockReset();
   apiMocks.getInfo.mockResolvedValue({});
   apiMocks.createSession.mockResolvedValue({ id: "session-1" });
-  serviceMocks.available = false;
   serviceMocks.create.mockReset();
   serviceMocks.remove.mockReset();
   accessMocks.direct = true;
@@ -67,6 +64,7 @@ describe("AddAgentModal", () => {
       <AddAgentModal isOpen onClose={onClose} onCreate={onCreate} />,
     );
 
+    fireEvent.click(screen.getByLabelText("Run through the agent service"));
     fireEvent.click(screen.getByLabelText("Local agent"));
     expect(screen.getByLabelText("HPC project")).toHaveValue("hpc-project-1");
     fireEvent.click(screen.getByRole("button", { name: "Add agent" }));
@@ -96,6 +94,7 @@ describe("AddAgentModal", () => {
     const onCreate = vi.fn();
     render(<AddAgentModal isOpen onClose={vi.fn()} onCreate={onCreate} />);
 
+    fireEvent.click(screen.getByLabelText("Run through the agent service"));
     fireEvent.click(screen.getByLabelText("Local agent"));
     fireEvent.change(screen.getByLabelText("HPC project"), {
       target: { value: "hpc-project-2" },
@@ -120,6 +119,8 @@ describe("AddAgentModal", () => {
       <AddAgentModal isOpen onClose={onClose} onCreate={onCreate} />,
     );
 
+    // Direct mode, so the modal verifies the opencode server itself.
+    fireEvent.click(screen.getByLabelText("Run through the agent service"));
     fireEvent.click(screen.getByRole("button", { name: "Add agent" }));
 
     expect(
@@ -130,10 +131,9 @@ describe("AddAgentModal", () => {
   });
 
   it("creates a service-managed agent and uses its proxy URL", async () => {
-    serviceMocks.available = true;
     serviceMocks.create.mockResolvedValue({
       serviceAgentId: "svc-1",
-      serverUrl: "http://agent-service:8090/agents/svc-1/opencode",
+      serverUrl: "/agents/svc-1/opencode",
     });
     const onCreate = vi.fn();
     const onClose = vi.fn();
@@ -141,8 +141,7 @@ describe("AddAgentModal", () => {
       <AddAgentModal isOpen onClose={onClose} onCreate={onCreate} />,
     );
 
-    // The service is the default when it is configured, and no server URL or
-    // password is asked for.
+    // The service is the default, and no server URL or password is asked for.
     expect(
       screen.getByLabelText("Run through the agent service"),
     ).toBeChecked();
@@ -154,7 +153,7 @@ describe("AddAgentModal", () => {
     expect(serviceMocks.create).toHaveBeenCalledWith({ name: "HPC project 1" });
     expect(apiMocks.getInfo).toHaveBeenCalledWith(
       expect.objectContaining({
-        serverUrl: "http://agent-service:8090/agents/svc-1/opencode",
+        serverUrl: "/agents/svc-1/opencode",
         password: "",
       }),
     );
@@ -162,7 +161,7 @@ describe("AddAgentModal", () => {
       expect.objectContaining({
         serviceAgentId: "svc-1",
         serviceManaged: true,
-        serverUrl: "http://agent-service:8090/agents/svc-1/opencode",
+        serverUrl: "/agents/svc-1/opencode",
         password: "",
         sessionId: "session-1",
       }),
@@ -172,10 +171,9 @@ describe("AddAgentModal", () => {
 
   it("forces the service and hides the direct option outside local access", async () => {
     accessMocks.direct = false;
-    serviceMocks.available = true;
     serviceMocks.create.mockResolvedValue({
       serviceAgentId: "svc-2",
-      serverUrl: "http://gateway.example/agents/svc-2/opencode",
+      serverUrl: "/agents/svc-2/opencode",
     });
     const onCreate = vi.fn();
     render(<AddAgentModal isOpen onClose={vi.fn()} onCreate={onCreate} />);
@@ -194,27 +192,16 @@ describe("AddAgentModal", () => {
     expect(onCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         serviceAgentId: "svc-2",
-        serverUrl: "http://gateway.example/agents/svc-2/opencode",
+        serverUrl: "/agents/svc-2/opencode",
       }),
     );
   });
 
-  it("blocks creation outside local access when no service is configured", () => {
-    accessMocks.direct = false;
-    serviceMocks.available = false;
-    const onCreate = vi.fn();
-    render(<AddAgentModal isOpen onClose={vi.fn()} onCreate={onCreate} />);
-
-    expect(screen.getByText(/it is not configured/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Add agent" })).toBeDisabled();
-  });
-
   it("migrates a direct agent to the service when it is saved outside local access", async () => {
     accessMocks.direct = false;
-    serviceMocks.available = true;
     serviceMocks.create.mockResolvedValue({
       serviceAgentId: "svc-3",
-      serverUrl: "http://gateway.example/agents/svc-3/opencode",
+      serverUrl: "/agents/svc-3/opencode",
     });
     const agent = {
       id: "agent-direct",
@@ -248,7 +235,7 @@ describe("AddAgentModal", () => {
       expect.objectContaining({
         serviceAgentId: "svc-3",
         serviceManaged: true,
-        serverUrl: "http://gateway.example/agents/svc-3/opencode",
+        serverUrl: "/agents/svc-3/opencode",
         password: "",
         sessionId: "session-1",
       }),
