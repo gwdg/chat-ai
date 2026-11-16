@@ -2061,6 +2061,10 @@ export default {
     local_hint:
       "The browser asks for access to the folder. The folder stays on this device and is never uploaded.",
     local_unsupported: "This browser cannot open local folders.",
+    local_insecure:
+      "Opening local folders needs a secure page: use https:// or http://localhost.",
+    local_aborted:
+      "No folder was taken over. If no dialog appeared, Chrome blocked the folder dialog or the system file dialog could not open. Check the site permission for editing files and use a normal project folder, not your whole home or downloads folder.",
     mcp_endpoint: "MCP endpoint",
     mcp_transport: "Transport",
     mcp_allowlist: "Tool allowlist (comma separated, optional)",

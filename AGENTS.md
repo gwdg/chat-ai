@@ -747,7 +747,13 @@ or no longer exists (a source for a bridged-only agent is kept). It uses the sam
 only what a provider reports.
 `WorkspaceSourceRow.readOnly` wraps the provider in `ReadOnlyProvider` (writes, deletes, mkdir,
 move and copy throw `PERMISSION_DENIED`), and `WorkspaceMountRow.readOnly` blocks writes/moves
-through that mount while still allowing reads and copies out. The Local tools panel was removed;
+through that mount while still allowing reads and copies out. A read-only row is also passed to
+`LocalProvider`, which then queries and requests only `read` permission, and `AddSourceModal` asks
+the picker for `mode: "read"`; otherwise a browser write guard blocks a folder that is never
+written to. `AddSourceModal` surfaces the picker's `AbortError` in the dialog instead of treating it
+as a silent cancel, because Chrome reports the same error when its file dialog cannot open or
+refuses a folder.
+The Local tools panel was removed;
 GWDG Tools now contains the document-creation and image-analysis toggles, while codemode and the
 tool-call limit moved to the Workspace popover. When a chat has a workspace link, `runAgent` uses
 `workspace/agentVfs.ts` over that workspace's root and mounts for the file tools.

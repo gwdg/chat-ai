@@ -2087,6 +2087,10 @@ export default {
     local_hint:
       "Der Browser fragt nach Zugriff auf den Ordner. Der Ordner bleibt auf diesem Gerät und wird nie hochgeladen.",
     local_unsupported: "Dieser Browser kann keine lokalen Ordner öffnen.",
+    local_insecure:
+      "Lokale Ordner brauchen eine sichere Seite: https:// oder http://localhost.",
+    local_aborted:
+      "Kein Ordner übernommen. Falls kein Dialog erschien, hat Chrome den Ordner-Dialog blockiert oder der Datei-Dialog des Systems ließ sich nicht öffnen. Prüfe die Website-Berechtigung zum Bearbeiten von Dateien und wähle einen normalen Projektordner, nicht das gesamte Benutzer- oder Download-Verzeichnis.",
     mcp_endpoint: "MCP-Endpunkt",
     mcp_transport: "Transport",
     mcp_allowlist: "Tool-Allowlist (kommagetrennt, optional)",

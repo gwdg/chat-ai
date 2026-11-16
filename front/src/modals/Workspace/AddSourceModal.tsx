@@ -84,12 +84,32 @@ export default function AddSourceModal({ isOpen, onClose, workspaceId, onAdded }
     setBusy(true);
     try {
       if (kind === "local") {
+        if (window.isSecureContext === false) {
+          throw new Error(t("workspace.local_insecure"));
+        }
         if (!("showDirectoryPicker" in window)) {
           throw new Error(t("workspace.local_unsupported"));
         }
-        const handle = await (window as any).showDirectoryPicker({
-          mode: "readwrite",
-        });
+        let handle: FileSystemDirectoryHandle;
+        try {
+          handle = await (window as any).showDirectoryPicker({
+            mode: readOnly ? "read" : "readwrite",
+          });
+        } catch (event) {
+          // Chrome reports AbortError both for "user cancelled" and for "the file dialog could not
+          // open / the folder was refused". Swallowing it made a blocked picker look like a click
+          // that does nothing, so keep the failure visible and diagnosable.
+          console.warn(
+            "[workspace] directory picker did not return a folder",
+            (event as Error)?.name,
+            (event as Error)?.message,
+          );
+          if ((event as Error)?.name === "AbortError") {
+            setError(t("workspace.local_aborted"));
+            return;
+          }
+          throw event;
+        }
         await finish({
           kind,
           label: label.trim() || handle.name,

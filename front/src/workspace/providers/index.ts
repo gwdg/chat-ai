@@ -23,6 +23,7 @@ export function createProvider(source: WorkspaceSourceRow): FileProvider {
     provider = new LocalProvider(
       source.id,
       String((source.config as any)?.handleKey || source.id),
+      source.readOnly === true,
     );
   } else if (source.kind === "agent") {
     provider = new AgentFilesProvider(
