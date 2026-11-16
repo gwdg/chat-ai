@@ -6,7 +6,7 @@ import { test, expect, openApp } from "./fixtures";
  * Unlike the other specs, this one talks to a real `opencode serve` process
  * instead of mocking it. The Playwright config starts that server through
  * `scripts/opencode-server.mjs` when `E2E_OPENCODE=1`, with a fixed password and
- * port, and the app uses the agent in "Local agent" mode.
+ * port, and the app connects to it through the "OpenCode server" connection.
  *
  * The turn is a `!` shell command rather than a model prompt: it proves the
  * browser→server session, prompt and event path without depending on a model
@@ -53,7 +53,7 @@ test.describe("local OpenCode agent", () => {
       {
         user: "The user clicks the Spawn agent button in the Agents section.",
         system:
-          "The Add agent dialog opens with a name, a Local agent toggle (on by default), an opencode server URL and a password field.",
+          "The Add agent dialog opens with a name, the connection choice (GWDG service or OpenCode server), an opencode server URL and a password field.",
         shows:
           "the Add agent dialog with an agent name field and server settings",
       },
@@ -69,24 +69,23 @@ test.describe("local OpenCode agent", () => {
     await doc.step(
       "Configure the local agent",
       {
-        user: "The user enters a name, the local server URL and its password.",
+        user:
+          "The user picks “OpenCode server” as the connection and enters a name, the local server URL and its password.",
         system:
-          "The form keeps Local agent checked, so the app will connect to this server directly instead of the configured defaults.",
+          "The dialog switches from the GWDG service to a direct connection, so the app will talk to this opencode serve instance instead of the agent service.",
         shows:
-          "the Add agent dialog filled with an agent name, a server URL and a password",
+          "the Add agent dialog in OpenCode server mode, filled with a name, a server URL and a password",
       },
       async () => {
+        // New agents default to the GWDG service; a direct server is the other tab.
+        await dialog
+          .getByRole("button", { name: "OpenCode server", exact: true })
+          .click();
+
         await dialog
           .locator("label", { hasText: "Agent name" })
           .locator("input")
           .fill(AGENT_NAME);
-
-        // Local mode is the default and is what points the app at this server.
-        await expect(
-          dialog
-            .locator("label", { hasText: "Local agent" })
-            .locator('input[type="checkbox"]'),
-        ).toBeChecked();
 
         await dialog
           .locator("label", { hasText: "opencode server" })

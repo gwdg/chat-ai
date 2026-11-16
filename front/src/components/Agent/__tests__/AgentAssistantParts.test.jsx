@@ -60,3 +60,50 @@ describe("AgentAssistantParts file cards", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+describe("AgentAssistantParts tool output", () => {
+  it("shows the text content OpenCode returns for a finished tool", () => {
+    // OpenCode 2.3 reports a tool result as text content parts; the card must
+    // render them, otherwise a shell call's stdout is invisible in the chat.
+    render(
+      <AgentAssistantParts
+        parts={[
+          {
+            type: "tool",
+            name: "shell",
+            state: {
+              status: "completed",
+              input: { command: "python3 hello.py" },
+              content: [{ type: "text", text: "hello from the scripted agent\n" }],
+            },
+          },
+        ]}
+      />,
+    );
+
+    expect(
+      screen.getByText("hello from the scripted agent", { exact: false }),
+    ).toBeInTheDocument();
+  });
+
+  it("prefers an explicit output over the content parts", () => {
+    render(
+      <AgentAssistantParts
+        parts={[
+          {
+            type: "tool",
+            name: "read",
+            state: {
+              input: { path: "notes.md" },
+              output: "line from output",
+              content: [{ type: "text", text: "line from content" }],
+            },
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("line from output")).toBeInTheDocument();
+    expect(screen.queryByText("line from content")).not.toBeInTheDocument();
+  });
+});

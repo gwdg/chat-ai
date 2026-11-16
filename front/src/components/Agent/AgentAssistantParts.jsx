@@ -66,6 +66,18 @@ const toolArgument = (name, input) => {
   return "";
 };
 
+// OpenCode returns a tool's result as text content parts. Older versions put it
+// in `output`/`result`, so `toolDetail` falls back to this when neither exists;
+// without it a shell call's stdout and a read call's file text stay invisible.
+const contentText = (state) => {
+  if (!Array.isArray(state?.content)) return undefined;
+  const text = state.content
+    .map((item) => (item?.type === "text" ? item.text ?? "" : ""))
+    .filter(Boolean)
+    .join("\n");
+  return text || undefined;
+};
+
 const toolDetail = (part) => {
   const state = part.state ?? part;
   return {
@@ -75,7 +87,8 @@ const toolDetail = (part) => {
       state.result ??
       part.output ??
       part.result ??
-      state.metadata?.output,
+      state.metadata?.output ??
+      contentText(state),
     status: state.status ?? part.status ?? state.title,
   };
 };

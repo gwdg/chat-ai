@@ -18,7 +18,21 @@ const USE_EXTERNAL_APP = Boolean(process.env.E2E_APP_URL);
 const OPENCODE_ENABLED = process.env.E2E_OPENCODE === "1";
 const OPENCODE_URL = (process.env.E2E_OPENCODE_URL ?? "http://127.0.0.1:4096").replace(/\/$/, "");
 const START_OPENCODE = OPENCODE_ENABLED && !process.env.E2E_OPENCODE_URL;
-const OPENCODE_SPEC = /agent-opencode\.spec\.ts/;
+const OPENCODE_SPEC = /agent-(opencode|agentic-tasks)\.spec\.ts/;
+
+/**
+ * The agentic scenario needs a model whose tool calls are deterministic, so the
+ * bundled OpenCode project gets a `scripted` provider pointing at
+ * `scripts/scripted-model.mjs`. An OpenCode instance you started yourself
+ * (`E2E_OPENCODE_URL`) has to configure that provider on its own, which is why
+ * the scenario skips in that case.
+ */
+const SCRIPTED_MODEL_PORT = process.env.E2E_SCRIPTED_MODEL_PORT ?? "4100";
+const SCRIPTED_MODEL_URL = (
+  process.env.E2E_SCRIPTED_MODEL_URL ??
+  `http://127.0.0.1:${SCRIPTED_MODEL_PORT}`
+).replace(/\/+$/, "");
+const START_SCRIPTED_MODEL = START_OPENCODE && !process.env.E2E_SCRIPTED_MODEL_URL;
 
 /**
  * Opt-in scenario against a real model: the app talks to a back service you
@@ -83,11 +97,27 @@ if (!USE_EXTERNAL_APP && !REAL_MODEL_ENABLED) {
 if (START_OPENCODE) {
   // scripts/opencode-server.mjs sets a fixed password (E2E_OPENCODE_PASSWORD)
   // and waits for /api/info, so the scenario can authenticate deterministically.
+  // When the scripted model runs too, its URL is written into the project's
+  // opencode.json as the `scripted` provider, which is what makes the agentic
+  // scenario's tool calls deterministic.
   webServer.push({
     command: "node scripts/opencode-server.mjs",
     url: `${OPENCODE_URL}/health`,
     reuseExistingServer: false,
     timeout: 120_000,
+    ...(START_SCRIPTED_MODEL
+      ? { env: { E2E_SCRIPTED_MODEL_URL: SCRIPTED_MODEL_URL } }
+      : {}),
+  });
+}
+if (START_SCRIPTED_MODEL) {
+  // Offline stand-in for a model: answers the OpenAI chat-completions API with
+  // a fixed write → shell → read script (scripts/scripted-model.mjs).
+  webServer.push({
+    command: "node scripts/scripted-model.mjs",
+    url: `${SCRIPTED_MODEL_URL}/health`,
+    reuseExistingServer: false,
+    timeout: 60_000,
   });
 }
 if (REAL_MODEL_ENABLED && !USE_EXTERNAL_APP) {

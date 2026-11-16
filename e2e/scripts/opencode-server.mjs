@@ -12,10 +12,12 @@
  *
  * Environment: E2E_OPENCODE_PORT (4096), E2E_OPENCODE_HOST (127.0.0.1),
  * E2E_OPENCODE_USERNAME (opencode), E2E_OPENCODE_PASSWORD (e2e-local-password),
- * E2E_OPENCODE_PROJECT (results/opencode/project).
+ * E2E_OPENCODE_PROJECT (results/opencode/project), E2E_SCRIPTED_MODEL_URL
+ * (unset; when set, the project gets a `scripted` provider pointing at that
+ * OpenAI-compatible server and `scripted/agentic` as the default model).
  */
 import { execFileSync, spawn } from "node:child_process";
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -28,12 +30,67 @@ const PROJECT_DIR = resolve(
   E2E_DIR,
   process.env.E2E_OPENCODE_PROJECT ?? join("results", "opencode", "project"),
 );
+// The agentic scenario needs a model whose tool calls are deterministic. When
+// Playwright starts `scripts/scripted-model.mjs` it exports this URL, and every
+// session in this project then uses that provider by default. Without it (for
+// example `npm run opencode:serve` for manual poking) the config is untouched.
+const SCRIPTED_MODEL_URL = (process.env.E2E_SCRIPTED_MODEL_URL ?? "").replace(/\/+$/, "");
 const URL = `http://${HOST}:${PORT}`;
 const CHECK = process.argv.includes("--check");
 const ANSI = /\u001b\[[0-9;]*m/g;
 const stripAnsi = (text) => String(text ?? "").replace(ANSI, "");
 
 const authHeader = `Basic ${Buffer.from(`${USERNAME}:${PASSWORD}`).toString("base64")}`;
+
+/**
+ * Point the project at the scripted model.
+ *
+ * The file is merged, so a project that already has an `opencode.json` keeps
+ * its other settings; only the `scripted` provider and the default model are
+ * written. `results/opencode/project` is test state, so overwriting those keys
+ * is intended and keeps a run independent of the previous one.
+ */
+function writeScriptedProvider() {
+  if (!SCRIPTED_MODEL_URL) return;
+
+  const file = join(PROJECT_DIR, "opencode.json");
+  let config = {};
+  if (existsSync(file)) {
+    try {
+      config = JSON.parse(readFileSync(file, "utf8"));
+    } catch {
+      // A broken file must not stop the scenario; it is replaced below.
+      config = {};
+    }
+  }
+
+  writeFileSync(
+    file,
+    `${JSON.stringify(
+      {
+        ...config,
+        $schema: config.$schema ?? "https://opencode.ai/config.json",
+        provider: {
+          ...(config.provider ?? {}),
+          scripted: {
+            // The package OpenCode uses to speak the OpenAI API to a custom endpoint.
+            npm: "@ai-sdk/openai-compatible",
+            name: "Scripted Agent",
+            options: {
+              baseURL: `${SCRIPTED_MODEL_URL}/v1`,
+              apiKey: "e2e-scripted-model",
+            },
+            models: { agentic: { name: "Scripted Agent" } },
+          },
+        },
+        model: "scripted/agentic",
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  console.log(`Scripted model provider written to ${file} (${SCRIPTED_MODEL_URL}).`);
+}
 
 function fail(message) {
   console.error(`✘ ${message}`);
@@ -91,6 +148,7 @@ async function serve() {
   }
 
   if (!existsSync(PROJECT_DIR)) mkdirSync(PROJECT_DIR, { recursive: true });
+  writeScriptedProvider();
 
   let stopping = false;
   const child = spawn(
