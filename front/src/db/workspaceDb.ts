@@ -2,7 +2,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import i18n from "../i18n";
 import { isArcanasEnabled } from "../utils/modules";
 
-import { db, newId } from "./index";
+import { db, createConversation, newId } from "./index";
 import type {
   SourceKind,
   WorkspaceRow,
@@ -268,42 +268,51 @@ export async function ensureChatStorageSource(
   if (!workspaceId || !conversationId) return "";
   const id = chatStorageSourceId(workspaceId, conversationId);
   const text = String(label ?? "").trim() || i18n.t("workspace.kind_chat");
-  const existing = await db.workspace_sources.get(id);
-  if (!existing) {
-    await addSource({
-      id,
-      workspaceId,
-      kind: "chat",
-      label: text,
-      config: { conversationId },
-      status: "offline",
-    });
-  } else if (existing.label !== text) {
-    await updateSource(id, { label: text });
-  }
   const mountPath = chatStorageMountPath(conversationId);
-  const mount = await db.workspace_mounts
-    .where("workspaceId")
-    .equals(workspaceId)
-    .and((row) => row.sourceId === id)
-    .first();
-  if (mount) {
-    if (mount.path !== mountPath || mount.sourcePath !== "/") {
-      await db.workspace_mounts.update(mount.id, {
-        path: mountPath,
-        sourcePath: "/",
-        lastModified: now(),
-      });
-    }
-    return id;
-  }
-  await addWorkspaceMount({
-    workspaceId,
-    sourceId: id,
-    sourcePath: "/",
-    path: mountPath,
-  });
-  return id;
+  // One transaction: linking a chat and the page's reconcile effect can call
+  // this at the same time, and two "create if missing" writes would collide on
+  // the deterministic source id.
+  return db.transaction(
+    "rw",
+    [db.workspace_sources, db.workspace_handles, db.workspace_mounts, db.workspaces],
+    async () => {
+      const existing = await db.workspace_sources.get(id);
+      if (!existing) {
+        await addSource({
+          id,
+          workspaceId,
+          kind: "chat",
+          label: text,
+          config: { conversationId },
+          status: "offline",
+        });
+      } else if (existing.label !== text) {
+        await updateSource(id, { label: text });
+      }
+      const mount = await db.workspace_mounts
+        .where("workspaceId")
+        .equals(workspaceId)
+        .and((row) => row.sourceId === id)
+        .first();
+      if (mount) {
+        if (mount.path !== mountPath || mount.sourcePath !== "/") {
+          await db.workspace_mounts.update(mount.id, {
+            path: mountPath,
+            sourcePath: "/",
+            lastModified: now(),
+          });
+        }
+      } else {
+        await addWorkspaceMount({
+          workspaceId,
+          sourceId: id,
+          sourcePath: "/",
+          path: mountPath,
+        });
+      }
+      return id;
+    },
+  );
 }
 
 export async function removeChatStorageSource(
@@ -697,6 +706,19 @@ export async function attachWorkspaceChat(
   // The chat keeps its own tree; the workspace only shows it at /chats/<conversationId>.
   const title = (await db.conversations.get(conversationId))?.title;
   await ensureChatStorageSource(workspaceId, conversationId, title);
+}
+
+/**
+ * Creates a new chat and links it to the workspace in one step. The chat keeps
+ * its own storage; attaching adds the `/chats/<id>` mount like any other link.
+ */
+export async function createAttachedChat(
+  workspaceId: string,
+  conversation: Parameters<typeof createConversation>[0],
+): Promise<string> {
+  const id = await createConversation(conversation);
+  await attachWorkspaceChat(workspaceId, id);
+  return id;
 }
 
 export async function detachWorkspaceChat(

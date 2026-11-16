@@ -10,12 +10,14 @@ import {
   attachWorkspaceChat,
   attachWorkspaceAgent,
   attachWorkspaceAgentSession,
+  createAttachedChat,
   createWorkspace,
   deleteWorkspace,
   detachWorkspaceChat,
   detachWorkspaceAgent,
   detachWorkspaceAgentSession,
   ensureBrowserSource,
+  ensureChatStorageSource,
   getChatWorkspaceId,
   getSourceHandle,
   getWorkspace,
@@ -240,6 +242,49 @@ describe("workspace database", () => {
     await detachWorkspaceChat(workspaceId, "chat-1");
     expect(await db.workspace_sources.get(source.id)).toBeUndefined();
     expect(await db.workspace_mounts.count()).toBe(0);
+  });
+
+  it("creates a new chat and attaches it in one step", async () => {
+    const workspaceId = await createWorkspace("New chats");
+    const id = await createAttachedChat(workspaceId, {
+      title: "Fresh chat",
+      settings: {},
+    });
+
+    expect(id).toEqual(expect.any(String));
+    expect((await db.conversations.get(id))?.title).toBe("Fresh chat");
+    const link = await db.workspace_chats
+      .where("workspaceId")
+      .equals(workspaceId)
+      .first();
+    expect(link).toMatchObject({ conversationId: id });
+    const mount = await db.workspace_mounts
+      .where("workspaceId")
+      .equals(workspaceId)
+      .and((row) => row.path === `/chats/${id}`)
+      .first();
+    expect(mount).toBeTruthy();
+
+    await deleteConversation(id);
+  });
+
+  it("does not collide when a chat folder is reconciled concurrently", async () => {
+    const workspaceId = await createWorkspace("Chat race");
+    // The workspace page reconciles while the chat is being attached, so both
+    // create-if-missing calls can run at the same time.
+    await Promise.all([
+      ensureChatStorageSource(workspaceId, "chat-race", "Race"),
+      ensureChatStorageSource(workspaceId, "chat-race", "Race"),
+    ]);
+
+    expect(
+      await db.workspace_sources
+        .where("workspaceId")
+        .equals(workspaceId)
+        .and((source) => source.kind === "chat")
+        .count(),
+    ).toBe(1);
+    expect(await db.workspace_mounts.count()).toBe(1);
   });
 
   it("drops the chat folder when the chat is deleted", async () => {

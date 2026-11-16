@@ -1996,6 +1996,7 @@ export default {
     attached_items: "Attached chats, agents and sessions",
     no_attached_chats: "No chats attached yet.",
     attach_chat: "Attach chat",
+    new_chat: "New chat in this workspace",
     detach_chat: "Detach chat",
     attach_chat_hint: "Attach any chat to this workspace.",
     attach_agent: "Attach agent",

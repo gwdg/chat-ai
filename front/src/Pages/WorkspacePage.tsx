@@ -10,6 +10,7 @@ import {
   Folder,
   FolderAdd,
   Home,
+  Link,
   Locked,
   Unlocked,
   TrashCan,
@@ -33,6 +34,9 @@ import { formatBytes } from "../utils/formatBytes";
 import { formatModifiedTime } from "../utils/conversationDates";
 import { formatGitLog } from "../utils/gitLog";
 import { useConversationList } from "../db";
+import { useSelector } from "react-redux";
+import { selectUserSettings } from "../Redux/reducers/userSettingsReducer";
+import { getDefaultConversation } from "../utils/conversationUtils";
 import { useAgents } from "../agents/agentStore";
 import {
   fetchAgentSessions,
@@ -46,6 +50,7 @@ import {
   workspaceSessionIds,
 } from "../agents/workspaceAgentSessions";
 import {
+  createAttachedChat,
   deleteWorkspace,
   detachWorkspaceChat,
   getDeviceId,
@@ -83,6 +88,9 @@ import { runTransfer } from "../workspace/transfer";
 import { uploadLocalFiles } from "../workspace/upload";
 import { downloadProviderEntry, readAll } from "../workspace/download";
 import { baseName, joinPath, normalizePath, parentPath } from "../workspace/paths";
+import { buildSourceBreadcrumbs, sourceUpPath } from "../workspace/breadcrumbs";
+import { visibleStorageSources } from "../workspace/sources";
+import { rootEntryAction } from "../workspace/rootNavigation";
 import type { FileProvider, QuotaInfo } from "../workspace/providers/types";
 
 const PREVIEW_LIMIT = 8 * 1024 * 1024;
@@ -155,6 +163,7 @@ export default function WorkspacePage() {
   const { notifyError, notifySuccess } = useToast();
   const modelsData = useUpdateModelsData();
   const userData = useUpdateUserData();
+  const userSettings = useSelector(selectUserSettings);
 
   const workspace = useWorkspace(workspaceId);
   const sources = useWorkspaceSources(workspaceId);
@@ -296,6 +305,9 @@ export default function WorkspacePage() {
   const previewUrlRef = useRef<string | null>(null);
 
   const selectedSource = sources.find((source) => source.id === selectedSourceId);
+  // The per-chat storage sources are derived mounts of attached chats
+  // (`/chats/<id>`), not storage the user added, so the list leaves them out.
+  const listedSources = visibleStorageSources(sources);
   const selectedProvider = selectedSourceId
     ? providers.get(selectedSourceId)
     : undefined;
@@ -811,15 +823,17 @@ export default function WorkspacePage() {
   };
 
   const openRootEntry = (entry: RootEntry) => {
-    if (entry.mount) {
-      openMount(entry.mount);
+    // A row of the left workspace root always shows its result in the root
+    // view, even while the centre is showing a source.
+    setSelectedSourceId(null);
+    setActiveMountId(null);
+    const action = rootEntryAction(entry);
+    if (action.kind === "mount") {
+      openMount(action.mount);
       return;
     }
-    if (entry.kind === "dir") {
-      setRootPath(entry.path);
-      return;
-    }
-    void openFile(entry, rootProvider);
+    setRootPath(action.kind === "folder" ? action.path : action.folder);
+    if (action.kind === "file") void openFile(entry, rootProvider);
   };
 
   const gitProviderFor = (entry: RootEntry) => {
@@ -1125,6 +1139,21 @@ export default function WorkspacePage() {
       conversations,
       attachedIds: workspaceChats.map((link) => link.conversationId),
     });
+  };
+
+  // The "+" adds a chat that belongs to this workspace right away; linking an
+  // existing chat is the button next to it.
+  const createChat = async () => {
+    if (!workspaceId) return;
+    try {
+      const id = await createAttachedChat(
+        workspaceId,
+        getDefaultConversation(userSettings),
+      );
+      navigate(`/chat/${id}`);
+    } catch (error) {
+      notifyError(error instanceof Error ? error.message : String(error));
+    }
   };
 
   const detachChat = (conversationId: string) => {
@@ -1574,16 +1603,61 @@ export default function WorkspacePage() {
     }
   };
 
-  const breadcrumbs = useMemo(() => {
-    const parts = normalizePath(currentPath).split("/").filter(Boolean);
-    const items = [{ label: t("workspace.root"), path: "/" }];
-    let path = "/";
-    for (const part of parts) {
-      path = joinPath(path, part);
-      items.push({ label: part, path });
+  // Breadcrumbs of the source view. A mount is a window into a provider, so the
+  // trail keeps the workspace folders above the mount (`/chats/<id>`), and only
+  // the crumbs at or below the mount switch the source view's own path.
+  const sourceBreadcrumbs = useMemo(
+    () =>
+      buildSourceBreadcrumbs({
+        currentPath,
+        mountPath: activeMount?.path,
+        sourcePath: activeMount?.sourcePath,
+        rootLabel: t("workspace.root"),
+      }),
+    [activeMount, currentPath, t],
+  );
+
+  // The ".." row leaves the source view when the parent is the mount's parent
+  // folder in the workspace.
+  const sourceParentPath = useMemo(
+    () =>
+      sourceUpPath({
+        currentPath,
+        mountPath: activeMount?.path,
+        sourcePath: activeMount?.sourcePath,
+      }),
+    [activeMount, currentPath],
+  );
+
+  // Switching back to the workspace browser. The mount path is a workspace path,
+  // so it cannot be derived from the provider path.
+  const leaveSource = useCallback((path: string) => {
+    setSelectedSourceId(null);
+    setActiveMountId(null);
+    setRootPath(normalizePath(path));
+  }, []);
+
+  const navigateSource = (nextPath: string) => {
+    setPathBySource((current) => ({
+      ...current,
+      [selectedSourceId!]: normalizePath(nextPath),
+    }));
+  };
+
+  // The ".." row walks up inside the source and leaves it at the mount root.
+  // A mount whose `sourcePath` is `/` contains every path, so the boundary has
+  // to come from the mount, not from the path prefix.
+  const sourceUp = () => {
+    if (!sourceParentPath) return;
+    const atMountRoot =
+      activeMount &&
+      normalizePath(currentPath) === normalizePath(activeMount.sourcePath);
+    if (atMountRoot) {
+      leaveSource(sourceParentPath);
+      return;
     }
-    return items;
-  }, [currentPath, t]);
+    navigateSource(sourceParentPath);
+  };
 
   const rootBreadcrumbs = useMemo(() => {
     const parts = normalizePath(rootPath).split("/").filter(Boolean);
@@ -1705,7 +1779,7 @@ export default function WorkspacePage() {
                     </div>
                   {availableStorageOpen && (
                   <div className="mt-1 max-h-[45vh] overflow-y-auto">
-                    {sources.length === 0 ? (
+                    {listedSources.length === 0 ? (
                       <button
                         type="button"
                         onClick={addSource}
@@ -1714,7 +1788,7 @@ export default function WorkspacePage() {
                         {t("workspace.no_sources")}
                       </button>
                     ) : (
-                      sources.map((source) => {
+                      listedSources.map((source) => {
                         const active = source.id === selectedSourceId;
                         const provider = providers.get(source.id);
                         const unavailable =
@@ -1954,15 +2028,26 @@ export default function WorkspacePage() {
                       <span className="text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
                         {t("workspace.attached_chats")}
                       </span>
-                      <button
-                        type="button"
-                        onClick={attachChat}
-                        className="flex h-6 w-6 items-center justify-center rounded-md text-base-content/50 transition hover:bg-base-200 hover:text-accent"
-                        title={t("workspace.attach_chat")}
-                        aria-label={t("workspace.attach_chat")}
-                      >
-                        <Add size={15} />
-                      </button>
+                      <div className="flex items-center gap-0.5">
+                        <button
+                          type="button"
+                          onClick={attachChat}
+                          className="flex h-6 w-6 items-center justify-center rounded-md text-base-content/50 transition hover:bg-base-200 hover:text-accent"
+                          title={t("workspace.attach_chat")}
+                          aria-label={t("workspace.attach_chat")}
+                        >
+                          <Link size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void createChat()}
+                          className="flex h-6 w-6 items-center justify-center rounded-md text-base-content/50 transition hover:bg-base-200 hover:text-accent"
+                          title={t("workspace.new_chat")}
+                          aria-label={t("workspace.new_chat")}
+                        >
+                          <Add size={15} />
+                        </button>
+                      </div>
                     </div>
                     <div className="mt-1 max-h-44 overflow-y-auto">
                       {attachedChats.length === 0 ? (
@@ -2215,7 +2300,8 @@ export default function WorkspacePage() {
                     <WorkspaceRootBrowser
                       path={currentPath}
                       rootPath="/"
-                      breadcrumbs={breadcrumbs}
+                      breadcrumbs={sourceBreadcrumbs}
+                      upPath={sourceParentPath}
                       entries={entries}
                       loading={loading}
                       error={
@@ -2223,27 +2309,16 @@ export default function WorkspacePage() {
                           ? t("workspace.source_unavailable")
                           : listError
                       }
-                      onHome={() => {
-                        setActiveMountId(null);
-                        setSelectedSourceId(null);
-                      }}
-                      onBreadcrumb={(crumb, index) => {
-                        if (index === 0) {
-                          setActiveMountId(null);
-                          setSelectedSourceId(null);
+                      onHome={() => leaveSource("/")}
+                      onBreadcrumb={(crumb) => {
+                        if (crumb.mode === "root") {
+                          leaveSource(crumb.target);
                           return;
                         }
-                        setPathBySource((current) => ({
-                          ...current,
-                          [selectedSourceId!]: crumb.path,
-                        }));
+                        navigateSource(crumb.target);
                       }}
-                      onNavigate={(nextPath) =>
-                        setPathBySource((current) => ({
-                          ...current,
-                          [selectedSourceId!]: nextPath,
-                        }))
-                      }
+                      onNavigate={navigateSource}
+                      onUp={sourceUp}
                       onRetry={() => void loadEntries(false)}
                       onOpen={(entry) => {
                         if (entry.kind === "dir") {

@@ -2022,6 +2022,7 @@ export default {
     attached_items: "Verknüpfte Chats, Agenten und Sitzungen",
     no_attached_chats: "Noch keine Chats verknüpft.",
     attach_chat: "Chat verknüpfen",
+    new_chat: "Neuer Chat in diesem Arbeitsbereich",
     detach_chat: "Chat trennen",
     attach_chat_hint: "Verknüpfen Sie einen Chat mit diesem Arbeitsbereich.",
     attach_agent: "Agent verknüpfen",
