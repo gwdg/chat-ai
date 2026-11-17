@@ -93,6 +93,9 @@ export default function MetaChangesPanel({
   const [width, setWidth] = useState(readWidth);
   const [activeTab, setActiveTab] = useState("changes");
   const widthRef = useRef(width);
+  useEffect(() => {
+    widthRef.current = width;
+  }, [width]);
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState("");
   const activeContentTab = tabs.find((tab) => tab.id === activeTab) ?? null;

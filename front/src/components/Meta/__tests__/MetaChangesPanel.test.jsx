@@ -244,6 +244,27 @@ describe("MetaChangesPanel", () => {
     expect(localStorage.getItem("chatai.meta.changes-width-v2")).toBeNull();
   });
 
+  it("keeps a width the user drags to", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <MetaChangesPanel userSettings={{}} />
+      </MemoryRouter>,
+    );
+    const handle = screen.getByRole("button", { name: "Resize What's new" });
+
+    fireEvent.pointerDown(handle, { clientX: 1200 });
+    fireEvent.pointerMove(window, { clientX: 1100 });
+    expect(container.querySelector("aside")).toHaveStyle({ width: "340px" });
+    fireEvent.pointerUp(window, { clientX: 1100 });
+    expect(localStorage.getItem("chatai.meta.changes-width-v2")).toBe("340");
+
+    fireEvent.pointerDown(handle, { clientX: 1100 });
+    fireEvent.pointerMove(window, { clientX: 1050 });
+    expect(container.querySelector("aside")).toHaveStyle({ width: "390px" });
+    fireEvent.pointerUp(window, { clientX: 1050 });
+    expect(localStorage.getItem("chatai.meta.changes-width-v2")).toBe("390");
+  });
+
   it("starts collapsed on tablet when the user has never chosen", () => {
     setViewportWidth(1024);
 
