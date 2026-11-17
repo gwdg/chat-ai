@@ -306,6 +306,95 @@ describe("WorkspaceSourceBrowser", () => {
     expect(addButton()).toHaveTextContent("Add to Workspace (1)");
   });
 
+  it("marks a row that is already in the workspace", async () => {
+    renderBrowser({
+      target: { drive: "chats" },
+      isInWorkspace: (selection) => selection.conversationId === "conv-uuid-1",
+    });
+
+    const row = (await screen.findByText("Planning chat")).closest(".group");
+    expect(within(row).getByText("In workspace")).toBeInTheDocument();
+
+    const checkbox = screen.getByLabelText("Planning chat");
+    expect(checkbox).toBeDisabled();
+    expect(checkbox).toHaveAttribute("title", "In workspace");
+  });
+
+  it("does not select or add a row that is already in the workspace", async () => {
+    renderBrowser({
+      target: { drive: "chats" },
+      isInWorkspace: () => true,
+    });
+
+    fireEvent.click(await screen.findByText("Planning chat"));
+
+    expect(screen.getByLabelText("Planning chat")).not.toBeChecked();
+    expect(addButton()).toBeDisabled();
+    expect(mocks.onAddToWorkspace).not.toHaveBeenCalled();
+  });
+
+  it("selects only rows that are not already in the workspace with Select all", async () => {
+    mocks.conversations = [
+      { id: "conv-uuid-1", title: "Planning chat" },
+      { id: "conv-uuid-2", title: "Second chat" },
+    ];
+    renderBrowser({
+      target: { drive: "chats" },
+      isInWorkspace: (selection) => selection.conversationId === "conv-uuid-1",
+    });
+
+    await screen.findByText("Planning chat");
+    fireEvent.click(screen.getByLabelText("Select all"));
+
+    expect(screen.getByLabelText("Planning chat")).not.toBeChecked();
+    expect(screen.getByLabelText("Second chat")).toBeChecked();
+    expect(addButton()).toHaveTextContent("Add to Workspace (1)");
+  });
+
+  it("still selects and adds rows that are not in the workspace", async () => {
+    renderBrowser({
+      target: { drive: "chats" },
+      isInWorkspace: () => false,
+    });
+
+    fireEvent.click(await screen.findByText("Planning chat"));
+    expect(addButton()).toBeEnabled();
+
+    fireEvent.click(addButton());
+
+    await waitFor(() =>
+      expect(mocks.onAddToWorkspace).toHaveBeenCalledWith([
+        expect.objectContaining({
+          sourceId: "chat:conv-uuid-1",
+          sourceKind: "chat",
+          conversationId: "conv-uuid-1",
+        }),
+      ]),
+    );
+  });
+
+  it("marks a device drive source folder that is already in the workspace", async () => {
+    renderBrowser({
+      target: { drive: "device" },
+      isInWorkspace: () => true,
+    });
+
+    const row = (await screen.findByText("Project")).closest(".group");
+    expect(within(row).getByText("In workspace")).toBeInTheDocument();
+    expect(screen.getByLabelText("Project")).toBeDisabled();
+  });
+
+  it("marks a file inside a source that is already in the workspace", async () => {
+    renderBrowser({
+      target: { drive: "device", sourceId: "local-1" },
+      isInWorkspace: (selection) => selection.kind === "file",
+    });
+
+    const row = (await screen.findByText("notes.txt")).closest(".group");
+    expect(within(row).getByText("In workspace")).toBeInTheDocument();
+    expect(screen.getByLabelText("notes.txt")).toBeDisabled();
+  });
+
   it("drops the card chrome when embedded", () => {
     const { unmount } = renderBrowser();
     const section = guide("workspace-source-browser");

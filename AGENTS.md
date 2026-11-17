@@ -827,7 +827,12 @@ row per conversation, clicking a row toggles its selection, and there is no dril
 files. The toolbar's **Add to Workspace** button is always visible at the top right and is disabled —
 never hidden — until something is selected, when it shows the count ("Add to Workspace (2)"). With
 no target the toolbar keeps the disabled button above the `workspace.source_browser.pick_source`
-hint. The neighbouring card, `data-guide="workspace-root-pane"`, is the **Workspace Root** — eyebrow
+hint. Rows already present in the workspace carry a green "In workspace" marker, their checkbox is
+disabled and Select all skips them; the page supplies that through the `isInWorkspace` predicate —
+`workspace_chats` for a chat, an exact `sourceId` + `sourcePath` match in `workspace_mounts` for a
+folder, and for a file either of those or a same-named entry at the workspace root (`rootNames`,
+refreshed with every root load plus add/create/rename/delete/upload). The neighbouring card,
+`data-guide="workspace-root-pane"`, is the **Workspace Root** — eyebrow
 `workspace.workspace_root`, the current path on the right, then the same `WorkspaceRootBrowser` (or
 the mounted-source view when a mount is open) as before, so adding from the Sources card lands on the
 root card.

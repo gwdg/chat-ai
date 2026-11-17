@@ -221,6 +221,7 @@ export default function WorkspacePage() {
   );
   const [rootPath, setRootPath] = useState("/");
   const [rootEntries, setRootEntries] = useState<RootEntry[]>([]);
+  const [rootNames, setRootNames] = useState<Set<string>>(new Set());
   const [rootLoading, setRootLoading] = useState(false);
   const [rootError, setRootError] = useState("");
   const [addingSelection, setAddingSelection] = useState(false);
@@ -287,6 +288,7 @@ export default function WorkspacePage() {
     previewRequestRef.current += 1;
     setRootPath("/");
     setRootEntries([]);
+    setRootNames(new Set());
     setRootLoading(false);
     setRootError("");
     setSelectedSourceId(null);
@@ -469,6 +471,39 @@ export default function WorkspacePage() {
     [rootProvider, workspaceId, mounts],
   );
 
+  const refreshRootNames = useCallback(async () => {
+    if (!workspaceId || !rootProvider) {
+      setRootNames(new Set());
+      return;
+    }
+    try {
+      const entries = await listRoot("/");
+      setRootNames(new Set(entries.map((entry) => entry.name)));
+    } catch {
+      setRootNames(new Set());
+    }
+  }, [workspaceId, rootProvider, listRoot]);
+
+  const isSelectionInWorkspace = useCallback(
+    (selection: SourcesSelection) => {
+      if (!workspaceId) return false;
+      if (selection.sourceKind === "chat") {
+        return workspaceChats.some(
+          (row) => row.conversationId === selection.conversationId,
+        );
+      }
+      const path = normalizePath(selection.path);
+      const mounted = mounts.some(
+        (mount) =>
+          mount.sourceId === selection.sourceId &&
+          normalizePath(mount.sourcePath) === path,
+      );
+      if (mounted) return true;
+      return selection.kind === "file" && rootNames.has(selection.name);
+    },
+    [workspaceId, workspaceChats, mounts, rootNames],
+  );
+
   const loadRoot = useCallback(async () => {
     const generation = workspaceGenerationRef.current;
     const request = ++rootRequestRef.current;
@@ -477,6 +512,7 @@ export default function WorkspacePage() {
       request !== rootRequestRef.current;
     if (!rootProvider) {
       setRootEntries([]);
+      setRootNames(new Set());
       setRootLoading(false);
       setRootError("");
       return;
@@ -487,10 +523,14 @@ export default function WorkspacePage() {
       const entries = await listRoot(rootPath);
       if (isStale()) return;
       setRootEntries(entries);
+      if (normalizePath(rootPath) === "/") {
+        setRootNames(new Set(entries.map((entry) => entry.name)));
+      }
     } catch (error) {
       if (isStale()) return;
       setRootError(error instanceof Error ? error.message : String(error));
       setRootEntries([]);
+      setRootNames(new Set());
     } finally {
       if (!isStale()) setRootLoading(false);
     }
@@ -514,6 +554,7 @@ export default function WorkspacePage() {
           await rootProvider.write(path, emptyStream(), { overwrite: false });
         }
         await loadRoot();
+        await refreshRootNames();
       },
     });
   };
@@ -550,6 +591,7 @@ export default function WorkspacePage() {
     try {
       await rootProvider.connect();
       await rootProvider.remove(entry.path, { recursive: true });
+      await refreshRootNames();
       clearDeletedPreview(entry.path);
       if (browsingDeleted) setRootPath(parentPath(entry.path));
       if (!browsingDeleted) await loadRoot();
@@ -695,6 +737,7 @@ export default function WorkspacePage() {
       } else {
         if (deletedAncestor) setRootPath(parentPath(deletedAncestor));
         else await loadRoot();
+        await refreshRootNames();
       }
       void refreshQuota(provider);
       if (deleted) {
@@ -948,6 +991,7 @@ export default function WorkspacePage() {
             onClick={() =>
               renameEntry(entry, rootProvider ?? undefined, async () => {
                 await loadRoot();
+                await refreshRootNames();
               })
             }
             className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:bg-base-200 hover:text-base-content group-hover:opacity-100"
@@ -1096,7 +1140,10 @@ export default function WorkspacePage() {
         notifySuccess(t("workspace.upload_success", { count: uploaded }));
       }
       if (selectedSourceId) await loadEntries(false);
-      else await loadRoot();
+      else {
+        await loadRoot();
+        await refreshRootNames();
+      }
     } catch (error) {
       notifyError(error instanceof Error ? error.message : String(error));
     } finally {
@@ -1147,6 +1194,7 @@ export default function WorkspacePage() {
         onProgress: (done, total) => setAddProgress({ done, total }),
       });
       await loadRoot();
+      await refreshRootNames();
       const added = result.mounted + result.copied;
       if (added > 0) {
         notifySuccess(t("workspace.source_browser.added", { count: added }));
@@ -1749,6 +1797,7 @@ export default function WorkspacePage() {
                       onTargetChange={setSourceTarget}
                       onAddToWorkspace={addSourcesToWorkspace}
                       busy={addingSelection}
+                      isInWorkspace={isSelectionInWorkspace}
                       onAddDeviceFolder={() => addSource("local")}
                       onRemoveSource={removeSelectedSource}
                       onToggleSourceReadOnly={toggleSourceReadOnly}

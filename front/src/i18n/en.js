@@ -2292,6 +2292,7 @@ export default {
       select_all: "Select all",
       clear: "Clear",
       add_device_folder: "Add folder from this device",
+      in_workspace: "In workspace",
       untitled_chat: "Untitled chat",
       pick_source: "Pick a source on the left to browse its files.",
       added: "Added {{count}} items",

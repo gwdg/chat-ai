@@ -4,6 +4,7 @@ import { Locked, TrashCan, Unlocked } from "@carbon/icons-react";
 import {
   AlertCircle,
   ArrowLeft,
+  Check,
   ChevronRight,
   FileText,
   Folder,
@@ -216,6 +217,7 @@ export default function WorkspaceSourceBrowser({
   onRemoveSource,
   onToggleSourceReadOnly,
   onAddDeviceFolder,
+  isInWorkspace,
   embedded = false,
   className = "",
 }: {
@@ -227,6 +229,7 @@ export default function WorkspaceSourceBrowser({
   onRemoveSource?: (source: WorkspaceSourceRow) => void;
   onToggleSourceReadOnly?: (source: WorkspaceSourceRow) => void;
   onAddDeviceFolder?: () => void;
+  isInWorkspace?: (selection: SourcesSelection) => boolean;
   embedded?: boolean;
   className?: string;
 }) {
@@ -426,16 +429,31 @@ export default function WorkspaceSourceBrowser({
   const visibleItems = useMemo(
     () =>
       rows
-        .map((row) => ({ row, selection: selectionFor(row) }))
+        .map((row) => {
+          const selection = selectionFor(row);
+          return selection
+            ? {
+                row,
+                selection,
+                inWorkspace: isInWorkspace?.(selection) ?? false,
+              }
+            : null;
+        })
         .filter(
-          (item): item is { row: Row; selection: SourcesSelection } =>
-            item.selection !== null,
+          (
+            item,
+          ): item is {
+            row: Row;
+            selection: SourcesSelection;
+            inWorkspace: boolean;
+          } => item !== null,
         ),
-    [rows, selectionFor],
+    [rows, selectionFor, isInWorkspace],
   );
+  const selectableItems = visibleItems.filter((item) => !item.inWorkspace);
   const allVisibleSelected =
-    visibleItems.length > 0 &&
-    visibleItems.every((item) =>
+    selectableItems.length > 0 &&
+    selectableItems.every((item) =>
       selected.has(selectionKey(item.selection)),
     );
 
@@ -453,6 +471,7 @@ export default function WorkspaceSourceBrowser({
     setSelected((current) => {
       const next = new Map(current);
       for (const item of visibleItems) {
+        if (checked && item.inWorkspace) continue;
         const key = selectionKey(item.selection);
         if (checked) next.set(key, item.selection);
         else next.delete(key);
@@ -480,6 +499,7 @@ export default function WorkspaceSourceBrowser({
     }
     if (view.drive === "chats") {
       const selection = selectionFor(row);
+      if (selection && isInWorkspace?.(selection)) return;
       if (selection) {
         toggleSelection(selection, !selected.has(selectionKey(selection)));
       }
@@ -490,6 +510,7 @@ export default function WorkspaceSourceBrowser({
       return;
     }
     const selection = selectionFor(row);
+    if (selection && isInWorkspace?.(selection)) return;
     if (selection) {
       toggleSelection(selection, !selected.has(selectionKey(selection)));
     }
@@ -658,8 +679,11 @@ export default function WorkspaceSourceBrowser({
               </div>
             ) : (
               <div className="flex flex-col gap-0.5">
-                {visibleItems.map(({ row, selection }) => {
+                {visibleItems.map(({ row, selection, inWorkspace }) => {
                   const checked = selected.has(selectionKey(selection));
+                  const inWorkspaceLabel = t(
+                    "workspace.source_browser.in_workspace",
+                  );
                   const source =
                     view.drive === "device" &&
                     view.level === "drives" &&
@@ -681,9 +705,12 @@ export default function WorkspaceSourceBrowser({
                           type="checkbox"
                           className="checkbox checkbox-xs mt-0.5 shrink-0"
                           checked={checked}
-                          onChange={(event) =>
-                            toggleSelection(selection, event.target.checked)
-                          }
+                          disabled={inWorkspace}
+                          title={inWorkspace ? inWorkspaceLabel : undefined}
+                          onChange={(event) => {
+                            if (inWorkspace) return;
+                            toggleSelection(selection, event.target.checked);
+                          }}
                           aria-label={row.name}
                         />
                         <button
@@ -705,6 +732,12 @@ export default function WorkspaceSourceBrowser({
                           </span>
                           <QuotaMeter quota={quota} label={usageLabel(quota)} />
                         </button>
+                        {inWorkspace && (
+                          <span className="flex shrink-0 whitespace-nowrap items-center gap-0.5 text-[9px] font-semibold uppercase tracking-wide text-success">
+                            <Check size={11} />
+                            {inWorkspaceLabel}
+                          </span>
+                        )}
                         {(onToggleSourceReadOnly || onRemoveSource) && (
                           <span className="flex shrink-0 items-center gap-0.5">
                             {source.kind === "local" &&
@@ -770,9 +803,12 @@ export default function WorkspaceSourceBrowser({
                         type="checkbox"
                         className="checkbox checkbox-xs shrink-0"
                         checked={checked}
-                        onChange={(event) =>
-                          toggleSelection(selection, event.target.checked)
-                        }
+                        disabled={inWorkspace}
+                        title={inWorkspace ? inWorkspaceLabel : undefined}
+                        onChange={(event) => {
+                          if (inWorkspace) return;
+                          toggleSelection(selection, event.target.checked);
+                        }}
                         aria-label={row.name}
                       />
                       <button
@@ -808,6 +844,12 @@ export default function WorkspaceSourceBrowser({
                           />
                         )}
                       </button>
+                      {inWorkspace && (
+                        <span className="flex shrink-0 whitespace-nowrap items-center gap-0.5 text-[9px] font-semibold uppercase tracking-wide text-success">
+                          <Check size={11} />
+                          {inWorkspaceLabel}
+                        </span>
+                      )}
                     </div>
                   );
                 })}

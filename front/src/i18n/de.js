@@ -2321,6 +2321,7 @@ export default {
       select_all: "Alle auswählen",
       clear: "Auswahl aufheben",
       add_device_folder: "Ordner von diesem Gerät hinzufügen",
+      in_workspace: "Im Arbeitsbereich",
       untitled_chat: "Unbenannter Chat",
       pick_source: "Wählen Sie links eine Quelle, um ihre Dateien zu durchsuchen.",
       added: "{{count}} Elemente hinzugefügt",
