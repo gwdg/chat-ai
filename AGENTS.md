@@ -505,11 +505,10 @@ icon included. The Workspace section header and the workspace rows, and the topi
 edge of the row, after the label (and after the per-row actions), never before the icon.
 Agents and MCP Servers are advanced sections: both, with their dividers and pinned agent rows, are
 rendered only while `user_settings.advanced_mode` is on (`selectAdvancedMode`, default off). The
-switch appears in two places that read and write that same key — the prompt box's chat settings
-panel (`SettingsPanel/SettingsContent.jsx`, `data-guide="advanced-mode-preference"`) and the
-profile modal's Chat tab (`modals/UserSettings/ChatPreferences.jsx`,
-`data-guide="profile-advanced-mode-preference"`), because the admin looked for it in the profile
-and did not find it; with it off the sidebar is chats, topics and workspaces.
+switch lives in one place only — the profile modal's Chat tab
+(`modals/UserSettings/ChatPreferences.jsx`, `data-guide="profile-advanced-mode-preference"`). It was
+removed from the prompt box's chat settings panel at the admin's request (2026-11-17) so the prompt
+panel stays to model/temperature; with it off the sidebar is chats, topics and workspaces.
 
 The chat's close control is a circle X (`Conversation/CloseChatButton.jsx`, `data-guide="close-chat"`)
 rendered in normal flow at the top of the messages area, directly below `HallucinationWarning` and any

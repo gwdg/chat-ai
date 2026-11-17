@@ -1,8 +1,8 @@
  
 //Libraries
 import { useEffect, useRef, useState } from "react";
-import { Trans, useTranslation } from "react-i18next";
-import { useDispatch, useSelector } from "react-redux";
+import { Trans } from "react-i18next";
+import { useSelector } from "react-redux";
 
 //Components
 
@@ -24,11 +24,6 @@ import { useConversationList } from "../../db";
 import { getDefaultSettings } from "../../utils/conversationUtils";
 import ReasoningEffortContainer from "./ReasoningEffortContainer";
 import { getSpeechModule } from "../../utils/speechAudio";
-import ProfilePreferenceSwitch from "../../modals/UserSettings/ProfilePreferenceSwitch";
-import {
-  selectAdvancedMode,
-  setAdvancedMode,
-} from "../../Redux/reducers/userSettingsReducer";
 
 const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
 const SPEECH_MODULE_ENABLED = Boolean(getSpeechModule());
@@ -37,10 +32,7 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
   const conversations = useConversationList();
 
   //Hooks
-  const { t } = useTranslation();
-  const dispatch = useDispatch();
   const userSettings = useSelector(selectUserSettings);
-  const advancedMode = useSelector(selectAdvancedMode);
   const settings = localState.settings;
   const tools = settings?.tools || {};
   const { notifySuccess, notifyError } = useToast();
@@ -104,16 +96,6 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
 
           {/* Warning for external models */}
           <DataSafetyText localState={localState} userData={userData} />
-          <div data-guide="advanced-mode-preference">
-            <ProfilePreferenceSwitch
-              label={t("user_settings.chat_preferences.sidebar.advanced.label")}
-              description={t(
-                "user_settings.chat_preferences.sidebar.advanced.description",
-              )}
-              checked={advancedMode}
-              onChange={(checked) => dispatch(setAdvancedMode(checked))}
-            />
-          </div>
           {SPEECH_MODULE_ENABLED && (
             <AudioSettingsContainer
               localState={localState}
