@@ -848,10 +848,15 @@ disabled and Select all skips them; the page supplies that through the `isInWork
 `workspace_chats` for a chat, an exact `sourceId` + `sourcePath` match in `workspace_mounts` for a
 folder, and for a file either of those or a same-named entry at the workspace root (`rootNames`,
 refreshed with every root load plus add/create/rename/delete/upload). The neighbouring card,
-`data-guide="workspace-root-pane"`, is the **Workspace Root** — eyebrow
-`workspace.workspace_root`, the current path on the right, then the same `WorkspaceRootBrowser` (or
-the mounted-source view when a mount is open) as before, so adding from the Sources card lands on the
-root card.
+`data-guide="workspace-root-pane"`, is the **Workspace Root**, and its heading is a tab strip: the
+`workspace.workspace_root` tab (`data-guide="workspace-tab-root"`, the current path on the right
+while it is active) shows the same `WorkspaceRootBrowser` (or the mounted-source view when a mount is
+open) as before, so adding from the Sources card lands on the root card. Opening a file — in either
+browser, or a `.git` log from a row's menu — switches the card to the **Preview** tab
+(`data-guide="workspace-tab-preview"`, disabled until a file has been opened), which renders that
+file in place through `components/Workspace/WorkspacePreviewTab.jsx` (name, mime · size, download,
+close) instead of docking a page-level panel; closing it returns to the root tab. Phones keep the
+full-screen `DocumentPanel/FilePreviewPanel`, since the cards stack there.
 
 `workspace/addSelectionToWorkspace.ts` is what Add to Workspace runs: a folder from `local`,
 `arcana` or `arcana-filesystem` becomes a **mount** at `/<name>` (never a copy, so it stays live;

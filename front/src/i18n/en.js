@@ -2099,6 +2099,7 @@ export default {
     pin_action: "Pin workspace",
     unpin_action: "Unpin workspace",
     workspace_root: "Workspace Root",
+    tab_preview: "Preview",
     root_hint: "Files and folders kept in this workspace.",
     storage: "Storage",
     available_storage: "Available storage",

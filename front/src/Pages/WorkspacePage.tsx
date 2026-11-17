@@ -5,7 +5,6 @@ import {
   Bot,
   Download,
   Edit,
-  Home,
   Locked,
   Unlocked,
   TrashCan,
@@ -16,6 +15,7 @@ import Header from "../components/Header/Header";
 import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
 import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
 import WorkspaceRootBrowser from "../components/Workspace/WorkspaceRootBrowser";
+import WorkspacePreviewTab from "../components/Workspace/WorkspacePreviewTab";
 import WorkspaceAgentPanel from "../components/Workspace/WorkspaceAgentPanel";
 import WorkspaceSourceBrowser, {
   type SourceTarget,
@@ -102,7 +102,12 @@ const readGitLog = async (provider: FileProvider, gitPath: string) => {
   }
 };
 
-
+const rootTabClass = (active: boolean) =>
+  `whitespace-nowrap rounded-md px-2 py-1 text-[11px] font-semibold ${
+    active
+      ? "bg-base-200 text-base-content"
+      : "text-base-content/55 hover:text-base-content"
+  } disabled:opacity-40 disabled:hover:text-base-content/55`;
 
 const isTextFile = (entry: WorkspaceFileEntry): boolean => {
   const name = entry.name.toLowerCase();
@@ -257,6 +262,7 @@ export default function WorkspacePage() {
     loading: boolean;
     onOpenPath?: (path: string) => void;
   } | null>(null);
+  const [rootTab, setRootTab] = useState<"root" | "preview">("root");
   const [quotas, setQuotas] = useState<Record<string, QuotaInfo | null>>({});
   const [transferring, setTransferring] = useState(false);
   const [draggingEntry, setDraggingEntry] = useState<{
@@ -310,6 +316,7 @@ export default function WorkspacePage() {
       previewUrlRef.current = null;
     }
     setPreview(null);
+    setRootTab("root");
   }, [workspaceId]);
 
   useEffect(() => {
@@ -524,6 +531,7 @@ export default function WorkspacePage() {
       previewUrlRef.current = null;
     }
     setPreview(null);
+    setRootTab("root");
   }, []);
 
   useEffect(() => {
@@ -794,6 +802,7 @@ export default function WorkspacePage() {
       return;
     }
     closePreview();
+    setRootTab("preview");
     const generation = workspaceGenerationRef.current;
     const request = ++previewRequestRef.current;
     const isStale = () =>
@@ -887,6 +896,7 @@ export default function WorkspacePage() {
       );
     };
     closePreview();
+    setRootTab("preview");
     setPreview({ entry: previewEntry, loading: true });
     try {
       if (provider.status !== "connected") await provider.connect();
@@ -1034,11 +1044,24 @@ export default function WorkspacePage() {
   };
 
   const download = (entry: WorkspaceFileEntry) => {
-    if (!preview?.url) return;
+    if (preview?.url) {
+      const link = document.createElement("a");
+      link.href = preview.url;
+      link.download = entry.name;
+      link.click();
+      return;
+    }
+    if (preview?.text === undefined) return;
+    const url = URL.createObjectURL(
+      new Blob([preview.text], {
+        type: entry.mime || "text/plain;charset=utf-8",
+      }),
+    );
     const link = document.createElement("a");
-    link.href = preview.url;
+    link.href = url;
     link.download = entry.name;
     link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
   const uploadReadOnly = selectedSourceId
@@ -1769,21 +1792,47 @@ export default function WorkspacePage() {
                   data-guide="workspace-root-pane"
                   className="flex min-h-[60dvh] min-w-0 flex-[2] flex-col overflow-hidden rounded-xl border border-base-300 bg-base-100 md:min-h-0"
                 >
-                  <div className="flex items-center justify-between gap-2 border-b border-base-300 px-3 py-2">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <Home
-                        size={14}
-                        className="shrink-0 text-base-content/45"
-                      />
-                      <span className="truncate text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
+                  <div className="flex items-center gap-2 border-b border-base-300 px-2 py-1.5">
+                    <div
+                      role="tablist"
+                      data-guide="workspace-root-tabs"
+                      className="flex min-w-0 items-center gap-0.5"
+                    >
+                      <button
+                        type="button"
+                        role="tab"
+                        data-guide="workspace-tab-root"
+                        aria-selected={rootTab === "root"}
+                        onClick={() => setRootTab("root")}
+                        className={rootTabClass(rootTab === "root")}
+                      >
                         {t("workspace.workspace_root")}
-                      </span>
+                      </button>
+                      <button
+                        type="button"
+                        role="tab"
+                        data-guide="workspace-tab-preview"
+                        aria-selected={rootTab === "preview"}
+                        disabled={!preview}
+                        onClick={() => setRootTab("preview")}
+                        className={rootTabClass(rootTab === "preview")}
+                      >
+                        {t("workspace.tab_preview")}
+                      </button>
                     </div>
-                    <span className="min-w-0 truncate text-[10px] text-base-content/50">
-                      {rootPath}
-                    </span>
+                    {rootTab === "root" && (
+                      <span className="ml-auto min-w-0 truncate text-[10px] text-base-content/50">
+                        {rootPath}
+                      </span>
+                    )}
                   </div>
-                  {!selectedProvider ? (
+                  {rootTab === "preview" && preview ? (
+                    <WorkspacePreviewTab
+                      preview={preview}
+                      onClose={closePreview}
+                      onDownload={download}
+                    />
+                  ) : !selectedProvider ? (
                     <div className="flex flex-1 flex-col">
                       <WorkspaceRootBrowser
                         path={rootPath}
@@ -2132,11 +2181,13 @@ export default function WorkspacePage() {
       </div>
       </div>
       {preview && (
-        <FilePreviewPanel
-          preview={preview}
-          onClose={closePreview}
-          onDownload={download}
-        />
+        <div className="md:hidden">
+          <FilePreviewPanel
+            preview={preview}
+            onClose={closePreview}
+            onDownload={download}
+          />
+        </div>
       )}
     </div>
   );

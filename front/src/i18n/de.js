@@ -2128,6 +2128,7 @@ export default {
     pin_action: "Arbeitsbereich anheften",
     unpin_action: "Arbeitsbereich nicht mehr anheften",
     workspace_root: "Arbeitsbereich-Stamm",
+    tab_preview: "Vorschau",
     root_hint: "Dateien und Ordner in diesem Arbeitsbereich.",
     storage: "Speicher",
     available_storage: "Verfügbarer Speicher",
