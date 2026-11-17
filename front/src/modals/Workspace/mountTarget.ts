@@ -23,8 +23,11 @@ export async function inspectMountTarget({
   path: string;
   mountedPaths?: string[];
 }): Promise<MountTargetProblem | null> {
-  if (!workspaceId) return null;
   const target = normalizePath(path);
+  if (target === "/uploads" || target.startsWith("/uploads/")) {
+    return { key: "workspace.mount_target_reserved", values: { path: target } };
+  }
+  if (!workspaceId) return null;
   const mounted = mountedPaths.map((entry) => normalizePath(entry));
 
   if (mounted.includes(target)) {

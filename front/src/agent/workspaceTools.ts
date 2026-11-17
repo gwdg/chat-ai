@@ -237,9 +237,11 @@ export async function createWorkspaceTools(
       if (source) {
         const mountPath = normalizePath(mount.path);
         const normalizedPath = normalizePath(pathValue || "/");
-        const relative = isWithinPath(normalizedPath, mountPath)
-          ? normalizedPath.slice(mountPath.length).replace(/^\/+/, "")
-          : String(pathValue || "").replace(/^\/+/, "");
+        const relative = (
+          isWithinPath(normalizedPath, mountPath)
+            ? normalizedPath.slice(mountPath.length)
+            : normalizedPath
+        ).replace(/^\/+/, "");
         return {
           source,
           path: relative
@@ -257,11 +259,22 @@ export async function createWorkspaceTools(
     if (!source) return null;
     const normalizedPath = normalizePath(pathValue || "/");
     // A path expressed in workspace terms can still be read through its mount.
-    const throughMount = bundle.mounts.find(
-      (item) =>
-        item.sourceId === source.id &&
-        isWithinPath(normalizedPath, normalizePath(item.path)),
-    );
+    let throughMount: WorkspaceMountRow | undefined;
+    for (const item of bundle.mounts) {
+      if (
+        item.sourceId !== source.id ||
+        !isWithinPath(normalizedPath, normalizePath(item.path))
+      ) {
+        continue;
+      }
+      if (
+        !throughMount ||
+        normalizePath(item.path).length >
+          normalizePath(throughMount.path).length
+      ) {
+        throughMount = item;
+      }
+    }
     if (throughMount) {
       const mountPath = normalizePath(throughMount.path);
       const relative = normalizedPath

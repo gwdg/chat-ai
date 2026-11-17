@@ -2164,6 +2164,7 @@ export default {
     mount_target_file: "A file already exists at {{path}}.",
     mount_target_covers: "The folder {{path}} already contains a mounted folder.",
     mount_target_nested: "{{path}} is inside the mounted folder {{mount}}.",
+    mount_target_reserved: "The folder {{path}} is reserved for chat uploads.",
     attached_chats: "Chats",
     attached_items: "Attached chats, agents and sessions",
     no_attached_chats: "No chats attached yet.",

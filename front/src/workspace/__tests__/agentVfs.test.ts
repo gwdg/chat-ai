@@ -153,6 +153,17 @@ const mount = (readOnly: boolean): WorkspaceMountRow => ({
   lastModified: 0,
 });
 
+const mountAt = (
+  path: string,
+  readOnly = false,
+  sourcePath = "/",
+): WorkspaceMountRow => ({
+  ...mount(readOnly),
+  id: `mount-${path}`,
+  path,
+  sourcePath,
+});
+
 describe("WorkspaceAgentVfs", () => {
   it("refuses writeFile, mkdir, and remove on a read-only mount", async () => {
     const { root } = makeRoot();
@@ -211,6 +222,42 @@ describe("WorkspaceAgentVfs", () => {
 
     expect(mounted.calls.write).toEqual(["/a.txt"]);
     expect(mounted.written).toBe("hello");
+  });
+
+  it("routes an overlapping path to the longest mount prefix", async () => {
+    const { root } = makeRoot();
+    const chats = makeMountProvider();
+    const chat = makeMountProvider();
+    const vfs = new WorkspaceAgentVfs(emptyConversation, "workspace-1", root, [
+      { mount: mountAt("/chats"), provider: chats.provider },
+      { mount: mountAt("/chats/chat-1"), provider: chat.provider },
+    ]);
+
+    await vfs.writeFile("/chats/chat-1/f", "hello");
+
+    expect(chats.calls.write).toEqual([]);
+    expect(chat.calls.write).toEqual(["/f"]);
+  });
+
+  it("keeps the uploads namespace ahead of a read-only mount there", async () => {
+    const { root } = makeRoot();
+    const mounted = makeMountProvider();
+    const uploads: string[] = [];
+    const conversation: Vfs = {
+      ...emptyConversation,
+      writeFile: async (path) => {
+        uploads.push(path);
+      },
+    };
+    const vfs = new WorkspaceAgentVfs(conversation, "workspace-1", root, [
+      { mount: mountAt("/uploads", true), provider: mounted.provider },
+    ]);
+
+    await vfs.writeFile("/uploads/file.txt", "hello");
+
+    expect(uploads).toEqual(["/uploads/file.txt"]);
+    expect(mounted.calls.write).toEqual([]);
+    expect(vfs.mountLabels()).toEqual([]);
   });
 
   it("normalises before routing, so dotdot cannot select a different mount", async () => {

@@ -319,6 +319,30 @@ describe("createWorkspaceTools", () => {
     expect(provider.read).toHaveBeenCalledWith("/docs/intro.txt");
   });
 
+  it("maps a path inside an explicit mount from the normalised path", async () => {
+    const provider = providerWith({
+      read: vi.fn(async () => bytesOf("hello")),
+    });
+    mocks.createProvider.mockReturnValue(provider);
+
+    const read = await tool("workspace_read_file");
+    await read.run({ source: "/shared", path: "/shared/intro.txt" });
+
+    expect(provider.read).toHaveBeenCalledWith("/docs/intro.txt");
+  });
+
+  it("keeps an explicit mount path that escapes the mount inside its source path", async () => {
+    const provider = providerWith({
+      read: vi.fn(async () => bytesOf("hello")),
+    });
+    mocks.createProvider.mockReturnValue(provider);
+
+    const read = await tool("workspace_read_file");
+    await read.run({ source: "/shared", path: "/shared/../../secret" });
+
+    expect(provider.read).toHaveBeenCalledWith("/docs/secret");
+  });
+
   it("writes a file through a provider", async () => {
     const provider = providerWith();
     mocks.createProvider.mockReturnValue(provider);
@@ -353,6 +377,27 @@ describe("createWorkspaceTools", () => {
       "hello",
     );
     expect(output).toContain("Wrote /notes.md");
+  });
+
+  it("routes a named source through the deepest matching mount, including read-only", async () => {
+    mocks.mounts.mockResolvedValue([
+      { ...mount, id: "mount-writable", path: "/x" },
+      { ...mount, id: "mount-readonly", path: "/x/ro", readOnly: true },
+    ]);
+    const provider = providerWith();
+    mocks.createProvider.mockReturnValue(provider);
+
+    const write = await tool("workspace_write_file");
+    const output = textOf(
+      await write.run({
+        source: "Shared documents",
+        path: "/x/ro/file.md",
+        content: "hi",
+      }),
+    );
+
+    expect(provider.write).not.toHaveBeenCalled();
+    expect(output).toContain("That mount is read-only.");
   });
 
   it("rejects a write through a read-only mount", async () => {

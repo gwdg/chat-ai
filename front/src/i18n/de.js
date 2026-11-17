@@ -2193,6 +2193,7 @@ export default {
     mount_target_file: "Unter {{path}} gibt es bereits eine Datei.",
     mount_target_covers: "Der Ordner {{path}} enthält bereits einen eingebundenen Ordner.",
     mount_target_nested: "{{path}} liegt in dem eingebundenen Ordner {{mount}}.",
+    mount_target_reserved: "Der Ordner {{path}} ist für Chat-Uploads reserviert.",
     attached_chats: "Chats",
     attached_items: "Verknüpfte Chats, Agenten und Sitzungen",
     no_attached_chats: "Noch keine Chats verknüpft.",

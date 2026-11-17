@@ -38,23 +38,29 @@ export class WorkspaceAgentVfs implements Vfs {
 
   private binding(path: string): { binding: MountBinding; inner: string } | null {
     const normalized = normalizePath(path);
+    let best:
+      | { binding: MountBinding; inner: string; mountPath: string }
+      | null = null;
     for (const binding of this.mounts) {
       const mountPath = normalizePath(binding.mount.path);
-      if (normalized === mountPath) {
-        return {
-          binding,
-          inner: normalizePath(binding.mount.sourcePath || "/"),
-        };
+      if (isUploads(mountPath)) continue;
+      if (
+        normalized !== mountPath &&
+        !normalized.startsWith(`${mountPath}/`)
+      ) {
+        continue;
       }
-      if (normalized.startsWith(`${mountPath}/`)) {
-        const suffix = normalized.slice(mountPath.length);
-        return {
-          binding,
-          inner: joinPath(binding.mount.sourcePath || "/", suffix),
-        };
-      }
+      if (best && mountPath.length <= best.mountPath.length) continue;
+      const inner =
+        normalized === mountPath
+          ? normalizePath(binding.mount.sourcePath || "/")
+          : joinPath(
+              binding.mount.sourcePath || "/",
+              normalized.slice(mountPath.length),
+            );
+      best = { binding, inner, mountPath };
     }
-    return null;
+    return best ? { binding: best.binding, inner: best.inner } : null;
   }
 
   private virtualMounts(path: string): string[] {
@@ -63,6 +69,7 @@ export class WorkspaceAgentVfs implements Vfs {
     const names = new Set<string>();
     for (const { mount } of this.mounts) {
       const mountPath = normalizePath(mount.path);
+      if (isUploads(mountPath)) continue;
       if (!mountPath.startsWith(prefix) || mountPath === normalized) continue;
       const rest = mountPath.slice(prefix.length);
       const first = rest.split("/")[0];
@@ -158,7 +165,9 @@ export class WorkspaceAgentVfs implements Vfs {
     }
     if (this.virtualMounts(normalized).length > 0) return { dir: true };
     for (const { mount } of this.mounts) {
-      if (normalizePath(mount.path).startsWith(`${normalized}/`)) return { dir: true };
+      const mountPath = normalizePath(mount.path);
+      if (isUploads(mountPath)) continue;
+      if (mountPath.startsWith(`${normalized}/`)) return { dir: true };
     }
     try {
       const entry = await this.root.stat(normalized);
@@ -206,7 +215,9 @@ export class WorkspaceAgentVfs implements Vfs {
   }
 
   mountLabels(): string[] {
-    return this.mounts.map(({ mount }) => normalizePath(mount.path));
+    return this.mounts
+      .map(({ mount }) => normalizePath(mount.path))
+      .filter((mountPath) => !isUploads(mountPath));
   }
 
   uploadPath(path: string): boolean {

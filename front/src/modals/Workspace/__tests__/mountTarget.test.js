@@ -35,6 +35,22 @@ describe("inspectMountTarget", () => {
     ).resolves.toBeNull();
   });
 
+  it("rejects the reserved uploads namespace", async () => {
+    await expect(
+      inspectMountTarget({ workspaceId: "ws-1", path: "/uploads" }),
+    ).resolves.toEqual({
+      key: "workspace.mount_target_reserved",
+      values: { path: "/uploads" },
+    });
+    await expect(
+      inspectMountTarget({ workspaceId: "ws-1", path: "/uploads/photos" }),
+    ).resolves.toEqual({
+      key: "workspace.mount_target_reserved",
+      values: { path: "/uploads/photos" },
+    });
+    expect(rootProvider.connect).not.toHaveBeenCalled();
+  });
+
   it("reports a file at the path", async () => {
     rootProvider.stat.mockResolvedValue({ path: "/notes.txt", name: "notes.txt", kind: "file" });
 
