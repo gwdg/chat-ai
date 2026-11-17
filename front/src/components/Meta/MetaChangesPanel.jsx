@@ -18,7 +18,7 @@ import {
 
 const COLLAPSED_KEY = "chatai.meta.changes-collapsed";
 const WIDTH_KEY = "chatai.meta.changes-width-v2";
-const DEFAULT_WIDTH = 640;
+const DEFAULT_WIDTH = 420;
 const MIN_WIDTH = 320;
 const MAX_WIDTH = 1024;
 
@@ -249,7 +249,21 @@ export default function MetaChangesPanel({
             {changesTitle}
           </span>
         )}
-        {(tabs.length === 0 || activeTab === "changes") && (
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          className="flex h-5 w-5 items-center justify-center rounded text-base-content/45 hover:bg-base-200 hover:text-base-content"
+          title={t("meta_chat.collapse_changes")}
+          aria-label={t("meta_chat.collapse_changes")}
+        >
+          <ChevronRight size={14} />
+        </button>
+      </div>
+      {(tabs.length === 0 || activeTab === "changes") && (
+        <div
+          data-guide="meta-check-now-row"
+          className="flex items-center px-3 pb-2 pt-1.5"
+        >
           <button
             type="button"
             onClick={() => void check()}
@@ -261,17 +275,8 @@ export default function MetaChangesPanel({
             <RefreshCw size={13} className={checking ? "animate-spin" : ""} />
             {t("meta_chat.check_now")}
           </button>
-        )}
-        <button
-          type="button"
-          onClick={toggleCollapsed}
-          className="flex h-5 w-5 items-center justify-center rounded text-base-content/45 hover:bg-base-200 hover:text-base-content"
-          title={t("meta_chat.collapse_changes")}
-          aria-label={t("meta_chat.collapse_changes")}
-        >
-          <ChevronRight size={14} />
-        </button>
-      </div>
+        </div>
+      )}
       {activeContentTab ? (
         <div className="min-h-0 flex-1 overflow-y-auto p-2">
           {activeContentTab.content}

@@ -585,7 +585,8 @@ sidebar, not repeated below the report. The same panel carries two more tabs bes
 folders labelled by chat title) and **Sessions** (`sessions_tab`, a `WorkspaceSessionsPanel` list of
 the workspace's chats whose rows look like the sidebar's workspace chat rows and navigate to
 `/chat/<id>`) — through `MetaChangesPanel.tabs` (`{id,label,content}[]`, default none, so the Meta
-chat's global panel has no strip). A scoped report shows a topic only when one of those chats
+chat's global panel has no strip). "Check now" sits in its own row under the strip and only on the
+report tab, and the panel's default width is 420 px (320–1024 after a drag). A scoped report shows a topic only when one of those chats
 is in it and omits memories,
 which belong to the account rather than to a workspace; agent files stay agent-level because they
 have no session link. Scoped results are stored under

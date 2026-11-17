@@ -154,29 +154,74 @@ describe("MetaChangesPanel", () => {
     expect(screen.queryByRole("link", { name: "Chat title" })).toBeNull();
   });
 
-  it("shows Check now only on the What's new tab", () => {
+  it("shows the Check now row only on the What's new tab", () => {
     render(
       <MemoryRouter>
         <MetaChangesPanel
           userSettings={{}}
           tabs={[
-            { id: "files", label: "Files", content: <div>Files view</div> },
+            {
+              id: "workspace",
+              label: "Workspace",
+              content: <div>Workspace view</div>,
+            },
+            {
+              id: "sessions",
+              label: "Sessions",
+              content: <div>Sessions view</div>,
+            },
           ]}
         />
       </MemoryRouter>,
     );
 
-    expect(
-      screen.getByRole("button", { name: "Check now" }),
-    ).toBeInTheDocument();
+    const checkRow = () =>
+      document.querySelector('[data-guide="meta-check-now-row"]');
 
-    fireEvent.click(screen.getByRole("tab", { name: "Files" }));
+    const button = screen.getByRole("button", { name: "Check now" });
+    const row = checkRow();
+    expect(row).not.toBeNull();
+    expect(row).toHaveClass("flex", "items-center", "px-3", "pb-2", "pt-1.5");
+    expect(row.contains(button)).toBe(true);
+    expect(button.closest('[data-guide="meta-check-now-row"]')).toBe(row);
+    expect(button).toHaveClass("btn", "btn-ghost", "btn-xs", "gap-1");
+
+    const header = screen.getByRole("tablist").parentElement;
+    expect(header.querySelector('[data-guide="meta-check-now-row"]')).toBeNull();
+    expect(header.contains(button)).toBe(false);
+    expect(header.nextElementSibling).toBe(row);
+
+    fireEvent.click(screen.getByRole("tab", { name: "Workspace" }));
+    expect(checkRow()).toBeNull();
+    expect(screen.queryByRole("button", { name: "Check now" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Sessions" }));
+    expect(checkRow()).toBeNull();
     expect(screen.queryByRole("button", { name: "Check now" })).toBeNull();
 
     fireEvent.click(screen.getByRole("tab", { name: "What's new" }));
+    const restoredRow = checkRow();
+    expect(restoredRow).not.toBeNull();
     expect(
-      screen.getByRole("button", { name: "Check now" }),
-    ).toBeInTheDocument();
+      restoredRow.contains(screen.getByRole("button", { name: "Check now" })),
+    ).toBe(true);
+  });
+
+  it("shows the Check now row on the no-tabs panel", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <MetaChangesPanel userSettings={{}} />
+      </MemoryRouter>,
+    );
+
+    const row = document.querySelector('[data-guide="meta-check-now-row"]');
+    expect(row).not.toBeNull();
+    const button = screen.getByRole("button", { name: "Check now" });
+    expect(row.contains(button)).toBe(true);
+    expect(button.closest('[data-guide="meta-check-now-row"]')).toBe(row);
+    expect(button).toHaveClass("btn", "btn-ghost", "btn-xs", "gap-1");
+    expect(screen.getByText("What's new").closest("[data-guide]")).toBeNull();
+    expect(container.querySelector("aside")).toHaveStyle({ width: "420px" });
   });
 
   it("renders three tabs and only the active tab's content", () => {
