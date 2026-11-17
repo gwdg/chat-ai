@@ -29,7 +29,14 @@ import { useImportConversation } from "../../hooks/useImportConversation";
 import { useUpdateModelsData } from "../../hooks/useUpdateModelsData";
 import { useToast } from "../../hooks/useToast";
 import { deleteConversation, newId } from "../../db";
-import { baseName, joinPath, normalizePath } from "../../workspace/paths";
+import { baseName, joinPath } from "../../workspace/paths";
+import { formatBytes } from "../../utils/formatBytes";
+import { folderName } from "../../workspace/folders";
+import {
+  addLocalSource,
+  createLocalWorkspace,
+  pickDirectory,
+} from "../../workspace/localWorkspace";
 import {
   cleanupAgentClone,
   cloneId,
@@ -40,26 +47,6 @@ import {
   parsePublicGitUrl,
   readManifestFromAgent,
 } from "../../workspace/importProject";
-
-const formatBytes = (value) => {
-  if (!Number.isFinite(value) || value <= 0) return "0 B";
-  if (value < 1024) return `${value} B`;
-  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
-  if (value < 1024 * 1024 * 1024) {
-    return `${(value / (1024 * 1024)).toFixed(1)} MB`;
-  }
-  return `${(value / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-};
-
-const safeFolder = (value) => {
-  const parts = normalizePath(`/${String(value || "").trim()}`)
-    .split("/")
-    .filter(Boolean);
-  if (!parts.length || parts.some((part) => part === "..")) {
-    throw new Error("Invalid target folder");
-  }
-  return parts.join("/").slice(0, 120);
-};
 
 const repoNameFromUrl = (value) => {
   try {
@@ -144,11 +131,10 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
   };
 
   const pickLocalTarget = async () => {
-    if (!("showDirectoryPicker" in window)) {
-      throw new Error(t("workspace.local_unsupported"));
-    }
     try {
-      const handle = await window.showDirectoryPicker({ mode: "readwrite" });
+      const handle = await pickDirectory({
+        unsupportedMessage: t("workspace.local_unsupported"),
+      });
       setTargetHandle(handle);
       setTargetMode("local");
     } catch (event) {
@@ -187,28 +173,11 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
     try {
       let handle = targetHandle;
       if (!handle) {
-        if (!("showDirectoryPicker" in window)) {
-          throw new Error(t("workspace.local_unsupported"));
-        }
-        handle = await window.showDirectoryPicker({ mode: "readwrite" });
+        handle = await pickDirectory({
+          unsupportedMessage: t("workspace.local_unsupported"),
+        });
       }
-      const workspaceId = await createWorkspace(name);
-      const sourceId = await addSource({
-        workspaceId,
-        kind: "local",
-        label: handle.name,
-        config: { handleKey: "" },
-        capabilities: defaultCapabilities("local"),
-        status: "offline",
-        handle,
-      });
-      const mountPath = `/${safeFolder(handle.name)}`;
-      await addWorkspaceMount({
-        workspaceId,
-        sourceId,
-        sourcePath: "/",
-        path: mountPath,
-      });
+      const { workspaceId } = await createLocalWorkspace({ name, handle });
       reset();
       onClose();
       navigate(`/workspace/${workspaceId}`);
@@ -230,7 +199,10 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
     try {
       if (!name.trim()) throw new Error(t("workspace.name_required"));
       const targetUrl = parsePublicGitUrl(url);
-      const targetFolder = safeFolder(folder || repoNameFromUrl(targetUrl));
+      const targetFolder = folderName(folder || repoNameFromUrl(targetUrl), {
+        maxLength: 120,
+        rejectEmpty: true,
+      });
       agent = localAgents.find((item) => item.id === cloneAgentId);
       if (!agent) throw new Error(t("workspace.clone_agent_required"));
       if (targetMode === "local" && !targetHandle) {
@@ -328,13 +300,9 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
       } else if (plan.targetMode === "browser") {
         provider = createWorkspaceRootProvider(workspaceId);
       } else if (plan.targetMode === "local") {
-        sourceId = await addSource({
+        sourceId = await addLocalSource({
           workspaceId,
-          kind: "local",
           label: plan.targetHandle.name,
-          config: { handleKey: "" },
-          capabilities: defaultCapabilities("local"),
-          status: "offline",
           handle: plan.targetHandle,
         });
         const source = await getWorkspaceSource(sourceId);
@@ -375,7 +343,7 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
             setProgress(
               t("workspace.clone_progress_files", {
                 files,
-                size: formatBytes(bytes),
+                size: formatBytes(bytes, { fixedDigits: true, maxUnit: 3 }),
               }),
             ),
         });
@@ -535,7 +503,12 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
               {t("workspace.clone_summary_files", {
                 files: plan.measure.files,
                 ...(plan.measure.bytes > 0
-                  ? { size: ` · ${formatBytes(plan.measure.bytes)}` }
+                  ? {
+                      size: ` · ${formatBytes(plan.measure.bytes, {
+                        fixedDigits: true,
+                        maxUnit: 3,
+                      })}`,
+                    }
                   : { size: "" }),
               })}{" "}
               · {targetLabel()}

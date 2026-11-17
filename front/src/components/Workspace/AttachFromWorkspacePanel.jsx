@@ -22,27 +22,8 @@ import {
   workspaceRootSourceId,
 } from "../../workspace/workspaceRoot";
 import { joinPath, normalizePath } from "../../workspace/paths";
-
-const readAll = async (stream) => {
-  const reader = stream.getReader();
-  const chunks = [];
-  let length = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (value) {
-      chunks.push(value);
-      length += value.length;
-    }
-  }
-  const data = new Uint8Array(length);
-  let offset = 0;
-  for (const chunk of chunks) {
-    data.set(chunk, offset);
-    offset += chunk.length;
-  }
-  return data;
-};
+import { readAll } from "../../workspace/bytes";
+import { listAllEntries } from "../../workspace/entries";
 
 const entryKey = (entry) =>
   entry.mount
@@ -162,8 +143,8 @@ function WorkspaceAttachmentSection({
 
   const listProvider = useCallback(async (provider, path) => {
     if (provider.status !== "connected") await provider.connect();
-    const page = await provider.list(path);
-    return page.entries.map((entry) => ({ ...entry, provider }));
+    const entries = await listAllEntries(provider, path);
+    return entries.map((entry) => ({ ...entry, provider }));
   }, []);
 
   const listRoot = useCallback(

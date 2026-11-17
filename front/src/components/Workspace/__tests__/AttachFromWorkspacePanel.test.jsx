@@ -128,4 +128,40 @@ describe("AttachFromWorkspacePanel", () => {
     expect(file.name).toBe("readme.txt");
     expect(await file.text()).toBe("hello");
   });
+
+  it("lists entries from later pages of a paginated workspace", async () => {
+    rootProvider.list.mockImplementation(async (path, cursor) => {
+      if (path !== "/") return { entries: [] };
+      if (!cursor) {
+        return {
+          entries: [
+            { sourceId: rootProvider.sourceId, path: "/docs", name: "docs", kind: "dir" },
+          ],
+          next: "page-2",
+        };
+      }
+      return {
+        entries: [
+          {
+            sourceId: rootProvider.sourceId,
+            path: "/notes.md",
+            name: "notes.md",
+            kind: "file",
+            mime: "text/markdown",
+            size: 5,
+          },
+        ],
+      };
+    });
+    render(
+      <AttachFromWorkspacePanel
+        workspaceIds={["workspace-1"]}
+        localState={localState}
+        setLocalState={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByText("notes.md")).toBeInTheDocument();
+  });
 });

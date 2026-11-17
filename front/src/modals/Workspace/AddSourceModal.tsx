@@ -9,6 +9,7 @@ import { hasLocalMcpServerValue } from "../../agent/mcp";
 import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
 import { defaultCapabilities } from "../../workspace/capabilities";
 import { DEVICE_PLANE_KINDS } from "../../workspace/deviceId";
+import { addLocalSource, pickDirectory } from "../../workspace/localWorkspace";
 
 const KINDS: SourceKind[] = ["local", "mcp"];
 
@@ -77,18 +78,28 @@ export default function AddSourceModal({ isOpen, onClose, workspaceId, onAdded }
     handle?: FileSystemDirectoryHandle;
     status?: string;
   }) => {
-    const id = newId();
-    await addSource({
-      id,
-      workspaceId,
-      kind: payload.kind,
-      label: payload.label,
-      config: payload.config,
-      status: payload.status as any,
-      capabilities: defaultCapabilities(payload.kind),
-      readOnly,
-      handle: payload.handle,
-    });
+    let id: string;
+    if (payload.kind === "local" && payload.handle) {
+      id = await addLocalSource({
+        workspaceId,
+        handle: payload.handle,
+        label: payload.label,
+        readOnly,
+      });
+    } else {
+      id = newId();
+      await addSource({
+        id,
+        workspaceId,
+        kind: payload.kind,
+        label: payload.label,
+        config: payload.config,
+        status: payload.status as any,
+        capabilities: defaultCapabilities(payload.kind),
+        readOnly,
+        handle: payload.handle,
+      });
+    }
     onAdded?.(id);
     close();
   };
@@ -103,34 +114,27 @@ export default function AddSourceModal({ isOpen, onClose, workspaceId, onAdded }
     setError("");
     setBusy(true);
     try {
-      if (window.isSecureContext === false) {
-        throw new Error(t("workspace.local_insecure"));
-      }
-      if (!("showDirectoryPicker" in window)) {
-        throw new Error(t("workspace.local_unsupported"));
-      }
-      let picked: FileSystemDirectoryHandle;
-      try {
-        picked = await (window as any).showDirectoryPicker({
-          mode: readOnly ? "read" : "readwrite",
-        });
-      } catch (event) {
-        // Chrome reports AbortError both for "user cancelled" and for "the file dialog could not
-        // open / the folder was refused". Swallowing it made a blocked picker look like a click
-        // that does nothing, so keep the failure visible and diagnosable.
-        console.warn(
-          "[workspace] directory picker did not return a folder",
-          (event as Error)?.name,
-          (event as Error)?.message,
-        );
-        if ((event as Error)?.name === "AbortError") {
-          setError(t("workspace.local_aborted"));
-          return;
-        }
-        throw event;
-      }
+      const picked = await pickDirectory({
+        mode: readOnly ? "read" : "readwrite",
+        insecureMessage: t("workspace.local_insecure"),
+        unsupportedMessage: t("workspace.local_unsupported"),
+        onPickerError: (event) => {
+          // Chrome reports AbortError both for "user cancelled" and for "the file dialog could not
+          // open / the folder was refused". Swallowing it made a blocked picker look like a click
+          // that does nothing, so keep the failure visible and diagnosable.
+          console.warn(
+            "[workspace] directory picker did not return a folder",
+            (event as Error)?.name,
+            (event as Error)?.message,
+          );
+        },
+      });
       setHandle(picked);
     } catch (event) {
+      if ((event as Error)?.name === "AbortError") {
+        setError(t("workspace.local_aborted"));
+        return;
+      }
       setError(event instanceof Error ? event.message : String(event));
     } finally {
       setBusy(false);

@@ -8,36 +8,15 @@ import { createProvider } from "../../workspace/providers";
 import { baseName, joinPath, normalizePath } from "../../workspace/paths";
 import { createWorkspaceRootProvider } from "../../workspace/workspaceRoot";
 import { inspectMountTarget } from "./mountTarget";
+import { listAllEntries } from "../../workspace/entries";
+import { folderName } from "../../workspace/folders";
 
-/**
- * Reads every page of a directory and keeps only its folders. Provider listings are paginated
- * (Arcana, MCP), and stopping at the first page would hide folders in a large directory.
- */
+/** Reads every page of a directory and keeps only its folders. */
 const listFolders = async (provider, path) => {
-  const folders = [];
-  let cursor;
-  for (let page = 0; page < 20; page += 1) {
-    const result = await provider.list(path, cursor);
-    for (const entry of result.entries) {
-      if (entry.kind === "dir") {
-        folders.push({ path: entry.path, name: entry.name });
-      }
-    }
-    cursor = result.next;
-    if (!cursor) break;
-  }
-  return folders;
-};
-
-/** The folder name a source root mounts as, e.g. a "Browser storage" source becomes "/Browser
- * storage"; the name is only a label, so path separators are flattened. */
-const sourceLeaf = (source) => {
-  const label = String(source?.label ?? "")
-    .trim()
-    .replace(/[\\/]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  return label || "folder";
+  const entries = await listAllEntries(provider, path);
+  return entries
+    .filter((entry) => entry.kind === "dir")
+    .map((entry) => ({ path: entry.path, name: entry.name }));
 };
 
 export default function AddMountModal({
@@ -70,7 +49,8 @@ export default function AddMountModal({
 
   const currentSource = sources.find((entry) => entry.id === sourceId);
   const mountName =
-    baseName(normalizePath(sourcePath)) || sourceLeaf(currentSource);
+    baseName(normalizePath(sourcePath)) ||
+    folderName(currentSource?.label, { flattenSeparators: true });
   const mountPath = joinPath(mountParent, mountName);
 
   const mountedPaths = useMemo(
