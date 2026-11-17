@@ -586,7 +586,11 @@ folders labelled by chat title) and **Sessions** (`sessions_tab`, a `WorkspaceSe
 the workspace's chats whose rows look like the sidebar's workspace chat rows and navigate to
 `/chat/<id>`) — through `MetaChangesPanel.tabs` (`{id,label,content}[]`, default none, so the Meta
 chat's global panel has no strip). "Check now" sits in its own row under the strip and only on the
-report tab, and the panel's default width is 420 px (320–1024 after a drag). A scoped report shows a topic only when one of those chats
+report tab. The panel follows the left sidebar's conventions: it defaults to 240 px (the sidebar's
+`15rem`, clamp 200–1024 after a drag), starts collapsed below 1280 px to the same 64 px rail as the
+sidebar, and an explicit collapse/expand (localStorage `chatai.meta.changes-collapsed`) overrides
+the viewport on every later load. Its tab strip is compact (11 px, `whitespace-nowrap`) so three
+tabs and the chevron fit in 240 px. A scoped report shows a topic only when one of those chats
 is in it and omits memories,
 which belong to the account rather than to a workspace; agent files stay agent-level because they
 have no session link. Scoped results are stored under

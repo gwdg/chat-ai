@@ -13,7 +13,16 @@ vi.mock("../../../hooks/useMetaChatSend", () => ({
   META_LAST_CHECK_RESULT_KEY: "chatai.meta.last-check-result",
 }));
 
+const setViewportWidth = (width) => {
+  Object.defineProperty(window, "innerWidth", {
+    configurable: true,
+    writable: true,
+    value: width,
+  });
+};
+
 beforeEach(() => {
+  setViewportWidth(1440);
   localStorage.clear();
   const at = Date.now();
   localStorage.setItem("chatai.meta.last-check", String(at));
@@ -221,7 +230,75 @@ describe("MetaChangesPanel", () => {
     expect(button.closest('[data-guide="meta-check-now-row"]')).toBe(row);
     expect(button).toHaveClass("btn", "btn-ghost", "btn-xs", "gap-1");
     expect(screen.getByText("What's new").closest("[data-guide]")).toBeNull();
-    expect(container.querySelector("aside")).toHaveStyle({ width: "420px" });
+    expect(container.querySelector("aside")).toHaveStyle({ width: "240px" });
+  });
+
+  it("defaults to the sidebar width of 240px", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <MetaChangesPanel userSettings={{}} />
+      </MemoryRouter>,
+    );
+
+    expect(container.querySelector("aside")).toHaveStyle({ width: "240px" });
+    expect(localStorage.getItem("chatai.meta.changes-width-v2")).toBeNull();
+  });
+
+  it("starts collapsed on tablet when the user has never chosen", () => {
+    setViewportWidth(1024);
+
+    render(
+      <MemoryRouter>
+        <MetaChangesPanel
+          userSettings={{}}
+          tabs={[
+            { id: "files", label: "Files", content: <div>Files content</div> },
+          ]}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole("tablist")).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Expand What's new" }),
+    );
+
+    expect(screen.getByRole("tablist")).toBeInTheDocument();
+    expect(localStorage.getItem("chatai.meta.changes-collapsed")).toBe("false");
+  });
+
+  it("starts expanded on desktop when the user has never chosen", () => {
+    render(
+      <MemoryRouter>
+        <MetaChangesPanel
+          userSettings={{}}
+          tabs={[
+            { id: "files", label: "Files", content: <div>Files content</div> },
+          ]}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("tablist")).toBeInTheDocument();
+  });
+
+  it("keeps a stored collapse choice on desktop", () => {
+    localStorage.setItem("chatai.meta.changes-collapsed", "true");
+
+    render(
+      <MemoryRouter>
+        <MetaChangesPanel
+          userSettings={{}}
+          tabs={[
+            { id: "files", label: "Files", content: <div>Files content</div> },
+          ]}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole("tablist")).toBeNull();
+    expect(document.querySelector("aside")).toHaveClass("w-16");
   });
 
   it("renders three tabs and only the active tab's content", () => {

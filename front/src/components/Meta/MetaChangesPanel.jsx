@@ -18,8 +18,8 @@ import {
 
 const COLLAPSED_KEY = "chatai.meta.changes-collapsed";
 const WIDTH_KEY = "chatai.meta.changes-width-v2";
-const DEFAULT_WIDTH = 420;
-const MIN_WIDTH = 320;
+const DEFAULT_WIDTH = 240;
+const MIN_WIDTH = 200;
 const MAX_WIDTH = 1024;
 
 const clampWidth = (value) =>
@@ -36,18 +36,27 @@ const readWidth = () => {
   }
 };
 
-const readCollapsed = () => {
+const readStoredCollapsed = () => {
   try {
-    return localStorage.getItem(COLLAPSED_KEY) === "true";
+    const stored = localStorage.getItem(COLLAPSED_KEY);
+    if (stored === "true") return true;
+    if (stored === "false") return false;
+    return null;
   } catch {
-    return false;
+    return null;
   }
+};
+
+const readCollapsed = () => {
+  const stored = readStoredCollapsed();
+  if (stored !== null) return stored;
+  return window.innerWidth < 1280;
 };
 
 const scopedKey = (base, scopeKey) => (scopeKey ? `${base}:${scopeKey}` : base);
 
 const tabClass = (active) =>
-  `rounded-md px-2 py-1 text-xs font-semibold ${
+  `whitespace-nowrap rounded-md px-1.5 py-1 text-[11px] font-semibold ${
     active
       ? "bg-base-200 text-base-content"
       : "text-base-content/55 hover:text-base-content"
@@ -92,6 +101,21 @@ export default function MetaChangesPanel({
   useEffect(() => {
     setState(readStored(scopeKey));
   }, [scopeKey]);
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return undefined;
+    const mediaQuery = window.matchMedia("(max-width: 1279px)");
+    const syncCollapsed = () => {
+      if (readStoredCollapsed() !== null) return;
+      setCollapsed(mediaQuery.matches);
+    };
+    mediaQuery.addEventListener?.("change", syncCollapsed);
+    window.addEventListener("resize", syncCollapsed);
+    return () => {
+      mediaQuery.removeEventListener?.("change", syncCollapsed);
+      window.removeEventListener("resize", syncCollapsed);
+    };
+  }, []);
 
   useEffect(() => {
     const reload = (event) => {
@@ -181,7 +205,7 @@ export default function MetaChangesPanel({
 
   if (collapsed) {
     return (
-      <aside className="hidden h-full min-h-0 w-10 shrink-0 self-stretch flex-col items-center overflow-hidden rounded-xl border border-base-300 bg-base-100 py-2 shadow-sm md:flex">
+      <aside className="hidden h-full min-h-0 w-16 shrink-0 self-stretch flex-col items-center overflow-hidden rounded-xl border border-base-300 bg-base-100 py-2 shadow-sm md:flex">
         <button
           type="button"
           onClick={toggleCollapsed}
@@ -213,12 +237,12 @@ export default function MetaChangesPanel({
         title={t("meta_chat.resize_changes")}
         aria-label={t("meta_chat.resize_changes")}
       />
-      <div className="flex items-center gap-2 border-b border-base-300 px-3 py-2">
+      <div className="flex items-center gap-1.5 border-b border-base-300 px-2 py-2">
         {tabs.length > 0 ? (
           <div
             role="tablist"
             data-guide="meta-tab-strip"
-            className="flex min-w-0 flex-1 items-center gap-1"
+            className="flex min-w-0 flex-1 items-center gap-0.5"
           >
             <button
               type="button"
@@ -252,7 +276,7 @@ export default function MetaChangesPanel({
         <button
           type="button"
           onClick={toggleCollapsed}
-          className="flex h-5 w-5 items-center justify-center rounded text-base-content/45 hover:bg-base-200 hover:text-base-content"
+          className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-base-content/45 hover:bg-base-200 hover:text-base-content"
           title={t("meta_chat.collapse_changes")}
           aria-label={t("meta_chat.collapse_changes")}
         >
