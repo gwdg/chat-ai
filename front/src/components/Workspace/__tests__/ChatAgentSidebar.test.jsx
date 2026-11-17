@@ -100,6 +100,15 @@ describe("ChatAgentSidebar what's new scope", () => {
     });
   });
 
+  it("offers the workspace files and sessions tabs from the same panel", () => {
+    render(<ChatAgentSidebar conversationId="chat-1" />);
+
+    const tabs = lastPanel().tabs ?? [];
+    expect(tabs.map((tab) => tab.id)).toEqual(["workspace", "sessions"]);
+    expect(tabs.map((tab) => tab.label)).toEqual(["Workspace", "Sessions"]);
+    expect(tabs.every((tab) => tab.content)).toBe(true);
+  });
+
   it("does not repeat the connected agents below the report", () => {
     render(<ChatAgentSidebar conversationId="chat-1" />);
 

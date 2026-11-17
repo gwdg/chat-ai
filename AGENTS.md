@@ -580,7 +580,12 @@ it globally, while the panel inside a workspace chat (`ChatAgentSidebar`) passes
 chat's workspace ids, so `getWhatsNew` only reports the workspace's chats, agents and the sessions
 attached to them (subagents of an attached session are kept; an active session outside the scope is
 not named). That panel shows only the report: connected agents and their sessions are listed in the
-sidebar, not repeated below the report. A scoped report shows a topic only when one of those chats
+sidebar, not repeated below the report. The same panel carries two more tabs besides the report —
+**Workspace** (`files_tab`, a read-only `WorkspaceFilesPanel` tree of the workspace root, chat
+folders labelled by chat title) and **Sessions** (`sessions_tab`, a `WorkspaceSessionsPanel` list of
+the workspace's chats whose rows look like the sidebar's workspace chat rows and navigate to
+`/chat/<id>`) — through `MetaChangesPanel.tabs` (`{id,label,content}[]`, default none, so the Meta
+chat's global panel has no strip). A scoped report shows a topic only when one of those chats
 is in it and omits memories,
 which belong to the account rather than to a workspace; agent files stay agent-level because they
 have no session link. Scoped results are stored under

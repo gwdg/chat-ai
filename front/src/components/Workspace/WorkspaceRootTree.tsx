@@ -15,15 +15,16 @@ import type { RootEntry } from "../../workspace/workspaceRoot";
 type TreeProps = {
   entries: RootEntry[];
   flat?: boolean;
+  readOnly?: boolean;
   loadChildren: (path: string) => Promise<RootEntry[]>;
   onOpen: (entry: RootEntry) => void;
   onShowGitLog?: (entry: RootEntry) => void;
   checkGit?: (entry: RootEntry) => Promise<boolean>;
-  onRemoveLocal: (entry: RootEntry) => void;
-  onRemoveMount: (entry: RootEntry) => void;
-  onToggleMountReadOnly: (entry: RootEntry) => void;
-  isReadOnly: (entry: RootEntry) => boolean;
-  isSourceReadOnly: (entry: RootEntry) => boolean;
+  onRemoveLocal?: (entry: RootEntry) => void;
+  onRemoveMount?: (entry: RootEntry) => void;
+  onToggleMountReadOnly?: (entry: RootEntry) => void;
+  isReadOnly?: (entry: RootEntry) => boolean;
+  isSourceReadOnly?: (entry: RootEntry) => boolean;
   sourceLabel?: (entry: RootEntry) => string | undefined;
   /** A mount the UI must not offer to unmount, e.g. an attached chat's own folder. */
   canRemoveMount?: (entry: RootEntry) => boolean;
@@ -45,8 +46,9 @@ function TreeRow({
   const isMount = !!entry.mount;
   const isDir = entry.kind === "dir";
   const expandable = isDir && !isMount && !props.flat;
-  const readOnly = props.isReadOnly(entry);
-  const sourceReadOnly = props.isSourceReadOnly(entry);
+  const readOnly = !props.readOnly && (props.isReadOnly?.(entry) ?? false);
+  const sourceReadOnly =
+    !props.readOnly && (props.isSourceReadOnly?.(entry) ?? false);
   const displayText = props.displayName?.(entry);
   const label = typeof displayText === "string" ? displayText : entry.name;
 
@@ -73,7 +75,7 @@ function TreeRow({
         cancelled = true;
       };
     }
-    if (isMount && props.checkGit) {
+    if (isMount && props.checkGit && !props.readOnly) {
       let cancelled = false;
       props
         .checkGit(entry)
@@ -96,6 +98,7 @@ function TreeRow({
     expandable,
     isDir,
     isMount,
+    props.readOnly,
     props.checkGit,
     props.loadChildren,
   ]);
@@ -168,56 +171,62 @@ function TreeRow({
             </span>
           )}
         </button>
-        {hasGit && props.onShowGitLog && (
-          <button
-            type="button"
-            onClick={() => props.onShowGitLog?.(entry)}
-            className="flex h-4 w-4 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:bg-base-200 hover:text-accent group-hover:opacity-100"
-            title={t("workspace.git_log")}
-            aria-label={t("workspace.git_log")}
-          >
-            <GitBranch size={11} />
-          </button>
-        )}
-        {entry.local ? (
-          <button
-            type="button"
-            onClick={() => props.onRemoveLocal(entry)}
-            className="flex h-4 w-4 items-center justify-center rounded text-base-content/40 opacity-0 hover:text-error group-hover:opacity-100"
-            title={t("workspace.remove_mount")}
-            aria-label={t("workspace.remove_mount")}
-          >
-            <TrashCan size={11} />
-          </button>
-        ) : isMount ? (
+        {!props.readOnly && (
           <>
-            {readOnly && (
+            {hasGit && props.onShowGitLog && (
               <button
                 type="button"
-                onClick={() => !sourceReadOnly && props.onToggleMountReadOnly(entry)}
-                disabled={sourceReadOnly}
-                className={`flex h-4 w-4 items-center justify-center rounded text-warning ${
-                  sourceReadOnly ? "cursor-default" : "hover:bg-base-200"
-                }`}
-                title={t("workspace.make_writable")}
-                aria-label={t("workspace.make_writable")}
+                onClick={() => props.onShowGitLog?.(entry)}
+                className="flex h-4 w-4 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:bg-base-200 hover:text-accent group-hover:opacity-100"
+                title={t("workspace.git_log")}
+                aria-label={t("workspace.git_log")}
               >
-                <Locked size={11} />
+                <GitBranch size={11} />
               </button>
             )}
-            {(props.canRemoveMount ? props.canRemoveMount(entry) : true) && (
+            {entry.local ? (
               <button
                 type="button"
-                onClick={() => props.onRemoveMount(entry)}
+                onClick={() => props.onRemoveLocal?.(entry)}
                 className="flex h-4 w-4 items-center justify-center rounded text-base-content/40 opacity-0 hover:text-error group-hover:opacity-100"
                 title={t("workspace.remove_mount")}
                 aria-label={t("workspace.remove_mount")}
               >
                 <TrashCan size={11} />
               </button>
-            )}
+            ) : isMount ? (
+              <>
+                {readOnly && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      !sourceReadOnly && props.onToggleMountReadOnly?.(entry)
+                    }
+                    disabled={sourceReadOnly}
+                    className={`flex h-4 w-4 items-center justify-center rounded text-warning ${
+                      sourceReadOnly ? "cursor-default" : "hover:bg-base-200"
+                    }`}
+                    title={t("workspace.make_writable")}
+                    aria-label={t("workspace.make_writable")}
+                  >
+                    <Locked size={11} />
+                  </button>
+                )}
+                {(props.canRemoveMount ? props.canRemoveMount(entry) : true) && (
+                  <button
+                    type="button"
+                    onClick={() => props.onRemoveMount?.(entry)}
+                    className="flex h-4 w-4 items-center justify-center rounded text-base-content/40 opacity-0 hover:text-error group-hover:opacity-100"
+                    title={t("workspace.remove_mount")}
+                    aria-label={t("workspace.remove_mount")}
+                  >
+                    <TrashCan size={11} />
+                  </button>
+                )}
+              </>
+            ) : null}
           </>
-        ) : null}
+        )}
       </div>
       {expandable && open && (
         <div>

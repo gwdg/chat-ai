@@ -46,6 +46,13 @@ const readCollapsed = () => {
 
 const scopedKey = (base, scopeKey) => (scopeKey ? `${base}:${scopeKey}` : base);
 
+const tabClass = (active) =>
+  `rounded-md px-2 py-1 text-xs font-semibold ${
+    active
+      ? "bg-base-200 text-base-content"
+      : "text-base-content/55 hover:text-base-content"
+  }`;
+
 const readStored = (scopeKey = "") => {
   try {
     const at =
@@ -69,14 +76,18 @@ export default function MetaChangesPanel({
   scope = null,
   scopeKey = "",
   children,
+  tabs = [],
 }) {
   const { t, i18n } = useTranslation();
   const [state, setState] = useState(() => readStored(scopeKey));
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const [width, setWidth] = useState(readWidth);
+  const [activeTab, setActiveTab] = useState("changes");
   const widthRef = useRef(width);
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState("");
+  const activeContentTab = tabs.find((tab) => tab.id === activeTab) ?? null;
+  const changesTitle = t("meta_chat.changes_title");
 
   useEffect(() => {
     setState(readStored(scopeKey));
@@ -184,7 +195,7 @@ export default function MetaChangesPanel({
           className="mt-3 text-[10px] font-semibold uppercase tracking-wider text-base-content/45"
           style={{ writingMode: "vertical-rl" }}
         >
-          {t("meta_chat.changes_title")}
+          {activeContentTab ? activeContentTab.label : changesTitle}
         </span>
       </aside>
     );
@@ -203,20 +214,54 @@ export default function MetaChangesPanel({
         aria-label={t("meta_chat.resize_changes")}
       />
       <div className="flex items-center gap-2 border-b border-base-300 px-3 py-2">
-        <span className="min-w-0 flex-1 text-xs font-semibold">
-          {t("meta_chat.changes_title")}
-        </span>
-        <button
-          type="button"
-          onClick={() => void check()}
-          disabled={checking}
-          className="btn btn-ghost btn-xs gap-1"
-          title={t("meta_chat.check_now")}
-          aria-label={t("meta_chat.check_now")}
-        >
-          <RefreshCw size={13} className={checking ? "animate-spin" : ""} />
-          {t("meta_chat.check_now")}
-        </button>
+        {tabs.length > 0 ? (
+          <div
+            role="tablist"
+            data-guide="meta-tab-strip"
+            className="flex min-w-0 flex-1 items-center gap-1"
+          >
+            <button
+              type="button"
+              role="tab"
+              data-guide="meta-tab-changes"
+              aria-selected={activeTab === "changes"}
+              onClick={() => setActiveTab("changes")}
+              className={tabClass(activeTab === "changes")}
+            >
+              {changesTitle}
+            </button>
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                data-guide={"meta-tab-" + tab.id}
+                aria-selected={activeTab === tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={tabClass(activeTab === tab.id)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <span className="min-w-0 flex-1 text-xs font-semibold">
+            {changesTitle}
+          </span>
+        )}
+        {(tabs.length === 0 || activeTab === "changes") && (
+          <button
+            type="button"
+            onClick={() => void check()}
+            disabled={checking}
+            className="btn btn-ghost btn-xs gap-1"
+            title={t("meta_chat.check_now")}
+            aria-label={t("meta_chat.check_now")}
+          >
+            <RefreshCw size={13} className={checking ? "animate-spin" : ""} />
+            {t("meta_chat.check_now")}
+          </button>
+        )}
         <button
           type="button"
           onClick={toggleCollapsed}
@@ -227,35 +272,41 @@ export default function MetaChangesPanel({
           <ChevronRight size={14} />
         </button>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto p-3">
-        {state.at > 0 && (
-          <p
-            data-guide="meta-last-check"
-            className="mb-2 text-[10px] text-base-content/50"
-            title={formatFullTimestamp(state.at, i18n.language)}
-          >
-            {t("meta_chat.last_checked", {
-              date: formatRelativeTime(state.at, i18n.language),
-            })}
-          </p>
-        )}
-        {error ? (
-          <p className="text-xs text-error">{error}</p>
-        ) : state.text ? (
-          <div className="text-xs leading-relaxed text-base-content/80">
-            <SafeMarkdown components={plainRendererComponents}>
-              {state.text}
-            </SafeMarkdown>
-          </div>
-        ) : (
-          <p className="text-xs text-base-content/60">
-            {t("meta_chat.changes_empty")}
-          </p>
-        )}
-        {children && (
-          <div className="mt-3 border-t border-base-300 pt-3">{children}</div>
-        )}
-      </div>
+      {activeContentTab ? (
+        <div className="min-h-0 flex-1 overflow-y-auto p-2">
+          {activeContentTab.content}
+        </div>
+      ) : (
+        <div className="min-h-0 flex-1 overflow-y-auto p-3">
+          {state.at > 0 && (
+            <p
+              data-guide="meta-last-check"
+              className="mb-2 text-[10px] text-base-content/50"
+              title={formatFullTimestamp(state.at, i18n.language)}
+            >
+              {t("meta_chat.last_checked", {
+                date: formatRelativeTime(state.at, i18n.language),
+              })}
+            </p>
+          )}
+          {error ? (
+            <p className="text-xs text-error">{error}</p>
+          ) : state.text ? (
+            <div className="text-xs leading-relaxed text-base-content/80">
+              <SafeMarkdown components={plainRendererComponents}>
+                {state.text}
+              </SafeMarkdown>
+            </div>
+          ) : (
+            <p className="text-xs text-base-content/60">
+              {t("meta_chat.changes_empty")}
+            </p>
+          )}
+          {children && (
+            <div className="mt-3 border-t border-base-300 pt-3">{children}</div>
+          )}
+        </div>
+      )}
     </aside>
   );
 }
