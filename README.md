@@ -367,6 +367,26 @@ The interface has two model-selector variants and picks one automatically from t
 
 The variant is chosen from the `description` field of the **first** model in the response. If you provide a custom `modelsPath` and want the extended selector, include a `description` in each entry (plus any of the optional fields above that you want to display). A model's `name` falls back to its `id` when omitted.
 
+## The Agent Bridge
+
+`back` serves the OpenCode bridge on `/bridge/*`. It is no longer open to anyone who can reach the
+port:
+
+- `POST /bridge/sessions` needs `BRIDGE_SHARED_SECRET` in `back`'s environment and a matching
+  `x-bridge-key` header. The browser takes that value from `VITE_BRIDGE_KEY` at build time, so it is
+  public — it stops a client that reaches the backend directly from opening a session, while the
+  OIDC gateway stays the real trust boundary. With the variable unset the route answers 503 instead
+  of minting credentials; `BRIDGE_ALLOW_ANON=1` restores anonymous sessions for local testing only.
+- Sessions expire after `BRIDGE_SESSION_TTL_MS` (default 15 minutes), are capped at
+  `BRIDGE_MAX_SESSIONS` (32), and one client IP may create ten per minute.
+- Tokens travel in the WebSocket subprotocol (browser) and an `Authorization` header (sidecar), not
+  in the URL, so they stay out of proxy and access logs.
+- Cross-origin requests are answered only for the origins listed in `CORS_ORIGINS`
+  (comma-separated) or the app's own host; requests without an `Origin` header still work.
+
+Agents managed by a SAIA agent service use `/agents/<id>/bridge` on the app origin instead, which is
+served by that service rather than by `back`.
+
 ## Development
 You can use docker as local development setup. Alternatively, you can run Chat AI directly for which you nee `nodejs` installed.
 

@@ -1310,6 +1310,20 @@ able to spawn the sidecar and open the outbound WebSocket; the bridge host must 
 agent host (through `AGENT_SERVICE_BRIDGE_AGENT_URL` for the agent service, `bridgePublicUrl` in
 `back.json` for `back`).
 
+`back`'s own bridge is authenticated and bounded. `POST /bridge/sessions` requires the `x-bridge-key`
+header to equal `BRIDGE_SHARED_SECRET`, and the route answers 503 when that variable is unset rather
+than minting tokens for whoever can reach the port; `BRIDGE_ALLOW_ANON=1` restores the old anonymous
+behaviour and exists for local testing only. The browser's key comes from `VITE_BRIDGE_KEY` at build
+time, so it ships in the bundle: it keeps a client that reaches the backend directly from opening a
+session, and the OIDC gateway remains the real boundary. A session expires after
+`BRIDGE_SESSION_TTL_MS` (default 15 minutes) and is refreshed by tool calls and socket traffic, at
+most `BRIDGE_MAX_SESSIONS` (32) exist at once, and one client IP may create ten per minute. Neither
+WebSocket carries its token in the URL any more — the browser sends it as the `bridge-token.<token>`
+subprotocol, the sidecar as an `Authorization: Bearer` header — so proxy and access logs no longer
+record credentials. `cors()` answers only the origins in `CORS_ORIGINS` (comma-separated) or the
+request's own host, and still allows requests without an `Origin` header so server-to-server calls
+work.
+
 The first call is `POST <bridge base>/bridge/sessions`, where the base is `/agents/<serviceAgentId>`
 for a service-managed agent and `VITE_BACKEND_ENDPOINT` for a direct one. A 404 or 405 means that
 base has no bridge route (a direct engine such as the `saia/saia-engine/local-testing` stack answers
