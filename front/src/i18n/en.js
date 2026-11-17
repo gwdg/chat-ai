@@ -269,7 +269,12 @@ export default {
     create_chat_summary: "Create chat “{{title}}” with {{count}} initial messages",
     mcp_target_all: "all chats",
     mcp_target_global: "the MCP server list",
-    agent_prompt_summary: "Send a prompt to agent {{agent}}",
+    agent_prompt_summary:
+      "Send {{chars}} characters to agent {{agent}}: “{{preview}}”",
+    agent_prompt_text_label: "Prompt text",
+    agent_prompt_meta: "Agent {{agent}} · {{chars}} characters",
+    agent_prompt_notice:
+      "This text is sent verbatim to the agent, which can run commands on its machine.",
     agent_interrupt_summary: "Interrupt agent {{agent}}",
     agent_session_create_summary: "Create a new session on agent {{agent}}",
     agent_session_switch_summary: "Switch to session {{session}} on agent {{agent}}",

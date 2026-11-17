@@ -364,4 +364,63 @@ describe("MetaActionCard", () => {
       ]);
     });
   });
+  it("shows the full prompt text for an agent prompt action", () => {
+    const longText = "x".repeat(1500);
+    const { container } = render(
+      <MetaActionCard
+        actions={[
+          {
+            type: "agent_action",
+            op: "prompt",
+            agentId: "agent-1",
+            text: longText,
+          },
+        ]}
+        localState={localState}
+        setLocalState={vi.fn()}
+        message_index={0}
+      />,
+    );
+
+    expect(container.querySelector("pre")?.textContent).toBe(longText);
+  });
+
+  it("includes the prompt character count in the agent prompt summary", () => {
+    render(
+      <MetaActionCard
+        actions={[
+          {
+            type: "agent_action",
+            op: "prompt",
+            agentId: "agent-1",
+            text: "x".repeat(1500),
+          },
+        ]}
+        localState={localState}
+        setLocalState={vi.fn()}
+        message_index={0}
+      />,
+    );
+
+    expect(
+      screen.getByText(/Send 1500 characters to agent agent-1/),
+    ).toBeInTheDocument();
+  });
+
+  it("renders no prompt text block for an agent interrupt action", () => {
+    const { container } = render(
+      <MetaActionCard
+        actions={[
+          { type: "agent_action", op: "interrupt", agentId: "agent-1" },
+        ]}
+        localState={localState}
+        setLocalState={vi.fn()}
+        message_index={0}
+      />,
+    );
+
+    expect(screen.getByText(/Interrupt agent agent-1/)).toBeInTheDocument();
+    expect(screen.queryByText("Prompt text")).not.toBeInTheDocument();
+    expect(container.querySelector("pre")).toBeNull();
+  });
 });

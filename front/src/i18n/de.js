@@ -273,7 +273,12 @@ export default {
     create_chat_summary: "Chat „{{title}}“ mit {{count}} Anfangsnachrichten erstellen",
     mcp_target_all: "alle Chats",
     mcp_target_global: "die MCP-Serverliste",
-    agent_prompt_summary: "Prompt an Agenten {{agent}} senden",
+    agent_prompt_summary:
+      "{{chars}} Zeichen an Agenten {{agent}} senden: „{{preview}}“",
+    agent_prompt_text_label: "Prompt-Text",
+    agent_prompt_meta: "Agent {{agent}} · {{chars}} Zeichen",
+    agent_prompt_notice:
+      "Dieser Text wird unverändert an den Agenten gesendet, der Befehle auf seinem Rechner ausführen kann.",
     agent_interrupt_summary: "Agenten {{agent}} unterbrechen",
     agent_session_create_summary: "Neue Sitzung für Agenten {{agent}} erstellen",
     agent_session_switch_summary: "Zu Sitzung {{session}} von Agent {{agent}} wechseln",

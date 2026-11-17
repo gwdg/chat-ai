@@ -491,6 +491,9 @@ export default function MetaActionCard({
     memories[index]?.text ||
     t("meta_chat.memory_item", { index: index + 1 });
 
+  const promptPreview = (text) =>
+    text.length > 60 ? `${text.slice(0, 60)}…` : text;
+
   const summaryFor = (action) => {
     if (action.type === "rename") {
       return t("meta_chat.rename_summary", {
@@ -575,12 +578,17 @@ export default function MetaActionCard({
       });
     }
     if (action.type === "agent_action") {
-      return t(
-        action.op === "prompt"
-          ? "meta_chat.agent_prompt_summary"
-          : "meta_chat.agent_interrupt_summary",
-        { agent: action.agentId },
-      );
+      if (action.op === "prompt") {
+        const text = typeof action.text === "string" ? action.text : "";
+        return t("meta_chat.agent_prompt_summary", {
+          chars: text.length,
+          agent: action.agentId,
+          preview: promptPreview(text),
+        });
+      }
+      return t("meta_chat.agent_interrupt_summary", {
+        agent: action.agentId,
+      });
     }
     if (action.type === "agent_session") {
       return t(
@@ -1666,6 +1674,36 @@ export default function MetaActionCard({
               </li>
             ))}
           </ul>
+
+          {actions
+            .filter(
+              (action) =>
+                action.type === "agent_action" &&
+                action.op === "prompt" &&
+                typeof action.text === "string" &&
+                action.text.length > 0,
+            )
+            .map((action, index) => (
+              <div key={`agent-prompt:${index}`} className="mt-2 min-w-0">
+                <div className="flex items-baseline justify-between gap-2 text-[11px] leading-snug">
+                  <p className="font-medium text-base-content">
+                    {t("meta_chat.agent_prompt_text_label")}
+                  </p>
+                  <p className="shrink-0 text-base-content/70">
+                    {t("meta_chat.agent_prompt_meta", {
+                      agent: action.agentId,
+                      chars: action.text.length,
+                    })}
+                  </p>
+                </div>
+                <pre className="mt-1 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded border border-base-300 bg-base-200 p-2 font-mono text-xs text-base-content">
+                  {action.text}
+                </pre>
+                <p className="mt-1 text-[11px] leading-snug text-base-content/70">
+                  {t("meta_chat.agent_prompt_notice")}
+                </p>
+              </div>
+            ))}
 
           {error && <p className="mt-1.5 text-[11px] text-error">{error}</p>}
 
