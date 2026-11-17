@@ -46,7 +46,7 @@ export const featureGuides = {
         textKey: "feature_guide.workspace_overview.step3",
       },
       {
-        target: '[data-guide="workspace-agents"]',
+        target: '[data-guide="workspace-agent"]',
         textKey: "feature_guide.workspace_overview.step4",
       },
     ],

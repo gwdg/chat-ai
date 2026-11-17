@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleInfo } from "@fortawesome/free-solid-svg-icons";
@@ -29,7 +29,18 @@ const PROJECT_COUNT = 3;
 // agentic service, or an OpenCode server the user runs and points at itself.
 const CONNECTION_MODES = ["service", "external"];
 
-export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
+function resolveConnectionMode(agent, initialMode, directAllowed) {
+  if (agent) return agent.serviceAgentId ? "service" : "external";
+  return directAllowed && initialMode === "external" ? "external" : "service";
+}
+
+export default function AddAgentModal({
+  isOpen,
+  onClose,
+  onCreate,
+  agent,
+  initialMode,
+}) {
   const { t } = useTranslation();
   const editing = Boolean(agent?.id);
   const defaults = useMemo(() => opencodeDefaults(), []);
@@ -45,17 +56,17 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
   const [projectId, setProjectId] = useState(
     agent?.projectId ?? projects[0]?.id ?? "",
   );
-  // New agents run on the GWDG HPC agentic service (the default deployment
-  // path); an existing agent keeps the mode it was created with so editing never
-  // migrates it silently.
-  const [mode, setMode] = useState(
-    agent ? (agent.serviceAgentId ? "service" : "external") : "service",
-  );
   // Direct `opencode serve` connections are a local-only affordance. Outside a
   // locally opened Chat AI every agent must run through the service behind SAIA,
   // so the external server is not offered and an existing direct agent is
   // migrated when it is saved.
   const directAllowed = directAgentAccessAllowed();
+  // New agents run on the GWDG HPC agentic service by default, but a workspace
+  // card can ask for the OpenCode server tab. An existing agent keeps the mode
+  // it was created with so editing never migrates it silently.
+  const [mode, setMode] = useState(() =>
+    resolveConnectionMode(agent, initialMode, directAllowed),
+  );
   const connectionMode = directAllowed ? mode : "service";
   const serviceMode = connectionMode === "service";
   const [serverUrl, setServerUrl] = useState(
@@ -67,6 +78,18 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const project = projects.find((item) => item.id === projectId);
+
+  // The modal stays mounted between opens, so each open must start from the
+  // current props rather than leftovers from the previous one.
+  useEffect(() => {
+    if (!isOpen) return;
+    setName(agent?.name ?? "");
+    setProjectId(agent?.projectId ?? projects[0]?.id ?? "");
+    setMode(resolveConnectionMode(agent, initialMode, directAllowed));
+    setServerUrl(agent?.serverUrl ?? defaults.serverUrl);
+    setPassword(agent?.password ?? defaults.password);
+    setError("");
+  }, [isOpen, initialMode]);
 
   // The HPC service exists per user and is granted through an engine access
   // group, so a user without the grant cannot create one at all: the model list

@@ -105,6 +105,105 @@ describe("AddAgentModal", () => {
     expect(screen.queryByLabelText("HPC project")).toBeNull();
   });
 
+  it("opens a new agent on the OpenCode server tab when asked", () => {
+    render(
+      <AddAgentModal
+        isOpen
+        onClose={vi.fn()}
+        onCreate={vi.fn()}
+        initialMode="external"
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "OpenCode server" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByLabelText("opencode server")).toHaveValue(
+      "http://127.0.0.1:9000",
+    );
+    expect(screen.queryByLabelText("HPC project")).toBeNull();
+  });
+
+  it("opens a new agent on the service tab when initialMode is service", () => {
+    render(
+      <AddAgentModal
+        isOpen
+        onClose={vi.fn()}
+        onCreate={vi.fn()}
+        initialMode="service"
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "GWDG HPC agentic service" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByLabelText("HPC project")).toBeInTheDocument();
+    expect(screen.queryByLabelText("opencode server")).toBeNull();
+  });
+
+  it("starts each open on the tab named by the current initialMode", () => {
+    const onClose = vi.fn();
+    const onCreate = vi.fn();
+    const { rerender } = render(
+      <AddAgentModal
+        isOpen
+        onClose={onClose}
+        onCreate={onCreate}
+        initialMode="service"
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "GWDG HPC agentic service" }),
+    ).toHaveAttribute("aria-pressed", "true");
+
+    rerender(
+      <AddAgentModal
+        isOpen={false}
+        onClose={onClose}
+        onCreate={onCreate}
+        initialMode="service"
+      />,
+    );
+    rerender(
+      <AddAgentModal
+        isOpen
+        onClose={onClose}
+        onCreate={onCreate}
+        initialMode="external"
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "OpenCode server" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByLabelText("opencode server")).toBeInTheDocument();
+    expect(screen.queryByLabelText("HPC project")).toBeNull();
+
+    rerender(
+      <AddAgentModal
+        isOpen={false}
+        onClose={onClose}
+        onCreate={onCreate}
+        initialMode="external"
+      />,
+    );
+    rerender(
+      <AddAgentModal
+        isOpen
+        onClose={onClose}
+        onCreate={onCreate}
+        initialMode="service"
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "GWDG HPC agentic service" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByLabelText("HPC project")).toBeInTheDocument();
+    expect(screen.queryByLabelText("opencode server")).toBeNull();
+  });
+
   it("creates a service agent for the selected HPC project", async () => {
     serviceMocks.create.mockResolvedValue({
       serviceAgentId: "svc-1",
@@ -322,6 +421,66 @@ describe("AddAgentModal", () => {
       "http://127.0.0.1:9100",
     );
     expect(screen.queryByLabelText("HPC project")).toBeNull();
+  });
+
+  it("keeps an existing agent's mode regardless of initialMode", () => {
+    const directAgent = {
+      id: "agent-direct",
+      name: "Direct agent",
+      local: true,
+      serverUrl: "http://127.0.0.1:9100",
+      username: "opencode",
+      password: "custom",
+      sessionId: "session-9",
+    };
+    const { unmount } = render(
+      <AddAgentModal
+        isOpen
+        onClose={vi.fn()}
+        onCreate={vi.fn()}
+        agent={directAgent}
+        initialMode="service"
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "OpenCode server" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByLabelText("opencode server")).toHaveValue(
+      "http://127.0.0.1:9100",
+    );
+    expect(screen.queryByLabelText("HPC project")).toBeNull();
+
+    unmount();
+
+    const serviceAgent = {
+      id: "agent-service",
+      name: "Service agent",
+      projectId: "hpc-project-1",
+      serviceAgentId: "svc-old",
+      serviceManaged: true,
+      local: true,
+      serverUrl: "/agents/svc-old/opencode",
+      username: "opencode",
+      password: "",
+      passwordSource: "service",
+      sessionId: "session-1",
+    };
+    render(
+      <AddAgentModal
+        isOpen
+        onClose={vi.fn()}
+        onCreate={vi.fn()}
+        agent={serviceAgent}
+        initialMode="external"
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "GWDG HPC agentic service" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByLabelText("HPC project")).toHaveValue("hpc-project-1");
+    expect(screen.queryByLabelText("opencode server")).toBeNull();
   });
 
   it("reports a service refusal and lets the dialog be submitted again", async () => {

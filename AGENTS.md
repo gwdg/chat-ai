@@ -789,6 +789,20 @@ transfer journal never leave the device. A persisted
 sources carry no `deviceId`. The UI badges device-plane sources "This device only" and marks a
 source whose stored `deviceId` differs as unavailable.
 
+The workspace page's left column is Storage and **Agent** — nothing else. The attached-chat and
+attached-agent lists were removed on purpose (the sidebar does both), together with their handlers;
+`attachedChats` / `attachedAgents` remain only as inputs to `syncChatStorageSources`,
+`seedWorkspaceAgentSessions` and `syncAgentFilesSources`. The Agent card
+(`components/Workspace/WorkspaceAgentPanel.tsx`, `data-guide="workspace-agent"`) offers exactly three
+options — In-browser Pi agent (the chat's own `agent/runAgent.ts` runtime: no shell, reads and writes
+workspace files), OpenCode server (an `external` agent with `serverUrl`) and Remote agent (a `service`
+agent with `serviceAgentId`) — and the current choice is derived from the workspace's
+`workspace_agents` links, never stored twice. Choosing the in-browser agent detaches every attached
+agent; the other two open an inline picker of that kind's agents plus an "Add new agent" row that
+opens the same `agentAdd` modal as the sidebar, preset through its `initialMode` prop
+(`"external"` / `"service"`; an agent being edited keeps its own mode, and on a deployment without
+direct access the external tab still degrades to the service).
+
 Attaching a file from a workspace to a chat records a `workspace_file_references` row for the
 browser node; deleting a chat removes its reference rows. A workspace root and its browser sources
 share one tree per workspace (`workspaceBrowserStorageId` in `workspace/browserStorage.ts`), never

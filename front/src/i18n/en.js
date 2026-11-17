@@ -436,7 +436,7 @@ export default {
       step1: "Create a workspace or open an existing one from the sidebar; it already includes browser storage and an Arcana filesystem source.",
       step2: "Pick a source on the left. Device sources carry a \"This device only\" badge.",
       step3: "Browse the files here. Drag a file onto another source to copy it; hold Alt for a move.",
-      step4: "Attach an agent and pick the sessions that belong to this workspace; new sessions created here are attached automatically.",
+      step4: "Choose how this workspace runs its agent: in the browser, through an OpenCode server, or with the Remote agent.",
     },
     manage_chat_data: {
       title: "Manage the files of a chat",
@@ -2207,6 +2207,24 @@ export default {
       "Pick the sessions of this agent that belong to this workspace. Other workspaces keep their own list.",
     no_available_agents: "No unattached agents available.",
     agents: "Agents",
+    agent: {
+      title: "Agent",
+      browser_title: "In-browser Pi agent",
+      browser_description:
+        "Runs in the browser. No shell, but it can read and write files in the workspace.",
+      opencode_title: "OpenCode server",
+      opencode_description:
+        "Connect to an OpenCode server by address and use it with Chat AI.",
+      remote_title: "Remote agent",
+      remote_description:
+        "The GWDG HPC agentic service agent that also appears in the sidebar.",
+      choose_existing: "Choose an existing agent",
+      add_new: "Add new agent",
+      no_agents: "No agents of this kind yet.",
+      in_use: "In use",
+      available: "Available",
+      back: "Back",
+    },
     no_attached_agents: "No agents attached yet.",
     detach_agent: "Detach agent",
     chat_workspaces: "Workspace",

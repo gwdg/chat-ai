@@ -449,7 +449,7 @@ export default {
       step1: "Erstellen Sie einen Arbeitsbereich oder öffnen Sie einen in der Seitenleiste; er enthält bereits Browserspeicher und eine Arcana-Dateisystem-Quelle.",
       step2: "Wählen Sie links eine Quelle. Gerätequellen tragen die Markierung \"Nur dieses Gerät\".",
       step3: "Durchsuchen Sie hier die Dateien. Ziehen Sie eine Datei auf eine andere Quelle zum Kopieren; mit Alt zum Verschieben.",
-      step4: "Verknüpfen Sie einen Agenten und wählen Sie die Sitzungen, die zu diesem Arbeitsbereich gehören; hier neu erstellte Sitzungen werden automatisch zugeordnet.",
+      step4: "Wählen Sie, wie der Agent in diesem Arbeitsbereich läuft: im Browser, über einen OpenCode-Server oder mit dem Remote-Agenten.",
     },
     manage_chat_data: {
       title: "Dateien eines Chats verwalten",
@@ -2236,6 +2236,24 @@ export default {
       "Wählen Sie die Sitzungen dieses Agenten, die zu diesem Arbeitsbereich gehören. Andere Arbeitsbereiche behalten ihre eigene Liste.",
     no_available_agents: "Keine nicht verknüpften Agenten verfügbar.",
     agents: "Agenten",
+    agent: {
+      title: "Agent",
+      browser_title: "Pi-Agent im Browser",
+      browser_description:
+        "Läuft im Browser. Keine Shell, kann aber Dateien im Arbeitsbereich lesen und schreiben.",
+      opencode_title: "OpenCode-Server",
+      opencode_description:
+        "Verbinden Sie einen OpenCode-Server über seine Adresse und nutzen Sie ihn mit Chat AI.",
+      remote_title: "Remote-Agent",
+      remote_description:
+        "Der Agent des GWDG-HPC-Agentendienstes, der auch in der Seitenleiste erscheint.",
+      choose_existing: "Vorhandenen Agenten wählen",
+      add_new: "Neuen Agenten hinzufügen",
+      no_agents: "Noch keine Agenten dieser Art.",
+      in_use: "In Verwendung",
+      available: "Verfügbar",
+      back: "Zurück",
+    },
     no_attached_agents: "Noch keine Agenten verknüpft.",
     detach_agent: "Agent trennen",
     chat_workspaces: "Arbeitsbereich",
