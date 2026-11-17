@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import BaseModal from "../BaseModal";
+import { useToast } from "../../hooks/useToast";
 import { attachWorkspaceChat } from "../../db/workspaceDb";
 
 export default function AttachChatModal({
@@ -13,6 +14,7 @@ export default function AttachChatModal({
   onAdded,
 }) {
   const { t } = useTranslation();
+  const { notifyError } = useToast();
   const attached = useMemo(() => new Set(attachedIds), [attachedIds]);
   const available = useMemo(
     () =>
@@ -26,12 +28,24 @@ export default function AttachChatModal({
     [conversations, attached],
   );
   const [conversationId, setConversationId] = useState(available[0]?.id ?? "");
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const submit = async () => {
-    if (!conversationId) return;
-    await attachWorkspaceChat(workspaceId, conversationId);
-    onAdded?.(conversationId);
-    onClose();
+    if (!conversationId || saving) return;
+    setSaving(true);
+    setError("");
+    try {
+      await attachWorkspaceChat(workspaceId, conversationId);
+      onAdded?.(conversationId);
+      onClose();
+    } catch (event) {
+      const message = event instanceof Error ? event.message : String(event);
+      setError(message);
+      notifyError(message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -57,6 +71,7 @@ export default function AttachChatModal({
             ))}
           </select>
         )}
+        {error && <p className="text-xs text-error">{error}</p>}
         <div className="mt-2 flex justify-end gap-2">
           <button type="button" className="btn" onClick={onClose}>
             {t("common.cancel")}
@@ -65,7 +80,7 @@ export default function AttachChatModal({
             type="button"
             className="btn btn-accent"
             onClick={submit}
-            disabled={!conversationId}
+            disabled={!conversationId || saving}
           >
             {t("workspace.attach_chat")}
           </button>

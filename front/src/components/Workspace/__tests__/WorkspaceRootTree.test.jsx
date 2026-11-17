@@ -75,3 +75,41 @@ describe("WorkspaceRootTree flat mode", () => {
     expect(props.onOpen).toHaveBeenCalledWith(chatEntry);
   });
 });
+
+describe("WorkspaceRootTree failures", () => {
+  it("keeps a failed folder listing on the expanded row", async () => {
+    const props = baseProps([entry("Docs", "dir")]);
+    props.loadChildren.mockRejectedValue(new Error("listing failed"));
+
+    render(<WorkspaceRootTree {...props} />);
+    fireEvent.click(screen.getByText("Docs"));
+
+    expect(await screen.findByText("listing failed")).toBeInTheDocument();
+    expect(props.onOpen).not.toHaveBeenCalled();
+  });
+
+  it("reports a failed git check on the mount row", async () => {
+    const props = baseProps([
+      {
+        ...entry("chat-1", "dir", "chats/chat-1"),
+        local: false,
+        mount: {
+          id: "mount-1",
+          workspaceId: "ws-1",
+          sourceId: "chat-storage:ws-1:chat-1",
+          sourcePath: "/",
+          path: "/chats/chat-1",
+          createdAt: 1,
+          lastModified: 1,
+        },
+      },
+    ]);
+    props.checkGit = vi.fn(async () => {
+      throw new Error("git check failed");
+    });
+
+    render(<WorkspaceRootTree {...props} />);
+
+    expect(await screen.findByText("git check failed")).toBeInTheDocument();
+  });
+});

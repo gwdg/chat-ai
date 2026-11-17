@@ -39,6 +39,7 @@ function TreeRow({
   const [children, setChildren] = useState<RootEntry[] | null>(null);
   const [hasGit, setHasGit] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const isMount = !!entry.mount;
   const isDir = entry.kind === "dir";
   const expandable = isDir && !isMount && !props.flat;
@@ -49,6 +50,7 @@ function TreeRow({
     if (!isDir) return;
     if (expandable && children === null) {
       let cancelled = false;
+      setError("");
       props
         .loadChildren(entry.path)
         .then((next) => {
@@ -58,7 +60,11 @@ function TreeRow({
             next.some((child) => child.kind === "dir" && child.name === ".git"),
           );
         })
-        .catch(() => {});
+        .catch((reason) => {
+          if (!cancelled) {
+            setError(reason instanceof Error ? reason.message : String(reason));
+          }
+        });
       return () => {
         cancelled = true;
       };
@@ -70,7 +76,11 @@ function TreeRow({
         .then((result) => {
           if (!cancelled) setHasGit(result);
         })
-        .catch(() => {});
+        .catch((reason) => {
+          if (!cancelled) {
+            setError(reason instanceof Error ? reason.message : String(reason));
+          }
+        });
       return () => {
         cancelled = true;
       };
@@ -102,12 +112,16 @@ function TreeRow({
     setOpen((current) => !current);
     if (!open && children === null) {
       setLoading(true);
+      setError("");
       try {
         const next = await props.loadChildren(entry.path);
         setChildren(next);
         setHasGit(
           next.some((child) => child.kind === "dir" && child.name === ".git"),
         );
+      } catch (reason) {
+        setError(reason instanceof Error ? reason.message : String(reason));
+        return;
       } finally {
         setLoading(false);
       }
@@ -211,6 +225,14 @@ function TreeRow({
               …
             </div>
           )}
+          {!loading && error && (
+            <div
+              className="py-0.5 text-[10px] text-error"
+              style={{ paddingLeft: 18 + depth * 10 }}
+            >
+              {error}
+            </div>
+          )}
           {!loading &&
             children?.map((child) => (
               <TreeRow
@@ -220,6 +242,14 @@ function TreeRow({
                 {...props}
               />
             ))}
+        </div>
+      )}
+      {error && !expandable && (
+        <div
+          className="py-0.5 text-[10px] text-error"
+          style={{ paddingLeft: 18 + depth * 10 }}
+        >
+          {error}
         </div>
       )}
     </div>
