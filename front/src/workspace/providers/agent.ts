@@ -74,7 +74,8 @@ export class AgentFilesProvider implements FileProvider {
   }
 
   async list(path: string): Promise<DirectoryPage> {
-    const rows = await listOpencodeFiles(this.agent(), agentPath(path));
+    const normalized = normalizePath(path);
+    const rows = await listOpencodeFiles(this.agent(), agentPath(normalized));
     return {
       entries: (Array.isArray(rows) ? rows : [])
         .map((row: any) => this.entry(row))
@@ -103,7 +104,8 @@ export class AgentFilesProvider implements FileProvider {
   }
 
   async read(path: string, range?: { start: number; end: number }) {
-    const { blob } = await readOpencodeFile(this.agent(), agentPath(path));
+    const normalized = normalizePath(path);
+    const { blob } = await readOpencodeFile(this.agent(), agentPath(normalized));
     const data = range ? blob.slice(range.start, range.end) : blob;
     return data.stream();
   }

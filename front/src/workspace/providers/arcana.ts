@@ -158,9 +158,10 @@ export class ArcanaProvider implements FileProvider {
   }
 
   async read(path: string, range?: { start: number; end: number }) {
+    const normalized = normalizePath(path);
     const result = await readArcanaFile(
       this.remoteWorkspaceId,
-      baseName(path),
+      baseName(normalized),
       "base64",
     );
     const data = fromBase64(String(result?.content ?? ""));
@@ -198,7 +199,8 @@ export class ArcanaProvider implements FileProvider {
   }
 
   async remove(path: string) {
-    await deleteArcanaFile(this.remoteWorkspaceId, baseName(path));
+    const normalized = normalizePath(path);
+    await deleteArcanaFile(this.remoteWorkspaceId, baseName(normalized));
     await this.refresh();
   }
 

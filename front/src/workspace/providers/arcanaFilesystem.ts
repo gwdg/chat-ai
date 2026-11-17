@@ -178,7 +178,8 @@ export class ArcanaFilesystemProvider implements FileProvider {
   }
 
   async list(path: string, cursor?: string): Promise<DirectoryPage> {
-    const parts = this.parts(path);
+    const normalized = normalizePath(path);
+    const parts = this.parts(normalized);
     if (parts.length === 0) {
       const arcanas = await this.listArcanas();
       return page(
@@ -206,7 +207,8 @@ export class ArcanaFilesystemProvider implements FileProvider {
   }
 
   async stat(path: string): Promise<WorkspaceFileEntry> {
-    const parts = this.parts(path);
+    const normalized = normalizePath(path);
+    const parts = this.parts(normalized);
     if (parts.length === 0) {
       return { sourceId: this.sourceId, path: "/", name: "/", kind: "dir" };
     }
@@ -226,12 +228,13 @@ export class ArcanaFilesystemProvider implements FileProvider {
     const file = (await this.files(arcana)).find(
       (entry) => fileName(entry) === name,
     );
-    if (!file) throw new WorkspaceError("NOT_FOUND", path);
+    if (!file) throw new WorkspaceError("NOT_FOUND", normalized);
     return this.fileEntry(arcana, file);
   }
 
   async read(path: string, range?: { start: number; end: number }) {
-    const parts = this.parts(path);
+    const normalized = normalizePath(path);
+    const parts = this.parts(normalized);
     if (parts.length !== 2) {
       throw new WorkspaceError("UNSUPPORTED", "Not an Arcana file");
     }
@@ -247,7 +250,8 @@ export class ArcanaFilesystemProvider implements FileProvider {
     data: ReadableStream<Uint8Array>,
     opts: { size?: number; overwrite: boolean },
   ): Promise<WorkspaceFileEntry> {
-    const parts = this.parts(path);
+    const normalized = normalizePath(path);
+    const parts = this.parts(normalized);
     if (parts.length !== 2) {
       throw new WorkspaceError("UNSUPPORTED", "Arcana collections are flat");
     }
@@ -257,7 +261,7 @@ export class ArcanaFilesystemProvider implements FileProvider {
       (entry) => fileName(entry) === name,
     );
     if (exists && !opts.overwrite) {
-      throw new WorkspaceError("CONFLICT", path);
+      throw new WorkspaceError("CONFLICT", normalized);
     }
     const bytes = await readAll(data);
     const content = toBase64(bytes);
@@ -276,7 +280,8 @@ export class ArcanaFilesystemProvider implements FileProvider {
   }
 
   async mkdir(path: string) {
-    const parts = this.parts(path);
+    const normalized = normalizePath(path);
+    const parts = this.parts(normalized);
     if (parts.length !== 1) {
       throw new WorkspaceError("UNSUPPORTED", "Arcana collections are flat");
     }
@@ -285,7 +290,8 @@ export class ArcanaFilesystemProvider implements FileProvider {
   }
 
   async remove(path: string) {
-    const parts = this.parts(path);
+    const normalized = normalizePath(path);
+    const parts = this.parts(normalized);
     if (parts.length !== 2) {
       throw new WorkspaceError(
         "UNSUPPORTED",

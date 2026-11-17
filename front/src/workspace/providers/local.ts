@@ -1,7 +1,13 @@
 import type { WorkspaceCapabilities, WorkspaceFileEntry } from "../../db/dbTypes";
 import { getSourceHandle } from "../../db/workspaceDb";
 import { defaultCapabilities } from "../capabilities";
-import { baseName, joinPath, normalizePath, parentPath } from "../paths";
+import {
+  baseName,
+  joinPath,
+  normalizePath,
+  parentPath,
+  resolveWithin,
+} from "../paths";
 import type { DirectoryPage, FileProvider, QuotaInfo } from "./types";
 import { WorkspaceError } from "./types";
 
@@ -10,8 +16,12 @@ async function getDir(
   path: string,
   create = false,
 ): Promise<FileSystemDirectoryHandle> {
+  const resolved = resolveWithin(path, "/");
+  if (resolved === null) {
+    throw new WorkspaceError("PERMISSION_DENIED", path);
+  }
   let dir = root;
-  for (const segment of normalizePath(path).split("/").filter(Boolean)) {
+  for (const segment of resolved.split("/").filter(Boolean)) {
     dir = await dir.getDirectoryHandle(segment, { create });
   }
   return dir;
@@ -112,11 +122,12 @@ export class LocalProvider implements FileProvider {
   }
 
   async list(path: string, cursor?: string): Promise<DirectoryPage> {
+    const normalized = normalizePath(path);
     let dir: FileSystemDirectoryHandle;
     try {
-      dir = await getDir(this.handle(), path);
+      dir = await getDir(this.handle(), normalized);
     } catch {
-      throw new WorkspaceError("NOT_FOUND", path);
+      throw new WorkspaceError("NOT_FOUND", normalized);
     }
     const entries: WorkspaceFileEntry[] = [];
     // @ts-expect-error entries() is missing from older DOM typings
@@ -124,7 +135,7 @@ export class LocalProvider implements FileProvider {
       entries.push(
         await entryFor(
           this.sourceId,
-          joinPath(path, name),
+          joinPath(normalized, name),
           name,
           handle,
         ),
@@ -172,11 +183,12 @@ export class LocalProvider implements FileProvider {
   }
 
   async read(path: string, range?: { start: number; end: number }) {
+    const normalized = normalizePath(path);
     let file: File;
     try {
-      file = await (await getFile(this.handle(), path)).getFile();
+      file = await (await getFile(this.handle(), normalized)).getFile();
     } catch {
-      throw new WorkspaceError("NOT_FOUND", path);
+      throw new WorkspaceError("NOT_FOUND", normalized);
     }
     const slice = range ? file.slice(range.start, range.end) : file;
     return slice.stream();
@@ -208,7 +220,8 @@ export class LocalProvider implements FileProvider {
   }
 
   async mkdir(path: string) {
-    await getDir(this.handle(), path, true);
+    const normalized = normalizePath(path);
+    await getDir(this.handle(), normalized, true);
   }
 
   async remove(path: string, opts: { recursive: boolean }) {

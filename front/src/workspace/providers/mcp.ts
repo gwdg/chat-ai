@@ -116,8 +116,9 @@ export class McpProvider implements FileProvider {
   }
 
   async list(path: string, cursor?: string): Promise<DirectoryPage> {
+    const normalized = normalizePath(path);
     const result = await this.call(pick(this.tools, LIST_TOOLS), {
-      path: normalizePath(path),
+      path: normalized,
       cursor,
     });
     const payload = result?.structuredContent ?? result;
@@ -128,7 +129,7 @@ export class McpProvider implements FileProvider {
         : [];
     const entries: WorkspaceFileEntry[] = rawEntries.map((entry: any) => ({
       sourceId: this.sourceId,
-      path: normalizePath(entry.path ?? joinPath(path, entry.name ?? "")),
+      path: normalizePath(entry.path ?? joinPath(normalized, entry.name ?? "")),
       name: String(entry.name ?? baseName(entry.path ?? "")),
       kind: entry.type === "dir" || entry.isDirectory ? "dir" : "file",
       size: typeof entry.size === "number" ? entry.size : undefined,
@@ -152,8 +153,9 @@ export class McpProvider implements FileProvider {
   }
 
   async read(path: string) {
+    const normalized = normalizePath(path);
     const result = await this.call(pick(this.tools, READ_TOOLS), {
-      path: normalizePath(path),
+      path: normalized,
     });
     const payload = result?.structuredContent ?? result;
     const content = payload?.content ?? payload?.data ?? payload;
@@ -175,6 +177,7 @@ export class McpProvider implements FileProvider {
     data: ReadableStream<Uint8Array>,
     opts: { size?: number; overwrite: boolean },
   ): Promise<WorkspaceFileEntry> {
+    const normalized = normalizePath(path);
     if (!this.capabilities.write) throw new WorkspaceError("UNSUPPORTED");
     const reader = data.getReader();
     const chunks: Uint8Array[] = [];
@@ -190,35 +193,41 @@ export class McpProvider implements FileProvider {
       offset += part.length;
     }
     await this.call(pick(this.tools, WRITE_TOOLS), {
-      path: normalizePath(path),
+      path: normalized,
       content: new TextDecoder().decode(bytes),
       overwrite: opts.overwrite,
     });
-    return this.stat(path);
+    return this.stat(normalized);
   }
 
   async mkdir(path: string) {
-    await this.call(pick(this.tools, MKDIR_TOOLS), { path: normalizePath(path) });
+    const normalized = normalizePath(path);
+    await this.call(pick(this.tools, MKDIR_TOOLS), { path: normalized });
   }
 
   async remove(path: string, opts: { recursive: boolean }) {
+    const normalized = normalizePath(path);
     await this.call(pick(this.tools, DELETE_TOOLS), {
-      path: normalizePath(path),
+      path: normalized,
       recursive: opts.recursive,
     });
   }
 
   async move(from: string, to: string) {
+    const normalizedFrom = normalizePath(from);
+    const normalizedTo = normalizePath(to);
     await this.call(pick(this.tools, MOVE_TOOLS), {
-      from: normalizePath(from),
-      to: normalizePath(to),
+      from: normalizedFrom,
+      to: normalizedTo,
     });
   }
 
   async copy(from: string, to: string) {
+    const normalizedFrom = normalizePath(from);
+    const normalizedTo = normalizePath(to);
     await this.call(pick(this.tools, COPY_TOOLS), {
-      from: normalizePath(from),
-      to: normalizePath(to),
+      from: normalizedFrom,
+      to: normalizedTo,
     });
   }
 

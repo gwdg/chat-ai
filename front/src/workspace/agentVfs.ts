@@ -11,6 +11,7 @@ type MountBinding = {
 };
 
 const UPLOAD_PREFIX = "/uploads";
+const READ_ONLY_MESSAGE = "That mount is read-only.";
 
 const toBytes = async (stream: ReadableStream<Uint8Array>): Promise<Uint8Array> => {
   const reader = stream.getReader();
@@ -46,6 +47,15 @@ const streamOf = (data: Uint8Array | string): ReadableStream<Uint8Array> => {
 const isUploads = (path: string) => {
   const normalized = normalizePath(path);
   return normalized === UPLOAD_PREFIX || normalized.startsWith(`${UPLOAD_PREFIX}/`);
+};
+
+const assertWritable = (binding: MountBinding) => {
+  if (
+    binding.mount.readOnly === true ||
+    binding.provider.capabilities.write === false
+  ) {
+    throw new Error(READ_ONLY_MESSAGE);
+  }
 };
 
 export class WorkspaceAgentVfs implements Vfs {
@@ -92,70 +102,82 @@ export class WorkspaceAgentVfs implements Vfs {
   }
 
   async readFile(path: string): Promise<Uint8Array> {
-    if (isUploads(path)) return this.conversation.readFile(path);
-    const routed = this.binding(path);
+    const normalized = normalizePath(path);
+    if (isUploads(normalized)) return this.conversation.readFile(normalized);
+    const routed = this.binding(normalized);
     if (routed) {
       return toBytes(await routed.binding.provider.read(routed.inner));
     }
     try {
-      return toBytes(await this.root.read(path));
+      return toBytes(await this.root.read(normalized));
     } catch {
-      throw enoent(path);
+      throw enoent(normalized);
     }
   }
 
   async writeFile(path: string, data: Uint8Array | string): Promise<void> {
-    if (isUploads(path)) {
-      await this.conversation.writeFile(path, data);
+    const normalized = normalizePath(path);
+    if (isUploads(normalized)) {
+      await this.conversation.writeFile(normalized, data);
       return;
     }
-    const routed = this.binding(path);
+    const routed = this.binding(normalized);
     if (routed) {
+      assertWritable(routed.binding);
       await routed.binding.provider.write(routed.inner, streamOf(data), {
         overwrite: true,
       });
       return;
     }
-    await this.root.write(path, streamOf(data), { overwrite: true });
+    if (this.root.capabilities.write === false) {
+      throw new Error(READ_ONLY_MESSAGE);
+    }
+    await this.root.write(normalized, streamOf(data), { overwrite: true });
   }
 
   async mkdir(path: string): Promise<void> {
-    if (isUploads(path)) {
-      await this.conversation.mkdir(path);
+    const normalized = normalizePath(path);
+    if (isUploads(normalized)) {
+      await this.conversation.mkdir(normalized);
       return;
     }
-    const routed = this.binding(path);
+    const routed = this.binding(normalized);
     if (routed) {
+      assertWritable(routed.binding);
       await routed.binding.provider.mkdir(routed.inner);
       return;
     }
-    await this.root.mkdir(path);
+    if (this.root.capabilities.write === false) {
+      throw new Error(READ_ONLY_MESSAGE);
+    }
+    await this.root.mkdir(normalized);
   }
 
   async readdir(path: string): Promise<Entry[]> {
-    if (isUploads(path)) return this.conversation.readdir(path);
-    const routed = this.binding(path);
+    const normalized = normalizePath(path);
+    if (isUploads(normalized)) return this.conversation.readdir(normalized);
+    const routed = this.binding(normalized);
     const entries: Entry[] = routed
       ? (await routed.binding.provider.list(routed.inner)).entries.map((entry) => ({
           name: entry.name,
           dir: entry.kind === "dir",
         }))
-      : (await this.root.list(path)).entries.map((entry) => ({
+      : (await this.root.list(normalized)).entries.map((entry) => ({
           name: entry.name,
           dir: entry.kind === "dir",
         }));
     const seen = new Set(entries.map((entry) => entry.name));
-    for (const name of this.virtualMounts(path)) {
+    for (const name of this.virtualMounts(normalized)) {
       if (!seen.has(name)) entries.push({ name, dir: true });
     }
     return entries.sort((a, b) => Number(b.dir) - Number(a.dir) || a.name.localeCompare(b.name));
   }
 
   async stat(path: string): Promise<{ dir: boolean } | null> {
-    if (isUploads(path)) return this.conversation.stat(path);
     const normalized = normalizePath(path);
+    if (isUploads(normalized)) return this.conversation.stat(normalized);
     if (normalized === "/") return { dir: true };
-    const routed = this.binding(path);
+    const routed = this.binding(normalized);
     if (routed) {
       try {
         const entry = await routed.binding.provider.stat(routed.inner);
@@ -169,7 +191,7 @@ export class WorkspaceAgentVfs implements Vfs {
       if (normalizePath(mount.path).startsWith(`${normalized}/`)) return { dir: true };
     }
     try {
-      const entry = await this.root.stat(path);
+      const entry = await this.root.stat(normalized);
       return { dir: entry.kind === "dir" };
     } catch {
       return null;
@@ -177,30 +199,36 @@ export class WorkspaceAgentVfs implements Vfs {
   }
 
   async remove(path: string): Promise<void> {
-    if (isUploads(path)) {
-      await this.conversation.remove(path);
+    const normalized = normalizePath(path);
+    if (isUploads(normalized)) {
+      await this.conversation.remove(normalized);
       return;
     }
-    const routed = this.binding(path);
+    const routed = this.binding(normalized);
     if (routed) {
-      if (normalizePath(path) === normalizePath(routed.binding.mount.path)) {
-        throw new Error(`Cannot remove the mount point ${path}`);
+      assertWritable(routed.binding);
+      if (normalized === normalizePath(routed.binding.mount.path)) {
+        throw new Error(`Cannot remove the mount point ${normalized}`);
       }
       await routed.binding.provider.remove(routed.inner, { recursive: true });
       return;
     }
-    await this.root.remove(path, { recursive: true });
+    if (this.root.capabilities.write === false) {
+      throw new Error(READ_ONLY_MESSAGE);
+    }
+    await this.root.remove(normalized, { recursive: true });
   }
 
   async stamp(path: string): Promise<string | null> {
-    if (isUploads(path)) return this.conversation.stamp?.(path) ?? null;
-    const routed = this.binding(path);
+    const normalized = normalizePath(path);
+    if (isUploads(normalized)) return this.conversation.stamp?.(normalized) ?? null;
+    const routed = this.binding(normalized);
     try {
       if (routed) {
         const entry = await routed.binding.provider.stat(routed.inner);
         return `${entry.mtime ?? ""}:${entry.size ?? ""}`;
       }
-      const entry = await this.root.stat(path);
+      const entry = await this.root.stat(normalized);
       return `${entry.mtime ?? ""}:${entry.size ?? ""}`;
     } catch {
       return null;
