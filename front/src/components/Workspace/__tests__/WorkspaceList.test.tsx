@@ -446,12 +446,38 @@ describe("WorkspaceList group colours", () => {
 });
 
 describe("WorkspaceList section header", () => {
-  it("marks the section with an icon beside the collapse control", () => {
+  it("puts the section icon first and the collapse control last", () => {
     renderList(makeStore());
 
-    // Two icons: the collapse chevron and the section icon, like Pinned.
-    expect(
-      screen.getByRole("button", { name: "Workspace" }).querySelectorAll("svg"),
-    ).toHaveLength(2);
+    const toggle = screen.getByRole("button", { name: "Workspace" });
+    const icons = toggle.querySelectorAll("svg");
+    // Two icons: the section icon leading, the collapse chevron trailing.
+    expect(icons).toHaveLength(2);
+    expect(icons[0].getAttribute("class")).not.toContain(
+      "transition-transform",
+    );
+    expect(icons[1].getAttribute("class")).toContain("transition-transform");
+    expect(toggle.lastElementChild).toBe(icons[1]);
+
+    // The trailing cluster keeps the add action as the very last element.
+    const add = screen.getByRole("button", { name: "New workspace" });
+    expect(add.parentElement?.lastElementChild).toBe(add);
+  });
+});
+
+describe("WorkspaceList row controls", () => {
+  it("puts the disclosure arrow at the trailing edge of the row", async () => {
+    renderList(makeStore());
+
+    await screen.findByText("Teaching");
+    const row = screen.getByText("Teaching").closest("[style]") as HTMLElement;
+    const toggle = screen.getByRole("button", {
+      name: "Attached chats, agents and sessions",
+    });
+
+    expect(row.lastElementChild).toBe(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    // The name button still comes first and owns the navigation click.
+    expect(row.querySelector("button")).not.toBe(toggle);
   });
 });

@@ -18,6 +18,7 @@ import UserInfoContainer from "./UserInfoContainer";
 import TimeoutSetter from "./TimeoutSetter";
 import UserMemoryContainer from "./UserMemoryContainer";
 import {
+  AdvancedModePreference,
   ConversationSummaryPreference,
   DocumentConversionPreference,
   MemoryPreference,
@@ -144,6 +145,9 @@ export default function UserSettingsModal({
     if (activeTab === "chat") {
       return (
         <div className="flex flex-col gap-5">
+          <div className="border-b border-base-300 pb-5">
+            <AdvancedModePreference />
+          </div>
           {modelsData ? (
             <DefaultModelSelector modelsData={modelsData} />
           ) : (

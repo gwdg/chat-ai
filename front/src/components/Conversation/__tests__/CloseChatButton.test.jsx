@@ -45,7 +45,9 @@ describe("CloseChatButton", () => {
     expect(button).toHaveAttribute("data-guide", "close-chat");
     expect(button).toHaveClass("btn", "btn-circle", "shadow-lg");
     expect(button.className).not.toMatch(/(^|\s)(absolute|fixed|z-\d+)(\s|$)/);
-    expect(button.querySelector("svg")).toBeInTheDocument();
+    const icon = button.querySelector("svg");
+    expect(icon).toBeInTheDocument();
+    expect(icon).toHaveClass("h-5", "w-5");
 
     expect(container.querySelectorAll("button")).toHaveLength(1);
     expect(container.firstElementChild.tagName).toBe("SPAN");

@@ -254,3 +254,26 @@ describe("TopicList collapse all", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+describe("TopicList row controls", () => {
+  it("puts the disclosure arrow at the trailing edge of the topic row", () => {
+    const topic = { id: "t4", name: "Trailing topic", color: "violet" };
+    render(
+      <TopicList
+        {...baseProps}
+        topics={[topic]}
+        conversationsByTopic={
+          new Map([["t4", [{ id: "c4", title: "Topic chat", lastModified: 1 }]]])
+        }
+      />,
+    );
+
+    const row = screen.getByText("Trailing topic").closest('[role="button"]');
+    const toggle = row.querySelector('button[aria-label="Collapse topic"]');
+
+    expect(row.lastElementChild).toBe(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    // The emoji/icon slot and the label keep their leading positions.
+    expect(row.firstElementChild).not.toBe(toggle);
+  });
+});

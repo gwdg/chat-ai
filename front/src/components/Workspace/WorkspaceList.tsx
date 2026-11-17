@@ -268,12 +268,14 @@ export default function WorkspaceList({
         className="flex min-w-0 flex-1 items-center gap-1 rounded-md text-left text-[11px] font-semibold uppercase tracking-wide text-base-content/70 transition hover:text-base-content"
         aria-expanded={!collapsed}
       >
+        <Workspace size={12} className="shrink-0" />
+        <span className="min-w-0 flex-1 truncate">
+          {t("workspace.sidebar_title")}
+        </span>
         <ChevronDown
           size={12}
           className={`shrink-0 transition-transform ${collapsed ? "-rotate-90" : ""}`}
         />
-        <Workspace size={12} className="shrink-0" />
-        <span className="truncate">{t("workspace.sidebar_title")}</span>
       </button>
       <button
         type="button"
@@ -330,27 +332,6 @@ export default function WorkspaceList({
             >
               <button
                 type="button"
-                onClick={() =>
-                  dispatch(
-                    toggleTopic(collapseId(workspaceRowCollapseId(workspace.id))),
-                  )
-                }
-                disabled={!expandable}
-                className={`ml-1 flex h-5 w-5 shrink-0 items-center justify-center rounded text-base-content/40 ${
-                  expandable
-                    ? "hover:text-base-content"
-                    : "cursor-default opacity-40"
-                }`}
-                aria-expanded={expanded}
-                aria-label={t("workspace.attached_items")}
-              >
-                <ChevronDown
-                  size={12}
-                  className={`transition-transform ${expanded ? "" : "-rotate-90"}`}
-                />
-              </button>
-              <button
-                type="button"
                 onClick={() => {
                   navigate(`/workspace/${workspace.id}`);
                   onNavigate?.();
@@ -387,7 +368,7 @@ export default function WorkspaceList({
                   <Add size={14} />
                 )}
               </button>
-              <Popover className="relative mr-1">
+              <Popover className="relative">
                 <PopoverButton
                   data-guide="workspace-menu"
                   className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-base-content/40 opacity-0 transition hover:bg-base-300 hover:text-base-content group-hover:opacity-100 focus:outline-none"
@@ -456,6 +437,27 @@ export default function WorkspaceList({
                   )}
                 </PopoverPanel>
               </Popover>
+              <button
+                type="button"
+                onClick={() =>
+                  dispatch(
+                    toggleTopic(collapseId(workspaceRowCollapseId(workspace.id))),
+                  )
+                }
+                disabled={!expandable}
+                className={`mr-1 flex h-5 w-5 shrink-0 items-center justify-center rounded text-base-content/40 ${
+                  expandable
+                    ? "hover:text-base-content"
+                    : "cursor-default opacity-40"
+                }`}
+                aria-expanded={expanded}
+                aria-label={t("workspace.attached_items")}
+              >
+                <ChevronDown
+                  size={12}
+                  className={`transition-transform ${expanded ? "" : "-rotate-90"}`}
+                />
+              </button>
             </div>
             {expanded && expandable && (
               <div

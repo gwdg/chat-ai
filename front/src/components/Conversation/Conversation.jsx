@@ -399,6 +399,16 @@ export default function Conversation({
           localState?.persona
         ) && <HallucinationWarning />}
 
+        {/* Close chat - normal flow, below every banner */}
+        {!hideCloseButton && localState?.id && (
+          <div className="flex justify-end px-2 pt-1">
+            <CloseChatButton
+              localState={localState}
+              setLocalState={setLocalState}
+            />
+          </div>
+        )}
+
         {/* Scrollable messages container */}
         <div className="relative flex-1 min-h-0">
           <div ref={containerRef}
@@ -531,12 +541,6 @@ export default function Conversation({
           )}
           {/* Floating actions - bottom right above the prompt box */}
           <div className="absolute bottom-3 right-5 md:right-3 z-10 flex flex-col items-center gap-2">
-            {!hideCloseButton && (
-              <CloseChatButton
-                localState={localState}
-                setLocalState={setLocalState}
-              />
-            )}
             {localState?.messages?.length >= 4 && (
               <UndoButton
                 localState={localState}

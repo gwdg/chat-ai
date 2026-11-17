@@ -269,28 +269,6 @@ export default function TopicList({
             } as CSSProperties
           }
         >
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleTopicCollapse(id);
-            }}
-            aria-expanded={!isCollapsed}
-            aria-label={
-              isCollapsed
-                ? t("folders.expand_topic")
-                : t("folders.collapse_topic")
-            }
-            className="flex-shrink-0 rounded-lg p-1 text-base-content/50 transition-colors hover:bg-base-300"
-          >
-            <ChevronDown
-              size={12}
-              className={`pointer-events-none transition-transform duration-200 ${
-                isCollapsed ? "-rotate-90" : "rotate-0"
-              }`}
-            />
-          </button>
-
           {emoji ? (
             <span
               aria-hidden="true"
@@ -347,6 +325,28 @@ export default function TopicList({
               />
             </button>
           )}
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleTopicCollapse(id);
+            }}
+            aria-expanded={!isCollapsed}
+            aria-label={
+              isCollapsed
+                ? t("folders.expand_topic")
+                : t("folders.collapse_topic")
+            }
+            className="flex-shrink-0 rounded-lg p-1 text-base-content/50 transition-colors hover:bg-base-300"
+          >
+            <ChevronDown
+              size={12}
+              className={`pointer-events-none transition-transform duration-200 ${
+                isCollapsed ? "-rotate-90" : "rotate-0"
+              }`}
+            />
+          </button>
         </div>
 
         {!isCollapsed && (

@@ -500,11 +500,21 @@ semibold label row on a `bg-base-200/70` band, with `mx-2 my-1.5 border-t border
 between the sections in `SidebarContent`. Every header starts with the collapse chevron and then a
 12 px section icon (chat bubble, workspace grid, robot, server; Pinned uses its pin there), so the
 sections stay distinguishable while collapsed. A new sidebar section should reuse that pattern,
-icon included.
+icon included. The Workspace section header and the workspace rows, and the topic rows in
+`TopicList`, are the exception the admin asked for: their disclosure chevron sits at the trailing
+edge of the row, after the label (and after the per-row actions), never before the icon.
 Agents and MCP Servers are advanced sections: both, with their dividers and pinned agent rows, are
-rendered only while `user_settings.advanced_mode` is on (`selectAdvancedMode`, default off). The one
-switch lives in the prompt box's chat settings panel (`SettingsPanel/SettingsContent.jsx`,
-`data-guide="advanced-mode-preference"`); with it off the sidebar is chats, topics and workspaces.
+rendered only while `user_settings.advanced_mode` is on (`selectAdvancedMode`, default off). The
+switch appears in two places that read and write that same key — the prompt box's chat settings
+panel (`SettingsPanel/SettingsContent.jsx`, `data-guide="advanced-mode-preference"`) and the
+profile modal's Chat tab (`modals/UserSettings/ChatPreferences.jsx`,
+`data-guide="profile-advanced-mode-preference"`), because the admin looked for it in the profile
+and did not find it; with it off the sidebar is chats, topics and workspaces.
+
+The chat's close control is a circle X (`Conversation/CloseChatButton.jsx`, `data-guide="close-chat"`)
+rendered in normal flow at the top of the messages area, directly below `HallucinationWarning` and any
+persona banner — never floating over the conversation, and never stacked above the undo button, which
+alone stays in the bottom-right cluster.
 
 ### 4.16 Meta chat works from conversation summaries, not messages
 

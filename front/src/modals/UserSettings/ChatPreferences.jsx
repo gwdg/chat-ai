@@ -34,6 +34,8 @@ import {
   selectShowTimestamps,
   setShowTimestamps,
   setSendWithEnter,
+  selectAdvancedMode,
+  setAdvancedMode,
 } from "../../Redux/reducers/userSettingsReducer";
 import { useModal } from "../ModalContext";
 import { useSendWithEnter } from "../../hooks/useSendWithEnter";
@@ -61,6 +63,27 @@ const DOCUMENT_CONVERSION_OPTIONS = [
   { value: "browser", key: "browser" },
   { value: "choice", key: "choice" },
 ];
+
+export function AdvancedModePreference() {
+  const dispatch = useDispatch();
+  const { t } = useTranslation();
+  const advancedMode = useSelector(selectAdvancedMode);
+
+  return (
+    <section className="flex flex-col gap-2">
+      <div data-guide="profile-advanced-mode-preference">
+        <ProfilePreferenceSwitch
+          label={t("user_settings.chat_preferences.sidebar.advanced.label")}
+          description={t(
+            "user_settings.chat_preferences.sidebar.advanced.description",
+          )}
+          checked={advancedMode}
+          onChange={(checked) => dispatch(setAdvancedMode(checked))}
+        />
+      </div>
+    </section>
+  );
+}
 
 export function MemoryPreference() {
   const dispatch = useDispatch();
