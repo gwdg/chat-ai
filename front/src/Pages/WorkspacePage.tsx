@@ -303,6 +303,11 @@ export default function WorkspacePage() {
   const [selectionBusy, setSelectionBusy] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const previewUrlRef = useRef<string | null>(null);
+  const entriesRequestRef = useRef(0);
+  const rootRequestRef = useRef(0);
+  const rootTreeRequestRef = useRef(0);
+  const previewRequestRef = useRef(0);
+  const mountedRef = useRef(true);
 
   const selectedSource = sources.find((source) => source.id === selectedSourceId);
   // The per-chat storage sources are derived mounts of attached chats
@@ -317,6 +322,31 @@ export default function WorkspacePage() {
   const rootSourceId = workspaceId ? workspaceRootSourceId(workspaceId) : "";
   const providerFor = (sourceId: string) =>
     sourceId === rootSourceId ? rootProvider : providers.get(sourceId);
+
+  useEffect(() => {
+    entriesRequestRef.current += 1;
+    rootRequestRef.current += 1;
+    rootTreeRequestRef.current += 1;
+    previewRequestRef.current += 1;
+    setRootPath("/");
+    setRootEntries([]);
+    setRootTreeEntries([]);
+    setRootLoading(false);
+    setRootError("");
+    setSelectedSourceId(null);
+    setActiveMountId(null);
+    setPathBySource({});
+    setEntries([]);
+    setNextCursor(undefined);
+    setLoading(false);
+    setListError("");
+    setSelectedPaths([]);
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = null;
+    }
+    setPreview(null);
+  }, [workspaceId]);
 
   useEffect(() => {
     if (
@@ -392,9 +422,12 @@ export default function WorkspacePage() {
 
   const loadEntries = useCallback(
     async (append = false) => {
+      const request = ++entriesRequestRef.current;
       if (!selectedProvider) {
         setEntries([]);
         setNextCursor(undefined);
+        setLoading(false);
+        setListError("");
         return;
       }
       setLoading(true);
@@ -407,14 +440,16 @@ export default function WorkspacePage() {
           currentPath,
           append ? nextCursor : undefined,
         );
+        if (request !== entriesRequestRef.current) return;
         setEntries((current) => (append ? [...current, ...page.entries] : page.entries));
         setNextCursor(page.next);
         void refreshQuota(selectedProvider);
       } catch (error) {
+        if (request !== entriesRequestRef.current) return;
         setListError(error instanceof Error ? error.message : String(error));
         if (!append) setEntries([]);
       } finally {
-        setLoading(false);
+        if (request === entriesRequestRef.current) setLoading(false);
       }
     },
     [selectedProvider, currentPath, nextCursor, refreshQuota],
@@ -458,23 +493,28 @@ export default function WorkspacePage() {
   );
 
   const loadRoot = useCallback(async () => {
+    const request = ++rootRequestRef.current;
     if (!rootProvider) {
       setRootEntries([]);
+      setRootLoading(false);
+      setRootError("");
       return;
     }
     setRootLoading(true);
     setRootError("");
     try {
       const entries = await listRoot(rootPath);
+      if (request !== rootRequestRef.current) return;
       setRootEntries(entries);
       // The left panel always lists the workspace's top level, so keep it in sync while
       // the centre browser is at the root.
       if (rootPath === "/") setRootTreeEntries(entries);
     } catch (error) {
+      if (request !== rootRequestRef.current) return;
       setRootError(error instanceof Error ? error.message : String(error));
       setRootEntries([]);
     } finally {
-      setRootLoading(false);
+      if (request === rootRequestRef.current) setRootLoading(false);
     }
   }, [rootProvider, rootPath, listRoot]);
 
@@ -483,10 +523,15 @@ export default function WorkspacePage() {
   }, [loadRoot]);
 
   const loadRootTree = useCallback(async () => {
+    const request = ++rootTreeRequestRef.current;
     try {
-      setRootTreeEntries(await listRoot("/"));
-    } catch {
+      const entries = await listRoot("/");
+      if (request !== rootTreeRequestRef.current) return;
+      setRootTreeEntries(entries);
+    } catch (error) {
+      if (request !== rootTreeRequestRef.current) return;
       setRootTreeEntries([]);
+      setRootError(error instanceof Error ? error.message : String(error));
     }
   }, [listRoot]);
 
@@ -520,12 +565,13 @@ export default function WorkspacePage() {
     setPreview(null);
   }, []);
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
       if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
-    },
-    [],
-  );
+    };
+  }, []);
 
   const clearDeletedPreview = (path: string) => {
     if (!preview) return;
@@ -789,9 +835,11 @@ export default function WorkspacePage() {
       return;
     }
     closePreview();
+    const request = ++previewRequestRef.current;
     setPreview({ entry, loading: true });
     try {
       if ((entry.size ?? 0) > PREVIEW_LIMIT) {
+        if (request !== previewRequestRef.current) return;
         setPreview({
           entry,
           loading: false,
@@ -801,6 +849,7 @@ export default function WorkspacePage() {
       }
       if (isTextFile(entry)) {
         const bytes = await readAll(await provider.read(entry.path));
+        if (request !== previewRequestRef.current || !mountedRef.current) return;
         setPreview({
           entry,
           loading: false,
@@ -811,9 +860,14 @@ export default function WorkspacePage() {
       const bytes = await readAll(await provider.read(entry.path));
       const blob = new Blob([bytes], { type: entry.mime || "application/octet-stream" });
       const url = URL.createObjectURL(blob);
+      if (request !== previewRequestRef.current || !mountedRef.current) {
+        URL.revokeObjectURL(url);
+        return;
+      }
       previewUrlRef.current = url;
       setPreview({ entry, loading: false, url });
     } catch (error) {
+      if (request !== previewRequestRef.current || !mountedRef.current) return;
       setPreview({
         entry,
         loading: false,
@@ -1125,12 +1179,20 @@ export default function WorkspacePage() {
     }));
   };
 
-  const removeMount = (mountId: string) => {
-    void removeWorkspaceMount(workspaceId!, mountId);
+  const removeMount = async (mountId: string) => {
+    try {
+      await removeWorkspaceMount(workspaceId!, mountId);
+    } catch (error) {
+      notifyError(error instanceof Error ? error.message : String(error));
+    }
   };
 
-  const toggleMountReadOnly = (mount: WorkspaceMountRow) => {
-    void setWorkspaceMountReadOnly(mount.id, !mount.readOnly);
+  const toggleMountReadOnly = async (mount: WorkspaceMountRow) => {
+    try {
+      await setWorkspaceMountReadOnly(mount.id, !mount.readOnly);
+    } catch (error) {
+      notifyError(error instanceof Error ? error.message : String(error));
+    }
   };
 
   const attachChat = () => {
@@ -1156,8 +1218,12 @@ export default function WorkspacePage() {
     }
   };
 
-  const detachChat = (conversationId: string) => {
-    void detachWorkspaceChat(workspaceId!, conversationId);
+  const detachChat = async (conversationId: string) => {
+    try {
+      await detachWorkspaceChat(workspaceId!, conversationId);
+    } catch (error) {
+      notifyError(error instanceof Error ? error.message : String(error));
+    }
   };
 
   const attachAgent = () => {
@@ -1168,10 +1234,13 @@ export default function WorkspacePage() {
     });
   };
 
-  const detachAgent = (agentId: string) => {
-    void detachWorkspaceAgent(workspaceId!, agentId).then(() =>
-      removeAgentFilesSource(workspaceId!, agentId),
-    );
+  const detachAgent = async (agentId: string) => {
+    try {
+      await detachWorkspaceAgent(workspaceId!, agentId);
+      await removeAgentFilesSource(workspaceId!, agentId);
+    } catch (error) {
+      notifyError(error instanceof Error ? error.message : String(error));
+    }
   };
 
   const toggleAgentSessions = (agentId: string) => {
@@ -1198,13 +1267,21 @@ export default function WorkspacePage() {
     }
   };
 
-  const switchToAgentSession = (agent, session) => {
-    void openWorkspaceAgentSession(workspaceId, agent, session);
-    navigate(`/agent/${agent.id}`);
+  const switchToAgentSession = async (agent, session) => {
+    try {
+      await openWorkspaceAgentSession(workspaceId, agent, session);
+      navigate(`/agent/${agent.id}`);
+    } catch (error) {
+      notifyError(error instanceof Error ? error.message : String(error));
+    }
   };
 
-  const detachAgentSession = (agent, session) => {
-    void detachSessionFromWorkspace(workspaceId, agent, session);
+  const detachAgentSession = async (agent, session) => {
+    try {
+      await detachSessionFromWorkspace(workspaceId, agent, session);
+    } catch (error) {
+      notifyError(error instanceof Error ? error.message : String(error));
+    }
   };
 
   const attachAgentSession = (agent) => {
@@ -1217,8 +1294,12 @@ export default function WorkspacePage() {
     });
   };
 
-  const toggleSourceReadOnly = (source: { id: string; readOnly?: boolean }) => {
-    void updateSource(source.id, { readOnly: !source.readOnly });
+  const toggleSourceReadOnly = async (source: { id: string; readOnly?: boolean }) => {
+    try {
+      await updateSource(source.id, { readOnly: !source.readOnly });
+    } catch (error) {
+      notifyError(error instanceof Error ? error.message : String(error));
+    }
   };
 
   const removeSelectedSource = (sourceId: string, label: string) => {
