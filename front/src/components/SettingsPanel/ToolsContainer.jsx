@@ -8,6 +8,7 @@ import {
   agreeWebSearch,
 } from "../../Redux/reducers/interfaceSettingsSlice";
 import {
+  BookOpen,
   CircleHelp,
   Globe,
   Image as ImageIcon,
@@ -17,12 +18,10 @@ import {
   FileText,
   ScanEye,
   Server,
+  TriangleAlert,
 } from "lucide-react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBookOpen } from "@fortawesome/free-solid-svg-icons";
 import ArcanaContainer from "./ArcanaContainer";
 import McpServerPicker from "./McpServerPicker";
-import MiniToolButton from "./MiniToolButton";
 import { agentGatewayTools, isAgentEnabled, modelSupportsTools } from "../../apis/agentEndpoints";
 import { remoteMcpEnabled } from "../../agent/mcp";
 import { isArcanasEnabled } from "../../utils/modules";
@@ -105,17 +104,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
       },
       {
         key: "arcana",
-        Icon: ({ className = "", ...rest }) => (
-          <FontAwesomeIcon
-            icon={faBookOpen}
-            className={[
-              "leading-none",
-              "text-[18px] md:text-[22px] lg:text-[26px]",
-              className,
-            ].join(" ")}
-            {...rest}
-          />
-        ),
+        Icon: BookOpen,
         label: t("settings.label_arcana"),
       },
       {
@@ -302,13 +291,10 @@ export default function ToolsContainer({ localState, setLocalState }) {
         </div>
       </div>
 
-      {/* Compact, responsive grid */}
-      <div
+      {/* One row per tool: name on the left, the on/off switch on the right. */}
+      <ul
         data-guide="tools-grid"
-        className={[
-          "grid gap-2.5 sm:gap-3",
-          "grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))]",
-        ].join(" ")}
+        className="overflow-hidden rounded-xl border border-base-300 bg-base-100"
       >
         {TOOL_DEFS.map(({ key, Icon, label }) => {
           const unavailable = agentMode && AGENT_UNAVAILABLE.has(key);
@@ -329,21 +315,60 @@ export default function ToolsContainer({ localState, setLocalState }) {
                 ? () => handleToggleMcp(!active)
                 : () => toggleTool(key, !active);
 
+          const disabled = agentMode
+            ? unavailable || agentWithoutTools
+            : !toolsEnabled;
+          const title = unavailable
+            ? `${label}: ${t("settings.tools_agent_unavailable")}`
+            : label;
+
           return (
-            <MiniToolButton
+            <li
               key={key}
-              active={active}
-              disabled={agentMode ? unavailable || agentWithoutTools : !toolsEnabled}
-              onClick={onToggle}
-              Icon={Icon}
-              label={label}
-              title={unavailable ? `${label}: ${t("settings.tools_agent_unavailable")}` : label}
-              guideKey={key}
-              warning={key === "web_search" || key === "mcp"}
-            />
+              className="border-b border-base-300/70 last:border-b-0"
+            >
+              <button
+                type="button"
+                onClick={onToggle}
+                disabled={disabled}
+                aria-pressed={active}
+                aria-label={label}
+                data-guide={`tool-${key}`}
+                title={title}
+                className={[
+                  "flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm",
+                  disabled
+                    ? "cursor-not-allowed opacity-50"
+                    : "cursor-pointer hover:bg-base-200",
+                ].join(" ")}
+              >
+                <Icon
+                  className="h-5 w-5 shrink-0 text-base-content/70"
+                  aria-hidden="true"
+                />
+                <span className="min-w-0 flex-1 truncate font-medium">
+                  {label}
+                </span>
+                {(key === "web_search" || key === "mcp") && (
+                  <TriangleAlert
+                    className="h-3.5 w-3.5 shrink-0 text-warning"
+                    aria-hidden="true"
+                  />
+                )}
+                <input
+                  type="checkbox"
+                  aria-hidden="true"
+                  tabIndex={-1}
+                  readOnly
+                  checked={active}
+                  disabled={disabled}
+                  className="toggle toggle-sm toggle-success pointer-events-none shrink-0"
+                />
+              </button>
+            </li>
           );
         })}
-      </div>
+      </ul>
       {/* Arcana box (only when enabled AND has an ID) */}
       {showArcanaBox && (
         <ArcanaContainer

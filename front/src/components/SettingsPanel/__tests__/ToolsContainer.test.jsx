@@ -220,3 +220,70 @@ describe("ToolsContainer bulk actions", () => {
     }
   });
 });
+
+describe("ToolsContainer list layout", () => {
+  it("lists each tool as a row whose switch shows whether it is on", () => {
+    render(
+      <ToolsContainer
+        localState={stateWith({ image_generation: true })}
+        setLocalState={vi.fn()}
+      />,
+    );
+
+    const list = document.querySelector('[data-guide="tools-grid"]');
+    expect(list?.tagName).toBe("UL");
+
+    const rows = Array.from(list?.querySelectorAll("li") ?? []);
+    const toolButtons = Array.from(
+      list?.querySelectorAll('[data-guide^="tool-"]') ?? [],
+    );
+    expect(rows).toHaveLength(toolButtons.length);
+    for (const row of rows) {
+      expect(row.querySelector('input[type="checkbox"]')).toBeTruthy();
+    }
+
+    const on = screen.getByRole("button", { name: /image generation/i });
+    expect(on).toHaveAttribute("aria-pressed", "true");
+    expect(on.querySelector('input[type="checkbox"]')).toBeChecked();
+    expect(on.parentElement?.tagName).toBe("LI");
+
+    const off = screen.getByRole("button", { name: /image modification/i });
+    expect(off).toHaveAttribute("aria-pressed", "false");
+    expect(off.querySelector('input[type="checkbox"]')).not.toBeChecked();
+  });
+
+  it("disables every row while each switch keeps its own tools state", () => {
+    render(
+      <ToolsContainer
+        localState={{
+          settings: {
+            enable_tools: false,
+            model: { id: "m", name: "Test Model" },
+            tools: { image_generation: true, image_modification: false },
+          },
+        }}
+        setLocalState={vi.fn()}
+      />,
+    );
+
+    const rows = Array.from(
+      document.querySelectorAll('[data-guide="tools-grid"] > li'),
+    );
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      const button = row.querySelector("button");
+      expect(button).toBeDisabled();
+      expect(button?.querySelector('input[type="checkbox"]')).toBeDisabled();
+    }
+
+    const on = screen.getByRole("button", { name: /image generation/i });
+    expect(on).toBeDisabled();
+    expect(on).toHaveAttribute("aria-pressed", "true");
+    expect(on.querySelector('input[type="checkbox"]')).toBeChecked();
+
+    const off = screen.getByRole("button", { name: /image modification/i });
+    expect(off).toBeDisabled();
+    expect(off).toHaveAttribute("aria-pressed", "false");
+    expect(off.querySelector('input[type="checkbox"]')).not.toBeChecked();
+  });
+});
