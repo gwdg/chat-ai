@@ -125,15 +125,13 @@ export default function AttachButton({
     return (
         <Popover className="relative flex">
             {fileInput}
-            <Tooltip text={t("conversation.prompt.attach")}>
-                <PopoverButton
-                    className="h-[30px] w-[30px] flex items-center justify-center cursor-pointer focus:outline-none"
-                    aria-label={t("conversation.prompt.attach")}
-                    data-guide="attach-file"
-                >
-                    <Attachment size={24} className="text-accent" />
-                </PopoverButton>
-            </Tooltip>
+            <PopoverButton
+                className="h-[30px] w-[30px] flex items-center justify-center cursor-pointer focus:outline-none"
+                aria-label={t("conversation.prompt.attach")}
+                data-guide="attach-file"
+            >
+                <Attachment size={24} className="text-accent" />
+            </PopoverButton>
 
             <Transition
                 as={Fragment}

@@ -104,6 +104,16 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
 
           {/* Warning for external models */}
           <DataSafetyText localState={localState} userData={userData} />
+          <div data-guide="advanced-mode-preference">
+            <ProfilePreferenceSwitch
+              label={t("user_settings.chat_preferences.sidebar.advanced.label")}
+              description={t(
+                "user_settings.chat_preferences.sidebar.advanced.description",
+              )}
+              checked={advancedMode}
+              onChange={(checked) => dispatch(setAdvancedMode(checked))}
+            />
+          </div>
           {SPEECH_MODULE_ENABLED && (
             <AudioSettingsContainer
               localState={localState}
@@ -131,16 +141,6 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
             localState={localState}
             setLocalState={setLocalState}
           />
-          <div data-guide="advanced-mode-preference">
-            <ProfilePreferenceSwitch
-              label={t("user_settings.chat_preferences.sidebar.advanced.label")}
-              description={t(
-                "user_settings.chat_preferences.sidebar.advanced.description",
-              )}
-              checked={advancedMode}
-              onChange={(checked) => dispatch(setAdvancedMode(checked))}
-            />
-          </div>
           <div className="flex flex-wrap md:justify-end gap-2 md:gap-4 items-center w-full">
             {/* Share Settings Button */}
             <ShareSettingsButton

@@ -156,7 +156,7 @@ export const featureGuides = {
   attach_from_workspace: {
     titleKey: "feature_guide.attach_from_workspace.title",
     prompt:
-      "Attach a file from a workspace to the current chat. Attach the chat to a workspace with the workspace button in the prompt box, then open Attach from workspace and pick a file from the tree.",
+      "Attach a file from a workspace to the current chat. Attach the chat to a workspace with the workspace button in the prompt box, then click the attach button and choose From workspace to pick a file from the tree.",
     keywords: ["attach from workspace", "workspace file", "workspace attachment", "workspace tree"],
     steps: [
       {
