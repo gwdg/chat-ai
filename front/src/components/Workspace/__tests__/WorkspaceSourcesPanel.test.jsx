@@ -1,16 +1,20 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   providers: new Map(),
   sources: [],
   conversations: [],
-  chatStorageDir: vi.fn(),
+  onOpenTarget: vi.fn(),
   onAddSource: vi.fn(),
-  onAddToWorkspace: vi.fn(async () => {}),
   onAddDeviceFolder: vi.fn(),
-  onRemoveSource: vi.fn(),
-  onToggleSourceReadOnly: vi.fn(),
 }));
 
 vi.mock("../../../workspace/useWorkspaceProviders", () => ({
@@ -18,9 +22,6 @@ vi.mock("../../../workspace/useWorkspaceProviders", () => ({
 }));
 vi.mock("../../../db", () => ({
   useConversationList: () => mocks.conversations,
-}));
-vi.mock("../../../workspace/chatStorage", () => ({
-  chatStorageDir: (...args) => mocks.chatStorageDir(...args),
 }));
 
 import WorkspaceSourcesPanel from "../WorkspaceSourcesPanel";
@@ -30,6 +31,18 @@ const localSource = {
   workspaceId: "ws-1",
   kind: "local",
   label: "Project",
+  config: {},
+  capabilities: {},
+  status: "connected",
+  createdAt: 1,
+  lastModified: 1,
+};
+
+const browserSource = {
+  id: "browser-1",
+  workspaceId: "ws-1",
+  kind: "browser",
+  label: "Browser",
   config: {},
   capabilities: {},
   status: "connected",
@@ -54,21 +67,15 @@ const localProvider = {
   kind: "local",
   status: "connected",
   capabilities: {},
-  list: vi.fn(async (path) => ({
-    entries:
-      path === "/"
-        ? [
-            { sourceId: "local-1", path: "/docs", name: "docs", kind: "dir" },
-            {
-              sourceId: "local-1",
-              path: "/notes.txt",
-              name: "notes.txt",
-              kind: "file",
-              size: 12,
-            },
-          ]
-        : [],
-  })),
+  quota: vi.fn(),
+};
+
+const browserProvider = {
+  sourceId: "browser-1",
+  kind: "browser",
+  status: "connected",
+  capabilities: {},
+  quota: vi.fn(),
 };
 
 const arcanaProvider = {
@@ -76,205 +83,154 @@ const arcanaProvider = {
   kind: "arcana-filesystem",
   status: "connected",
   capabilities: {},
-  list: vi.fn(async () => ({
-    entries: [
-      { sourceId: "arcana-1", path: "/recipes", name: "recipes", kind: "dir" },
-    ],
-  })),
-};
-
-const chatRoot = () => {
-  const file = {
-    kind: "file",
-    getFile: async () => ({ size: 10, lastModified: 1, type: "text/plain" }),
-  };
-  return {
-    kind: "directory",
-    entries: async function* entries() {
-      yield ["draft.md", file];
-    },
-  };
+  quota: vi.fn(),
 };
 
 const renderPanel = (props = {}) =>
   render(
     <WorkspaceSourcesPanel
-      workspaceId="ws-1"
       sources={mocks.sources}
+      onOpenTarget={mocks.onOpenTarget}
       onAddSource={mocks.onAddSource}
-      onAddToWorkspace={mocks.onAddToWorkspace}
       onAddDeviceFolder={mocks.onAddDeviceFolder}
-      onRemoveSource={mocks.onRemoveSource}
-      onToggleSourceReadOnly={mocks.onToggleSourceReadOnly}
       {...props}
     />,
   );
 
-const drive = (guide) =>
-  document.querySelector(`[data-guide="${guide}"]`);
-
-const addButton = () =>
-  document.querySelector('[data-guide="workspace-add-to-workspace"]');
+const drive = (guide) => document.querySelector(`[data-guide="${guide}"]`);
 
 beforeEach(() => {
-  mocks.sources = [localSource, arcanaSource];
+  mocks.sources = [localSource, browserSource, arcanaSource];
   mocks.providers = new Map([
     ["local-1", localProvider],
+    ["browser-1", browserProvider],
     ["arcana-1", arcanaProvider],
   ]);
   mocks.conversations = [{ id: "conv-uuid-1", title: "Planning chat" }];
-  mocks.chatStorageDir.mockReset();
-  mocks.chatStorageDir.mockResolvedValue(chatRoot());
+  mocks.onOpenTarget.mockReset();
   mocks.onAddSource.mockReset();
-  mocks.onAddToWorkspace.mockReset();
   mocks.onAddDeviceFolder.mockReset();
-  mocks.onRemoveSource.mockReset();
-  mocks.onToggleSourceReadOnly.mockReset();
-  localProvider.list.mockClear();
-  arcanaProvider.list.mockClear();
+  localProvider.quota.mockReset();
+  localProvider.quota.mockResolvedValue({
+    usage: 512 * 1024,
+    quota: 2 * 1024 * 1024,
+    scope: "origin",
+  });
+  browserProvider.quota.mockReset();
+  browserProvider.quota.mockResolvedValue({
+    usage: 10 * 1024 * 1024,
+    quota: 100 * 1024 * 1024,
+    scope: "origin",
+  });
+  arcanaProvider.quota.mockReset();
+  arcanaProvider.quota.mockResolvedValue({
+    usage: 1 * 1024 * 1024,
+    quota: 5 * 1024 * 1024,
+    scope: "account",
+  });
 });
 
 describe("WorkspaceSourcesPanel", () => {
-  it("renders the three drives and opens the add-source modal", () => {
+  it("renders the three drives with subtitles and opens the add-source modal", async () => {
     renderPanel();
 
     expect(screen.getByText("Sources")).toBeInTheDocument();
     expect(screen.getByText("Your Device")).toBeInTheDocument();
     expect(screen.getByText("Chats")).toBeInTheDocument();
     expect(screen.getByText("Arcanas")).toBeInTheDocument();
-    expect(drive("workspace-source-device")).toBeInTheDocument();
-    expect(drive("workspace-source-chats")).toBeInTheDocument();
-    expect(drive("workspace-source-arcanas")).toBeInTheDocument();
+    expect(within(drive("workspace-source-device")).getByText("1 folder")).toBeInTheDocument();
+    expect(within(drive("workspace-source-chats")).getByText("1 chat")).toBeInTheDocument();
+    expect(within(drive("workspace-source-arcanas")).getByText("1 collection")).toBeInTheDocument();
 
     fireEvent.click(drive("workspace-sources-add"));
     expect(mocks.onAddSource).toHaveBeenCalledTimes(1);
+    await act(async () => {});
   });
 
-  it("opens Your Device and lists a local source's contents", async () => {
+  it("shows provider quotas and bars on the drive cards", async () => {
     renderPanel();
 
-    fireEvent.click(drive("workspace-source-device"));
-    fireEvent.click(await screen.findByText("Project"));
-
-    expect(await screen.findByText("docs")).toBeInTheDocument();
-    expect(screen.getByText("notes.txt")).toBeInTheDocument();
-    expect(localProvider.list).toHaveBeenCalledWith("/");
-
-    fireEvent.click(screen.getByText("docs"));
-    await waitFor(() => expect(localProvider.list).toHaveBeenCalledWith("/docs"));
-    expect(await screen.findByText("Nothing here yet")).toBeInTheDocument();
-  });
-
-  it("shows the device add-folder entry point only on the drive root", async () => {
-    renderPanel();
-
-    fireEvent.click(drive("workspace-source-device"));
-    const addFolder = await screen.findByText("Add folder from this device");
-    fireEvent.click(addFolder);
-    expect(mocks.onAddDeviceFolder).toHaveBeenCalledTimes(1);
-
-    fireEvent.click(screen.getByText("Project"));
-    await screen.findByText("docs");
+    await waitFor(() =>
+      expect(
+        within(drive("workspace-source-device")).getByText(
+          "512 KB of 2.0 MB used",
+        ),
+      ).toBeInTheDocument(),
+    );
+    expect(localProvider.quota).toHaveBeenCalledTimes(1);
     expect(
-      screen.queryByText("Add folder from this device"),
-    ).not.toBeInTheDocument();
+      within(drive("workspace-source-chats")).getByText(
+        "10 MB of 100 MB used",
+      ),
+    ).toBeInTheDocument();
+    expect(drive("workspace-source-chats")).toHaveAttribute(
+      "title",
+      "10 MB of 100 MB used — shared with this app",
+    );
+    expect(drive("workspace-source-device")).toHaveAttribute(
+      "title",
+      "512 KB of 2.0 MB used",
+    );
+    expect(drive("workspace-source-arcanas")).toHaveAttribute(
+      "title",
+      "1.0 MB of 5.0 MB used",
+    );
+    expect(
+      within(drive("workspace-source-arcanas")).getByText("1.0 MB of 5.0 MB used"),
+    ).toBeInTheDocument();
+
+    expect(
+      drive("workspace-source-device").querySelector("[data-quota-bar]"),
+    ).toHaveStyle({ width: "25%" });
+    expect(
+      drive("workspace-source-chats").querySelector("[data-quota-bar]"),
+    ).toHaveStyle({ width: "10%" });
+    expect(
+      drive("workspace-source-arcanas").querySelector("[data-quota-bar]"),
+    ).toHaveStyle({ width: "20%" });
   });
 
-  it("lists conversation titles instead of ids and opens a chat's OPFS tree", async () => {
-    renderPanel();
+  it("marks the active drive, including a local source", async () => {
+    renderPanel({ activeTarget: { drive: "chats" } });
 
-    fireEvent.click(drive("workspace-source-chats"));
-    expect(await screen.findByText("Planning chat")).toBeInTheDocument();
-    expect(screen.queryByText("conv-uuid-1")).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByText("Planning chat"));
-
-    expect(await screen.findByText("draft.md")).toBeInTheDocument();
-    expect(mocks.chatStorageDir).toHaveBeenCalledWith("conv-uuid-1");
-    expect(screen.queryByText("conv-uuid-1")).not.toBeInTheDocument();
+    expect(drive("workspace-source-chats")).toHaveAttribute("aria-pressed", "true");
+    expect(drive("workspace-source-device")).toHaveAttribute("aria-pressed", "false");
+    expect(drive("workspace-source-arcanas")).toHaveAttribute("aria-pressed", "false");
+    await act(async () => {});
   });
 
-  it("adds a selected local folder to the workspace", async () => {
+  it("marks Your Device active when one of its sources is open", async () => {
+    renderPanel({ activeTarget: { drive: "device", sourceId: "local-1" } });
+
+    expect(drive("workspace-source-device")).toHaveAttribute("aria-pressed", "true");
+    await act(async () => {});
+  });
+
+  it("opens each drive through onOpenTarget", async () => {
     renderPanel();
 
     fireEvent.click(drive("workspace-source-device"));
-    fireEvent.click(await screen.findByText("Project"));
-    await screen.findByText("docs");
-    expect(addButton()).toBeNull();
-
-    fireEvent.click(screen.getByLabelText("docs"));
-    expect(addButton()).toBeInTheDocument();
-    fireEvent.click(addButton());
-
-    await waitFor(() =>
-      expect(mocks.onAddToWorkspace).toHaveBeenCalledWith([
-        expect.objectContaining({
-          sourceId: "local-1",
-          sourceKind: "local",
-          path: "/docs",
-          name: "docs",
-          kind: "dir",
-        }),
-      ]),
-    );
-  });
-
-  it("carries the conversation id when a chat row is added", async () => {
-    renderPanel();
-
     fireEvent.click(drive("workspace-source-chats"));
-    await screen.findByText("Planning chat");
-    fireEvent.click(screen.getByLabelText("Planning chat"));
-    fireEvent.click(addButton());
+    fireEvent.click(drive("workspace-source-arcanas"));
 
-    await waitFor(() =>
-      expect(mocks.onAddToWorkspace).toHaveBeenCalledWith([
-        expect.objectContaining({
-          sourceId: "chat:conv-uuid-1",
-          sourceKind: "chat",
-          path: "/",
-          name: "Planning chat",
-          kind: "dir",
-          conversationId: "conv-uuid-1",
-        }),
-      ]),
-    );
+    expect(mocks.onOpenTarget.mock.calls).toEqual([
+      [{ drive: "device" }],
+      [{ drive: "chats" }],
+      [{ drive: "arcanas" }],
+    ]);
+    await act(async () => {});
   });
 
-  it("hides Add to Workspace while nothing is selected", async () => {
+  it("fires the add-folder row", async () => {
     renderPanel();
-
-    fireEvent.click(drive("workspace-source-chats"));
-    await screen.findByText("Planning chat");
-
-    expect(addButton()).toBeNull();
+    fireEvent.click(drive("workspace-sources-add-device-folder"));
+    expect(mocks.onAddDeviceFolder).toHaveBeenCalledTimes(1);
+    await act(async () => {});
   });
 
-  it("removes a local source without opening it", async () => {
-    renderPanel();
-
-    fireEvent.click(drive("workspace-source-device"));
-    await screen.findByText("Project");
-
-    fireEvent.click(screen.getByRole("button", { name: "Remove source" }));
-
-    expect(mocks.onRemoveSource).toHaveBeenCalledWith(localSource);
-    expect(localProvider.list).not.toHaveBeenCalled();
-    expect(screen.getByText("Add folder from this device")).toBeInTheDocument();
-  });
-
-  it("toggles read-only on a local source without opening it", async () => {
-    renderPanel();
-
-    fireEvent.click(drive("workspace-source-device"));
-    await screen.findByText("Project");
-
-    fireEvent.click(
-      screen.getByRole("button", { name: "Make source read-only" }),
-    );
-
-    expect(mocks.onToggleSourceReadOnly).toHaveBeenCalledWith(localSource);
-    expect(localProvider.list).not.toHaveBeenCalled();
-    expect(screen.getByText("Add folder from this device")).toBeInTheDocument();
+  it("omits the add-folder row without a handler", async () => {
+    renderPanel({ onAddDeviceFolder: undefined });
+    expect(drive("workspace-sources-add-device-folder")).toBeNull();
+    await act(async () => {});
   });
 });

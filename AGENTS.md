@@ -789,31 +789,43 @@ transfer journal never leave the device. A persisted
 sources carry no `deviceId`. The UI badges device-plane sources "This device only" and marks a
 source whose stored `deviceId` differs as unavailable.
 
-The workspace page's left column is **Agent** on top and **SOURCES** under it — nothing else. The
-attached-chat and attached-agent lists were removed on purpose (the sidebar does both);
-`attachedChats` / `attachedAgents` remain only as inputs to `syncChatStorageSources`,
-`seedWorkspaceAgentSessions` and `syncAgentFilesSources`. The Agent card
-(`components/Workspace/WorkspaceAgentPanel.tsx`, `data-guide="workspace-agent"`) offers exactly three
-options — In-browser Pi agent (the chat's own `agent/runAgent.ts` runtime: no shell, reads and writes
-workspace files), OpenCode server (an `external` agent with `serverUrl`) and Remote agent (a `service`
-agent with `serviceAgentId`) — and the current choice is derived from the workspace's
-`workspace_agents` links, never stored twice. Choosing the in-browser agent detaches every attached
-agent; the other two open an inline picker of that kind's agents plus an "Add new agent" row that
-opens the same `agentAdd` modal as the sidebar, preset through its `initialMode` prop
-(`"external"` / `"service"`; an agent being edited keeps its own mode, and on a deployment without
-direct access the external tab still degrades to the service).
+The workspace page is **header → SOURCES rail → two panes**. The header card carries the
+workspace name, its dates and the delete button on the left, and next to them the Agent strip — the
+attached-chat and attached-agent lists stay gone on purpose (the sidebar does both); `attachedChats` /
+`attachedAgents` remain only as inputs to `syncChatStorageSources`, `seedWorkspaceAgentSessions` and
+`syncAgentFilesSources`. The Agent card (`components/Workspace/WorkspaceAgentPanel.tsx`,
+`data-guide="workspace-agent"`) offers exactly three options — In-browser Pi agent (the chat's own
+`agent/runAgent.ts` runtime: no shell, reads and writes workspace files), OpenCode server (an
+`external` agent with `serverUrl`) and Remote agent (a `service` agent with `serviceAgentId`) — and
+the current choice is derived from the workspace's `workspace_agents` links, never stored twice. Its
+`layout="row"` variant (the one the page uses) renders them as three equal cards in the header and
+stacks on phone width; `layout="column"` is the older vertical card. Choosing the in-browser agent
+detaches every attached agent; the other two open an inline picker of that kind's agents plus an "Add
+new agent" row that opens the same `agentAdd` modal as the sidebar, preset through its `initialMode`
+prop (`"external"` / `"service"`; an agent being edited keeps its own mode, and on a deployment
+without direct access the external tab still degrades to the service).
 
-SOURCES (`components/Workspace/WorkspaceSourcesPanel.tsx`, `data-guide="workspace-sources"`) is the
-"My Computer" of the workspace: three drives — **Your Device** (the workspace's `local` sources, i.e.
-folders picked through `pickDirectory`, plus git clones, which are local sources too), **Chats**
-(every conversation by title, never the uuid, listed from `useConversationList` and browsed through
-`chatStorageDir`) and **Arcanas** (the `arcana-filesystem` source, falling back to `arcana`; its root
-is one directory per Arcana collection). A drive opens inside the card with a back row and a
-breadcrumb, folders navigate on click, every row has a checkbox, and a sticky footer appears with
-"Select all", the count and **Add to Workspace**. Local source rows keep their remove / read-only
-controls on hover (`onRemoveSource`, `onToggleSourceReadOnly`), and Your Device has an "Add folder
-from this device" row that opens the Add source modal — the old Storage card's badges and quota bars
-are gone for good.
+The SOURCES rail (`components/Workspace/WorkspaceSourcesPanel.tsx`, `data-guide="workspace-sources"`)
+is the "My Computer" of the workspace and is a **picker only**: three drive cards — **Your Device**
+(the workspace's `local` sources, i.e. folders picked through `pickDirectory`, plus git clones, which
+are local sources too), **Chats** (counted from `useConversationList`) and **Arcanas** (the
+`arcana-filesystem` source, falling back to `arcana`). Each card is a big row with an icon tile, a
+count subtitle and, when the provider reports one, the old usage line ("3.2 MB of 5 GB used") and
+progress bar — aggregated across local providers for Your Device, the browser-storage quota ("shared
+with this app") for Chats, the Arcana provider's for Arcanas — plus the "Add folder from this device"
+row. It owns no browsing state; it takes `activeTarget` / `onOpenTarget` with a `SourceTarget` of
+`{drive:"device",sourceId?}` / `{drive:"chats",conversationId?}` / `{drive:"arcanas"}`.
+
+Browsing lives in the first of two panes,
+`components/Workspace/WorkspaceSourceBrowser.tsx` (`data-guide="workspace-source-pane"`): the page
+holds the `SourceTarget`, the pane holds the path and the selection. A drive opens there with a back
+row, a breadcrumb, folders that navigate on click, a checkbox on every row, Select all, and a fixed
+footer with the count and **Add to Workspace**; the local-source rows keep their remove / read-only
+controls on hover (`onRemoveSource`, `onToggleSourceReadOnly`). With no target it shows
+`workspace.source_browser.pick_source`. The second pane, `data-guide="workspace-root-pane"`, is the
+**Workspace Root** — eyebrow `workspace.workspace_root`, the current path on the right, then the same
+`WorkspaceRootBrowser` (or the mounted-source view when a mount is open) as before, so adding from
+the left pane lands on the right one.
 
 `workspace/addSelectionToWorkspace.ts` is what Add to Workspace runs: a folder from `local`,
 `arcana` or `arcana-filesystem` becomes a **mount** at `/<name>` (never a copy, so it stays live;

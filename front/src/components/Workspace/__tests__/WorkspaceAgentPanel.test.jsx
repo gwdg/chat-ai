@@ -32,6 +32,8 @@ vi.mock("../../../hooks/useToast", () => ({
 import WorkspaceAgentPanel from "../WorkspaceAgentPanel";
 
 const renderPanel = () => render(<WorkspaceAgentPanel workspaceId="ws-1" />);
+const renderRowPanel = () =>
+  render(<WorkspaceAgentPanel workspaceId="ws-1" layout="row" />);
 
 const browserOption = () =>
   screen.getByRole("button", { name: /in-browser pi agent/i });
@@ -59,6 +61,34 @@ describe("WorkspaceAgentPanel", () => {
     expect(screen.getByText("In-browser Pi agent")).toBeInTheDocument();
     expect(screen.getByText("OpenCode server")).toBeInTheDocument();
     expect(screen.getByText("Remote agent")).toBeInTheDocument();
+  });
+
+  it("renders a bare row strip and opens the OpenCode picker", () => {
+    renderRowPanel();
+
+    expect(browserOption()).toBeInTheDocument();
+    expect(opencodeOption()).toBeInTheDocument();
+    expect(remoteOption()).toBeInTheDocument();
+    expect(screen.queryByText("Agent")).not.toBeInTheDocument();
+
+    const wrapper = document.querySelector('[data-guide="workspace-agent"]');
+    expect(wrapper.className).toBe("");
+    expect(wrapper.firstElementChild).toHaveClass(
+      "grid",
+      "grid-cols-1",
+      "gap-2",
+      "sm:grid-cols-3",
+    );
+    expect(opencodeOption()).toHaveClass("px-3", "py-2", "rounded-lg");
+
+    fireEvent.click(opencodeOption());
+
+    expect(screen.getByText("Choose an existing agent")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /back/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /add new agent/i }),
+    ).toBeInTheDocument();
+    expect(opencodeOption()).toHaveAttribute("aria-pressed", "true");
   });
 
   it("selects the in-browser agent when nothing is attached", () => {

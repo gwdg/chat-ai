@@ -5,6 +5,8 @@ import {
   Bot,
   Download,
   Edit,
+  Folder,
+  Home,
   Locked,
   Unlocked,
   TrashCan,
@@ -16,6 +18,9 @@ import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
 import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
 import WorkspaceRootBrowser from "../components/Workspace/WorkspaceRootBrowser";
 import WorkspaceAgentPanel from "../components/Workspace/WorkspaceAgentPanel";
+import WorkspaceSourceBrowser, {
+  type SourceTarget,
+} from "../components/Workspace/WorkspaceSourceBrowser";
 import WorkspaceSourcesPanel, {
   type SourcesSelection,
 } from "../components/Workspace/WorkspaceSourcesPanel";
@@ -231,6 +236,7 @@ export default function WorkspacePage() {
   );
 
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
+  const [sourceTarget, setSourceTarget] = useState<SourceTarget | null>(null);
   const [activeMountId, setActiveMountId] = useState<string | null>(null);
   const activeMount = mounts.find((mount) => mount.id === activeMountId);
   const [pathBySource, setPathBySource] = useState<Record<string, string>>({});
@@ -285,6 +291,7 @@ export default function WorkspacePage() {
     setRootLoading(false);
     setRootError("");
     setSelectedSourceId(null);
+    setSourceTarget(null);
     setActiveMountId(null);
     setPathBySource({});
     setEntries([]);
@@ -1674,41 +1681,49 @@ export default function WorkspacePage() {
             </div>
           ) : (
             <>
-              <header className="mx-auto mb-2 flex w-full items-start gap-3 rounded-xl border border-base-300 bg-base-100 px-3 py-2 shadow-sm md:max-w-[85vw] xl:max-w-[1300px]">
-                <Bot size={18} className="mt-0.5 shrink-0 text-accent" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-base-content">
-                    {workspace.name}
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-base-content/60">
-                    {t("workspace.subtitle")}
-                  </p>
-                  <p className="mt-0.5 text-[10px] tabular-nums text-base-content/50">
-                    {[
-                      t("common.created", {
-                        date: formatModifiedTime(
-                          workspace.createdAt,
-                          i18n.language,
-                        ),
-                      }),
-                      t("common.modified", {
-                        date: formatModifiedTime(
-                          workspace.lastModified,
-                          i18n.language,
-                        ),
-                      }),
-                    ].join(" · ")}
-                  </p>
+              <header className="mx-auto mb-2 flex w-full flex-col gap-2 rounded-xl border border-base-300 bg-base-100 px-3 py-2 shadow-sm md:max-w-[85vw] md:flex-row md:items-stretch xl:max-w-[1300px]">
+                <div className="flex min-w-0 shrink-0 items-start gap-3 md:w-64">
+                  <Bot size={18} className="mt-0.5 shrink-0 text-accent" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-base-content">
+                      {workspace.name}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-base-content/60">
+                      {t("workspace.subtitle")}
+                    </p>
+                    <p className="mt-0.5 text-[10px] tabular-nums text-base-content/50">
+                      {[
+                        t("common.created", {
+                          date: formatModifiedTime(
+                            workspace.createdAt,
+                            i18n.language,
+                          ),
+                        }),
+                        t("common.modified", {
+                          date: formatModifiedTime(
+                            workspace.lastModified,
+                            i18n.language,
+                          ),
+                        }),
+                      ].join(" · ")}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm btn-square text-base-content/60 hover:text-error"
+                    onClick={deleteCurrentWorkspace}
+                    title={t("workspace.delete_workspace")}
+                    aria-label={t("workspace.delete_workspace")}
+                  >
+                    <TrashCan size={16} />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm btn-square text-base-content/60 hover:text-error"
-                  onClick={deleteCurrentWorkspace}
-                  title={t("workspace.delete_workspace")}
-                  aria-label={t("workspace.delete_workspace")}
-                >
-                  <TrashCan size={16} />
-                </button>
+                <div className="min-w-0 flex-1">
+                  <WorkspaceAgentPanel
+                    workspaceId={workspace.id}
+                    layout="row"
+                  />
+                </div>
               </header>
 
               <div className="mx-auto flex min-h-0 w-full flex-1 flex-col gap-2 overflow-y-auto md:max-w-[85vw] md:flex-row md:overflow-visible xl:max-w-[1300px]">
@@ -1716,20 +1731,60 @@ export default function WorkspacePage() {
                   data-guide="workspace-left-column"
                   className="flex w-full shrink-0 flex-col gap-2 md:w-64 md:overflow-y-auto"
                 >
-                  <WorkspaceAgentPanel workspaceId={workspace.id} />
                   <WorkspaceSourcesPanel
-                    workspaceId={workspace.id}
                     sources={sources}
+                    activeTarget={sourceTarget}
+                    onOpenTarget={setSourceTarget}
                     onAddSource={() => addSource()}
                     onAddDeviceFolder={() => addSource("local")}
-                    onAddToWorkspace={addSourcesToWorkspace}
-                    onRemoveSource={removeSelectedSource}
-                    onToggleSourceReadOnly={toggleSourceReadOnly}
-                    busy={addingSelection}
                   />
                 </aside>
 
-                <section className="flex min-h-[60dvh] min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-base-300 bg-base-100 md:min-h-0">
+                <div className="grid min-h-0 flex-1 gap-2 md:grid-cols-2">
+                  <section
+                    data-guide="workspace-source-pane"
+                    className="flex min-h-[40dvh] min-w-0 flex-col overflow-hidden rounded-xl border border-base-300 bg-base-100 md:min-h-0"
+                  >
+                    <div className="flex items-center gap-2 border-b border-base-300 px-3 py-2">
+                      <Folder
+                        size={14}
+                        className="shrink-0 text-base-content/45"
+                      />
+                      <span className="truncate text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
+                        {t("workspace.source_browser.title")}
+                      </span>
+                    </div>
+                    <WorkspaceSourceBrowser
+                      sources={sources}
+                      target={sourceTarget}
+                      onTargetChange={setSourceTarget}
+                      onAddToWorkspace={addSourcesToWorkspace}
+                      busy={addingSelection}
+                      onAddDeviceFolder={() => addSource("local")}
+                      onRemoveSource={removeSelectedSource}
+                      onToggleSourceReadOnly={toggleSourceReadOnly}
+                      className="min-h-0 flex-1"
+                    />
+                  </section>
+
+                  <section
+                    data-guide="workspace-root-pane"
+                    className="flex min-h-[60dvh] min-w-0 flex-col overflow-hidden rounded-xl border border-base-300 bg-base-100 md:min-h-0"
+                  >
+                    <div className="flex items-center justify-between gap-2 border-b border-base-300 px-3 py-2">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Home
+                          size={14}
+                          className="shrink-0 text-base-content/45"
+                        />
+                        <span className="truncate text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
+                          {t("workspace.workspace_root")}
+                        </span>
+                      </div>
+                      <span className="min-w-0 truncate text-[10px] text-base-content/50">
+                        {rootPath}
+                      </span>
+                    </div>
                   {!selectedProvider ? (
                     <div className="flex flex-1 flex-col">
                       <WorkspaceRootBrowser
@@ -2053,6 +2108,7 @@ export default function WorkspacePage() {
                     />
                   )}
                 </section>
+                </div>
 
               </div>
             </>

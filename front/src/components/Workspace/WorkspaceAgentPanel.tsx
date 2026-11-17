@@ -25,6 +25,7 @@ function AgentOption({
   description,
   selected,
   onClick,
+  layout,
 }: {
   dataGuide: string;
   icon: typeof Bot;
@@ -32,18 +33,52 @@ function AgentOption({
   description: string;
   selected: boolean;
   onClick: () => void;
+  layout: "column" | "row";
 }) {
+  const stateClass = selected
+    ? "border-accent/60 bg-accent/5"
+    : "border-base-300 hover:border-accent/40 hover:bg-base-200/60";
+
+  if (layout === "row") {
+    return (
+      <button
+        type="button"
+        data-guide={dataGuide}
+        aria-pressed={selected}
+        onClick={onClick}
+        className={`flex w-full min-w-0 flex-col items-start gap-1.5 rounded-lg border px-3 py-2 text-left transition ${stateClass}`}
+      >
+        <span className="flex w-full items-start justify-between gap-2">
+          <Icon
+            size={17}
+            className={`shrink-0 ${
+              selected ? "text-accent" : "text-base-content/55"
+            }`}
+          />
+          <Check
+            size={15}
+            className={`shrink-0 ${selected ? "text-accent" : "opacity-0"}`}
+          />
+        </span>
+        <span className="min-w-0">
+          <span className="block text-xs font-semibold leading-tight text-base-content">
+            {title}
+          </span>
+          <span className="mt-0.5 line-clamp-2 block text-[11px] leading-snug text-base-content/55">
+            {description}
+          </span>
+        </span>
+      </button>
+    );
+  }
+
   return (
     <button
       type="button"
       data-guide={dataGuide}
       aria-pressed={selected}
       onClick={onClick}
-      className={`flex w-full items-start gap-2 rounded-lg border px-2 py-2 text-left transition ${
-        selected
-          ? "border-accent/60 bg-accent/5"
-          : "border-base-300 hover:border-accent/40 hover:bg-base-200/60"
-      }`}
+      className={`flex w-full items-start gap-2 rounded-lg border px-2 py-2 text-left transition ${stateClass}`}
     >
       <Icon
         size={17}
@@ -71,8 +106,10 @@ function AgentOption({
 
 export default function WorkspaceAgentPanel({
   workspaceId,
+  layout = "column",
 }: {
   workspaceId?: string;
+  layout?: "column" | "row";
 }) {
   const { t } = useTranslation();
   const { openModal } = useModal();
@@ -166,16 +203,28 @@ export default function WorkspaceAgentPanel({
 
   return (
     <section
-      className="rounded-xl border border-base-300 bg-base-100 p-1.5"
+      className={
+        layout === "row"
+          ? undefined
+          : "rounded-xl border border-base-300 bg-base-100 p-1.5"
+      }
       data-guide="workspace-agent"
     >
-      <div className="flex items-center justify-between px-1 py-0.5">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
-          {t("workspace.agent.title")}
-        </span>
-      </div>
+      {layout === "column" && (
+        <div className="flex items-center justify-between px-1 py-0.5">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
+            {t("workspace.agent.title")}
+          </span>
+        </div>
+      )}
 
-      <div className="mt-1 flex flex-col gap-1.5">
+      <div
+        className={
+          layout === "row"
+            ? "grid grid-cols-1 gap-2 sm:grid-cols-3"
+            : "mt-1 flex flex-col gap-1.5"
+        }
+      >
         <AgentOption
           dataGuide="workspace-agent-browser"
           icon={Bot}
@@ -183,6 +232,7 @@ export default function WorkspaceAgentPanel({
           description={t("workspace.agent.browser_description")}
           selected={selectedKind === "browser"}
           onClick={() => chooseOption("browser")}
+          layout={layout}
         />
         <AgentOption
           dataGuide="workspace-agent-opencode"
@@ -191,6 +241,7 @@ export default function WorkspaceAgentPanel({
           description={t("workspace.agent.opencode_description")}
           selected={selectedKind === "opencode"}
           onClick={() => chooseOption("opencode")}
+          layout={layout}
         />
         <AgentOption
           dataGuide="workspace-agent-remote"
@@ -199,6 +250,7 @@ export default function WorkspaceAgentPanel({
           description={t("workspace.agent.remote_description")}
           selected={selectedKind === "remote"}
           onClick={() => chooseOption("remote")}
+          layout={layout}
         />
       </div>
 

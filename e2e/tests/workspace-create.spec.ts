@@ -39,9 +39,9 @@ test.describe("workspace", () => {
       {
         user: "The user names it “Deterministic workspace” and confirms.",
         system:
-          "The workspace page opens with its storage list, root folder and file browser.",
+          "The workspace page opens with the agent choices beside the workspace name, the Sources rail on the left, and the Workspace Root browser on the right.",
         shows:
-          "the workspace page for Deterministic workspace with a storage list and a file browser",
+          "the workspace page for Deterministic workspace with agent choices, a Sources rail, and a Workspace Root file browser",
       },
       async () => {
         await page
@@ -55,12 +55,40 @@ test.describe("workspace", () => {
         await expect(
           page.getByText("Deterministic workspace", { exact: true }).first(),
         ).toBeVisible();
+
+        const agentStrip = page.locator('[data-guide="workspace-agent"]');
+        await expect(agentStrip).toBeVisible();
+        for (const guide of ["browser", "opencode", "remote"]) {
+          await expect(
+            agentStrip.locator(`[data-guide="workspace-agent-${guide}"]`),
+          ).toBeVisible();
+        }
+
+        const leftColumn = page.locator(
+          '[data-guide="workspace-left-column"]',
+        );
+        for (const guide of ["device", "chats", "arcanas"]) {
+          await expect(
+            leftColumn.locator(`[data-guide="workspace-source-${guide}"]`),
+          ).toBeVisible();
+        }
+        await expect(page.getByText("Available storage")).toHaveCount(0);
+
+        const sourcePane = page.locator(
+          '[data-guide="workspace-source-pane"]',
+        );
+        await expect(sourcePane).toBeVisible();
         await expect(
-          page.getByRole("button", { name: "Workspace Root" }),
+          sourcePane.getByText(/Pick a source on the left/),
         ).toBeVisible();
-        await expect(page.getByText("Available storage")).toBeVisible();
+
+        const rootPane = page.locator('[data-guide="workspace-root-pane"]');
+        await expect(rootPane).toBeVisible();
         await expect(
-          page.locator('[data-guide="workspace-files"]'),
+          rootPane.getByText("Workspace Root", { exact: true }),
+        ).toBeVisible();
+        await expect(
+          rootPane.locator('[data-guide="workspace-files"]'),
         ).toBeVisible();
       },
     );
