@@ -138,7 +138,9 @@ const resolvePendingOffline = (message) => {
 
 const connect = () => {
   if (stopped) return;
-  socket = new WebSocket(url);
+  socket = new WebSocket(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
   socket.on("open", () => {
     console.error("Chat AI bridge connected");
   });

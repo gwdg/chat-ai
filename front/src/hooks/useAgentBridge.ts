@@ -46,6 +46,7 @@ const BACKEND = String(import.meta.env.VITE_BACKEND_ENDPOINT || "").replace(
   /\/+$/,
   "",
 );
+const BRIDGE_KEY = String(import.meta.env.VITE_BRIDGE_KEY || "").trim();
 
 /**
  * Where the bridge routes live.
@@ -181,9 +182,9 @@ export function useAgentBridge({
     let wasHidden = false;
     const originalTitle = document.title;
 
-    const connectSocket = (url: string) => {
+    const connectSocket = (url: string, token: string) => {
       if (cancelled) return;
-      socket = new WebSocket(url);
+      socket = new WebSocket(url, ["bridge.v1", `bridge-token.${token}`]);
       socket.onopen = () => {
         if (cancelled) return;
         setStatus("online");
@@ -203,7 +204,7 @@ export function useAgentBridge({
         if (cancelled) return;
         setStatus("offline");
         retryTimer = window.setTimeout(() => {
-          if (!cancelled) connectSocket(url);
+          if (!cancelled) connectSocket(url, token);
         }, 3000);
       };
       socket.onerror = () => {
@@ -352,7 +353,10 @@ export function useAgentBridge({
         const sessionUrl = `${bridgeBase(agent)}/bridge/sessions`;
         const response = await fetch(sessionUrl, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(BRIDGE_KEY ? { "x-bridge-key": BRIDGE_KEY } : {}),
+          },
           body: JSON.stringify({
             agentId: agent.id,
             workspaceId,
@@ -395,7 +399,7 @@ export function useAgentBridge({
           });
         }
         await connectOpencodeMcpServer(agent, mcpName);
-        if (!cancelled) connectSocket(socketUrl(session.wsUrl));
+        if (!cancelled) connectSocket(socketUrl(session.wsUrl), session.token);
       } catch (reason) {
         if (!cancelled) {
           const missing = reason instanceof BridgeUnavailableError;

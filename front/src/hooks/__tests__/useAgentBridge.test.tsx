@@ -35,23 +35,30 @@ const sessionResponse = {
   token: "browser-token",
   agentToken: "agent-token",
   runId: "session-1",
-  wsUrl: "/agents/svc-1/bridge/ws?id=session-1&token=browser-token",
-  agentWsUrl: "ws://agent-service.test/agents/svc-1/bridge/agent?id=session-1&token=agent-token",
+  wsUrl: "/agents/svc-1/bridge/ws?id=session-1",
+  agentWsUrl: "ws://agent-service.test/agents/svc-1/bridge/agent?id=session-1",
   mcpUrl: "http://agent-service.test/agents/svc-1/bridge/mcp/session-1",
+  expiresAt: Date.now() + 60_000,
 };
 
 class FakeWebSocket {
   static instances: FakeWebSocket[] = [];
 
   url: string;
+  protocols: string[];
   readyState = 0;
   onopen: (() => void) | null = null;
   onmessage: ((event: { data: string }) => void) | null = null;
   onclose: (() => void) | null = null;
   onerror: (() => void) | null = null;
 
-  constructor(url: string) {
+  constructor(url: string, protocols?: string | string[]) {
     this.url = url;
+    this.protocols = Array.isArray(protocols)
+      ? protocols
+      : protocols
+        ? [protocols]
+        : [];
     FakeWebSocket.instances.push(this);
   }
 
@@ -171,6 +178,10 @@ describe("useAgentBridge", () => {
     expect(FakeWebSocket.instances[0].url).toBe(
       `ws://${window.location.host}${sessionResponse.wsUrl}`,
     );
+    expect(FakeWebSocket.instances[0].protocols).toEqual([
+      "bridge.v1",
+      "bridge-token.browser-token",
+    ]);
     expect(result.current.status).toBe("connecting");
   });
 });
