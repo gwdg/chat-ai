@@ -71,6 +71,10 @@ import { baseName, joinPath, normalizePath, parentPath } from "../workspace/path
 import { buildSourceBreadcrumbs, sourceUpPath } from "../workspace/breadcrumbs";
 import { addSelectionToWorkspace } from "../workspace/addSelectionToWorkspace";
 import { chatFolderLabel } from "../workspace/chatFolderName";
+import {
+  mountCoversSelection,
+  rootHasName,
+} from "../workspace/inWorkspace";
 import type { FileProvider, QuotaInfo } from "../workspace/providers/types";
 
 const PREVIEW_LIMIT = 8 * 1024 * 1024;
@@ -492,14 +496,10 @@ export default function WorkspacePage() {
           (row) => row.conversationId === selection.conversationId,
         );
       }
-      const path = normalizePath(selection.path);
-      const mounted = mounts.some(
-        (mount) =>
-          mount.sourceId === selection.sourceId &&
-          normalizePath(mount.sourcePath) === path,
-      );
-      if (mounted) return true;
-      return selection.kind === "file" && rootNames.has(selection.name);
+      const coveredByMount = mountCoversSelection(mounts, selection);
+      const copiedIntoRoot =
+        selection.kind === "file" && rootHasName(rootNames, selection.name);
+      return coveredByMount || copiedIntoRoot;
     },
     [workspaceId, workspaceChats, mounts, rootNames],
   );

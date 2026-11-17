@@ -62,6 +62,18 @@ const arcanaSource = {
   lastModified: 1,
 };
 
+const mcpSource = {
+  id: "mcp-1",
+  workspaceId: "ws-1",
+  kind: "mcp",
+  label: "Docs server",
+  config: {},
+  capabilities: {},
+  status: "connected",
+  createdAt: 1,
+  lastModified: 1,
+};
+
 const localProvider = {
   sourceId: "local-1",
   kind: "local",
@@ -73,6 +85,14 @@ const localProvider = {
 const browserProvider = {
   sourceId: "browser-1",
   kind: "browser",
+  status: "connected",
+  capabilities: {},
+  quota: vi.fn(),
+};
+
+const mcpProvider = {
+  sourceId: "mcp-1",
+  kind: "mcp",
   status: "connected",
   capabilities: {},
   quota: vi.fn(),
@@ -128,6 +148,8 @@ beforeEach(() => {
     quota: 5 * 1024 * 1024,
     scope: "account",
   });
+  mcpProvider.quota.mockReset();
+  mcpProvider.quota.mockResolvedValue(null);
 });
 
 describe("WorkspaceSourcesPanel", () => {
@@ -218,6 +240,47 @@ describe("WorkspaceSourcesPanel", () => {
       [{ drive: "chats" }],
       [{ drive: "arcanas" }],
     ]);
+    await act(async () => {});
+  });
+
+  it("omits the MCP drive when the workspace has no MCP sources", async () => {
+    renderPanel();
+
+    expect(drive("workspace-source-mcp")).toBeNull();
+    await act(async () => {});
+  });
+
+  it("opens the MCP drive when the workspace has an MCP source", async () => {
+    mocks.sources = [...mocks.sources, mcpSource];
+    mocks.providers = new Map([...mocks.providers, ["mcp-1", mcpProvider]]);
+    renderPanel();
+
+    expect(
+      within(drive("workspace-source-mcp")).getByText("1 server"),
+    ).toBeInTheDocument();
+    expect(
+      drive("workspace-source-mcp").querySelector("[data-quota-bar]"),
+    ).toBeNull();
+    expect(drive("workspace-source-mcp")).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+
+    fireEvent.click(drive("workspace-source-mcp"));
+    expect(mocks.onOpenTarget).toHaveBeenCalledWith({ drive: "mcp" });
+
+    await act(async () => {});
+  });
+
+  it("marks the MCP drive active", async () => {
+    mocks.sources = [...mocks.sources, mcpSource];
+    mocks.providers = new Map([...mocks.providers, ["mcp-1", mcpProvider]]);
+    renderPanel({ activeTarget: { drive: "mcp" } });
+
+    expect(drive("workspace-source-mcp")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     await act(async () => {});
   });
 

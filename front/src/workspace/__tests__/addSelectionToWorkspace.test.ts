@@ -128,6 +128,21 @@ describe("addSelectionToWorkspace mounting folders", () => {
     expect(result).toEqual({ mounted: 1, copied: 0, failed: [] });
   });
 
+  it("mounts an MCP folder without copying it", async () => {
+    const result = await addSelectionToWorkspace("ws-1", [
+      folder({ sourceKind: "mcp", path: "/docs", name: "docs" }),
+    ]);
+
+    expect(api.addWorkspaceMount).toHaveBeenCalledWith({
+      workspaceId: "ws-1",
+      sourceId: "source-1",
+      sourcePath: "/docs",
+      path: "/docs",
+    });
+    expect(api.runTransfer).not.toHaveBeenCalled();
+    expect(result).toEqual({ mounted: 1, copied: 0, failed: [] });
+  });
+
   it("suffixes a second folder with the same name", async () => {
     const result = await addSelectionToWorkspace("ws-1", [
       folder({ path: "/A/Docs" }),

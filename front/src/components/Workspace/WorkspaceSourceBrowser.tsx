@@ -28,7 +28,7 @@ import { formatBytes } from "../../utils/formatBytes";
 
 export type SourcesSelection = {
   sourceId: string;
-  sourceKind: "local" | "chat" | "arcana-filesystem" | "arcana";
+  sourceKind: "local" | "chat" | "arcana-filesystem" | "arcana" | "mcp";
   path: string;
   name: string;
   kind: "dir" | "file";
@@ -39,7 +39,8 @@ export type SourcesSelection = {
 export type SourceTarget =
   | { drive: "device"; sourceId?: string }
   | { drive: "chats"; conversationId?: string }
-  | { drive: "arcanas" };
+  | { drive: "arcanas" }
+  | { drive: "mcp" };
 
 type DeviceView = { drive: "device"; level: "drives" };
 type DeviceSourceView = {
@@ -48,9 +49,22 @@ type DeviceSourceView = {
   sourceId: string;
   label: string;
 };
+type McpView = { drive: "mcp"; level: "drives" };
+type McpSourceView = {
+  drive: "mcp";
+  level: "source";
+  sourceId: string;
+  label: string;
+};
 type ChatsView = { drive: "chats"; level: "drives" };
 type ArcanasView = { drive: "arcanas"; level: "browse" };
-type View = DeviceView | DeviceSourceView | ChatsView | ArcanasView;
+type View =
+  | DeviceView
+  | DeviceSourceView
+  | McpView
+  | McpSourceView
+  | ChatsView
+  | ArcanasView;
 
 type Row = {
   id: string;
@@ -131,6 +145,10 @@ export function useSourceQuotas(sources: WorkspaceSourceRow[]) {
     () => sources.filter((source) => source.kind === "local"),
     [sources],
   );
+  const mcpSources = useMemo(
+    () => sources.filter((source) => source.kind === "mcp"),
+    [sources],
+  );
   const arcanaSources = useMemo(
     () =>
       sources.filter(
@@ -200,6 +218,7 @@ export function useSourceQuotas(sources: WorkspaceSourceRow[]) {
     providers,
     quotas,
     localSources,
+    mcpSources,
     arcanaSources,
     arcanaSource,
     deviceQuota,
@@ -235,7 +254,7 @@ export default function WorkspaceSourceBrowser({
 }) {
   const { t } = useTranslation();
   const conversations = (useConversationList() || []) as Conversation[];
-  const { providers, quotas, localSources, arcanaSource } =
+  const { providers, quotas, localSources, mcpSources, arcanaSource } =
     useSourceQuotas(sources);
   const [view, setView] = useState<View | null>(null);
   const [path, setPath] = useState("/");
@@ -251,14 +270,23 @@ export default function WorkspaceSourceBrowser({
     () => new Map(localSources.map((source) => [source.id, source])),
     [localSources],
   );
+  const mcpById = useMemo(
+    () => new Map(mcpSources.map((source) => [source.id, source])),
+    [mcpSources],
+  );
   const conversationTitle = useCallback(
     (conversation: Conversation) =>
       conversation.title?.trim() || t("workspace.source_browser.untitled_chat"),
     [t],
   );
 
-  const latest = useRef({ localById, conversations, conversationTitle });
-  latest.current = { localById, conversations, conversationTitle };
+  const latest = useRef({
+    localById,
+    mcpById,
+    conversations,
+    conversationTitle,
+  });
+  latest.current = { localById, mcpById, conversations, conversationTitle };
 
   const targetDrive = target?.drive ?? null;
   const targetSourceId =
@@ -287,6 +315,10 @@ export default function WorkspaceSourceBrowser({
     }
     if (targetDrive === "chats") {
       setView({ drive: "chats", level: "drives" });
+      return;
+    }
+    if (targetDrive === "mcp") {
+      setView({ drive: "mcp", level: "drives" });
       return;
     }
     setView({ drive: "arcanas", level: "browse" });
@@ -319,6 +351,22 @@ export default function WorkspaceSourceBrowser({
           );
         } else if (view.drive === "device") {
           const source = localById.get(view.sourceId);
+          if (!source) throw new Error(t("workspace.source_browser.unavailable"));
+          const provider = providers.get(source.id);
+          if (!provider) return;
+          next = await listProvider(provider, path);
+        } else if (view.drive === "mcp" && view.level === "drives") {
+          next = sortRows(
+            mcpSources.map((source) => ({
+              id: source.id,
+              referenceId: source.id,
+              name: source.label?.trim() || source.id,
+              path: "/",
+              kind: "dir" as const,
+            })),
+          );
+        } else if (view.drive === "mcp") {
+          const source = mcpById.get(view.sourceId);
           if (!source) throw new Error(t("workspace.source_browser.unavailable"));
           const provider = providers.get(source.id);
           if (!provider) return;
@@ -366,6 +414,8 @@ export default function WorkspaceSourceBrowser({
     providers,
     localSources,
     localById,
+    mcpSources,
+    mcpById,
     conversations,
     conversationTitle,
     arcanaSource,
@@ -399,6 +449,30 @@ export default function WorkspaceSourceBrowser({
           title: row.kind === "dir" ? row.name : undefined,
         };
       }
+      if (view.drive === "mcp") {
+        if (view.level === "drives") {
+          const source = row.referenceId
+            ? mcpById.get(row.referenceId)
+            : undefined;
+          if (!source) return null;
+          return {
+            sourceId: source.id,
+            sourceKind: "mcp",
+            path: "/",
+            name: row.name,
+            kind: "dir",
+            title: row.name,
+          };
+        }
+        return {
+          sourceId: view.sourceId,
+          sourceKind: "mcp",
+          path: row.path,
+          name: row.name,
+          kind: row.kind,
+          title: row.kind === "dir" ? row.name : undefined,
+        };
+      }
       if (view.drive === "chats") {
         if (!row.referenceId) return null;
         return {
@@ -423,7 +497,7 @@ export default function WorkspaceSourceBrowser({
         title: row.kind === "dir" ? row.name : undefined,
       };
     },
-    [view, localById, arcanaSource],
+    [view, localById, mcpById, arcanaSource],
   );
 
   const visibleItems = useMemo(
@@ -497,6 +571,21 @@ export default function WorkspaceSourceBrowser({
       }
       return;
     }
+    if (view.drive === "mcp" && view.level === "drives") {
+      const source = row.referenceId
+        ? mcpById.get(row.referenceId)
+        : undefined;
+      if (source) {
+        setPath("/");
+        setView({
+          drive: "mcp",
+          level: "source",
+          sourceId: source.id,
+          label: source.label?.trim() || source.id,
+        });
+      }
+      return;
+    }
     if (view.drive === "chats") {
       const selection = selectionFor(row);
       if (selection && isInWorkspace?.(selection)) return;
@@ -531,6 +620,19 @@ export default function WorkspaceSourceBrowser({
       onTargetChange(null);
       return;
     }
+    if (view.drive === "mcp") {
+      if (view.level === "source" && path !== "/") {
+        setPath(parentPath(path));
+        return;
+      }
+      if (view.level === "source") {
+        setPath("/");
+        setView({ drive: "mcp", level: "drives" });
+        return;
+      }
+      onTargetChange(null);
+      return;
+    }
     if (view.drive === "chats") {
       onTargetChange(null);
       return;
@@ -560,11 +662,16 @@ export default function WorkspaceSourceBrowser({
       ? t("workspace.source_browser.device")
       : view.drive === "chats"
         ? t("workspace.source_browser.chats")
-        : t("workspace.source_browser.arcanas")
+        : view.drive === "mcp"
+          ? t("workspace.source_browser.mcp")
+          : t("workspace.source_browser.arcanas")
     : "";
   const breadcrumb = view
     ? [
-        view.drive === "device" && view.level === "source" ? view.label : "",
+        (view.drive === "device" || view.drive === "mcp") &&
+        view.level === "source"
+          ? view.label
+          : "",
         ...normalizePath(path).split("/").filter(Boolean),
       ]
         .filter(Boolean)

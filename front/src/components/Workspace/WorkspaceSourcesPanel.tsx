@@ -1,5 +1,12 @@
 import { useTranslation } from "react-i18next";
-import { Boxes, ChevronRight, HardDrive, MessageSquare, Plus } from "lucide-react";
+import {
+  Boxes,
+  ChevronRight,
+  HardDrive,
+  MessageSquare,
+  Plus,
+  Server,
+} from "lucide-react";
 
 import { useConversationList } from "../../db";
 import type { WorkspaceSourceRow } from "../../db/dbTypes";
@@ -86,6 +93,7 @@ export default function WorkspaceSourcesPanel({
   const {
     localSources,
     arcanaSources,
+    mcpSources,
     deviceQuota,
     chatsQuota,
     arcanasQuota,
@@ -165,6 +173,19 @@ export default function WorkspaceSourcesPanel({
           active={activeDrive === "arcanas"}
           onClick={() => onOpenTarget({ drive: "arcanas" })}
         />
+        {mcpSources.length > 0 && (
+          <DriveCard
+            dataGuide="workspace-source-mcp"
+            icon={Server}
+            title={t("workspace.source_browser.mcp")}
+            subtitle={t("workspace.source_browser.servers", {
+              count: mcpSources.length,
+            })}
+            usageLabel=""
+            active={activeDrive === "mcp"}
+            onClick={() => onOpenTarget({ drive: "mcp" })}
+          />
+        )}
 
         {onAddDeviceFolder && (
           <button

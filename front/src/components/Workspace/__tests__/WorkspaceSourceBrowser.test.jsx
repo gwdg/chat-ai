@@ -65,9 +65,30 @@ const localProvider = {
   list: vi.fn(),
 };
 
+const mcpSource = {
+  id: "mcp-1",
+  workspaceId: "ws-1",
+  kind: "mcp",
+  label: "Docs server",
+  config: {},
+  capabilities: {},
+  status: "connected",
+  createdAt: 1,
+  lastModified: 1,
+};
+
 const arcanaProvider = {
   sourceId: "arcana-1",
   kind: "arcana-filesystem",
+  status: "connected",
+  capabilities: {},
+  quota: vi.fn(),
+  list: vi.fn(),
+};
+
+const mcpProvider = {
+  sourceId: "mcp-1",
+  kind: "mcp",
   status: "connected",
   capabilities: {},
   quota: vi.fn(),
@@ -152,6 +173,13 @@ beforeEach(() => {
     usage: 1 * 1024 * 1024,
     quota: 5 * 1024 * 1024,
     scope: "account",
+  });
+  mcpProvider.list.mockReset();
+  mcpProvider.list.mockResolvedValue({
+    entries: [
+      { sourceId: "mcp-1", path: "/files", name: "files", kind: "dir" },
+      { sourceId: "mcp-1", path: "/readme.md", name: "readme.md", kind: "file" },
+    ],
   });
 });
 
@@ -429,6 +457,51 @@ describe("WorkspaceSourceBrowser", () => {
 
     expect(await screen.findByText("recipes")).toBeInTheDocument();
     expect(arcanaProvider.list).toHaveBeenCalledWith("/");
+  });
+
+  it("lists MCP sources, drills in, and adds an MCP folder", async () => {
+    mocks.sources = [localSource, arcanaSource, mcpSource];
+    mocks.providers = new Map([
+      ["local-1", localProvider],
+      ["arcana-1", arcanaProvider],
+      ["mcp-1", mcpProvider],
+    ]);
+    renderBrowser({ target: { drive: "mcp" } });
+
+    expect(await screen.findByText("MCP")).toBeInTheDocument();
+    expect(screen.getByText("Docs server")).toBeInTheDocument();
+    expect(screen.queryByText("Project")).not.toBeInTheDocument();
+    expect(mcpProvider.list).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByText("Docs server"));
+
+    expect(await screen.findByText("files")).toBeInTheDocument();
+    expect(mcpProvider.list).toHaveBeenCalledWith("/");
+    expect(document.querySelector('[title="Docs server"]')).toBeInTheDocument();
+    expect(addButton()).toBeDisabled();
+
+    fireEvent.click(screen.getByLabelText("files"));
+    expect(addButton()).toHaveTextContent("Add to Workspace (1)");
+    fireEvent.click(addButton());
+
+    await waitFor(() =>
+      expect(mocks.onAddToWorkspace).toHaveBeenCalledWith([
+        expect.objectContaining({
+          sourceId: "mcp-1",
+          sourceKind: "mcp",
+          path: "/files",
+          name: "files",
+          kind: "dir",
+        }),
+      ]),
+    );
+    await waitFor(() => expect(addButton()).not.toHaveTextContent("(1)"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(await screen.findByText("Docs server")).toBeInTheDocument();
+    expect(mocks.onTargetChange).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(mocks.onTargetChange).toHaveBeenCalledWith(null);
   });
 
   it("returns from a source to the drive root without leaving the drive", async () => {

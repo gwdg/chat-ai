@@ -13,7 +13,7 @@ import { createWorkspaceRootProvider } from "./workspaceRoot";
 
 export type WorkspaceSelection = {
   sourceId: string;
-  sourceKind: "local" | "chat" | "arcana-filesystem" | "arcana";
+  sourceKind: "local" | "chat" | "arcana-filesystem" | "arcana" | "mcp";
   /** Provider path; "/" means the source (or chat) root. */
   path: string;
   name: string;
@@ -126,7 +126,8 @@ export async function addSelectionToWorkspace(
         item.kind === "dir" &&
         (item.sourceKind === "local" ||
           item.sourceKind === "arcana-filesystem" ||
-          item.sourceKind === "arcana")
+          item.sourceKind === "arcana" ||
+          item.sourceKind === "mcp")
       ) {
         await addWorkspaceMount({
           workspaceId,
