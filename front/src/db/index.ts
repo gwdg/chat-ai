@@ -358,15 +358,11 @@ export class AppDB extends Dexie {
     // rows. Provenance was lost in v11, so the copy is the safest isolation.
     this.version(16).stores({}).upgrade(isolateWorkspaceBrowserStorage);
 
-    // "Access storage" is on by default now. Every chat created before the switch existed stored
-    // the old opt-in default (`browser_storage: false`), which would otherwise read as an explicit
-    // opt-out and silently take the file tools away from existing conversations.
-    this.version(17).stores({}).upgrade(async (tx) => {
-      const conversations = tx.table('conversations');
-      await conversations.toCollection().modify((conversation) => {
-        enableStorageAccess(conversation?.settings);
-      });
-    });
+    // A migration must never change a consent flag. No stored row can tell the old opt-in
+    // default from an explicit opt-out, so v17 leaves `settings.tools.browser_storage` and
+    // every other row value exactly as it is. The version stays registered so PR builds that
+    // already opened as v17 do not hit a downgrade error.
+    this.version(17).stores({}).upgrade(preserveStorageConsent);
   }
 }
 
@@ -450,18 +446,12 @@ export function migrateLegacyToolKeys(settings: any) {
 }
 
 /**
- * Sets the storage switch of a conversation to the new default. Runs inside the
- * Dexie v17 upgrade transaction: the old default was `false` (opt-in), so every
- * existing row would otherwise look like an explicit opt-out.
+ * The Dexie v17 upgrade, and deliberately a no-op: a migration must never change
+ * a consent flag. A row that stored `browser_storage: false` (the old opt-in
+ * default) is indistinguishable from an explicit opt-out, so row values stay as
+ * they are. Absent values read as enabled through `storageAccessEnabled`.
  */
-export function enableStorageAccess(settings: any) {
-  const tools = settings?.tools;
-  if (!tools || typeof tools !== 'object' || Array.isArray(tools)) return settings;
-  if (tools.browser_storage === undefined || tools.browser_storage === false) {
-    tools.browser_storage = true;
-  }
-  return settings;
-}
+export async function preserveStorageConsent(_tx: any) {}
 
 export const db = new AppDB()
 
