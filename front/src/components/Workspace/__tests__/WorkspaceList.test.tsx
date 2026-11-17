@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, useLocation } from "react-router";
 import { configureStore } from "@reduxjs/toolkit";
 import { Provider } from "react-redux";
 
@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   workspaces: vi.fn(),
   setPinned: vi.fn(async () => {}),
   createChat: vi.fn(async () => "chat-new"),
+  detachChat: vi.fn(async () => {}),
 }));
 
 vi.mock("../../../db", () => ({
@@ -31,7 +32,7 @@ vi.mock("../../../db/workspaceDb", () => ({
   useWorkspaceAgentSessionLinks: () => mocks.sessionLinks(),
   deleteWorkspace: vi.fn(),
   detachWorkspaceAgent: vi.fn(),
-  detachWorkspaceChat: vi.fn(),
+  detachWorkspaceChat: (...args: any[]) => mocks.detachChat(...args),
   attachWorkspaceAgentSession: (...args: any[]) => mocks.attach(...args),
   detachWorkspaceAgentSession: vi.fn(),
   hasWorkspaceAgentLink: (...args: any[]) => mocks.hasAgentLink(...args),
@@ -113,7 +114,12 @@ beforeEach(() => {
   ]);
   mocks.setPinned.mockReset();
   mocks.createChat.mockReset().mockResolvedValue("chat-new");
+  mocks.detachChat.mockReset();
 });
+
+const LocationProbe = () => (
+  <span data-testid="location">{useLocation().pathname}</span>
+);
 
 describe("WorkspaceList pinning", () => {
   it("pins a workspace from its options menu", async () => {
@@ -401,6 +407,65 @@ describe("WorkspaceList new chats", () => {
         "ws-1",
         expect.objectContaining({ title: "Untitled Chat" }),
       ),
+    );
+  });
+});
+
+describe("WorkspaceList chat rows", () => {
+  beforeEach(() => {
+    mocks.conversations.mockReturnValue([
+      { id: "chat-1", title: "Workspace chat" },
+    ]);
+    mocks.chatLinks.mockReturnValue([
+      { workspaceId: "ws-1", conversationId: "chat-1" },
+    ]);
+  });
+
+  it("uses the topic chat row chrome when the chat is active", async () => {
+    renderList(makeStore(), ["/chat/chat-1"]);
+
+    const chat = await screen.findByRole("button", { name: "Workspace chat" });
+    const row = chat.parentElement as HTMLElement;
+    expect(row.className).toContain("rounded-xl");
+    expect(row.className).toContain("px-2");
+    expect(row.className).toContain("py-1");
+    expect(row.className).toContain("border");
+    expect(row.className).toContain("border-transparent");
+    expect(row.className).toContain("bg-base-200");
+    expect(row.className).toContain("shadow-sm");
+    expect(row.className).not.toContain("rounded-md");
+
+    expect(chat.className).toContain("text-xs");
+    expect(chat.className).toContain("leading-relaxed");
+    expect(chat.className).not.toContain("text-[11px]");
+
+    const detach = screen.getByRole("button", { name: "Detach chat" });
+    expect(detach.className).toContain("h-7");
+    expect(detach.className).toContain("w-7");
+    expect(detach.className).toContain("rounded-lg");
+    expect(detach.className).toContain("hover:bg-base-300");
+    expect(detach.className).toContain("transition-all");
+    expect(detach.className).toContain("duration-200");
+  });
+
+  it("keeps chat navigation and detach working", async () => {
+    render(
+      <Provider store={makeStore()}>
+        <MemoryRouter initialEntries={["/"]}>
+          <WorkspaceList />
+          <LocationProbe />
+        </MemoryRouter>
+      </Provider>,
+    );
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Workspace chat" }),
+    );
+    expect(screen.getByTestId("location")).toHaveTextContent("/chat/chat-1");
+
+    fireEvent.click(screen.getByRole("button", { name: "Detach chat" }));
+    await waitFor(() =>
+      expect(mocks.detachChat).toHaveBeenCalledWith("ws-1", "chat-1"),
     );
   });
 });

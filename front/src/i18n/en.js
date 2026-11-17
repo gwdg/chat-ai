@@ -161,8 +161,8 @@ export default {
     loading: "Loading topic…",
   },
   sorter: {
-    button: "Sort & organize",
-    title: "Sort & organize chats",
+    button: "Smart Sort",
+    title: "Smart Sort",
     intro:
       "Review the suggestions below. Nothing is changed until you apply them.",
     ai_model_note:
@@ -662,8 +662,8 @@ export default {
         "Use the button next to Create topic to collapse or expand all topics at once.",
     },
     sort_organize: {
-      title: "Sort & organize chats",
-      step1: "Click Sort & organize in the sidebar header.",
+      title: "Smart Sort",
+      step1: "Click Smart Sort in the sidebar header.",
       step2:
         "Review the suggested topics, titles, and deletions. Nothing changes until you apply them.",
       step3:

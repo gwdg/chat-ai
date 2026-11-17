@@ -503,6 +503,12 @@ sections stay distinguishable while collapsed. A new sidebar section should reus
 icon included. The Workspace section header and the workspace rows, and the topic rows in
 `TopicList`, are the exception the admin asked for: their disclosure chevron sits at the trailing
 edge of the row, after the label (and after the per-row actions), never before the icon.
+Chat rows nested under a workspace reuse the topic chat row's chrome exactly — `rounded-xl
+border border-transparent px-2 py-1`, active `bg-base-200 shadow-sm`, title `text-xs
+leading-relaxed`, and a trailing control in the same 28 px slot (`Workspace/WorkspaceList.tsx`
+against `renderConversationRow` in `Sidebar/SidebarContent.tsx`) — so the two lists read at the same
+size; the admin asked for that on 2026-11-17, so keep them in step. The topic row additionally shows
+its "modified" metadata line when selected; the workspace row does not.
 Agents and MCP Servers are advanced sections: both, with their dividers and pinned agent rows, are
 rendered only while `user_settings.advanced_mode` is on (`selectAdvancedMode`, default off). The
 switch lives in one place only — the profile modal's Chat tab

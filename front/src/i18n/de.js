@@ -163,8 +163,8 @@ export default {
     loading: "Thema wird geladen…",
   },
   sorter: {
-    button: "Sortieren & organisieren",
-    title: "Chats sortieren & organisieren",
+    button: "Smart Sort",
+    title: "Smart Sort",
     intro:
       "Prüfen Sie die Vorschläge unten. Änderungen werden erst beim Anwenden übernommen.",
     ai_model_note:
@@ -680,8 +680,8 @@ export default {
         "Nutzen Sie die Schaltfläche neben „Thema erstellen“, um alle Themen auf einmal ein- oder auszuklappen.",
     },
     sort_organize: {
-      title: "Chats sortieren & organisieren",
-      step1: "Klicken Sie in der Kopfzeile der Seitenleiste auf „Sortieren & organisieren“.",
+      title: "Smart Sort",
+      step1: "Klicken Sie in der Kopfzeile der Seitenleiste auf „Smart Sort“.",
       step2:
         "Prüfen Sie die vorgeschlagenen Themen, Titel und Löschungen. Änderungen werden erst beim Anwenden übernommen.",
       step3:

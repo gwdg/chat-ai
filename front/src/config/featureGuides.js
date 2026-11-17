@@ -714,8 +714,9 @@ export const featureGuides = {
   sort_organize: {
     titleKey: "feature_guide.sort_organize.title",
     prompt:
-      "Use Sort & organize in the sidebar header to let the model suggest topics, titles, and cleanup for your chats. Review the proposal, select what you want, and apply it. Nothing changes before you apply.",
+      "Use Smart Sort in the sidebar header to let the model suggest topics, titles, and cleanup for your chats. Review the proposal, select what you want, and apply it. Nothing changes before you apply.",
     keywords: [
+      "smart sort",
       "sort and organize",
       "sort & organize",
       "organize chats",

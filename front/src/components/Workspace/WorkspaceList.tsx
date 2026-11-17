@@ -471,10 +471,10 @@ export default function WorkspaceList({
                   return (
                     <div
                       key={chat.id}
-                      className={`group/chat flex items-center gap-1 rounded-md px-1 py-0.5 ${
+                      className={`group/chat relative flex items-center gap-1 rounded-xl border border-transparent px-2 py-1 ${
                         chatActive
-                          ? "bg-base-200 text-base-content"
-                          : "hover:bg-base-200"
+                          ? "bg-base-200 text-base-content shadow-sm"
+                          : "text-base-content hover:bg-base-200 transition-all duration-100"
                       }`}
                     >
                       <button
@@ -484,11 +484,7 @@ export default function WorkspaceList({
                           onNavigate?.();
                         }}
                         aria-current={chatActive ? "page" : undefined}
-                        className={`min-w-0 flex-1 truncate text-left text-[11px] ${
-                          chatActive
-                            ? "font-medium text-base-content"
-                            : "text-base-content/80"
-                        }`}
+                        className="min-w-0 flex-1 truncate text-left text-xs leading-relaxed"
                       >
                         {chat.title || t("conversation.untitled")}
                       </button>
@@ -497,11 +493,11 @@ export default function WorkspaceList({
                         onClick={() =>
                           void detachWorkspaceChat(workspace.id, chat.id)
                         }
-                        className="flex h-4 w-4 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:text-error group-hover/chat:opacity-100"
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-base-content/40 opacity-0 transition-all duration-200 hover:bg-base-300 hover:text-error group-hover/chat:opacity-100"
                         title={t("workspace.detach_chat")}
                         aria-label={t("workspace.detach_chat")}
                       >
-                        ×
+                        <span className="text-[16px] leading-none">×</span>
                       </button>
                     </div>
                     );
