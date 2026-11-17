@@ -27,6 +27,8 @@ type TreeProps = {
   sourceLabel?: (entry: RootEntry) => string | undefined;
   /** A mount the UI must not offer to unmount, e.g. an attached chat's own folder. */
   canRemoveMount?: (entry: RootEntry) => boolean;
+  /** Text to show instead of `entry.name`; navigation still uses the entry's path. */
+  displayName?: (entry: RootEntry) => string | undefined;
 };
 
 function TreeRow({
@@ -45,6 +47,8 @@ function TreeRow({
   const expandable = isDir && !isMount && !props.flat;
   const readOnly = props.isReadOnly(entry);
   const sourceReadOnly = props.isSourceReadOnly(entry);
+  const displayText = props.displayName?.(entry);
+  const label = typeof displayText === "string" ? displayText : entry.name;
 
   useEffect(() => {
     if (!isDir) return;
@@ -156,7 +160,7 @@ function TreeRow({
             <Document size={13} className="shrink-0 text-base-content/50" />
           )}
           <span className="min-w-0 flex-1 truncate text-base-content">
-            {entry.name}
+            {label}
           </span>
           {isMount && props.sourceLabel?.(entry) && (
             <span className="shrink-0 text-[9px] font-semibold text-base-content/55">

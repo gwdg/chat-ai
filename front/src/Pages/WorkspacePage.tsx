@@ -2,43 +2,37 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router";
 import {
-  Add,
   Bot,
-  ChevronRight,
   Download,
   Edit,
-  Folder,
-  FolderAdd,
-  Home,
   Locked,
   Unlocked,
   TrashCan,
-  Upload,
-  WarningAltFilled,
 } from "@carbon/icons-react";
+import { GitBranch } from "lucide-react";
 
 import Header from "../components/Header/Header";
 import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
 import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
-import WorkspaceRootTree from "../components/Workspace/WorkspaceRootTree";
 import WorkspaceRootBrowser from "../components/Workspace/WorkspaceRootBrowser";
 import WorkspaceAgentPanel from "../components/Workspace/WorkspaceAgentPanel";
+import WorkspaceSourcesPanel, {
+  type SourcesSelection,
+} from "../components/Workspace/WorkspaceSourcesPanel";
 import FilePreviewPanel from "../components/DocumentPanel/FilePreviewPanel";
 import { useModal } from "../modals/ModalContext";
 import { useToast } from "../hooks/useToast";
 import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
 import { useUpdateUserData } from "../hooks/useUpdateUserData";
-import { formatBytes } from "../utils/formatBytes";
 import { formatModifiedTime } from "../utils/conversationDates";
 import { formatGitLog } from "../utils/gitLog";
 import { useConversationList } from "../db";
 import { useAgents } from "../agents/agentStore";
 import {
   deleteWorkspace,
-  getDeviceId,
+  removeOrphanWorkspaceAgents,
   removeSource,
   removeWorkspaceMount,
-  updateSource,
   saveTransfer,
   seedWorkspaceAgentSessions,
   setWorkspaceMountReadOnly,
@@ -48,12 +42,15 @@ import {
   useWorkspaceMounts,
   useWorkspaceSources,
   useWorkspaceAgents,
-  removeOrphanWorkspaceAgents,
   syncAgentFilesSources,
   syncChatStorageSources,
+  updateSource,
 } from "../db/workspaceDb";
-import type { WorkspaceFileEntry, WorkspaceMountRow } from "../db/dbTypes";
-import { DEVICE_PLANE_KINDS } from "../workspace/deviceId";
+import type {
+  WorkspaceFileEntry,
+  WorkspaceMountRow,
+  WorkspaceSourceRow,
+} from "../db/dbTypes";
 import {
   createWorkspaceRootProvider,
   emptyStream,
@@ -68,8 +65,8 @@ import { uploadLocalFiles } from "../workspace/upload";
 import { downloadProviderEntry, readAll } from "../workspace/download";
 import { baseName, joinPath, normalizePath, parentPath } from "../workspace/paths";
 import { buildSourceBreadcrumbs, sourceUpPath } from "../workspace/breadcrumbs";
-import { sourceRowActions, visibleStorageSources } from "../workspace/sources";
-import { rootEntryAction } from "../workspace/rootNavigation";
+import { addSelectionToWorkspace } from "../workspace/addSelectionToWorkspace";
+import { chatFolderLabel } from "../workspace/chatFolderName";
 import type { FileProvider, QuotaInfo } from "../workspace/providers/types";
 
 const PREVIEW_LIMIT = 8 * 1024 * 1024;
@@ -110,28 +107,48 @@ const isTextFile = (entry: WorkspaceFileEntry): boolean => {
   );
 };
 
-const quotaLabel = (
-  kind: string,
-  quota: QuotaInfo | null | undefined,
-): { label: string; percent: number | null } => {
-  if (kind === "local" || kind === "mcp" || kind === "agent") {
-    return { label: "—", percent: null };
-  }
-  if (!quota || (!quota.quota && !quota.usage)) {
-    return { label: "—", percent: null };
-  }
-  const percent = quota.quota ? Math.round((quota.usage / quota.quota) * 100) : null;
-  if (kind === "browser" || kind === "chat") {
-    return {
-      label: `${formatBytes(quota.usage)} of ${formatBytes(quota.quota)} used — shared with this app`,
-      percent,
+function RootGitLogButton({
+  entry,
+  checkGit,
+  onOpen,
+}: {
+  entry: RootEntry;
+  checkGit: (entry: RootEntry) => Promise<boolean>;
+  onOpen: (entry: RootEntry) => void;
+}) {
+  const { t } = useTranslation();
+  const [hasGit, setHasGit] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void checkGit(entry)
+      .then((result) => {
+        if (!cancelled) setHasGit(result);
+      })
+      .catch(() => {
+        if (!cancelled) setHasGit(false);
+      });
+    return () => {
+      cancelled = true;
     };
-  }
-  return {
-    label: `${formatBytes(quota.usage)} of ${formatBytes(quota.quota)} used`,
-    percent,
-  };
-};
+  }, [entry, checkGit]);
+
+  if (!hasGit) return null;
+  return (
+    <button
+      type="button"
+      onClick={(event) => {
+        event.stopPropagation();
+        onOpen(entry);
+      }}
+      className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:bg-base-200 hover:text-accent group-hover:opacity-100"
+      title={t("workspace.git_log")}
+      aria-label={t("workspace.git_log")}
+    >
+      <GitBranch size={12} />
+    </button>
+  );
+}
 
 export default function WorkspacePage() {
   const { t, i18n } = useTranslation();
@@ -193,18 +210,20 @@ export default function WorkspacePage() {
 
   const pendingTransfers = usePendingTransfers(workspaceId);
   const resumedRef = useRef<Set<string>>(new Set());
-  const { providers, reconnect } = useWorkspaceProviders(sources);
+  const { providers } = useWorkspaceProviders(sources);
   const rootProvider = useMemo(
     () => (workspaceId ? createWorkspaceRootProvider(workspaceId) : null),
     [workspaceId],
   );
   const [rootPath, setRootPath] = useState("/");
   const [rootEntries, setRootEntries] = useState<RootEntry[]>([]);
-  const [rootTreeEntries, setRootTreeEntries] = useState<RootEntry[]>([]);
-  const [rootTreeRevision, setRootTreeRevision] = useState(0);
   const [rootLoading, setRootLoading] = useState(false);
   const [rootError, setRootError] = useState("");
-  const [availableStorageOpen, setAvailableStorageOpen] = useState(true);
+  const [addingSelection, setAddingSelection] = useState(false);
+  const [addProgress, setAddProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
 
   const sidebarState = useMemo(
     () => ({ id: "", title: "", messages: [], folderId: null, settings: { model: "" } }),
@@ -241,15 +260,11 @@ export default function WorkspacePage() {
   const previewUrlRef = useRef<string | null>(null);
   const entriesRequestRef = useRef(0);
   const rootRequestRef = useRef(0);
-  const rootTreeRequestRef = useRef(0);
   const previewRequestRef = useRef(0);
   const workspaceGenerationRef = useRef(0);
   const mountedRef = useRef(true);
 
   const selectedSource = sources.find((source) => source.id === selectedSourceId);
-  // The per-chat storage sources are derived mounts of attached chats
-  // (`/chats/<id>`), not storage the user added, so the list leaves them out.
-  const listedSources = visibleStorageSources(sources);
   const selectedProvider = selectedSourceId
     ? providers.get(selectedSourceId)
     : undefined;
@@ -264,11 +279,9 @@ export default function WorkspacePage() {
     workspaceGenerationRef.current += 1;
     entriesRequestRef.current += 1;
     rootRequestRef.current += 1;
-    rootTreeRequestRef.current += 1;
     previewRequestRef.current += 1;
     setRootPath("/");
     setRootEntries([]);
-    setRootTreeEntries([]);
     setRootLoading(false);
     setRootError("");
     setSelectedSourceId(null);
@@ -429,6 +442,22 @@ export default function WorkspacePage() {
           mount: mountPath === entryPath ? mount : undefined,
         });
       }
+      // Attached chats always live under `/chats`. The directory is display-only:
+      // it exists even when no chat is attached, and opening it lists the chat
+      // mounts (or nothing) exactly like a mount-backed folder.
+      if (
+        path === "/" &&
+        !local.some((entry) => entry.name === "chats") &&
+        !virtual.has("chats")
+      ) {
+        virtual.set("chats", {
+          sourceId: workspaceRootSourceId(workspaceId),
+          path: "/chats",
+          name: "chats",
+          kind: "dir",
+          local: false,
+        });
+      }
       return [...local, ...virtual.values()];
     },
     [rootProvider, workspaceId, mounts],
@@ -452,9 +481,6 @@ export default function WorkspacePage() {
       const entries = await listRoot(rootPath);
       if (isStale()) return;
       setRootEntries(entries);
-      // The left panel always lists the workspace's top level, so keep it in sync while
-      // the centre browser is at the root.
-      if (rootPath === "/") setRootTreeEntries(entries);
     } catch (error) {
       if (isStale()) return;
       setRootError(error instanceof Error ? error.message : String(error));
@@ -467,27 +493,6 @@ export default function WorkspacePage() {
   useEffect(() => {
     void loadRoot();
   }, [loadRoot]);
-
-  const loadRootTree = useCallback(async () => {
-    const generation = workspaceGenerationRef.current;
-    const request = ++rootTreeRequestRef.current;
-    const isStale = () =>
-      generation !== workspaceGenerationRef.current ||
-      request !== rootTreeRequestRef.current;
-    try {
-      const entries = await listRoot("/");
-      if (isStale()) return;
-      setRootTreeEntries(entries);
-    } catch (error) {
-      if (isStale()) return;
-      setRootTreeEntries([]);
-      setRootError(error instanceof Error ? error.message : String(error));
-    }
-  }, [listRoot]);
-
-  useEffect(() => {
-    void loadRootTree();
-  }, [loadRootTree]);
 
   const createRootEntry = (kind: "dir" | "file") => {
     openModal("workspaceCreateEntry", {
@@ -541,9 +546,7 @@ export default function WorkspacePage() {
       await rootProvider.remove(entry.path, { recursive: true });
       clearDeletedPreview(entry.path);
       if (browsingDeleted) setRootPath(parentPath(entry.path));
-      await loadRootTree();
       if (!browsingDeleted) await loadRoot();
-      setRootTreeRevision((current) => current + 1);
       notifySuccess(t("workspace.delete_success", { name: entry.name }));
     } catch (error) {
       notifyError(error instanceof Error ? error.message : String(error));
@@ -684,10 +687,8 @@ export default function WorkspacePage() {
           await loadEntries(false);
         }
       } else {
-        await loadRootTree();
         if (deletedAncestor) setRootPath(parentPath(deletedAncestor));
         else await loadRoot();
-        setRootTreeRevision((current) => current + 1);
       }
       void refreshQuota(provider);
       if (deleted) {
@@ -832,20 +833,6 @@ export default function WorkspacePage() {
     }
   };
 
-  const openRootEntry = (entry: RootEntry) => {
-    // A row of the left workspace root always shows its result in the root
-    // view, even while the centre is showing a source.
-    setSelectedSourceId(null);
-    setActiveMountId(null);
-    const action = rootEntryAction(entry);
-    if (action.kind === "mount") {
-      openMount(action.mount);
-      return;
-    }
-    setRootPath(action.kind === "folder" ? action.path : action.folder);
-    if (action.kind === "file") void openFile(entry, rootProvider);
-  };
-
   const gitProviderFor = (entry: RootEntry) => {
     if (entry.mount) {
       return {
@@ -919,12 +906,6 @@ export default function WorkspacePage() {
     return entry.mount.readOnly === true || source?.readOnly === true;
   };
 
-  const rootEntrySourceReadOnly = (entry: RootEntry) => {
-    if (!entry.mount) return false;
-    const source = sources.find((candidate) => candidate.id === entry.mount!.sourceId);
-    return source?.readOnly === true;
-  };
-
   const removeRootMount = (entry: RootEntry) => {
     if (entry.mount) removeMount(entry.mount.id);
   };
@@ -944,16 +925,23 @@ export default function WorkspacePage() {
   };
 
   const renderRootEntryActions = (entry: RootEntry) => {
+    const gitAction =
+      entry.kind === "dir" ? (
+        <RootGitLogButton
+          entry={entry}
+          checkGit={checkRootGit}
+          onOpen={(row) => void showRootGitLog(row)}
+        />
+      ) : null;
     if (entry.local) {
       return (
         <>
+          {gitAction}
           <button
             type="button"
             onClick={() =>
               renameEntry(entry, rootProvider ?? undefined, async () => {
                 await loadRoot();
-                await loadRootTree();
-                setRootTreeRevision((current) => current + 1);
               })
             }
             className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:bg-base-200 hover:text-base-content group-hover:opacity-100"
@@ -985,18 +973,19 @@ export default function WorkspacePage() {
         </>
       );
     }
-    if (!entry.mount) return null;
+    if (!entry.mount) return gitAction;
     const source = sources.find(
       (candidate) => candidate.id === entry.mount!.sourceId,
     );
     // A chat folder is linked in by attaching the chat, so it has no per-row unmount or
     // read-only switch; detaching the chat removes it.
-    if (source?.kind === "chat") return null;
+    if (source?.kind === "chat") return gitAction;
     const sourceReadOnly = source?.readOnly === true;
     const effectiveReadOnly =
       entry.mount.readOnly === true || sourceReadOnly;
     return (
       <>
+        {gitAction}
         <button
           type="button"
           onClick={() => !sourceReadOnly && toggleRootMountReadOnly(entry)}
@@ -1143,6 +1132,34 @@ export default function WorkspacePage() {
     });
   };
 
+  const addSourcesToWorkspace = async (selection: SourcesSelection[]) => {
+    if (!workspaceId || selection.length === 0) return;
+    setAddingSelection(true);
+    setAddProgress({ done: 0, total: selection.length });
+    try {
+      const result = await addSelectionToWorkspace(workspaceId, selection, {
+        onProgress: (done, total) => setAddProgress({ done, total }),
+      });
+      await loadRoot();
+      const added = result.mounted + result.copied;
+      if (added > 0) {
+        notifySuccess(t("workspace.source_browser.added", { count: added }));
+      }
+      if (result.failed.length > 0) {
+        notifyError(
+          t("workspace.source_browser.add_failed", {
+            count: result.failed.length,
+          }),
+        );
+      }
+    } catch (error) {
+      notifyError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setAddingSelection(false);
+      setAddProgress(null);
+    }
+  };
+
   const openMount = (mount: { id: string; sourceId: string; sourcePath: string }) => {
     setActiveMountId(mount.id);
     setSelectedSourceId(mount.sourceId);
@@ -1168,7 +1185,7 @@ export default function WorkspacePage() {
     }
   };
 
-  const toggleSourceReadOnly = async (source: { id: string; readOnly?: boolean }) => {
+  const toggleSourceReadOnly = async (source: WorkspaceSourceRow) => {
     try {
       await updateSource(source.id, { readOnly: !source.readOnly });
     } catch (error) {
@@ -1176,7 +1193,7 @@ export default function WorkspacePage() {
     }
   };
 
-  const removeSelectedSource = (sourceId: string, label: string) => {
+  const removeSelectedSource = (source: WorkspaceSourceRow) => {
     confirmAction(
       {
         warningKey: "warn_workspace_delete",
@@ -1186,11 +1203,12 @@ export default function WorkspacePage() {
       },
       async () => {
         try {
-          if (selectedSourceId === sourceId) {
+          if (selectedSourceId === source.id) {
             setSelectedSourceId(null);
             closePreview();
           }
-          await removeSource(sourceId);
+          await removeSource(source.id);
+          await loadRoot();
         } catch (error) {
           notifyError(error instanceof Error ? error.message : String(error));
         }
@@ -1264,8 +1282,6 @@ export default function WorkspacePage() {
       if (to.sourceId === selectedSourceId) await loadEntries(false);
       if (from.sourceId === rootSourceId || to.sourceId === rootSourceId) {
         await loadRoot();
-        await loadRootTree();
-        setRootTreeRevision((current) => current + 1);
       }
       void refreshQuota(from);
       void refreshQuota(to);
@@ -1697,278 +1713,20 @@ export default function WorkspacePage() {
 
               <div className="mx-auto flex min-h-0 w-full flex-1 flex-col gap-2 overflow-y-auto md:max-w-[85vw] md:flex-row md:overflow-visible xl:max-w-[1300px]">
                 <aside
-                  data-guide="workspace-sources"
+                  data-guide="workspace-left-column"
                   className="flex w-full shrink-0 flex-col gap-2 md:w-64 md:overflow-y-auto"
                 >
-                  <section className="rounded-xl border border-base-300 bg-base-100">
-                  <div className="flex items-center justify-between border-b border-base-300 px-3 py-2">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
-                      {t("workspace.storage")}
-                    </span>
-                  </div>
-                  <div className="p-1.5">
-                    <div className="flex items-center justify-between px-1">
-                      <button
-                        type="button"
-                        onClick={() => setAvailableStorageOpen((open) => !open)}
-                        className="flex min-w-0 items-center gap-1 rounded text-[10px] font-semibold uppercase tracking-wider text-base-content/45 transition hover:text-base-content"
-                        aria-expanded={availableStorageOpen}
-                      >
-                        <ChevronRight
-                          size={12}
-                          className={`shrink-0 transition ${availableStorageOpen ? "rotate-90" : ""}`}
-                        />
-                        <span className="truncate">
-                          {t("workspace.available_storage")}
-                        </span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => addSource()}
-                        className="flex h-6 w-6 items-center justify-center rounded-md text-base-content/50 transition hover:bg-base-200 hover:text-accent"
-                        title={t("workspace.add_source")}
-                        aria-label={t("workspace.add_source")}
-                      >
-                        <Add size={15} />
-                      </button>
-                    </div>
-                  {availableStorageOpen && (
-                  <div className="mt-1 max-h-[45vh] overflow-y-auto">
-                    {listedSources.length === 0 ? (
-                      <button
-                        type="button"
-                        onClick={() => addSource()}
-                        className="flex w-full flex-col items-start gap-1 rounded-lg border border-dashed border-base-300 px-3 py-2 text-left text-xs text-base-content/60 transition hover:border-accent/40 hover:bg-base-200/60"
-                      >
-                        {t("workspace.no_sources")}
-                      </button>
-                    ) : (
-                      listedSources.map((source) => {
-                        const active = source.id === selectedSourceId;
-                        const provider = providers.get(source.id);
-                        const unavailable =
-                          !!source.deviceId && source.deviceId !== getDeviceId();
-                        const quota = quotas[source.id];
-                        const storage = quotaLabel(source.kind, quota);
-                        const isDevicePlane = DEVICE_PLANE_KINDS.has(source.kind);
-                        const actions = sourceRowActions(source);
-                        return (
-                          <div
-                            key={source.id}
-                            onDragOver={(event) => {
-                              event.preventDefault();
-                              if (!draggingEntry || unavailable) return;
-                              setDragHint("move");
-                            }}
-                            onDragLeave={() => setDragHint(null)}
-                            onDragEnd={() => setDragHint(null)}
-                            onDrop={(event) => {
-                              if (unavailable) return;
-                              setDragHint(null);
-                              if (source.readOnly) {
-                                notifyError(t("workspace.source_read_only_error"));
-                                return;
-                              }
-                              onDrop(event, source.id, "/");
-                            }}
-                            onClick={() => {
-                              setActiveMountId(null);
-                              setSelectedSourceId(source.id);
-                            }}
-                            className={`mb-1 cursor-pointer rounded-lg border px-2 py-1.5 transition ${
-                              active
-                                ? "border-accent/40 bg-accent/10"
-                                : "border-transparent hover:bg-base-200"
-                            }`}
-                          >
-                            <div className="flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setActiveMountId(null);
-                                  setSelectedSourceId(source.id);
-                                }}
-                                className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                              >
-                                <span className="truncate text-xs font-medium text-base-content">
-                                  {source.label}
-                                </span>
-                                <span className="badge badge-ghost badge-xs capitalize">
-                                  {t(`workspace.kind_${source.kind}`)}
-                                </span>
-                              </button>
-                              {actions.addFolder && (
-                                <button
-                                  type="button"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    addFolder(source.id);
-                                  }}
-                                  className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 transition hover:bg-base-200 hover:text-accent"
-                                  title={t("workspace.add_folder")}
-                                  aria-label={t("workspace.add_folder")}
-                                >
-                                  <FolderAdd size={12} />
-                                </button>
-                              )}
-                              {(actions.toggleReadOnly || actions.remove) && (
-                                <>
-                                  {actions.toggleReadOnly && (
-                                    <button
-                                      type="button"
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        toggleSourceReadOnly(source);
-                                      }}
-                                      className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 transition hover:bg-base-200 hover:text-base-content"
-                                      title={
-                                        source.readOnly
-                                          ? t("workspace.make_source_writable")
-                                          : t("workspace.make_source_read_only")
-                                      }
-                                      aria-label={
-                                        source.readOnly
-                                          ? t("workspace.make_source_writable")
-                                          : t("workspace.make_source_read_only")
-                                      }
-                                    >
-                                      {source.readOnly ? (
-                                        <Locked size={12} />
-                                      ) : (
-                                        <Unlocked size={12} />
-                                      )}
-                                    </button>
-                                  )}
-                                  {actions.remove && (
-                                    <button
-                                      type="button"
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        removeSelectedSource(source.id, source.label);
-                                      }}
-                                      className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 transition hover:bg-error/10 hover:text-error"
-                                      aria-label={t("workspace.remove_source")}
-                                      title={t("workspace.remove_source")}
-                                    >
-                                      <TrashCan size={12} />
-                                    </button>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                            <div className="mt-1 flex flex-wrap items-center gap-1">
-                              {isDevicePlane && (
-                                <span className="badge badge-warning badge-xs">
-                                  {t("workspace.device_only")}
-                                </span>
-                              )}
-                              {source.readOnly && (
-                                <span className="badge badge-warning badge-xs">
-                                  {t("workspace.source_read_only")}
-                                </span>
-                              )}
-                              {unavailable && (
-                                <span className="badge badge-error badge-xs">
-                                  {t("workspace.unavailable_on_device")}
-                                </span>
-                              )}
-                              {source.status === "needs-permission" && (
-                                <button
-                                  type="button"
-                                  className="badge badge-warning badge-xs cursor-pointer"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    reconnect(source.id);
-                                  }}
-                                >
-                                  {t("workspace.reconnect")}
-                                </button>
-                              )}
-                              {source.status === "error" && (
-                                <button
-                                  type="button"
-                                  className="badge badge-error badge-xs cursor-pointer"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    reconnect(source.id);
-                                  }}
-                                  title={source.error}
-                                >
-                                  {t("workspace.retry")}
-                                </button>
-                              )}
-                            </div>
-                            <div className="mt-1">
-                              <div className="h-1 overflow-hidden rounded-full bg-base-200">
-                                <div
-                                  className={`h-full rounded-full ${
-                                    storage.percent !== null && storage.percent >= 90
-                                      ? "bg-warning"
-                                      : "bg-accent"
-                                  }`}
-                                  style={{
-                                    width: `${Math.min(100, Math.max(2, storage.percent ?? 0))}%`,
-                                  }}
-                                />
-                              </div>
-                              <p className="mt-0.5 truncate text-[10px] text-base-content/50">
-                                {storage.label}
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                  )}
-                  </div>
-                  <div className="border-t border-base-300 p-1.5">
-                    <div className="flex items-center justify-between px-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActiveMountId(null);
-                          setSelectedSourceId(null);
-                          setRootPath("/");
-                        }}
-                        className="rounded text-[10px] font-semibold uppercase tracking-wider text-base-content/45 transition hover:text-base-content"
-                        title={t("workspace.workspace_root")}
-                      >
-                        {t("workspace.workspace_root")}
-                      </button>
-                    </div>
-                    <div className="mt-1 max-h-44 overflow-y-auto">
-                      {rootTreeEntries.length === 0 ? (
-                        <p className="px-1 py-1 text-[10px] text-base-content/50">
-                          {t("workspace.empty_folder")}
-                        </p>
-                      ) : (
-                        <WorkspaceRootTree
-                          key={rootTreeRevision}
-                          flat
-                          entries={rootTreeEntries}
-                          loadChildren={listRoot}
-                          onOpen={openRootEntry}
-                          onShowGitLog={(entry) => void showRootGitLog(entry)}
-                          checkGit={checkRootGit}
-                          onRemoveLocal={requestDeleteRootEntry}
-                          onRemoveMount={removeRootMount}
-                          canRemoveMount={(entry) =>
-                            sources.find(
-                              (candidate) =>
-                                candidate.id === entry.mount?.sourceId,
-                            )?.kind !== "chat"
-                          }
-                          onToggleMountReadOnly={toggleRootMountReadOnly}
-                          isReadOnly={rootEntryReadOnly}
-                          isSourceReadOnly={rootEntrySourceReadOnly}
-                          sourceLabel={rootEntrySourceLabel}
-                        />
-                      )}
-                    </div>
-                  </div>
-                  </section>
                   <WorkspaceAgentPanel workspaceId={workspace.id} />
+                  <WorkspaceSourcesPanel
+                    workspaceId={workspace.id}
+                    sources={sources}
+                    onAddSource={() => addSource()}
+                    onAddDeviceFolder={() => addSource("local")}
+                    onAddToWorkspace={addSourcesToWorkspace}
+                    onRemoveSource={removeSelectedSource}
+                    onToggleSourceReadOnly={toggleSourceReadOnly}
+                    busy={addingSelection}
+                  />
                 </aside>
 
                 <section className="flex min-h-[60dvh] min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-base-300 bg-base-100 md:min-h-0">
@@ -1979,6 +1737,12 @@ export default function WorkspacePage() {
                         rootPath="/"
                         breadcrumbs={rootBreadcrumbs}
                         entries={rootEntries}
+                        displayName={(entry: RootEntry) =>
+                          chatFolderLabel(entry.path, {
+                            sources,
+                            conversations,
+                          })
+                        }
                         loading={rootLoading}
                         error={rootError}
                         onNavigate={setRootPath}
@@ -2297,6 +2061,11 @@ export default function WorkspacePage() {
         {transferring && (
           <div className="pointer-events-none fixed bottom-20 right-6 z-50 rounded-full bg-base-100 px-3 py-1 text-xs font-semibold shadow-lg ring-1 ring-base-300">
             {t("workspace.transferring")}
+          </div>
+        )}
+        {addProgress && (
+          <div className="pointer-events-none fixed bottom-28 right-6 z-50 rounded-full bg-base-100 px-3 py-1 text-xs font-semibold shadow-lg ring-1 ring-base-300">
+            {t("workspace.source_browser.adding_progress", addProgress)}
           </div>
         )}
         {dragHint && (

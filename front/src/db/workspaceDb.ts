@@ -170,7 +170,7 @@ export async function ensureBrowserSource(
   return addSource({
     workspaceId,
     kind: "browser",
-    label: i18n.t("workspace.source_browser"),
+    label: i18n.t("workspace.source_browser_label"),
     config: { storage: "indexeddb" },
     status: "offline",
   });

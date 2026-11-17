@@ -256,7 +256,7 @@ export class AppDB extends Dexie {
           id: uuidv4(),
           workspaceId: workspace.id,
           kind: 'browser',
-          label: i18n.t('workspace.source_browser'),
+          label: i18n.t('workspace.source_browser_label'),
           config: { storage: 'indexeddb' },
           capabilities: defaultCapabilities('browser'),
           readOnly: false,

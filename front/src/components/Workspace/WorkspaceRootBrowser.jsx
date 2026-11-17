@@ -69,9 +69,14 @@ export default function WorkspaceRootBrowser({
   onToggleSelect,
   onSelectAll,
   selectionActions,
+  displayName,
 }) {
   const { t } = useTranslation();
   const selected = new Set(selectedPaths);
+  const labelFor = (entry) => {
+    const text = displayName?.(entry);
+    return typeof text === "string" ? text : entry.name;
+  };
   const selectableEntries = selectable
     ? entries.filter((entry) => !canSelectEntry || canSelectEntry(entry))
     : [];
@@ -306,7 +311,7 @@ export default function WorkspaceRootBrowser({
                     </span>
                   )}
                   <span className="min-w-0 flex-1 truncate text-base-content">
-                    {entry.name}
+                    {labelFor(entry)}
                   </span>
                   {sourceLabel?.(entry) && (
                     <span className="shrink-0 text-[10px] font-semibold text-base-content/60">

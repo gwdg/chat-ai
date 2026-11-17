@@ -789,8 +789,8 @@ transfer journal never leave the device. A persisted
 sources carry no `deviceId`. The UI badges device-plane sources "This device only" and marks a
 source whose stored `deviceId` differs as unavailable.
 
-The workspace page's left column is Storage and **Agent** — nothing else. The attached-chat and
-attached-agent lists were removed on purpose (the sidebar does both), together with their handlers;
+The workspace page's left column is **Agent** on top and **SOURCES** under it — nothing else. The
+attached-chat and attached-agent lists were removed on purpose (the sidebar does both);
 `attachedChats` / `attachedAgents` remain only as inputs to `syncChatStorageSources`,
 `seedWorkspaceAgentSessions` and `syncAgentFilesSources`. The Agent card
 (`components/Workspace/WorkspaceAgentPanel.tsx`, `data-guide="workspace-agent"`) offers exactly three
@@ -802,6 +802,31 @@ agent; the other two open an inline picker of that kind's agents plus an "Add ne
 opens the same `agentAdd` modal as the sidebar, preset through its `initialMode` prop
 (`"external"` / `"service"`; an agent being edited keeps its own mode, and on a deployment without
 direct access the external tab still degrades to the service).
+
+SOURCES (`components/Workspace/WorkspaceSourcesPanel.tsx`, `data-guide="workspace-sources"`) is the
+"My Computer" of the workspace: three drives — **Your Device** (the workspace's `local` sources, i.e.
+folders picked through `pickDirectory`, plus git clones, which are local sources too), **Chats**
+(every conversation by title, never the uuid, listed from `useConversationList` and browsed through
+`chatStorageDir`) and **Arcanas** (the `arcana-filesystem` source, falling back to `arcana`; its root
+is one directory per Arcana collection). A drive opens inside the card with a back row and a
+breadcrumb, folders navigate on click, every row has a checkbox, and a sticky footer appears with
+"Select all", the count and **Add to Workspace**. Local source rows keep their remove / read-only
+controls on hover (`onRemoveSource`, `onToggleSourceReadOnly`), and Your Device has an "Add folder
+from this device" row that opens the Add source modal — the old Storage card's badges and quota bars
+are gone for good.
+
+`workspace/addSelectionToWorkspace.ts` is what Add to Workspace runs: a folder from `local`,
+`arcana` or `arcana-filesystem` becomes a **mount** at `/<name>` (never a copy, so it stays live;
+collisions get " (2)", " (3)", …), a chat **root** calls `attachWorkspaceChat`, which is what writes
+the `workspace_chats` link — calling only `ensureChatStorageSource` there would let
+`syncChatStorageSources` delete the folder on the next reconcile — and every **file**, plus anything
+below a chat's root, is copied into the workspace root with `runTransfer`. Failures are collected per
+item and the batch continues. `listRoot("/")` synthesises a `chats` directory even when no chat is
+attached, so the root always has `/chats`, and `workspace/chatFolderName.ts#chatFolderLabel` feeds
+`displayName` on `WorkspaceRootBrowser`/`WorkspaceRootTree` so `/chats/<id>` rows show the chat title
+while navigation keeps using the id. i18n note: `workspace.sources` and
+`workspace.source_browser_label` are strings used by the create modal and the DB labels; the panel's
+own keys live under `workspace.source_browser.*`.
 
 Attaching a file from a workspace to a chat records a `workspace_file_references` row for the
 browser node; deleting a chat removes its reference rows. A workspace root and its browser sources

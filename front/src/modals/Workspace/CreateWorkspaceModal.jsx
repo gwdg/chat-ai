@@ -293,7 +293,7 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
   const failed = rows.some((row) => row.status === "failed");
 
   const included = [
-    { Icon: DataBase, label: t("workspace.source_browser") },
+    { Icon: DataBase, label: t("workspace.source_browser_label") },
     { Icon: Cube, label: t("workspace.kind_arcana-filesystem") },
   ];
 

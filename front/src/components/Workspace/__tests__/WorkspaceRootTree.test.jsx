@@ -74,6 +74,38 @@ describe("WorkspaceRootTree flat mode", () => {
     fireEvent.click(row);
     expect(props.onOpen).toHaveBeenCalledWith(chatEntry);
   });
+
+  it("renders a display name while navigating by the real path", () => {
+    const chatEntry = {
+      ...entry("chat-1", "dir", "chats/chat-1"),
+      local: false,
+      mount: {
+        id: "mount-1",
+        workspaceId: "ws-1",
+        sourceId: "chat-storage:ws-1:chat-1",
+        sourcePath: "/",
+        path: "/chats/chat-1",
+        createdAt: 1,
+        lastModified: 1,
+      },
+    };
+    const props = baseProps([chatEntry]);
+
+    render(
+      <WorkspaceRootTree
+        {...props}
+        flat
+        displayName={() => "Trip planning"}
+      />,
+    );
+
+    const row = screen.getByText("Trip planning");
+    expect(screen.queryByText("chat-1")).toBeNull();
+    expect(row.closest("button")?.getAttribute("title")).toBe("chats/chat-1");
+
+    fireEvent.click(row);
+    expect(props.onOpen).toHaveBeenCalledWith(chatEntry);
+  });
 });
 
 describe("WorkspaceRootTree failures", () => {

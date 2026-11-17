@@ -121,3 +121,19 @@ describe("WorkspaceRootBrowser parent row", () => {
     expect(onNavigate).toHaveBeenCalledWith("/chats");
   });
 });
+
+describe("WorkspaceRootBrowser display names", () => {
+  it("renders a display name but opens the real path", () => {
+    const onOpen = vi.fn();
+    renderBrowser({
+      onOpen,
+      displayName: (entry) => (entry.path === "/a.txt" ? "Alpha" : undefined),
+    });
+
+    const label = screen.getByText("Alpha");
+    expect(screen.queryByText("a.txt")).toBeNull();
+    fireEvent.click(label);
+
+    expect(onOpen).toHaveBeenCalledWith(entries[0]);
+  });
+});
