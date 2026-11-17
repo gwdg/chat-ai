@@ -178,9 +178,20 @@ export function useAgentBridge({
     let socket: WebSocket | null = null;
     let retryTimer: number | null = null;
     let session: any = null;
+    let sessionDeleted = false;
     let mcpName = "";
     let wasHidden = false;
     const originalTitle = document.title;
+
+    const deleteSession = () => {
+      const created = session;
+      if (sessionDeleted || !created?.id || !created?.token) return;
+      sessionDeleted = true;
+      void fetch(`${bridgeBase(agent)}/bridge/sessions/${created.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${created.token}` },
+      }).catch(() => {});
+    };
 
     const connectSocket = (url: string, token: string) => {
       if (cancelled) return;
@@ -371,7 +382,10 @@ export function useAgentBridge({
         }
         if (!response.ok) throw new Error(`Bridge session failed (${response.status})`);
         session = await response.json();
-        if (cancelled) return;
+        if (cancelled) {
+          deleteSession();
+          return;
+        }
         mcpName = `chatai-bridge-${String(session.id).slice(0, 8)}`;
         if (wantsSidecar(SIDECAR_COMMAND, agent) && session.agentWsUrl && session.agentToken) {
           const scopes = [
@@ -455,12 +469,7 @@ export function useAgentBridge({
       if (mcpName) {
         void removeOpencodeMcpServer(agent, mcpName).catch(() => {});
       }
-      if (session?.id && session?.token) {
-        void fetch(`${bridgeBase(agent)}/bridge/sessions/${session.id}`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${session.token}` },
-        }).catch(() => {});
-      }
+      deleteSession();
     };
   }, [agent, workspaceId, writable, mcp, mcpServers]);
 

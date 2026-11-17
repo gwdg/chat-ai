@@ -184,4 +184,39 @@ describe("useAgentBridge", () => {
     ]);
     expect(result.current.status).toBe("connecting");
   });
+
+  it("deletes a session created after the hook was torn down", async () => {
+    // The POST can finish after cleanup has already run with no session to delete. The
+    // response still created a live bridge session, so that branch must remove it itself.
+    let resolvePost: ((response: any) => void) | undefined;
+    const fetchMock = vi.fn((url: string, init?: RequestInit) => {
+      if (init?.method === "POST") {
+        return new Promise((resolve) => {
+          resolvePost = resolve;
+        });
+      }
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("WebSocket", FakeWebSocket);
+
+    const { unmount } = renderHook(() => useAgentBridge(props));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    unmount();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    if (!resolvePost) throw new Error("POST was not started");
+    resolvePost({ ok: true, status: 200, json: async () => sessionResponse });
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(fetchMock.mock.calls[1][0]).toBe(
+      `${window.location.origin}/bridge/sessions/session-1`,
+    );
+    expect(fetchMock.mock.calls[1][1]).toMatchObject({
+      method: "DELETE",
+      headers: { Authorization: "Bearer browser-token" },
+    });
+    expect(FakeWebSocket.instances).toHaveLength(0);
+  });
 });

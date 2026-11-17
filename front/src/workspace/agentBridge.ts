@@ -9,6 +9,7 @@ export type ChatWorkspaceBundle = {
   workspaceId: string;
   root: ReturnType<typeof createWorkspaceRootProvider>;
   mounts: { mount: WorkspaceMountRow; provider: FileProvider }[];
+  close: () => void;
 };
 
 export async function getChatWorkspaceBundle(
@@ -34,25 +35,45 @@ export async function getChatWorkspaceBundle(
   const root = createWorkspaceRootProvider(link.workspaceId);
   await root.connect().catch(() => {});
 
-  const sources = await db.workspace_sources
-    .where("workspaceId")
-    .equals(link.workspaceId)
-    .toArray();
-  const mountRows = await db.workspace_mounts
-    .where("workspaceId")
-    .equals(link.workspaceId)
-    .toArray();
   const mounts: ChatWorkspaceBundle["mounts"] = [];
-  for (const mount of mountRows) {
-    const source = sources.find((candidate) => candidate.id === mount.sourceId);
-    if (!source) continue;
-    const provider = createProvider(source);
+  let closed = false;
+  const close = () => {
+    if (closed) return;
+    closed = true;
     try {
-      await provider.connect();
-      mounts.push({ mount, provider });
-    } catch {
-      provider.close?.();
+      root.close?.();
+    } catch {}
+    for (const { provider } of mounts) {
+      try {
+        provider.close?.();
+      } catch {}
     }
+  };
+
+  try {
+    const sources = await db.workspace_sources
+      .where("workspaceId")
+      .equals(link.workspaceId)
+      .toArray();
+    const mountRows = await db.workspace_mounts
+      .where("workspaceId")
+      .equals(link.workspaceId)
+      .toArray();
+    for (const mount of mountRows) {
+      const source = sources.find((candidate) => candidate.id === mount.sourceId);
+      if (!source) continue;
+      const provider = createProvider(source);
+      try {
+        await provider.connect();
+        mounts.push({ mount, provider });
+      } catch {
+        provider.close?.();
+      }
+    }
+  } catch (error) {
+    close();
+    throw error;
   }
-  return { workspaceId: link.workspaceId, root, mounts };
+
+  return { workspaceId: link.workspaceId, root, mounts, close };
 }

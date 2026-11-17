@@ -281,293 +281,297 @@ export async function runAgentTurn({
   const attachedWorkspace = await getChatWorkspaceBundle(conversationId).catch(
     () => null,
   );
-  // Writing is always on in the chat's own storage; an attached workspace has its own switch.
-  const writeAccess =
-    useTools &&
-    browserStorage &&
-    writeAccessEnabled(settings, {
-      attachedWorkspace: !!attachedWorkspace,
-    });
-  const agentStorage = attachedWorkspace
-    ? new WorkspaceAgentVfs(
-        storage,
-        attachedWorkspace.workspaceId,
-        attachedWorkspace.root,
-        attachedWorkspace.mounts,
-      )
-    : storage;
-  // Files the agent writes outside /artefacts become attachments of its reply.
-  const written = createWrittenFiles(conversationId, agentStorage);
-  const workspace = observe(agentStorage, (change: Change) => written.observe(change));
-  // Mounted folders show up in the prompt and count as local storage while access storage is on.
-  const mounts = [
-    ...listMounts(conversationId),
-    ...(attachedWorkspace?.mounts.map(({ mount }) => mount.path) ?? []),
-  ];
-
-  // Audio files by upload path, sent as audio to models that take it
-  const audio = spec.input?.includes("audio") ? new Map<string, InputAudio>() : null;
-  // `browserStorage` alone is not enough: a model without tool support cannot read the files either.
-  const conversation = await toAgentMessages(conversationId, agentStorage, uiMessages.filter((m) => m.role !== "system"), spec, vision, audio, useTools && browserStorage);
-  const prompt = conversation.pop();
-  if (!prompt || prompt.role !== "user") throw new Error("Nothing to send");
-
-  const models = createModels();
-  models.setProvider(
-    createProvider({
-      id: PROVIDER,
-      name: "Chat AI",
-      baseUrl: agentEndpoint(),
-      auth: { apiKey: { name: "Chat AI", resolve: async () => ({ auth: { apiKey: agentApiKey() } }) } },
-      models: [model],
-      api: openAICompletionsApi(),
-    }),
-  );
-
-  // Tool invocations per response: one model message with tool calls counts once, however many
-  // calls it batches. Past the limit the next batch is blocked; after that, tools are withdrawn.
-  const maxInvocations = settings.max_tool_calls ?? DEFAULT_MAX_TOOL_CALLS;
-  let invocations = 0;
-  let lastBatch: unknown;
-  let blockedBatch: unknown;
-  let toolsRevoked = false;
-  const beforeToolCall = async ({ assistantMessage }: { assistantMessage: unknown }) => {
-    if (assistantMessage !== lastBatch) {
-      lastBatch = assistantMessage;
-      if (maxInvocations > 0 && invocations >= maxInvocations) {
-        blockedBatch = assistantMessage;
-        toolsRevoked = true;
-      } else {
-        invocations++;
-      }
-    }
-    if (assistantMessage === blockedBatch) return { block: true, reason: TOOL_LIMIT_REASON };
-    return undefined;
-  };
-
-  const extra = { top_p: settings.top_p, ...reasoningParams(spec.id, settings) };
-  const gatewayFields = external || !agentGatewayTools() ? {} : gatewayRequestFields(settings);
-  const onPayload = (payload: any) => {
-    // Let the server pick the output limit, as the plain chat path does.
-    delete payload.max_tokens;
-    delete payload.max_completion_tokens;
-    Object.assign(payload, extra);
-    addGatewayFields(payload, gatewayFields);
-    if (!useTools || toolsRevoked) {
-      delete payload.tools;
-      payload.messages = flattenToolHistory(payload.messages);
-    }
-    if (external) {
-      // reasoningParams also sets this for OpenAI models, which reject it; back/ never forwarded it.
-      delete payload.chat_template_kwargs;
-      // OpenAI's reasoning models only accept the default sampling parameters.
-      if (/^openai-(gpt-?[5-9]|o\d)/.test(spec.id)) {
-        delete payload.temperature;
-        delete payload.top_p;
-      }
-    }
-    if (!vision) dropImages(payload.messages);
-    if (audio?.size) addInputAudio(payload.messages, audio);
-    return payload;
-  };
-
-  // The gateway's own tool use during a request, as pi messages. It belongs before the
-  // assistant message that request produced: `before` maps that message to it, for the
-  // following requests of this turn (transformContext) and the stored transcript (done).
-  let gatewayMessages: AgentMessage[] = [];
-  const before = new Map<AgentMessage, AgentMessage[]>();
-  // E2EE sits *under* the gateway wrapper, so the status-event filter only ever
-  // sees the decrypted stream.
-  const fetchFn = gatewayFetch(
-    (exchange) =>
-      gatewayMessages.push(toAgentMessage(exchange, { api: model.api, provider: PROVIDER, model: spec.id })),
-    e2eeFetch,
-  );
-
-  const tools = useTools
-    ? createTools(
-        workspace,
-        storageToolSettings(settings, {
-          vision,
-          attachedWorkspace: !!attachedWorkspace,
-          hasMounts: mounts.length > 0,
-        }),
-      )
-    : [];
-  let workspaceContext: WorkspaceToolContext | null = null;
-  if (useTools && browserStorage) {
-    try {
-      const workspaceTools = await createWorkspaceTools(
-        conversationId,
-        workspace,
-        attachedWorkspace?.workspaceId,
-        { writable: writeAccess },
-      );
-      tools.push(...workspaceTools.tools);
-      workspaceContext = workspaceTools.context;
-    } catch (error) {
-      console.warn("Could not load workspace tools", error);
-    }
-  }
-  let connectedAgentContext: ConnectedAgentContext | null = null;
-  if (useTools && browserStorage) {
-    try {
-      const connected = await createConnectedAgentTools(
-        conversationId,
-        workspace,
-      );
-      tools.push(...connected.tools);
-      connectedAgentContext = connected.context;
-    } catch (error) {
-      console.warn("Could not load connected agent tools", error);
-    }
-  }
-  // An enabled MCP server that cannot be reached stops the turn: the user turns it off or starts it
-  const servers = useTools ? activeMcpServers(settings) : [];
-  let mcp: McpTools | undefined;
-  if (servers.length) {
-    try {
-      mcp = await connectMcpServers(servers, new Set(tools.map((tool) => tool.name)), {
-        onNameMismatch: onMcpNameMismatch,
+  try {
+    // Writing is always on in the chat's own storage; an attached workspace has its own switch.
+    const writeAccess =
+      useTools &&
+      browserStorage &&
+      writeAccessEnabled(settings, {
+        attachedWorkspace: !!attachedWorkspace,
       });
-    } catch (error) {
-      if (!(error instanceof McpUnavailableError)) throw error;
-      console.error(error);
-      throw new Error(i18n.t("alert.mcp_unreachable", { url: error.url }));
-    }
-    tools.push(...mcp.tools);
-  }
+    const agentStorage = attachedWorkspace
+      ? new WorkspaceAgentVfs(
+          storage,
+          attachedWorkspace.workspaceId,
+          attachedWorkspace.root,
+          attachedWorkspace.mounts,
+        )
+      : storage;
+    // Files the agent writes outside /artefacts become attachments of its reply.
+    const written = createWrittenFiles(conversationId, agentStorage);
+    const workspace = observe(agentStorage, (change: Change) => written.observe(change));
+    // Mounted folders show up in the prompt and count as local storage while access storage is on.
+    const mounts = [
+      ...listMounts(conversationId),
+      ...(attachedWorkspace?.mounts.map(({ mount }) => mount.path) ?? []),
+    ];
 
-  const agent = new Agent({
-    initialState: {
-      systemPrompt: [
-        systemPrompt,
-        useTools
-          ? browserStorage
-            ? AGENT_PROMPT
-            : NO_BROWSER_STORAGE_PROMPT
-          : NO_TOOLS_PROMPT,
-        useTools && arcanaTools ? ARCANA_TOOLS_PROMPT : "",
-        workspaceContext?.workspaces.length
-          ? `This chat is attached to the workspace(s) ${workspaceContext.workspaces
-              .map((workspace) => `${workspace.name} (${workspace.id})`)
-              .join(
-                ", ",
-              )}. Use workspace_list for its sources, mounts and agents, workspace_list_agents for the agents attached to each workspace, and workspace_files, workspace_read_file, workspace_write_file and workspace_fetch_file for files in it, including sources that are not mounted. The read, ls and find tools work on the workspace root and its mounted folders. This chat's own folder is mounted at /chats/${conversationId}: it belongs to the chat and stays there if the workspace is detached, so keep the chat's private files there and the shared ones in the workspace.`
-          : "",
-        connectedAgentContext?.workspaceIds.length
-          ? connectedAgentContext.agents.length
-            ? `Agents connected to this chat's workspace: ${connectedAgentContext.agents
-                .map(({ agent }) => `${agent.name || agent.id} (${agent.id})`)
+    // Audio files by upload path, sent as audio to models that take it
+    const audio = spec.input?.includes("audio") ? new Map<string, InputAudio>() : null;
+    // `browserStorage` alone is not enough: a model without tool support cannot read the files either.
+    const conversation = await toAgentMessages(conversationId, agentStorage, uiMessages.filter((m) => m.role !== "system"), spec, vision, audio, useTools && browserStorage);
+    const prompt = conversation.pop();
+    if (!prompt || prompt.role !== "user") throw new Error("Nothing to send");
+
+    const models = createModels();
+    models.setProvider(
+      createProvider({
+        id: PROVIDER,
+        name: "Chat AI",
+        baseUrl: agentEndpoint(),
+        auth: { apiKey: { name: "Chat AI", resolve: async () => ({ auth: { apiKey: agentApiKey() } }) } },
+        models: [model],
+        api: openAICompletionsApi(),
+      }),
+    );
+
+    // Tool invocations per response: one model message with tool calls counts once, however many
+    // calls it batches. Past the limit the next batch is blocked; after that, tools are withdrawn.
+    const maxInvocations = settings.max_tool_calls ?? DEFAULT_MAX_TOOL_CALLS;
+    let invocations = 0;
+    let lastBatch: unknown;
+    let blockedBatch: unknown;
+    let toolsRevoked = false;
+    const beforeToolCall = async ({ assistantMessage }: { assistantMessage: unknown }) => {
+      if (assistantMessage !== lastBatch) {
+        lastBatch = assistantMessage;
+        if (maxInvocations > 0 && invocations >= maxInvocations) {
+          blockedBatch = assistantMessage;
+          toolsRevoked = true;
+        } else {
+          invocations++;
+        }
+      }
+      if (assistantMessage === blockedBatch) return { block: true, reason: TOOL_LIMIT_REASON };
+      return undefined;
+    };
+
+    const extra = { top_p: settings.top_p, ...reasoningParams(spec.id, settings) };
+    const gatewayFields = external || !agentGatewayTools() ? {} : gatewayRequestFields(settings);
+    const onPayload = (payload: any) => {
+      // Let the server pick the output limit, as the plain chat path does.
+      delete payload.max_tokens;
+      delete payload.max_completion_tokens;
+      Object.assign(payload, extra);
+      addGatewayFields(payload, gatewayFields);
+      if (!useTools || toolsRevoked) {
+        delete payload.tools;
+        payload.messages = flattenToolHistory(payload.messages);
+      }
+      if (external) {
+        // reasoningParams also sets this for OpenAI models, which reject it; back/ never forwarded it.
+        delete payload.chat_template_kwargs;
+        // OpenAI's reasoning models only accept the default sampling parameters.
+        if (/^openai-(gpt-?[5-9]|o\d)/.test(spec.id)) {
+          delete payload.temperature;
+          delete payload.top_p;
+        }
+      }
+      if (!vision) dropImages(payload.messages);
+      if (audio?.size) addInputAudio(payload.messages, audio);
+      return payload;
+    };
+
+    // The gateway's own tool use during a request, as pi messages. It belongs before the
+    // assistant message that request produced: `before` maps that message to it, for the
+    // following requests of this turn (transformContext) and the stored transcript (done).
+    let gatewayMessages: AgentMessage[] = [];
+    const before = new Map<AgentMessage, AgentMessage[]>();
+    // E2EE sits *under* the gateway wrapper, so the status-event filter only ever
+    // sees the decrypted stream.
+    const fetchFn = gatewayFetch(
+      (exchange) =>
+        gatewayMessages.push(toAgentMessage(exchange, { api: model.api, provider: PROVIDER, model: spec.id })),
+      e2eeFetch,
+    );
+
+    const tools = useTools
+      ? createTools(
+          workspace,
+          storageToolSettings(settings, {
+            vision,
+            attachedWorkspace: !!attachedWorkspace,
+            hasMounts: mounts.length > 0,
+          }),
+        )
+      : [];
+    let workspaceContext: WorkspaceToolContext | null = null;
+    if (useTools && browserStorage) {
+      try {
+        const workspaceTools = await createWorkspaceTools(
+          conversationId,
+          workspace,
+          attachedWorkspace?.workspaceId,
+          { writable: writeAccess },
+        );
+        tools.push(...workspaceTools.tools);
+        workspaceContext = workspaceTools.context;
+      } catch (error) {
+        console.warn("Could not load workspace tools", error);
+      }
+    }
+    let connectedAgentContext: ConnectedAgentContext | null = null;
+    if (useTools && browserStorage) {
+      try {
+        const connected = await createConnectedAgentTools(
+          conversationId,
+          workspace,
+        );
+        tools.push(...connected.tools);
+        connectedAgentContext = connected.context;
+      } catch (error) {
+        console.warn("Could not load connected agent tools", error);
+      }
+    }
+    // An enabled MCP server that cannot be reached stops the turn: the user turns it off or starts it
+    const servers = useTools ? activeMcpServers(settings) : [];
+    let mcp: McpTools | undefined;
+    if (servers.length) {
+      try {
+        mcp = await connectMcpServers(servers, new Set(tools.map((tool) => tool.name)), {
+          onNameMismatch: onMcpNameMismatch,
+        });
+      } catch (error) {
+        if (!(error instanceof McpUnavailableError)) throw error;
+        console.error(error);
+        throw new Error(i18n.t("alert.mcp_unreachable", { url: error.url }));
+      }
+      tools.push(...mcp.tools);
+    }
+
+    const agent = new Agent({
+      initialState: {
+        systemPrompt: [
+          systemPrompt,
+          useTools
+            ? browserStorage
+              ? AGENT_PROMPT
+              : NO_BROWSER_STORAGE_PROMPT
+            : NO_TOOLS_PROMPT,
+          useTools && arcanaTools ? ARCANA_TOOLS_PROMPT : "",
+          workspaceContext?.workspaces.length
+            ? `This chat is attached to the workspace(s) ${workspaceContext.workspaces
+                .map((workspace) => `${workspace.name} (${workspace.id})`)
                 .join(
                   ", ",
-                )}. They are available through connected_agents_status, connected_agent_list_sessions, connected_agent_history, connected_agent_switch_session, connected_agent_remove_session, connected_agent_files, connected_agent_read_file, and connected_agent_fetch_file. Access is limited to those agents and to the sessions attached to this chat's workspace; use connected_agent_list_sessions to see them, connected_agent_switch_session to change the active session, connected_agent_remove_session only when the user explicitly asks to remove one, and connected_agent_fetch_file for images, PDFs, and other binary files. Never claim to see sessions that are not listed.`
-            : "This chat is attached to a workspace, but no agents are attached to it. If the user asks about an agent, use connected_agents_status to check, then say that no agent is attached to this workspace. Do not claim to know or see one."
-          : "",
-        useTools && browserStorage && mounts.length ? `The user's folders are mounted at: ${mounts.join(", ")}.` : "",
-        useTools &&
-        browserStorage &&
-        !writeAccess
-          ? "The user has turned off writing and editing files: you can read files but not change them."
-          : "",
-        `Current date: ${new Date().toLocaleString()}`,
-      ]
-        .filter(Boolean)
-        .join("\n\n"),
-      model,
-      tools,
-      messages: conversation,
-    },
-    beforeToolCall,
-    transformContext: async (messages) => nameResults(messages.flatMap((message) => [...(before.get(message) ?? []), message])),
-    streamFn: (m, context, options) => {
-      gatewayMessages = [];
-      return models.streamSimple(m, context, { ...options, temperature: settings.temperature, onPayload, fetch: fetchFn });
-    },
-  });
+                )}. Use workspace_list for its sources, mounts and agents, workspace_list_agents for the agents attached to each workspace, and workspace_files, workspace_read_file, workspace_write_file and workspace_fetch_file for files in it, including sources that are not mounted. The read, ls and find tools work on the workspace root and its mounted folders. This chat's own folder is mounted at /chats/${conversationId}: it belongs to the chat and stays there if the workspace is detached, so keep the chat's private files there and the shared ones in the workspace.`
+            : "",
+          connectedAgentContext?.workspaceIds.length
+            ? connectedAgentContext.agents.length
+              ? `Agents connected to this chat's workspace: ${connectedAgentContext.agents
+                  .map(({ agent }) => `${agent.name || agent.id} (${agent.id})`)
+                  .join(
+                    ", ",
+                  )}. They are available through connected_agents_status, connected_agent_list_sessions, connected_agent_history, connected_agent_switch_session, connected_agent_remove_session, connected_agent_files, connected_agent_read_file, and connected_agent_fetch_file. Access is limited to those agents and to the sessions attached to this chat's workspace; use connected_agent_list_sessions to see them, connected_agent_switch_session to change the active session, connected_agent_remove_session only when the user explicitly asks to remove one, and connected_agent_fetch_file for images, PDFs, and other binary files. Never claim to see sessions that are not listed.`
+              : "This chat is attached to a workspace, but no agents are attached to it. If the user asks about an agent, use connected_agents_status to check, then say that no agent is attached to this workspace. Do not claim to know or see one."
+            : "",
+          useTools && browserStorage && mounts.length ? `The user's folders are mounted at: ${mounts.join(", ")}.` : "",
+          useTools &&
+          browserStorage &&
+          !writeAccess
+            ? "The user has turned off writing and editing files: you can read files but not change them."
+            : "",
+          `Current date: ${new Date().toLocaleString()}`,
+        ]
+          .filter(Boolean)
+          .join("\n\n"),
+        model,
+        tools,
+        messages: conversation,
+      },
+      beforeToolCall,
+      transformContext: async (messages) => nameResults(messages.flatMap((message) => [...(before.get(message) ?? []), message])),
+      streamFn: (m, context, options) => {
+        gatewayMessages = [];
+        return models.streamSimple(m, context, { ...options, temperature: settings.temperature, onPayload, fetch: fetchFn });
+      },
+    });
 
-  const done: AgentMessage[] = [];
-  let streaming: AgentMessage | undefined;
-  const snapshot = (): TurnUpdate => {
-    const agentMessages = streaming ? [...done, streaming] : [...done];
-    return { agentMessages, text: agentText(agentMessages), files: written.items() };
-  };
+    const done: AgentMessage[] = [];
+    let streaming: AgentMessage | undefined;
+    const snapshot = (): TurnUpdate => {
+      const agentMessages = streaming ? [...done, streaming] : [...done];
+      return { agentMessages, text: agentText(agentMessages), files: written.items() };
+    };
 
-  // Arguments of each tool call, by id, to name the images its result carries after the path.
-  const toolArgs = new Map<string, any>();
-  // pi's read and MCP tools return images; attach them like a generated image.
-  const attachResultImages = async (event: {
-    toolCallId: string;
-    toolName: string;
-    result?: { content?: any[] };
-  }) => {
-    const path = toolArgs.get(event.toolCallId)?.path;
-    for (const image of resultImages(event.result, {
-      path: typeof path === "string" ? path : undefined,
-      toolName: event.toolName,
-    })) {
-      await written.attachImage(image);
-    }
-  };
+    // Arguments of each tool call, by id, to name the images its result carries after the path.
+    const toolArgs = new Map<string, any>();
+    // pi's read and MCP tools return images; attach them like a generated image.
+    const attachResultImages = async (event: {
+      toolCallId: string;
+      toolName: string;
+      result?: { content?: any[] };
+    }) => {
+      const path = toolArgs.get(event.toolCallId)?.path;
+      for (const image of resultImages(event.result, {
+        path: typeof path === "string" ? path : undefined,
+        toolName: event.toolName,
+      })) {
+        await written.attachImage(image);
+      }
+    };
 
-  let error: string | undefined;
-  agent.subscribe(async (event) => {
-    switch (event.type) {
-      case "message_update":
-        streaming = event.message;
-        break;
-      case "message_end":
-        streaming = undefined;
-        if (event.message.role === "user") return;
-        if (event.message.role === "assistant") {
-          for (const block of event.message.content ?? []) {
-            if (block?.type === "toolCall" && block.id) toolArgs.set(block.id, block.arguments);
+    let error: string | undefined;
+    agent.subscribe(async (event) => {
+      switch (event.type) {
+        case "message_update":
+          streaming = event.message;
+          break;
+        case "message_end":
+          streaming = undefined;
+          if (event.message.role === "user") return;
+          if (event.message.role === "assistant") {
+            for (const block of event.message.content ?? []) {
+              if (block?.type === "toolCall" && block.id) toolArgs.set(block.id, block.arguments);
+            }
           }
-        }
-        if (event.message.role === "assistant" && gatewayMessages.length) {
-          before.set(event.message, gatewayMessages);
-          done.push(...nameResults(gatewayMessages));
-          gatewayMessages = [];
-        }
-        done.push(event.message);
-        if (event.message.role === "assistant" && event.message.stopReason === "error") {
-          error = event.message.errorMessage ?? "The model request failed.";
-        }
-        break;
-      case "tool_execution_end":
-        await written.save();
-        await attachResultImages(event);
-        break;
-      default:
-        return;
+          if (event.message.role === "assistant" && gatewayMessages.length) {
+            before.set(event.message, gatewayMessages);
+            done.push(...nameResults(gatewayMessages));
+            gatewayMessages = [];
+          }
+          done.push(event.message);
+          if (event.message.role === "assistant" && event.message.stopReason === "error") {
+            error = event.message.errorMessage ?? "The model request failed.";
+          }
+          break;
+        case "tool_execution_end":
+          await written.save();
+          await attachResultImages(event);
+          break;
+        default:
+          return;
+      }
+      onUpdate(snapshot());
+    });
+
+    const stopListening = onAbortRequest(() => agent.abort());
+    try {
+      await agent.prompt(prompt);
+    } finally {
+      stopListening();
     }
-    onUpdate(snapshot());
-  });
+    await written.save();
 
-  const stopListening = onAbortRequest(() => agent.abort());
-  try {
-    await agent.prompt(prompt);
+    const usage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
+    for (const message of done) {
+      if (message.role !== "assistant") continue;
+      // Each call resends the conversation, so the last call's input is the context size.
+      usage.prompt_tokens = message.usage.input + message.usage.cacheRead;
+      usage.completion_tokens += message.usage.output;
+    }
+    usage.total_tokens = usage.prompt_tokens + usage.completion_tokens;
+
+    // vLLM without --enable-auto-tool-choice rejects any request with tools. If the very first
+    // request failed that way, remember the model and redo the turn without tools.
+    if (useTools && done.length === 1 && error && NO_TOOL_CALLING.test(error)) {
+      markToolless(spec.id);
+      return runAgentTurn({ conversationId, uiMessages, systemPrompt, settings, onUpdate });
+    }
+    return { ...snapshot(), usage, error };
   } finally {
-    stopListening();
+    attachedWorkspace?.close();
   }
-  await written.save();
-
-  const usage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
-  for (const message of done) {
-    if (message.role !== "assistant") continue;
-    // Each call resends the conversation, so the last call's input is the context size.
-    usage.prompt_tokens = message.usage.input + message.usage.cacheRead;
-    usage.completion_tokens += message.usage.output;
-  }
-  usage.total_tokens = usage.prompt_tokens + usage.completion_tokens;
-
-  // vLLM without --enable-auto-tool-choice rejects any request with tools. If the very first
-  // request failed that way, remember the model and redo the turn without tools.
-  if (useTools && done.length === 1 && error && NO_TOOL_CALLING.test(error)) {
-    markToolless(spec.id);
-    return runAgentTurn({ conversationId, uiMessages, systemPrompt, settings, onUpdate });
-  }
-  return { ...snapshot(), usage, error };
 }
 
 const DEFAULT_MAX_TOOL_CALLS = 10;
