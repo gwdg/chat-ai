@@ -104,10 +104,14 @@ export function saveAgentShellHistory(agentId, sessionId, messages) {
   } catch {}
 }
 
-export function clearAgentShellHistory(agentId) {
+export function clearAgentShellHistory(agentId, sessionId) {
   if (!canStore() || !agentId) return;
   const prefix = `${STORAGE_PREFIX}:${agentId}:`;
   try {
+    if (sessionId) {
+      localStorage.removeItem(`${prefix}${sessionId}`);
+      return;
+    }
     const keys = [];
     for (let index = 0; index < localStorage.length; index += 1) {
       const key = localStorage.key(index);

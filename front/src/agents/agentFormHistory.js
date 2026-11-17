@@ -59,10 +59,14 @@ export function saveAgentFormHistory(agentId, sessionId, entries) {
   } catch {}
 }
 
-export function clearAgentFormHistory(agentId) {
+export function clearAgentFormHistory(agentId, sessionId) {
   if (!canStore() || !agentId) return;
   const prefix = `${STORAGE_PREFIX}:${agentId}:`;
   try {
+    if (sessionId) {
+      localStorage.removeItem(`${prefix}${sessionId}`);
+      return;
+    }
     const keys = [];
     for (let index = 0; index < localStorage.length; index += 1) {
       const key = localStorage.key(index);

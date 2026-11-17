@@ -201,8 +201,19 @@ export default function AgentConversation({
   const [recovery, setRecovery] = useState(null);
   const [restoring, setRestoring] = useState(false);
   const [restoredHistory, setRestoredHistory] = useState(false);
-  const pollRef = useRef(null);
+  const pollTokensRef = useRef(new Set());
   const scrollRef = useRef(null);
+  const agentRef = useRef(agent);
+  const sessionIdentityRef = useRef(null);
+  const sessionGenerationRef = useRef(0);
+  const summaryTargetRef = useRef(null);
+  agentRef.current = agent;
+  const sessionIdentity =
+    agent?.id && agent?.sessionId ? `${agent.id}:${agent.sessionId}` : null;
+  if (sessionIdentityRef.current !== sessionIdentity) {
+    sessionIdentityRef.current = sessionIdentity;
+    sessionGenerationRef.current += 1;
+  }
   const modelKeyRef = useRef(null);
   const fileInputRef = useRef(null);
   const pendingShellRef = useRef(null);
@@ -259,12 +270,25 @@ export default function AgentConversation({
     [chatAIModelKey],
   );
 
-  const stopPolling = useCallback(() => {
-    if (pollRef.current) {
-      clearTimeout(pollRef.current);
-      pollRef.current = null;
+  const cancelPollToken = useCallback((token) => {
+    if (!token) return;
+    token.cancelled = true;
+    if (token.timer) {
+      clearTimeout(token.timer);
+      token.timer = null;
     }
+    pollTokensRef.current.delete(token);
   }, []);
+
+  const createPollToken = useCallback(() => {
+    const token = { cancelled: false, timer: null };
+    pollTokensRef.current.add(token);
+    return token;
+  }, []);
+
+  const stopPolling = useCallback(() => {
+    for (const token of [...pollTokensRef.current]) cancelPollToken(token);
+  }, [cancelPollToken]);
 
   const persistShellMessages = useCallback(() => {
     if (!agent?.id || !agent?.sessionId) return;
@@ -329,12 +353,18 @@ export default function AgentConversation({
   );
 
   const refresh = useCallback(async () => {
-    if (!agent?.sessionId) return [];
+    const currentAgent = agentRef.current;
+    const sessionId = currentAgent?.sessionId;
+    const generation = sessionGenerationRef.current;
+    if (!sessionId) return [];
+    const isStale = () =>
+      agentRef.current?.sessionId !== sessionId ||
+      sessionGenerationRef.current !== generation;
     const previousMessages = serverMessagesRef.current;
     // A compaction rewrites the history in place, so that sync starts from scratch.
     const synced = await syncSessionHistory(
-      agent,
-      agent.sessionId,
+      currentAgent,
+      sessionId,
       previousMessages,
       lastServerMessageIdRef.current,
       {
@@ -342,6 +372,7 @@ export default function AgentConversation({
         keepWhenEmpty: restoredHistoryRef.current,
       },
     );
+    if (isStale()) return [];
     forceFullSyncRef.current = false;
     if (
       !synced.messages.length &&
@@ -350,17 +381,21 @@ export default function AgentConversation({
     ) {
       // An empty answer usually means the session was cleared. If the session is actually gone
       // from the server, keep the cached history instead of letting the empty read wipe it.
-      const diagnosis = await inspectAgentRecovery(agent).catch(() => null);
+      const diagnosis = await inspectAgentRecovery(currentAgent).catch(
+        () => null,
+      );
+      if (isStale()) return [];
       if (
         diagnosis?.reachable &&
         diagnosis.missing.some(
-          (entry) => entry.session.id === agent.sessionId,
+          (entry) => entry.session.id === sessionId,
         )
       ) {
         setRecovery(diagnosis);
         return previousMessages;
       }
     }
+    if (isStale()) return [];
     serverMessagesRef.current = synced.messages;
     lastServerMessageIdRef.current = synced.lastMessageId;
 
@@ -374,10 +409,10 @@ export default function AgentConversation({
       restoredHistoryRef.current = false;
       setRestoredHistory(false);
     }
-    if (agent.id) {
+    if (currentAgent.id) {
       void saveAgentSessionMessages(
-        agent.id,
-        agent.sessionId,
+        currentAgent.id,
+        sessionId,
         synced.changed,
         {
           startIndex: synced.startIndex,
@@ -388,11 +423,13 @@ export default function AgentConversation({
       ).catch(() => {});
     }
     return visible;
-  }, [agent, mergeShellMessages]);
+  }, [mergeShellMessages]);
 
   const refreshPermissions = useCallback(async () => {
-    if (!agent?.sessionId) return [];
-    const next = await listOpencodePermissions(agent, agent.sessionId);
+    const currentAgent = agentRef.current;
+    const sessionId = currentAgent?.sessionId;
+    if (!sessionId) return [];
+    const next = await listOpencodePermissions(currentAgent, sessionId);
     const remaining = [];
     for (const request of next) {
       const policy = matchPermissionPolicy(
@@ -406,8 +443,8 @@ export default function AgentConversation({
       if (autoReplyingRef.current.has(request.id)) continue;
       autoReplyingRef.current.add(request.id);
       void replyOpencodePermission(
-        agent,
-        agent.sessionId,
+        currentAgent,
+        sessionId,
         request.id,
         policy.decision,
       )
@@ -423,11 +460,15 @@ export default function AgentConversation({
     }
     setPermissions(remaining);
     return remaining;
-  }, [agent]);
+  }, []);
 
   const refreshForms = useCallback(async () => {
-    if (!agent?.sessionId) return [];
-    const next = await listOpencodeForms(agent, agent.sessionId);
+    const currentAgent = agentRef.current;
+    if (!currentAgent?.sessionId) return [];
+    const next = await listOpencodeForms(
+      currentAgent,
+      currentAgent.sessionId,
+    );
     setForms(next);
     const known = new Set(formHistoryRef.current.map((entry) => entry.id));
     const additions = next
@@ -445,17 +486,20 @@ export default function AgentConversation({
       );
     }
     return next;
-  }, [agent, replaceFormHistory]);
+  }, [replaceFormHistory]);
 
   const reportSyncFailure = useCallback(
     async (reason) => {
+      const currentAgent = agentRef.current;
       // Keep the cached conversation readable when the server is gone. Without a cache the
       // banner explains the empty timeline, so no raw fetch error is needed.
       setOffline(true);
       if (!serverMessagesRef.current.length) setCachedAt(null);
       // A reachable server that lost the session is a different problem: offer to restore the
       // cached sessions instead of claiming the agent is unreachable.
-      const diagnosis = await inspectAgentRecovery(agent).catch(() => null);
+      const diagnosis = await inspectAgentRecovery(currentAgent).catch(
+        () => null,
+      );
       if (!diagnosis?.reachable) return;
       setOffline(false);
       if (diagnosis.missing.length) {
@@ -463,9 +507,9 @@ export default function AgentConversation({
         return;
       }
       const currentExists = (diagnosis.serverSessions || []).some(
-        (session) => session?.id === agent?.sessionId,
+        (session) => session?.id === currentAgent?.sessionId,
       );
-      if (agent?.sessionId && !currentExists) {
+      if (currentAgent?.sessionId && !currentExists) {
         setError(t("agents.session_missing"));
         return;
       }
@@ -475,7 +519,7 @@ export default function AgentConversation({
         );
       }
     },
-    [agent, t],
+    [t],
   );
 
   const retrySync = useCallback(async () => {
@@ -553,14 +597,17 @@ export default function AgentConversation({
 
   const startPolling = useCallback(
     (sentAt) => {
+      const token = createPollToken();
       let polls = 0;
       const poll = async () => {
+        if (token.cancelled) return;
         try {
           const [next] = await Promise.all([
             refresh(),
             refreshPermissions(),
             refreshForms(),
           ]);
+          if (token.cancelled) return;
           const finished = next.some(
             (message) =>
               message.type === "idle" &&
@@ -568,39 +615,60 @@ export default function AgentConversation({
           );
           if (finished) {
             setSending(false);
+            cancelPollToken(token);
             return;
           }
         } catch (reason) {
+          if (token.cancelled) return;
           reportSyncFailure(reason);
           setSending(false);
+          cancelPollToken(token);
           return;
         }
+        if (token.cancelled) return;
         polls += 1;
         if (polls >= MAX_POLLS) {
           setError(t("agents.chat_timeout"));
           setSending(false);
+          cancelPollToken(token);
           return;
         }
-        pollRef.current = setTimeout(poll, POLL_INTERVAL);
+        token.timer = setTimeout(poll, POLL_INTERVAL);
       };
-      pollRef.current = setTimeout(poll, 500);
+      token.timer = setTimeout(poll, 500);
     },
-    [refresh, refreshPermissions, reportSyncFailure, t],
+    [
+      cancelPollToken,
+      createPollToken,
+      refresh,
+      refreshPermissions,
+      reportSyncFailure,
+      t,
+    ],
   );
 
   const startStatusPolling = useCallback(() => {
+    const token = createPollToken();
     const startedAt = Date.now();
     let polls = 0;
     const poll = async () => {
+      if (token.cancelled) return;
+      const currentAgent = agentRef.current;
+      if (!currentAgent?.sessionId) {
+        cancelPollToken(token);
+        return;
+      }
       try {
         const [next, , , statuses] = await Promise.all([
           refresh(),
           refreshPermissions(),
           refreshForms(),
-          getOpencodeSessionStatus(agent).catch(() => null),
+          getOpencodeSessionStatus(currentAgent).catch(() => null),
         ]);
+        if (token.cancelled) return;
         const finishedByStatus =
-          statuses && !sessionIsWorking(statuses?.[agent.sessionId]);
+          statuses &&
+          !sessionIsWorking(statuses?.[currentAgent.sessionId]);
         const finishedByMessage = next.some(
           (message) =>
             message.type === "idle" &&
@@ -608,29 +676,44 @@ export default function AgentConversation({
         );
         if (finishedByStatus || (!statuses && finishedByMessage)) {
           setSending(false);
+          cancelPollToken(token);
           return;
         }
       } catch (reason) {
+        if (token.cancelled) return;
         reportSyncFailure(reason);
         setSending(false);
+        cancelPollToken(token);
         return;
       }
+      if (token.cancelled) return;
       polls += 1;
       if (polls >= 1800) {
         setSending(false);
+        cancelPollToken(token);
         return;
       }
-      pollRef.current = setTimeout(poll, POLL_INTERVAL);
+      token.timer = setTimeout(poll, POLL_INTERVAL);
     };
-    pollRef.current = setTimeout(poll, 700);
-  }, [agent, refresh, refreshPermissions, refreshForms, reportSyncFailure]);
+    token.timer = setTimeout(poll, 700);
+  }, [
+    cancelPollToken,
+    createPollToken,
+    refresh,
+    refreshPermissions,
+    refreshForms,
+    reportSyncFailure,
+  ]);
 
   const startShellPolling = useCallback(
     (baseline) => {
+      const token = createPollToken();
       let polls = 0;
       const poll = async () => {
+        if (token.cancelled) return;
         try {
           const next = await refresh();
+          if (token.cancelled) return;
           const shell = [...next]
             .reverse()
             .find(
@@ -640,68 +723,90 @@ export default function AgentConversation({
           if (shell) updatePendingShell(null);
           if (shell && shell.status !== "running") {
             setSending(false);
+            cancelPollToken(token);
             return;
           }
         } catch (reason) {
+          if (token.cancelled) return;
           reportSyncFailure(reason);
           updatePendingShell(null);
           setSending(false);
+          cancelPollToken(token);
           return;
         }
+        if (token.cancelled) return;
         polls += 1;
         if (polls >= MAX_POLLS) {
           setError(t("agents.shell_timeout"));
           updatePendingShell(null);
           setSending(false);
+          cancelPollToken(token);
           return;
         }
-        pollRef.current = setTimeout(poll, POLL_INTERVAL);
+        token.timer = setTimeout(poll, POLL_INTERVAL);
       };
-      pollRef.current = setTimeout(poll, 400);
+      token.timer = setTimeout(poll, 400);
     },
-    [refresh, reportSyncFailure, t],
+    [
+      cancelPollToken,
+      createPollToken,
+      refresh,
+      reportSyncFailure,
+      t,
+      updatePendingShell,
+    ],
   );
 
-  useEffect(() => {
-    if (!summaryKey || !agent?.sessionId) return;
-    const previousAgent = agent;
-    const previousSessionId = agent.sessionId;
-    return () => {
-      const settings = summarySettingsRef.current;
-      const snapshot = summaryMessagesRef.current.get(summaryKey) ?? [];
-      summaryMessagesRef.current.delete(summaryKey);
-      if (!settings.enabled) return;
-      const summaryMessages = snapshot.map(summaryMessage).filter(Boolean);
-      if (!summaryMessages.length) return;
-      const sourceHash = conversationSummarySignature(summaryMessages);
-      const existing =
-        getAgent(previousAgent.id)?.sessionSummaries?.[previousSessionId];
-      if (!sourceHash || existing?.sourceHash === sourceHash) {
-        return;
-      }
-      void (async () => {
-        try {
-          const summary = await generateConversationSummary({
-            localState: { messages: summaryMessages },
-            userSettings: settings.userSettings,
-            short: true,
-          });
-          if (!summary) return;
-          const current = getAgent(previousAgent.id);
-          updateAgent(previousAgent.id, {
-            sessionSummaries: {
-              ...(current?.sessionSummaries || {}),
-              [previousSessionId]: {
-                summary,
-                sourceHash,
-                updatedAt: Date.now(),
-              },
+  const flushSessionSummary = useCallback((key, agentId, sessionId) => {
+    const settings = summarySettingsRef.current;
+    const snapshot = summaryMessagesRef.current.get(key) ?? [];
+    summaryMessagesRef.current.delete(key);
+    if (!settings.enabled) return;
+    const summaryMessages = snapshot.map(summaryMessage).filter(Boolean);
+    if (!summaryMessages.length) return;
+    const sourceHash = conversationSummarySignature(summaryMessages);
+    const existing = getAgent(agentId)?.sessionSummaries?.[sessionId];
+    if (!sourceHash || existing?.sourceHash === sourceHash) {
+      return;
+    }
+    void (async () => {
+      try {
+        const summary = await generateConversationSummary({
+          localState: { messages: summaryMessages },
+          userSettings: settings.userSettings,
+          short: true,
+        });
+        if (!summary) return;
+        const current = getAgent(agentId);
+        updateAgent(agentId, {
+          sessionSummaries: {
+            ...(current?.sessionSummaries || {}),
+            [sessionId]: {
+              summary,
+              sourceHash,
+              updatedAt: Date.now(),
             },
-          });
-        } catch {}
-      })();
-    };
-  }, [summaryKey]);
+          },
+        });
+      } catch {}
+    })();
+  }, []);
+
+  useEffect(() => {
+    const current = agentRef.current;
+    const next =
+      summaryKey && current?.id && current.sessionId
+        ? {
+            key: summaryKey,
+            agentId: current.id,
+            sessionId: current.sessionId,
+          }
+        : null;
+    const previous = summaryTargetRef.current;
+    summaryTargetRef.current = next;
+    if (!previous || previous.key === next?.key) return;
+    flushSessionSummary(previous.key, previous.agentId, previous.sessionId);
+  }, [flushSessionSummary, summaryKey]);
 
   useEffect(() => {
     if (!summariesEnabled || !agent?.id || !agent?.sessionId) return;
@@ -741,24 +846,27 @@ export default function AgentConversation({
   }, [agent?.id, agent?.sessionId, messages, summariesEnabled]);
 
   useEffect(() => {
-    if (!agent?.sessionId) return;
+    const currentAgent = agentRef.current;
+    if (!currentAgent?.sessionId) return;
     let cancelled = false;
     setMessages([]);
     setPermissions([]);
     setForms([]);
-    const storedForms = loadAgentFormHistory(agent.id, agent.sessionId);
+    const storedForms = loadAgentFormHistory(
+      currentAgent.id,
+      currentAgent.sessionId,
+    );
     formHistoryRef.current = storedForms;
     setFormHistory(storedForms);
     autoReplyingRef.current.clear();
     setReplyingForm(null);
     shellMessagesRef.current = new Map(
-      loadAgentShellHistory(agent.id, agent.sessionId).map((message) => [
-        message.shellID,
-        message,
-      ]),
+      loadAgentShellHistory(currentAgent.id, currentAgent.sessionId).map(
+        (message) => [message.shellID, message],
+      ),
     );
     updatePendingShell(null);
-    setInput(loadAgentDraft(agent.id, agent.sessionId));
+    setInput(loadAgentDraft(currentAgent.id, currentAgent.sessionId));
     setError("");
     setSending(false);
     setStopping(false);
@@ -774,10 +882,12 @@ export default function AgentConversation({
     stopPolling();
 
     const load = async () => {
+      const activeAgent = agentRef.current;
+      if (!activeAgent?.sessionId) return;
       // Show the cached timeline immediately, then sync only what the server has since then.
       const cached = await loadAgentSessionMessages(
-        agent.id,
-        agent.sessionId,
+        activeAgent.id,
+        activeAgent.sessionId,
       ).catch(() => null);
       if (cancelled) return;
       if (cached?.restoredFrom) {
@@ -809,7 +919,8 @@ export default function AgentConversation({
       stopPolling();
     };
   }, [
-    agent,
+    agent?.id,
+    agent?.sessionId,
     mergeShellMessages,
     refresh,
     refreshPermissions,
@@ -822,8 +933,11 @@ export default function AgentConversation({
     // A revert rewrites the history in place rather than appending, so re-read all of it.
     const onHistoryChanged = (event) => {
       const detail = event?.detail || {};
-      if (!agent?.id || detail.agentId !== agent.id) return;
-      if (detail.sessionId && detail.sessionId !== agent.sessionId) return;
+      const currentAgent = agentRef.current;
+      if (!currentAgent?.id || detail.agentId !== currentAgent.id) return;
+      if (detail.sessionId && detail.sessionId !== currentAgent.sessionId) {
+        return;
+      }
       forceFullSyncRef.current = true;
       void refresh().catch((reason) => reportSyncFailure(reason));
     };
@@ -836,12 +950,13 @@ export default function AgentConversation({
   }, [agent?.id, agent?.sessionId, refresh, reportSyncFailure]);
 
   useEffect(() => {
-    if (!agent?.id || !agent?.sessionId) return;
+    const currentAgent = agentRef.current;
+    if (!currentAgent?.id || !currentAgent?.sessionId) return;
     let cancelled = false;
-    void getOpencodeSessionStatus(agent)
+    void getOpencodeSessionStatus(currentAgent)
       .then((statuses) => {
         if (cancelled) return;
-        if (sessionIsWorking(statuses?.[agent.sessionId])) {
+        if (sessionIsWorking(statuses?.[currentAgent.sessionId])) {
           setSending(true);
           startStatusPolling();
         }
@@ -869,14 +984,17 @@ export default function AgentConversation({
   }, [agent?.id]);
 
   useEffect(() => {
-    if (!agent?.sessionId) return;
+    const currentAgent = agentRef.current;
+    if (!currentAgent?.sessionId) return;
     let cancelled = false;
     Promise.all([
-      listOpencodeModels(agent),
-      listOpencodeCommands(agent).catch(() => []),
-      listOpencodeAgents(agent).catch(() => []),
-      getOpencodeSession(agent, agent.sessionId).catch(() => null),
-      getOpencodeDefaultModel(agent).catch(() => null),
+      listOpencodeModels(currentAgent),
+      listOpencodeCommands(currentAgent).catch(() => []),
+      listOpencodeAgents(currentAgent).catch(() => []),
+      getOpencodeSession(currentAgent, currentAgent.sessionId).catch(
+        () => null,
+      ),
+      getOpencodeDefaultModel(currentAgent).catch(() => null),
     ])
       .then(([rawModels, rawCommands, rawAgents, session, defaultModel]) => {
         if (cancelled) return;
@@ -923,27 +1041,37 @@ export default function AgentConversation({
         modelKeyRef.current = currentModel
           ? `${currentModel.providerID ?? ""}:${currentModel.id}`
           : null;
-        setModelState({ id: agent.id, settings: { model: selected } });
+        setModelState({ id: currentAgent.id, settings: { model: selected } });
       })
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [agent, chatAIModelIds]);
+  }, [agent?.id, agent?.sessionId, chatAIModelIds]);
 
   useEffect(() => {
     const model = modelState.settings.model;
-    if (!model || !agent?.sessionId) return;
+    const currentAgent = agentRef.current;
+    if (!model || !currentAgent?.sessionId) return;
     const key = `${model.providerID ?? ""}:${model.id}`;
     if (modelKeyRef.current === key) return;
     modelKeyRef.current = key;
-    void setOpencodeModel(agent, agent.sessionId, model).catch((reason) =>
+    void setOpencodeModel(
+      currentAgent,
+      currentAgent.sessionId,
+      model,
+    ).catch((reason) =>
       setError(reason instanceof Error ? reason.message : String(reason)),
     );
-  }, [agent, modelState.settings.model]);
+  }, [
+    agent?.id,
+    agent?.sessionId,
+    modelState.settings.model,
+  ]);
 
   useEffect(() => {
-    if (!agent?.sessionId) return;
+    const currentAgent = agentRef.current;
+    if (!currentAgent?.sessionId) return;
     const controller = new AbortController();
     let timer = null;
     const schedule = () => {
@@ -1013,13 +1141,16 @@ export default function AgentConversation({
       }
       schedule();
     };
-    subscribeOpencodeEvents(agent, handleEvent, controller.signal).catch(() => {});
+    subscribeOpencodeEvents(currentAgent, handleEvent, controller.signal).catch(
+      () => {},
+    );
     return () => {
       controller.abort();
       if (timer) clearTimeout(timer);
     };
   }, [
-    agent,
+    agent?.id,
+    agent?.sessionId,
     refresh,
     refreshPermissions,
     refreshForms,
@@ -1096,8 +1227,8 @@ export default function AgentConversation({
         agent,
         `${agent.name} agent`,
       );
-      clearAgentShellHistory(agent.id);
-      clearAgentFormHistory(agent.id);
+      clearAgentShellHistory(agent.id, previousSessionId);
+      clearAgentFormHistory(agent.id, previousSessionId);
       shellMessagesRef.current = new Map();
       formHistoryRef.current = [];
       stopPolling();
@@ -1435,17 +1566,31 @@ export default function AgentConversation({
 
   useEffect(() => {
     if (!focusMessageId) return;
-    const element = document.getElementById(
-      `agent-message-${focusMessageId}`,
-    );
-    if (!element) return;
-    element.scrollIntoView({ behavior: "smooth", block: "center" });
-    element.classList.add("ring-2", "ring-accent", "rounded-xl");
-    const timer = window.setTimeout(() => {
-      element.classList.remove("ring-2", "ring-accent", "rounded-xl");
-    }, 2200);
-    return () => window.clearTimeout(timer);
-  }, [focusMessageId, messages]);
+    let timer = null;
+    let observer = null;
+    const highlight = () => {
+      const element = document.getElementById(
+        `agent-message-${focusMessageId}`,
+      );
+      if (!element) return false;
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+      element.classList.add("ring-2", "ring-accent", "rounded-xl");
+      timer = window.setTimeout(() => {
+        element.classList.remove("ring-2", "ring-accent", "rounded-xl");
+      }, 2200);
+      return true;
+    };
+    if (!highlight()) {
+      observer = new MutationObserver(() => {
+        if (highlight()) observer.disconnect();
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+    }
+    return () => {
+      observer?.disconnect();
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [focusMessageId]);
 
   return (
     <section className="mx-auto flex h-full w-full flex-col overflow-hidden rounded-xl border border-base-300 bg-base-100 shadow-sm md:max-w-[85vw] xl:max-w-[1300px]">
