@@ -49,7 +49,7 @@ const debug = (message: string): void => {
   if (process.env.E2E_DOC_DEBUG === "1") console.log(`[documentation] ${message}`);
 };
 
-export interface StepNarrative {
+interface StepNarrative {
   /** What the user does in this step. */
   user: string;
   /** What the application shows or does in response. */

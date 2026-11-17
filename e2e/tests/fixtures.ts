@@ -45,7 +45,7 @@ export const MOCK_MODELS = [
 
 export const MOCK_TITLE = "Mocked conversation title";
 
-export interface MockApiOptions {
+interface MockApiOptions {
   /** Builds the assistant reply from the latest user message. */
   reply?: (prompt: string) => string;
   /** Text returned by non-streaming calls, i.e. title generation. */
@@ -276,7 +276,7 @@ export async function startTutorial(page: Page, title: string) {
 }
 
 /** True when the overlay sidebar drawer is covering the content. */
-export async function sidebarDrawerOpen(page: Page): Promise<boolean> {
+async function sidebarDrawerOpen(page: Page): Promise<boolean> {
   const width = page.viewportSize()?.width ?? 1280;
   if (width >= 1280) return false;
   const className = await page

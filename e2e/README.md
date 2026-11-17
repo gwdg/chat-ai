@@ -13,8 +13,7 @@ Each user scenario is its own readable file in `tests/`, so it can be run alone:
 
 | file | user action |
 | --- | --- |
-| `chat-send.spec.ts` | type a prompt, send it, see the streamed answer |
-| `chat-persistence.spec.ts` | reload and find the exchange still there |
+| `chat-persistence.spec.ts` | send a prompt, then reload and find the exchange still there |
 | `mcp-persistence.spec.ts` | a configured MCP server survives a reload, also with a second tab open |
 | `model-selector.spec.ts` | switch the conversation model |
 | `theme-toggle.spec.ts` | toggle dark mode and keep it after a reload |
@@ -60,8 +59,8 @@ npm run test:e2e:ui                     # interactive Playwright UI
 npm run analyze                         # check env, run all projects, summarise results
 
 npx playwright test --project=chrome-desktop
-npx playwright test tests/chat-send.spec.ts
-npx playwright test tests/chat-send.spec.ts --project=chrome-phone
+npx playwright test tests/chat-persistence.spec.ts
+npx playwright test tests/chat-persistence.spec.ts --project=chrome-phone
 npm run test:e2e:report                 # last HTML report
 npm run test:opencode                   # opt-in local agent scenario, see below
 npm run test:real                       # opt-in real-model scenario, see below

@@ -1,4 +1,5 @@
 import {
+  MOCK_TITLE,
   dismissWelcome,
   expect,
   openApp,
@@ -29,6 +30,10 @@ test.describe("chat persistence", () => {
             exact: true,
           }),
         ).toBeVisible({ timeout: 20_000 });
+        await expect(
+          page.getByText("Persist this exchange", { exact: true }),
+        ).toBeVisible();
+        await expect(page.locator('textarea[name="prompt"]')).toHaveValue("");
       },
     );
 
@@ -38,8 +43,7 @@ test.describe("chat persistence", () => {
         user: "The user looks at the sidebar.",
         system:
           "The generated title appears in the chat list, which proves the conversation was written to IndexedDB before the reload.",
-        shows:
-          "the sidebar chat list containing the title Mocked conversation title",
+        shows: `the sidebar chat list containing the title ${MOCK_TITLE}`,
       },
       async () => {
         // The title is generated after the reply and written in the same
@@ -47,9 +51,9 @@ test.describe("chat persistence", () => {
         // the title there guarantees the row was persisted before the reload,
         // instead of racing the sync hook. The header shows a rename button only
         // on desktop.
-        await expect(
-          page.getByText("Mocked conversation title").first(),
-        ).toBeVisible({ timeout: 20_000 });
+        await expect(page.getByText(MOCK_TITLE).first()).toBeVisible({
+          timeout: 20_000,
+        });
         // On tablets and phones the sidebar is an overlay. Open it so the
         // screenshot also shows the persisted title instead of a hidden drawer.
         await openSidebar(page);
