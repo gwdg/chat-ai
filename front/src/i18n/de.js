@@ -479,7 +479,8 @@ export default {
     attach_from_workspace: {
       title: "Dateien aus einem Arbeitsbereich anhängen",
       step1: "Verknüpfen Sie diesen Chat über die Arbeitsbereich-Schaltfläche im Eingabefeld mit einem Arbeitsbereich.",
-      step2: "Öffnen Sie Aus Arbeitsbereich anhängen und wählen Sie eine Datei aus dem Arbeitsbereichsbaum.",
+      step2:
+        "Klicken Sie auf „Anhängen“ und wählen Sie „Aus dem Arbeitsbereich“, dann eine Datei aus dem Arbeitsbereichsbaum.",
       step3: "Senden Sie die Nachricht mit der angehängten Datei.",
     },
     agent_recovery: {
@@ -1191,6 +1192,8 @@ export default {
     prompt: {
       placeholder: "Frag mich",
       attach: "Datei anhängen",
+      attach_device: "Vom Gerät",
+      attach_workspace: "Aus dem Arbeitsbereich",
       attach_media: "Medien anhängen",
       attachments: "Anhänge",
       clear_attachments: "Alle löschen",
@@ -1383,6 +1386,13 @@ export default {
         label: "Zusammenfassungen beim Darüberfahren anzeigen",
         description:
           "Beim Verlassen eines Chats wird eine kurze Zusammenfassung erstellt und beim Darüberfahren mit der Maus in der Seitenleiste angezeigt.",
+      },
+      sidebar: {
+        advanced: {
+          label: "Erweiterter Modus",
+          description:
+            "Zeigt Agenten und MCP-Server in der Seitenleiste. Ausgeschaltet zeigt die Seitenleiste nur Chats und Arbeitsbereiche.",
+        },
       },
       messages: {
         section_label: "Nachrichten",

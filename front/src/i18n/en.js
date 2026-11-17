@@ -466,7 +466,8 @@ export default {
     attach_from_workspace: {
       title: "Attach files from a workspace",
       step1: "Attach this chat to a workspace with the workspace button in the prompt box.",
-      step2: "Open Attach from workspace and pick a file from the workspace tree.",
+      step2:
+        "Click the attach button and choose From workspace, then pick a file from the workspace tree.",
       step3: "Send the message with the attached file.",
     },
     agent_recovery: {
@@ -1174,6 +1175,8 @@ export default {
     prompt: {
       placeholder: "Ask me",
       attach: "Attach File",
+      attach_device: "From device",
+      attach_workspace: "From workspace",
       attach_media: "Attach Media",
       attachments: "Attachments",
       clear_attachments: "Clear all",
@@ -1359,6 +1362,13 @@ export default {
         label: "Show summaries on hover",
         description:
           "Generate a short summary when you switch away from a chat, then show it when hovering over that chat in the sidebar.",
+      },
+      sidebar: {
+        advanced: {
+          label: "Advanced mode",
+          description:
+            "Show Agents and MCP servers in the sidebar. When this is off, the sidebar shows only chats and workspaces.",
+        },
       },
       messages: {
         section_label: "Messages",

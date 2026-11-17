@@ -46,7 +46,10 @@ import {
   toggleSidebar,
   toggleTopic,
 } from "../../Redux/reducers/interfaceSettingsSlice";
-import { selectConversationSummaries } from "../../Redux/reducers/userSettingsReducer";
+import {
+  selectAdvancedMode,
+  selectConversationSummaries,
+} from "../../Redux/reducers/userSettingsReducer";
 
 import { useWindowSize } from "../../hooks/useWindowSize";
 import { getWorkspaceSize } from "../../agent/workspace";
@@ -68,6 +71,7 @@ import TopicList, {
 } from "./TopicList";
 import TopicCreateBubble from "./TopicCreateBubble";
 import PinnedSection from "./PinnedSection";
+import { showAdvancedSidebarSections } from "./sidebarVisibility";
 import SidebarUserCard from "./SidebarUserCard";
 import AiServicesMenu from "./AiServicesMenu";
 import { useToast } from "../../hooks/useToast";
@@ -112,6 +116,11 @@ export default function SidebarContent({
   const conversationSort = useSelector(selectConversationSort);
   const conversationGrouping = useSelector(selectConversationGrouping);
   const summariesEnabled = useSelector(selectConversationSummaries);
+  // Advanced mode is off by default: an ordinary account sees chats, topics and
+  // workspaces only; the Agents and MCP server lists stay hidden until it is on.
+  const advancedMode = useSelector(selectAdvancedMode);
+  const { agents: showAgents, mcpServers: showMcpServers } =
+    showAdvancedSidebarSections(advancedMode, isAgentsEnabled());
   const collapsedTopicIds = useSelector(selectCollapsedTopics) ?? [];
   const chatsCollapsed = collapsedTopicIds.includes("__chats__");
 
@@ -809,10 +818,11 @@ export default function SidebarContent({
           {!hasSearch && (
             <PinnedSection
               chatCount={pinnedTopics.length + pinnedConversations.length}
+              showAgents={showAgents}
             >
               <TopicList {...topicListProps} variant="pinned" />
               <WorkspaceList variant="pinned" />
-              {isAgentsEnabled() && <AgentList variant="pinned" />}
+              {showAgents && <AgentList variant="pinned" />}
             </PinnedSection>
           )}
           <div
@@ -1073,14 +1083,18 @@ export default function SidebarContent({
             <>
               <div className="mx-2 my-1.5 border-t border-base-300" />
               <WorkspaceList />
-              {isAgentsEnabled() && (
+              {showMcpServers && (
                 <>
+                  {showAgents && (
+                    <>
+                      <div className="mx-2 my-1.5 border-t border-base-300" />
+                      <AgentList />
+                    </>
+                  )}
                   <div className="mx-2 my-1.5 border-t border-base-300" />
-                  <AgentList />
+                  <McpServerList />
                 </>
               )}
-              <div className="mx-2 my-1.5 border-t border-base-300" />
-              <McpServerList />
             </>
           )}
         </div>

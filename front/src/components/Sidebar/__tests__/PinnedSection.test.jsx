@@ -90,6 +90,21 @@ describe("PinnedSection", () => {
     }
   });
 
+  it("does not count pinned agents when agent rows are hidden", () => {
+    mocks.agents = [agent];
+    const { container } = renderSection({ showAgents: false });
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("counts pinned agents when agent rows are shown", () => {
+    mocks.agents = [agent];
+    renderSection({ showAgents: true });
+
+    expect(screen.getByText("Pinned")).toBeInTheDocument();
+    expect(screen.getByText("1")).toBeInTheDocument();
+  });
+
   it("ignores unpinned workspaces and agents in the count", () => {
     mocks.workspaces = [{ ...workspace, pinned: false }];
     mocks.agents = [{ ...agent, pinned: undefined }];

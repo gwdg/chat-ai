@@ -22,6 +22,9 @@ const initialState = {
   document_conversion_mode: "choice",
   conversation_summaries: true,
   show_timestamps: false,
+  // Off by default: the sidebar shows chats and workspaces only. The Agents and
+  // MCP server lists are advanced tools and appear when this is switched on.
+  advanced_mode: false,
   // null = device default (Enter on desktop, Shift+Enter on mobile).
   send_with_enter: null,
   // End-to-end encryption: published model public keys, and model → key bindings.
@@ -194,6 +197,7 @@ function importUserSettingsState(state, incoming) {
     "collapse_reasoning_while_streaming",
     "conversation_summaries",
     "show_timestamps",
+    "advanced_mode",
   ]) {
     if (typeof incoming[key] === "boolean") state[key] = incoming[key];
   }
@@ -415,6 +419,10 @@ const userSettingsSlice = createSlice({
       state.show_timestamps = Boolean(action.payload);
     },
 
+    setAdvancedMode: (state, action) => {
+      state.advanced_mode = Boolean(action.payload);
+    },
+
     setSendWithEnter: (state, action) => {
       state.send_with_enter = Boolean(action.payload);
     },
@@ -551,6 +559,7 @@ export const {
   setRenderLatex, setRenderGraphviz, setRenderVega, setRenderChartjs,
   setCollapseReasoningWhileStreaming, setDocumentConversionMode,
   setConversationSummaries, setShowTimestamps,
+  setAdvancedMode,
   setSendWithEnter, importUserSettings
 } = userSettingsSlice.actions;
 
@@ -602,6 +611,10 @@ export const selectConversationSummaries = (state) =>
   state.user_settings.conversation_summaries ?? true;
 export const selectShowTimestamps = (state) =>
   state.user_settings.show_timestamps ?? false;
+// Advanced mode reveals the Agents and MCP server lists in the sidebar; off by default so
+// an ordinary account sees only chats, topics and workspaces.
+export const selectAdvancedMode = (state) =>
+  state.user_settings.advanced_mode ?? false;
 // null means "use the device default", resolved in the prompt component.
 export const selectSendWithEnter = (state) =>
   state.user_settings.send_with_enter ?? null;

@@ -30,6 +30,8 @@ import userSettingsReducer, {
   selectShowTimestamps,
   setCollapseReasoningWhileStreaming,
   setShowTimestamps,
+  selectAdvancedMode,
+  setAdvancedMode,
   addE2eeKey,
   updateE2eeKey,
   removeE2eeKey,
@@ -228,6 +230,21 @@ describe("user settings reducer", () => {
     expect(selectMemoryMode({ user_settings: { memory_mode: 99 } })).toBe(0);
     expect(selectConversationSummaries({ user_settings: {} })).toBe(true);
     expect(selectShowTimestamps({ user_settings: {} })).toBe(false);
+    expect(selectAdvancedMode({ user_settings: {} })).toBe(false);
+  });
+
+  it("toggles advanced mode and restores it from an import", () => {
+    let state = init(userSettingsReducer);
+    expect(selectAdvancedMode({ user_settings: state })).toBe(false);
+
+    state = userSettingsReducer(state, setAdvancedMode(true));
+    expect(selectAdvancedMode({ user_settings: state })).toBe(true);
+
+    state = userSettingsReducer(
+      state,
+      importUserSettings({ advanced_mode: false }),
+    );
+    expect(selectAdvancedMode({ user_settings: state })).toBe(false);
   });
 
   it("toggles diagram rendering preferences and imports them", () => {

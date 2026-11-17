@@ -24,9 +24,11 @@ import { PINNED_COLLAPSE_ID } from "./TopicList";
 export default function PinnedSection({
   children,
   chatCount = 0,
+  showAgents = isAgentsEnabled(),
 }: {
   children?: ReactNode;
   chatCount?: number;
+  showAgents?: boolean;
 }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
@@ -37,7 +39,7 @@ export default function PinnedSection({
   const pinnedWorkspaceCount = workspaces.filter(
     (workspace) => workspace.pinned === true,
   ).length;
-  const pinnedAgentCount = isAgentsEnabled()
+  const pinnedAgentCount = showAgents
     ? agents.filter((agent) => agent.pinned === true).length
     : 0;
   const count = chatCount + pinnedWorkspaceCount + pinnedAgentCount;

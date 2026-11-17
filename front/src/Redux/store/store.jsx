@@ -73,6 +73,7 @@ const getDefaultState = () => {
       document_conversion_mode: "choice",
       conversation_summaries: true,
       show_timestamps: false,
+      advanced_mode: false,
       send_with_enter: null,
       e2ee_keys: [],
       e2ee_models: {},
