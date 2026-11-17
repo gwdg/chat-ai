@@ -39,9 +39,9 @@ test.describe("workspace", () => {
       {
         user: "The user names it “Deterministic workspace” and confirms.",
         system:
-          "The workspace page opens with the agent choices beside the workspace name, the Sources rail on the left, and the Workspace Root browser on the right.",
+          "The workspace page opens with the agent choices beside the workspace name, a combined Sources card on the left, and the Workspace Root browser on the right.",
         shows:
-          "the workspace page for Deterministic workspace with agent choices, a Sources rail, and a Workspace Root file browser",
+          "the workspace page for Deterministic workspace with agent choices, a combined Sources card, and a Workspace Root file browser",
       },
       async () => {
         await page
@@ -79,11 +79,40 @@ test.describe("workspace", () => {
         );
         await expect(sourcePane).toBeVisible();
         await expect(
+          leftColumn.locator('[data-guide="workspace-source-pane"]'),
+        ).toHaveCount(1);
+        await expect(
           sourcePane.getByText(/Pick a source on the left/),
         ).toBeVisible();
 
         const rootPane = page.locator('[data-guide="workspace-root-pane"]');
         await expect(rootPane).toBeVisible();
+        const cardRelations = await page.evaluate(() => {
+          const sources = document.querySelector(
+            '[data-guide="workspace-left-column"]',
+          );
+          const root = document.querySelector(
+            '[data-guide="workspace-root-pane"]',
+          );
+          return {
+            sameParent:
+              !!sources && !!root && sources.parentElement === root.parentElement,
+            rootInsideSources:
+              sources?.querySelector('[data-guide="workspace-root-pane"]') !==
+              null,
+            sourcesInsideRoot:
+              root?.querySelector('[data-guide="workspace-left-column"]') !==
+              null,
+          };
+        });
+        expect(cardRelations).toEqual({
+          sameParent: true,
+          rootInsideSources: false,
+          sourcesInsideRoot: false,
+        });
+        await expect(
+          rootPane.getByText("Workspace Root", { exact: true }),
+        ).toHaveCount(1);
         await expect(
           rootPane.getByText("Workspace Root", { exact: true }),
         ).toBeVisible();

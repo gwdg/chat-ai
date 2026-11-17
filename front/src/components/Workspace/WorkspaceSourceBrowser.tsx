@@ -7,6 +7,7 @@ import {
   ChevronRight,
   FileText,
   Folder,
+  MessageSquare,
   Plus,
 } from "lucide-react";
 
@@ -16,7 +17,6 @@ import type {
   WorkspaceFileEntry,
   WorkspaceSourceRow,
 } from "../../db/dbTypes";
-import { chatStorageDir } from "../../workspace/chatStorage";
 import { normalizePath, parentPath } from "../../workspace/paths";
 import type {
   FileProvider,
@@ -48,14 +48,8 @@ type DeviceSourceView = {
   label: string;
 };
 type ChatsView = { drive: "chats"; level: "drives" };
-type ChatView = {
-  drive: "chats";
-  level: "chat";
-  conversationId: string;
-  title: string;
-};
 type ArcanasView = { drive: "arcanas"; level: "browse" };
-type View = DeviceView | DeviceSourceView | ChatsView | ChatView | ArcanasView;
+type View = DeviceView | DeviceSourceView | ChatsView | ArcanasView;
 
 type Row = {
   id: string;
@@ -95,35 +89,6 @@ const fromEntries = (entries: WorkspaceFileEntry[]): Row[] =>
 async function listProvider(provider: FileProvider, path: string): Promise<Row[]> {
   const page = await provider.list(path || "/");
   return fromEntries(page.entries);
-}
-
-async function listChatDirectory(
-  conversationId: string,
-  path: string,
-): Promise<Row[]> {
-  let directory = await chatStorageDir(conversationId);
-  for (const segment of normalizePath(path).split("/").filter(Boolean)) {
-    directory = await directory.getDirectoryHandle(segment);
-  }
-  const rows: Row[] = [];
-  // @ts-expect-error entries() is missing from older DOM typings
-  for await (const [name, handle] of directory.entries()) {
-    const row: Row = {
-      id: name,
-      name,
-      path: `${normalizePath(path).replace(/\/$/, "")}/${name}`,
-      kind: handle.kind === "directory" ? "dir" : "file",
-    };
-    if (handle.kind === "file") {
-      try {
-        row.size = (await (handle as FileSystemFileHandle).getFile()).size;
-      } catch {
-        row.size = undefined;
-      }
-    }
-    rows.push(row);
-  }
-  return sortRows(rows);
 }
 
 export function QuotaMeter({
@@ -251,6 +216,7 @@ export default function WorkspaceSourceBrowser({
   onRemoveSource,
   onToggleSourceReadOnly,
   onAddDeviceFolder,
+  embedded = false,
   className = "",
 }: {
   sources: WorkspaceSourceRow[];
@@ -261,6 +227,7 @@ export default function WorkspaceSourceBrowser({
   onRemoveSource?: (source: WorkspaceSourceRow) => void;
   onToggleSourceReadOnly?: (source: WorkspaceSourceRow) => void;
   onAddDeviceFolder?: () => void;
+  embedded?: boolean;
   className?: string;
 }) {
   const { t } = useTranslation();
@@ -293,8 +260,6 @@ export default function WorkspaceSourceBrowser({
   const targetDrive = target?.drive ?? null;
   const targetSourceId =
     target && target.drive === "device" ? target.sourceId : undefined;
-  const targetConversationId =
-    target && target.drive === "chats" ? target.conversationId : undefined;
 
   useEffect(() => {
     setPath("/");
@@ -318,25 +283,11 @@ export default function WorkspaceSourceBrowser({
       return;
     }
     if (targetDrive === "chats") {
-      if (targetConversationId) {
-        const conversation = latest.current.conversations.find(
-          (item) => item.id === targetConversationId,
-        );
-        setView({
-          drive: "chats",
-          level: "chat",
-          conversationId: targetConversationId,
-          title: conversation
-            ? latest.current.conversationTitle(conversation)
-            : targetConversationId,
-        });
-        return;
-      }
       setView({ drive: "chats", level: "drives" });
       return;
     }
     setView({ drive: "arcanas", level: "browse" });
-  }, [targetDrive, targetSourceId, targetConversationId]);
+  }, [targetDrive, targetSourceId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -369,7 +320,7 @@ export default function WorkspaceSourceBrowser({
           const provider = providers.get(source.id);
           if (!provider) return;
           next = await listProvider(provider, path);
-        } else if (view.drive === "chats" && view.level === "drives") {
+        } else if (view.drive === "chats") {
           next = sortRows(
             conversations.map((conversation) => {
               const title = conversationTitle(conversation);
@@ -382,8 +333,6 @@ export default function WorkspaceSourceBrowser({
               };
             }),
           );
-        } else if (view.drive === "chats") {
-          next = await listChatDirectory(view.conversationId, path);
         } else if (!arcanaSource) {
           throw new Error(t("workspace.source_browser.unavailable"));
         } else {
@@ -448,26 +397,15 @@ export default function WorkspaceSourceBrowser({
         };
       }
       if (view.drive === "chats") {
-        if (view.level === "drives") {
-          if (!row.referenceId) return null;
-          return {
-            sourceId: `chat:${row.referenceId}`,
-            sourceKind: "chat",
-            path: "/",
-            name: row.name,
-            kind: "dir",
-            conversationId: row.referenceId,
-            title: row.name,
-          };
-        }
+        if (!row.referenceId) return null;
         return {
-          sourceId: `chat:${view.conversationId}`,
+          sourceId: `chat:${row.referenceId}`,
           sourceKind: "chat",
-          path: row.path,
+          path: "/",
           name: row.name,
-          kind: row.kind,
-          conversationId: view.conversationId,
-          title: row.kind === "dir" ? row.name : view.title,
+          kind: "dir",
+          conversationId: row.referenceId,
+          title: row.name,
         };
       }
       if (!arcanaSource) return null;
@@ -540,15 +478,10 @@ export default function WorkspaceSourceBrowser({
       }
       return;
     }
-    if (view.drive === "chats" && view.level === "drives") {
-      if (row.referenceId) {
-        setPath("/");
-        setView({
-          drive: "chats",
-          level: "chat",
-          conversationId: row.referenceId,
-          title: row.name,
-        });
+    if (view.drive === "chats") {
+      const selection = selectionFor(row);
+      if (selection) {
+        toggleSelection(selection, !selected.has(selectionKey(selection)));
       }
       return;
     }
@@ -578,15 +511,6 @@ export default function WorkspaceSourceBrowser({
       return;
     }
     if (view.drive === "chats") {
-      if (view.level === "chat" && path !== "/") {
-        setPath(parentPath(path));
-        return;
-      }
-      if (view.level === "chat") {
-        setPath("/");
-        setView({ drive: "chats", level: "drives" });
-        return;
-      }
       onTargetChange(null);
       return;
     }
@@ -620,7 +544,6 @@ export default function WorkspaceSourceBrowser({
   const breadcrumb = view
     ? [
         view.drive === "device" && view.level === "source" ? view.label : "",
-        view.drive === "chats" && view.level === "chat" ? view.title : "",
         ...normalizePath(path).split("/").filter(Boolean),
       ]
         .filter(Boolean)
@@ -640,11 +563,65 @@ export default function WorkspaceSourceBrowser({
         )
       : "";
 
+  const sectionClassName = embedded
+    ? `flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden ${className}`
+    : `flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-base-300 bg-base-100 ${className}`;
+
   return (
-    <section
-      data-guide="workspace-source-browser"
-      className={`flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-base-300 bg-base-100 ${className}`}
-    >
+    <section data-guide="workspace-source-browser" className={sectionClassName}>
+      <div className="flex min-w-0 shrink-0 items-center gap-1 border-b border-base-300 px-2 py-1.5">
+        {view && (
+          <button
+            type="button"
+            onClick={goBack}
+            aria-label={t("workspace.source_browser.back")}
+            title={t("workspace.source_browser.back")}
+            className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-base-content/55 transition hover:bg-base-200 hover:text-base-content"
+          >
+            <ArrowLeft size={14} />
+          </button>
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[11px] font-semibold leading-tight text-base-content">
+            {view ? driveName : t("workspace.source_browser.title")}
+          </div>
+          {view && (
+            <div
+              className="truncate text-[10px] leading-tight text-base-content/50"
+              title={breadcrumb}
+            >
+              {breadcrumb}
+            </div>
+          )}
+        </div>
+        {view && visibleItems.length > 0 && (
+          <input
+            type="checkbox"
+            className="checkbox checkbox-xs mr-0.5 shrink-0"
+            checked={allVisibleSelected}
+            onChange={(event) => toggleVisible(event.target.checked)}
+            aria-label={t("workspace.source_browser.select_all")}
+            title={t("workspace.source_browser.select_all")}
+          />
+        )}
+        <button
+          type="button"
+          data-guide="workspace-add-to-workspace"
+          onClick={() => void addSelection()}
+          disabled={selected.size === 0 || pending}
+          className="btn btn-primary btn-xs shrink-0 gap-1"
+        >
+          {pending && <span className="loading loading-spinner loading-xs" />}
+          <span className="truncate">
+            {selected.size > 0
+              ? t("workspace.source_browser.add_to_workspace_count", {
+                  count: selected.size,
+                })
+              : t("workspace.source_browser.add_to_workspace")}
+          </span>
+        </button>
+      </div>
+
       {!view ? (
         <div
           data-guide="workspace-source-browser-hint"
@@ -656,46 +633,6 @@ export default function WorkspaceSourceBrowser({
         </div>
       ) : (
         <>
-          <div className="flex min-w-0 shrink-0 items-center gap-1 border-b border-base-300 px-2 py-1.5">
-            <button
-              type="button"
-              onClick={goBack}
-              aria-label={t("workspace.source_browser.back")}
-              title={t("workspace.source_browser.back")}
-              className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-base-content/55 transition hover:bg-base-200 hover:text-base-content"
-            >
-              <ArrowLeft size={14} />
-            </button>
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-[11px] font-semibold leading-tight text-base-content">
-                {driveName}
-              </div>
-              <div
-                className="truncate text-[10px] leading-tight text-base-content/50"
-                title={breadcrumb}
-              >
-                {breadcrumb}
-              </div>
-            </div>
-            {visibleItems.length > 0 && (
-              <label
-                className="flex shrink-0 items-center gap-1 text-[10px] text-base-content/55"
-                title={t("workspace.source_browser.select_all")}
-              >
-                <input
-                  type="checkbox"
-                  className="checkbox checkbox-xs"
-                  checked={allVisibleSelected}
-                  onChange={(event) => toggleVisible(event.target.checked)}
-                  aria-label={t("workspace.source_browser.select_all")}
-                />
-                <span className="hidden min-[280px]:inline">
-                  {t("workspace.source_browser.select_all")}
-                </span>
-              </label>
-            )}
-          </div>
-
           <div
             data-guide="workspace-source-browser-list"
             className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-1"
@@ -734,7 +671,11 @@ export default function WorkspaceSourceBrowser({
                     return (
                       <div
                         key={row.id}
-                        className="group flex min-w-0 items-start gap-1 rounded-xl border border-base-300/60 px-1.5 py-1.5 transition hover:border-accent/40 hover:bg-base-200/50"
+                        className={`group flex min-w-0 items-start gap-1 rounded-xl border px-1.5 py-1.5 transition ${
+                          checked
+                            ? "border-accent/50 bg-accent/5"
+                            : "border-base-300/60 hover:border-accent/40 hover:bg-base-200/50"
+                        }`}
                       >
                         <input
                           type="checkbox"
@@ -819,7 +760,11 @@ export default function WorkspaceSourceBrowser({
                   return (
                     <div
                       key={row.id}
-                      className="group flex min-w-0 items-center gap-1 rounded-lg px-1 py-1 transition hover:bg-base-200/60"
+                      className={`group flex min-w-0 items-center gap-1 rounded-lg border px-1 py-1 transition ${
+                        checked
+                          ? "border-accent/50 bg-accent/5"
+                          : "border-transparent hover:bg-base-200/60"
+                      }`}
                     >
                       <input
                         type="checkbox"
@@ -835,7 +780,12 @@ export default function WorkspaceSourceBrowser({
                         onClick={() => openRow(row)}
                         className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
                       >
-                        {row.kind === "dir" ? (
+                        {view.drive === "chats" ? (
+                          <MessageSquare
+                            size={14}
+                            className="shrink-0 text-base-content/45"
+                          />
+                        ) : row.kind === "dir" ? (
                           <Folder size={14} className="shrink-0 text-accent" />
                         ) : (
                           <FileText
@@ -851,7 +801,7 @@ export default function WorkspaceSourceBrowser({
                             {formatBytes(row.size)}
                           </span>
                         )}
-                        {row.kind === "dir" && (
+                        {row.kind === "dir" && view.drive !== "chats" && (
                           <ChevronRight
                             size={12}
                             className="shrink-0 text-base-content/30"
@@ -883,41 +833,6 @@ export default function WorkspaceSourceBrowser({
               </div>
             )}
 
-          {selected.size > 0 && (
-            <div className="sticky bottom-0 z-10 flex min-w-0 shrink-0 flex-col gap-1 border-t border-base-300 bg-base-100 px-2 pb-1 pt-1.5">
-              <div className="flex min-w-0 items-center justify-between gap-2">
-                <span className="min-w-0 truncate text-[11px] font-medium text-base-content/70">
-                  {t(
-                    selected.size === 1
-                      ? "workspace.source_browser.selected_one"
-                      : "workspace.source_browser.selected_many",
-                    { count: selected.size },
-                  )}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setSelected(new Map())}
-                  className="shrink-0 rounded px-1 text-[10px] font-semibold text-base-content/50 transition hover:text-base-content"
-                >
-                  {t("workspace.source_browser.clear")}
-                </button>
-              </div>
-              <button
-                type="button"
-                data-guide="workspace-add-to-workspace"
-                onClick={() => void addSelection()}
-                disabled={pending}
-                className="btn btn-primary btn-xs w-full min-w-0 gap-1"
-              >
-                {pending && (
-                  <span className="loading loading-spinner loading-xs" />
-                )}
-                <span className="truncate">
-                  {t("workspace.source_browser.add_to_workspace")}
-                </span>
-              </button>
-            </div>
-          )}
         </>
       )}
     </section>

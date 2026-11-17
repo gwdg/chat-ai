@@ -789,7 +789,7 @@ transfer journal never leave the device. A persisted
 sources carry no `deviceId`. The UI badges device-plane sources "This device only" and marks a
 source whose stored `deviceId` differs as unavailable.
 
-The workspace page is **header → SOURCES rail → two panes**. The header card carries the
+The workspace page is **header → one Sources card → one Workspace Root card**. The header card carries the
 workspace name, its dates and the delete button on the left, and next to them the Agent strip — the
 attached-chat and attached-agent lists stay gone on purpose (the sidebar does both); `attachedChats` /
 `attachedAgents` remain only as inputs to `syncChatStorageSources`, `seedWorkspaceAgentSessions` and
@@ -816,16 +816,21 @@ with this app") for Chats, the Arcana provider's for Arcanas — plus the "Add f
 row. It owns no browsing state; it takes `activeTarget` / `onOpenTarget` with a `SourceTarget` of
 `{drive:"device",sourceId?}` / `{drive:"chats",conversationId?}` / `{drive:"arcanas"}`.
 
-Browsing lives in the first of two panes,
-`components/Workspace/WorkspaceSourceBrowser.tsx` (`data-guide="workspace-source-pane"`): the page
-holds the `SourceTarget`, the pane holds the path and the selection. A drive opens there with a back
-row, a breadcrumb, folders that navigate on click, a checkbox on every row, Select all, and a fixed
-footer with the count and **Add to Workspace**; the local-source rows keep their remove / read-only
-controls on hover (`onRemoveSource`, `onToggleSourceReadOnly`). With no target it shows
-`workspace.source_browser.pick_source`. The second pane, `data-guide="workspace-root-pane"`, is the
-**Workspace Root** — eyebrow `workspace.workspace_root`, the current path on the right, then the same
-`WorkspaceRootBrowser` (or the mounted-source view when a mount is open) as before, so adding from
-the left pane lands on the right one.
+Browsing lives inside that same Sources card, next to the rail
+(`components/Workspace/WorkspaceSourceBrowser.tsx`, `data-guide="workspace-source-pane"`): the page
+holds the `SourceTarget`, the pane holds the path and the selection. Its `embedded` prop drops the
+component's own border/rounding so the page can nest it in the shared card; the rail keeps only a
+`md:border-r` divider there. A drive opens with a back row, a breadcrumb, folders that navigate on
+click, a checkbox on every row and Select all; local-source rows keep their remove / read-only
+controls on hover (`onRemoveSource`, `onToggleSourceReadOnly`). **Chats are a list, not folders**: one
+row per conversation, clicking a row toggles its selection, and there is no drill-in to a chat's
+files. The toolbar's **Add to Workspace** button is always visible at the top right and is disabled —
+never hidden — until something is selected, when it shows the count ("Add to Workspace (2)"). With
+no target the toolbar keeps the disabled button above the `workspace.source_browser.pick_source`
+hint. The neighbouring card, `data-guide="workspace-root-pane"`, is the **Workspace Root** — eyebrow
+`workspace.workspace_root`, the current path on the right, then the same `WorkspaceRootBrowser` (or
+the mounted-source view when a mount is open) as before, so adding from the Sources card lands on the
+root card.
 
 `workspace/addSelectionToWorkspace.ts` is what Add to Workspace runs: a folder from `local`,
 `arcana` or `arcana-filesystem` becomes a **mount** at `/<name>` (never a copy, so it stays live;

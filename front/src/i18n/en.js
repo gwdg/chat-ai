@@ -2282,6 +2282,7 @@ export default {
       chats: "Chats",
       arcanas: "Arcanas",
       add_to_workspace: "Add to Workspace",
+      add_to_workspace_count: "Add to Workspace ({{count}})",
       selected_one: "{{count}} selected",
       selected_many: "{{count}} selected",
       empty: "Nothing here yet",

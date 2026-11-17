@@ -166,6 +166,20 @@ describe("WorkspaceSourceBrowser", () => {
     await act(async () => {});
   });
 
+  it("shows a disabled toolbar Add button when no drive is open", async () => {
+    renderBrowser();
+
+    expect(addButton()).toBeInTheDocument();
+    expect(addButton()).toBeDisabled();
+    expect(addButton()).toHaveTextContent("Add to Workspace");
+    expect(screen.getByText("Sources")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Back" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Select all")).not.toBeInTheDocument();
+    await act(async () => {});
+  });
+
   it("lists mounted local folders with badge, quota and source actions", async () => {
     renderBrowser({ target: { drive: "device" } });
 
@@ -189,15 +203,23 @@ describe("WorkspaceSourceBrowser", () => {
     expect(localProvider.list).not.toHaveBeenCalled();
   });
 
+  it("keeps the toolbar Add button disabled until a row is selected", async () => {
+    renderBrowser({ target: { drive: "device" } });
+
+    await screen.findByText("Project");
+    expect(addButton()).toBeDisabled();
+  });
+
   it("drills into a source and adds the selected folder to the workspace", async () => {
     renderBrowser({ target: { drive: "device" } });
 
     fireEvent.click(await screen.findByText("Project"));
     await screen.findByText("docs");
-    expect(addButton()).toBeNull();
+    expect(addButton()).toBeDisabled();
 
     fireEvent.click(screen.getByLabelText("docs"));
-    expect(addButton()).toBeInTheDocument();
+    expect(addButton()).toBeEnabled();
+    expect(addButton()).toHaveTextContent("Add to Workspace (1)");
     fireEvent.click(addButton());
 
     await waitFor(() =>
@@ -211,18 +233,66 @@ describe("WorkspaceSourceBrowser", () => {
         }),
       ]),
     );
-    await waitFor(() => expect(addButton()).toBeNull());
+    await waitFor(() => expect(addButton()).not.toHaveTextContent("(1)"));
+    expect(addButton()).toBeDisabled();
   });
 
-  it("lists chats by title and opens a chat's files", async () => {
+  it("selects a chat by clicking its row and adds exactly that chat", async () => {
+    mocks.conversations = [
+      { id: "conv-uuid-1", title: "Planning chat" },
+      { id: "conv-uuid-2", title: "Second chat" },
+    ];
     renderBrowser({ target: { drive: "chats" } });
 
     expect(await screen.findByText("Planning chat")).toBeInTheDocument();
     expect(screen.queryByText("conv-uuid-1")).not.toBeInTheDocument();
+    expect(addButton()).toBeDisabled();
 
     fireEvent.click(screen.getByText("Planning chat"));
-    expect(await screen.findByText("draft.md")).toBeInTheDocument();
-    expect(mocks.chatStorageDir).toHaveBeenCalledWith("conv-uuid-1");
+
+    const chatRow = screen.getByText("Planning chat").closest(".group");
+    expect(chatRow).toHaveClass(/bg-accent/);
+    expect(screen.getByLabelText("Planning chat")).toBeChecked();
+    expect(addButton()).toBeEnabled();
+    expect(addButton()).toHaveTextContent("Add to Workspace (1)");
+
+    fireEvent.click(addButton());
+
+    await waitFor(() =>
+      expect(mocks.onAddToWorkspace).toHaveBeenCalledTimes(1),
+    );
+    const added = mocks.onAddToWorkspace.mock.calls[0][0];
+    expect(added).toHaveLength(1);
+    expect(added[0]).toMatchObject({
+      sourceId: "chat:conv-uuid-1",
+      sourceKind: "chat",
+      path: "/",
+      name: "Planning chat",
+      kind: "dir",
+      conversationId: "conv-uuid-1",
+      title: "Planning chat",
+    });
+    await waitFor(() => expect(addButton()).not.toHaveTextContent("(1)"));
+    expect(addButton()).toBeDisabled();
+    expect(screen.getByLabelText("Planning chat")).not.toBeChecked();
+
+    fireEvent.click(screen.getByLabelText("Select all"));
+
+    expect(screen.getByLabelText("Planning chat")).toBeChecked();
+    expect(screen.getByLabelText("Second chat")).toBeChecked();
+    expect(addButton()).toHaveTextContent("Add to Workspace (2)");
+  });
+
+  it("does not open a chat as a folder when its row is clicked", async () => {
+    renderBrowser({ target: { drive: "chats" } });
+
+    fireEvent.click(await screen.findByText("Planning chat"));
+
+    expect(mocks.chatStorageDir).not.toHaveBeenCalled();
+    expect(screen.queryByText("draft.md")).not.toBeInTheDocument();
+    expect(screen.getByText("Planning chat")).toBeInTheDocument();
+    expect(addButton()).toBeEnabled();
+    expect(mocks.onTargetChange).not.toHaveBeenCalled();
   });
 
   it("selects every visible row with Select all", async () => {
@@ -231,8 +301,38 @@ describe("WorkspaceSourceBrowser", () => {
     await screen.findByText("Planning chat");
     fireEvent.click(screen.getByLabelText("Select all"));
 
-    expect(screen.getByText("1 selected")).toBeInTheDocument();
-    expect(addButton()).toBeInTheDocument();
+    expect(screen.getByLabelText("Planning chat")).toBeChecked();
+    expect(addButton()).toBeEnabled();
+    expect(addButton()).toHaveTextContent("Add to Workspace (1)");
+  });
+
+  it("drops the card chrome when embedded", () => {
+    const { unmount } = renderBrowser();
+    const section = guide("workspace-source-browser");
+    expect(section).toHaveClass(
+      "rounded-xl",
+      "border",
+      "border-base-300",
+      "bg-base-100",
+      "h-full",
+    );
+    unmount();
+
+    renderBrowser({ embedded: true });
+    const embeddedSection = guide("workspace-source-browser");
+    expect(embeddedSection).toHaveClass(
+      "flex",
+      "min-h-0",
+      "min-w-0",
+      "flex-1",
+      "flex-col",
+      "overflow-hidden",
+    );
+    expect(embeddedSection).not.toHaveClass("rounded-xl");
+    expect(embeddedSection).not.toHaveClass("border");
+    expect(embeddedSection).not.toHaveClass("border-base-300");
+    expect(embeddedSection).not.toHaveClass("bg-base-100");
+    expect(embeddedSection).not.toHaveClass("h-full");
   });
 
   it("browses the arcana collection", async () => {

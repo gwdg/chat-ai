@@ -5,7 +5,6 @@ import {
   Bot,
   Download,
   Edit,
-  Folder,
   Home,
   Locked,
   Unlocked,
@@ -1727,33 +1726,23 @@ export default function WorkspacePage() {
               </header>
 
               <div className="mx-auto flex min-h-0 w-full flex-1 flex-col gap-2 overflow-y-auto md:max-w-[85vw] md:flex-row md:overflow-visible xl:max-w-[1300px]">
-                <aside
+                <section
                   data-guide="workspace-left-column"
-                  className="flex w-full shrink-0 flex-col gap-2 md:w-64 md:overflow-y-auto"
+                  className="flex min-h-[60dvh] min-w-0 flex-[3] flex-col overflow-hidden rounded-xl border border-base-300 bg-base-100 md:min-h-0 md:flex-row"
                 >
-                  <WorkspaceSourcesPanel
-                    sources={sources}
-                    activeTarget={sourceTarget}
-                    onOpenTarget={setSourceTarget}
-                    onAddSource={() => addSource()}
-                    onAddDeviceFolder={() => addSource("local")}
-                  />
-                </aside>
-
-                <div className="grid min-h-0 flex-1 gap-2 md:grid-cols-2">
-                  <section
+                  <aside className="w-full shrink-0 p-1.5 md:w-64 md:overflow-y-auto md:border-r md:border-base-300 md:[&>section]:rounded-none md:[&>section]:border-0 md:[&>section]:bg-transparent">
+                    <WorkspaceSourcesPanel
+                      sources={sources}
+                      activeTarget={sourceTarget}
+                      onOpenTarget={setSourceTarget}
+                      onAddSource={() => addSource()}
+                      onAddDeviceFolder={() => addSource("local")}
+                    />
+                  </aside>
+                  <div
                     data-guide="workspace-source-pane"
-                    className="flex min-h-[40dvh] min-w-0 flex-col overflow-hidden rounded-xl border border-base-300 bg-base-100 md:min-h-0"
+                    className="flex min-h-0 min-w-0 flex-1 flex-col"
                   >
-                    <div className="flex items-center gap-2 border-b border-base-300 px-3 py-2">
-                      <Folder
-                        size={14}
-                        className="shrink-0 text-base-content/45"
-                      />
-                      <span className="truncate text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
-                        {t("workspace.source_browser.title")}
-                      </span>
-                    </div>
                     <WorkspaceSourceBrowser
                       sources={sources}
                       target={sourceTarget}
@@ -1763,28 +1752,30 @@ export default function WorkspacePage() {
                       onAddDeviceFolder={() => addSource("local")}
                       onRemoveSource={removeSelectedSource}
                       onToggleSourceReadOnly={toggleSourceReadOnly}
+                      embedded
                       className="min-h-0 flex-1"
                     />
-                  </section>
+                  </div>
+                </section>
 
-                  <section
-                    data-guide="workspace-root-pane"
-                    className="flex min-h-[60dvh] min-w-0 flex-col overflow-hidden rounded-xl border border-base-300 bg-base-100 md:min-h-0"
-                  >
-                    <div className="flex items-center justify-between gap-2 border-b border-base-300 px-3 py-2">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <Home
-                          size={14}
-                          className="shrink-0 text-base-content/45"
-                        />
-                        <span className="truncate text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
-                          {t("workspace.workspace_root")}
-                        </span>
-                      </div>
-                      <span className="min-w-0 truncate text-[10px] text-base-content/50">
-                        {rootPath}
+                <section
+                  data-guide="workspace-root-pane"
+                  className="flex min-h-[60dvh] min-w-0 flex-[2] flex-col overflow-hidden rounded-xl border border-base-300 bg-base-100 md:min-h-0"
+                >
+                  <div className="flex items-center justify-between gap-2 border-b border-base-300 px-3 py-2">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Home
+                        size={14}
+                        className="shrink-0 text-base-content/45"
+                      />
+                      <span className="truncate text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
+                        {t("workspace.workspace_root")}
                       </span>
                     </div>
+                    <span className="min-w-0 truncate text-[10px] text-base-content/50">
+                      {rootPath}
+                    </span>
+                  </div>
                   {!selectedProvider ? (
                     <div className="flex flex-1 flex-col">
                       <WorkspaceRootBrowser
@@ -2108,7 +2099,6 @@ export default function WorkspacePage() {
                     />
                   )}
                 </section>
-                </div>
 
               </div>
             </>
