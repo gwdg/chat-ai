@@ -142,29 +142,12 @@ app.use((err, req, res, next) => {
 });
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
-const corsOrigins = new Set(
-  String(process.env.CORS_ORIGINS || "")
-    .split(",")
-    .map((value) => value.trim().replace(/\/+$/, ""))
-    .filter(Boolean),
-);
-
-const corsOriginAllowed = (req) => {
-  const origin = req.headers.origin;
-  if (!origin) return true;
-  const normalized = String(origin).replace(/\/+$/, "");
-  if (corsOrigins.has(normalized)) return true;
-  try {
-    return new URL(normalized).host === req.headers.host;
-  } catch {
-    return false;
-  }
-};
-
+// Non-bridge routes keep the previous wildcard CORS behaviour. Bridge routes
+// own their allowlist in registerBridge, so this must never add a second
+// Access-Control-Allow-Origin header there.
 app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (!origin) return cors()(req, res, next);
-  return cors({ origin: corsOriginAllowed(req) ? origin : false })(req, res, next);
+  if (req.path.startsWith("/bridge")) return next();
+  return cors()(req, res, next);
 });
 
 // Function to process file with docling

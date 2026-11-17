@@ -1,6 +1,11 @@
 import Dexie from "dexie";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { migrateLegacyToolKeys, preserveStorageConsent } from "../index";
+import {
+  AppDB,
+  db,
+  migrateLegacyToolKeys,
+  preserveStorageConsent,
+} from "../index";
 import { storageAccessEnabled } from "../../agent/storageAccess";
 
 describe("migrateLegacyToolKeys", () => {
@@ -32,75 +37,72 @@ describe("migrateLegacyToolKeys", () => {
   });
 });
 
-const created = [];
-let counter = 0;
+const APP_DB_NAME = "app-conversations-db";
+const version17 = db._versions.find((version) => version._cfg.version === 17);
+const schema16 = Object.assign(
+  {},
+  ...db._versions
+    .filter((version) => version._cfg.version <= 16)
+    .map((version) => version._cfg.storesSource ?? {}),
+);
 
-const newDbName = () => {
-  const name = `v17-storage-consent-${counter++}`;
-  created.push(name);
-  return name;
+const seedV16 = async (rows) => {
+  const seed = new Dexie(APP_DB_NAME);
+  seed.version(16).stores(schema16);
+  await seed.open();
+  await seed.table("conversations").bulkAdd(rows);
+  seed.close();
 };
 
-const seedV16 = async (name, rows) => {
-  const db = new Dexie(name);
-  db.version(1).stores({ conversations: "id" });
-  await db.open();
-  await db.table("conversations").bulkAdd(rows);
-  db.close();
-  return name;
-};
-
-const openUpgraded = async (name) => {
-  const db = new Dexie(name);
-  db.version(1).stores({ conversations: "id" });
-  db.version(2).stores({}).upgrade(preserveStorageConsent);
-  await db.open();
-  return db;
+const openUpgraded = async () => {
+  const appDb = new AppDB();
+  await appDb.open();
+  expect(appDb.verno).toBe(17);
+  return appDb;
 };
 
 describe("v17 storage consent upgrade", () => {
-  beforeEach(() => {
-    created.length = 0;
+  beforeEach(async () => {
+    await Dexie.delete(APP_DB_NAME);
   });
 
   afterEach(async () => {
-    await Promise.all(created.map((name) => Dexie.delete(name)));
-    created.length = 0;
+    await Dexie.delete(APP_DB_NAME);
+  });
+
+  it("registers preserveStorageConsent as the version 17 upgrade", () => {
+    expect(version17).toBeTruthy();
+    expect(version17._cfg.contentUpgrade).toBe(preserveStorageConsent);
   });
 
   it("keeps an existing conversation's explicit opt-out", async () => {
-    const db = await openUpgraded(
-      await seedV16(newDbName(), [
-        { id: "chat-off", settings: { tools: { browser_storage: false } } },
-      ]),
-    );
-    const row = await db.table("conversations").get("chat-off");
+    await seedV16([
+      { id: "chat-off", settings: { tools: { browser_storage: false } } },
+    ]);
+    const appDb = await openUpgraded();
+    const row = await appDb.table("conversations").get("chat-off");
     expect(row.settings.tools.browser_storage).toBe(false);
     expect(storageAccessEnabled(row.settings)).toBe(false);
-    db.close();
+    appDb.close();
   });
 
   it("does not add a tools object to a conversation that had none", async () => {
-    const db = await openUpgraded(
-      await seedV16(newDbName(), [
-        { id: "chat-plain", settings: { temperature: 0.5 } },
-      ]),
-    );
-    const row = await db.table("conversations").get("chat-plain");
+    await seedV16([
+      { id: "chat-plain", settings: { temperature: 0.5 } },
+    ]);
+    const appDb = await openUpgraded();
+    const row = await appDb.table("conversations").get("chat-plain");
     expect(row.settings).toEqual({ temperature: 0.5 });
     expect("tools" in row.settings).toBe(false);
-    db.close();
+    appDb.close();
   });
 
   it("leaves a fresh conversation without a stored value enabled", async () => {
-    const db = await openUpgraded(
-      await seedV16(newDbName(), [
-        { id: "chat-fresh", settings: {} },
-      ]),
-    );
-    const row = await db.table("conversations").get("chat-fresh");
+    await seedV16([{ id: "chat-fresh", settings: {} }]);
+    const appDb = await openUpgraded();
+    const row = await appDb.table("conversations").get("chat-fresh");
     expect(row.settings).toEqual({});
     expect(storageAccessEnabled(row.settings)).toBe(true);
-    db.close();
+    appDb.close();
   });
 });

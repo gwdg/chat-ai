@@ -49,6 +49,35 @@ const createSession = (base, headers = {}) =>
     body: JSON.stringify({ workspaceId: "workspace-1" }),
   });
 
+const preflightAllowOrigins = async (base, origin) =>
+  new Promise((resolve, reject) => {
+    const target = new URL(`${base}/bridge/sessions`);
+    const request = http.request(
+      {
+        hostname: target.hostname,
+        port: target.port,
+        path: target.pathname,
+        method: "OPTIONS",
+        headers: {
+          Origin: origin,
+          "Access-Control-Request-Method": "POST",
+        },
+      },
+      (response) => {
+        const allowOrigins = [];
+        for (let index = 0; index < response.rawHeaders.length; index += 2) {
+          if (response.rawHeaders[index].toLowerCase() === "access-control-allow-origin") {
+            allowOrigins.push(response.rawHeaders[index + 1]);
+          }
+        }
+        response.resume();
+        response.once("end", () => resolve({ status: response.statusCode, allowOrigins }));
+      },
+    );
+    request.once("error", reject);
+    request.end();
+  });
+
 const expectUpgradeRejected = (url) =>
   new Promise((resolve, reject) => {
     const target = new URL(url);
@@ -135,6 +164,82 @@ test("session creation is limited to ten per minute per client IP", async () => 
     });
     assert.equal(response.status, 429);
     assert.ok(Number(response.headers.get("retry-after")) >= 1);
+  } finally {
+    await bridge.close();
+  }
+});
+
+test("wrong bridge keys are rate limited per client", async () => {
+  const bridge = await startBridge({ secret: "correct-secret" });
+  try {
+    const headers = {
+      "x-bridge-key": "wrong-secret",
+      "x-forwarded-for": "203.0.113.10, 10.0.0.1",
+    };
+    for (let index = 0; index < 10; index += 1) {
+      const response = await createSession(bridge.base, headers);
+      assert.equal(response.status, 401);
+    }
+    const limited = await createSession(bridge.base, headers);
+    assert.equal(limited.status, 429);
+    assert.ok(Number(limited.headers.get("retry-after")) >= 1);
+
+    const sameFirstHop = await createSession(bridge.base, {
+      "x-bridge-key": "wrong-secret",
+      "x-forwarded-for": "203.0.113.10, 10.0.0.2",
+    });
+    assert.equal(sameFirstHop.status, 429);
+  } finally {
+    await bridge.close();
+  }
+});
+
+test("a right bridge key still succeeds after 20 wrong keys from another client", async () => {
+  const bridge = await startBridge({ secret: "correct-secret" });
+  try {
+    for (let index = 0; index < 20; index += 1) {
+      const response = await createSession(bridge.base, {
+        "x-bridge-key": "wrong-secret",
+        "x-forwarded-for": "203.0.113.11",
+      });
+      assert.ok(response.status === 401 || response.status === 429);
+    }
+    const response = await createSession(bridge.base, {
+      "x-bridge-key": "correct-secret",
+      "x-forwarded-for": "203.0.113.12",
+    });
+    assert.equal(response.status, 200);
+  } finally {
+    await bridge.close();
+  }
+});
+
+test("bridge responses allow only same-host or configured origins", async () => {
+  const bridge = await startBridge({ secret: "correct-secret" });
+  try {
+    const evil = await createSession(bridge.base, {
+      "x-bridge-key": "correct-secret",
+      Origin: "https://evil.example",
+    });
+    assert.equal(evil.status, 200);
+    assert.equal(evil.headers.get("access-control-allow-origin"), null);
+
+    const sameHost = await createSession(bridge.base, {
+      "x-bridge-key": "correct-secret",
+      Origin: bridge.base,
+    });
+    assert.equal(sameHost.status, 200);
+    assert.equal(sameHost.headers.get("access-control-allow-origin"), bridge.base);
+
+    const evilPreflight = await preflightAllowOrigins(
+      bridge.base,
+      "https://evil.example",
+    );
+    assert.deepEqual(evilPreflight.allowOrigins, []);
+
+    const sameHostPreflight = await preflightAllowOrigins(bridge.base, bridge.base);
+    assert.equal(sameHostPreflight.status, 204);
+    assert.deepEqual(sameHostPreflight.allowOrigins, [bridge.base]);
   } finally {
     await bridge.close();
   }

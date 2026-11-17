@@ -1,4 +1,5 @@
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "crypto";
+import cors from "cors";
 import { WebSocketServer } from "ws";
 
 const SESSION_TTL_MS = 15 * 60 * 1000;
@@ -95,7 +96,10 @@ export const registerBridge = ({
   };
 
   const rateLimitFor = (req) => {
-    const ip = req.ip || req.socket?.remoteAddress || "unknown";
+    const forwarded = String(req.headers["x-forwarded-for"] ?? "")
+      .split(",")[0]
+      .trim();
+    const ip = forwarded || req.ip || req.socket?.remoteAddress || "unknown";
     const now = Date.now();
     const recent = (rateLimits.get(ip) ?? []).filter(
       (createdAt) => now - createdAt < RATE_WINDOW_MS,
@@ -250,7 +254,42 @@ export const registerBridge = ({
       );
     });
 
+  const corsOrigins = new Set(
+    String(process.env.CORS_ORIGINS || "")
+      .split(",")
+      .map((value) => value.trim().replace(/\/+$/, ""))
+      .filter(Boolean),
+  );
+
+  const corsOriginAllowed = (req) => {
+    const origin = req.headers.origin;
+    if (!origin) return false;
+    const normalized = String(origin).replace(/\/+$/, "");
+    if (corsOrigins.has(normalized)) return true;
+    try {
+      return new URL(normalized).host === req.headers.host;
+    } catch {
+      return false;
+    }
+  };
+
+  app.use(
+    "/bridge",
+    cors((req, callback) => {
+      const origin = req.headers.origin;
+      callback(null, {
+        origin: origin && corsOriginAllowed(req) ? origin : false,
+      });
+    }),
+  );
+
   app.post("/bridge/sessions", (req, res) => {
+    const limit = rateLimitFor(req);
+    if (!limit.ok) {
+      res.setHeader("Retry-After", String(limit.retryAfter));
+      return res.status(429).json({ error: "too many bridge sessions" });
+    }
+
     if (!anonymousAllowed) {
       if (!sharedSecret) {
         return res.status(503).json({ error: "bridge disabled" });
@@ -258,12 +297,6 @@ export const registerBridge = ({
       if (!safeEqual(String(req.headers["x-bridge-key"] ?? ""), sharedSecret)) {
         return res.status(401).json({ error: "bridge key rejected" });
       }
-    }
-
-    const limit = rateLimitFor(req);
-    if (!limit.ok) {
-      res.setHeader("Retry-After", String(limit.retryAfter));
-      return res.status(429).json({ error: "too many bridge sessions" });
     }
 
     const workspaceId = String(req.body?.workspaceId ?? "").trim();
