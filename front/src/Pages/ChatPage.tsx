@@ -22,7 +22,6 @@ import AgentFilePreviewPanel from "../components/Agent/AgentFilePreviewPanel";
 import ChatFilePreviewPanel from "../components/Conversation/ChatFilePreviewPanel";
 import PersonaChatBanner from "../components/Conversation/PersonaChatBanner";
 import HallucinationWarning from "../components/Conversation/HallucinationWarning";
-import CloseChatButton from "../components/Conversation/CloseChatButton";
 import TourManager from "../components/SettingsPanel/TourManager";
 import { useEffect, useState } from "react";
 import {
@@ -174,13 +173,6 @@ export default function ChatPage() {
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             {localState?.persona && (
               <>
-                <div className="mx-auto flex w-full shrink-0 justify-end px-1.5 md:max-w-[85vw] xl:max-w-[1300px]">
-                  <CloseChatButton
-                    localState={localState}
-                    setLocalState={setLocalState}
-                    withLabel
-                  />
-                </div>
                 <div className="mx-auto w-full md:max-w-[85vw] xl:max-w-[1300px]">
                   <HallucinationWarning />
                 </div>
@@ -193,7 +185,6 @@ export default function ChatPage() {
                 setLocalState={setLocalState}
                 userData={userData}
                 modelsData={modelsData}
-                hideCloseButton={Boolean(localState?.persona)}
               />
             </div>
           </div>

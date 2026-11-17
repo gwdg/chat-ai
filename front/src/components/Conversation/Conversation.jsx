@@ -363,16 +363,6 @@ export default function Conversation({
       className={`w-full flex flex-col gap-2 relative min-h-0 h-full overflow-hidden
                   ${emptyConversation ? "justify-start" : "justify-between"}`}
     >
-      {!hideCloseButton && (
-        <div className="mx-auto flex w-full shrink-0 justify-end px-1.5 md:max-w-[85vw] xl:max-w-[1300px]">
-          <CloseChatButton
-            localState={localState}
-            setLocalState={setLocalState}
-            withLabel
-          />
-        </div>
-      )}
-
       {/* Empty conversation */}
       <div
         className={`flex flex-col space-y-16 md:max-h-[45vh] xl:max_h-[45vh] justify-end
@@ -539,16 +529,21 @@ export default function Conversation({
               </Tooltip>
             </div>
           )}
-          {/* Floating button - bottom right above the prompt box */}
-          {localState?.messages?.length >= 4 && (
-              <div className="absolute bottom-3 right-5 md:right-3 z-10 flex items-end">
-                {/* Undo Button */}
-                <UndoButton
-                  localState={localState}
-                  setLocalState={setLocalState}
-                />
-              </div>
-          )}
+          {/* Floating actions - bottom right above the prompt box */}
+          <div className="absolute bottom-3 right-5 md:right-3 z-10 flex flex-col items-center gap-2">
+            {!hideCloseButton && (
+              <CloseChatButton
+                localState={localState}
+                setLocalState={setLocalState}
+              />
+            )}
+            {localState?.messages?.length >= 4 && (
+              <UndoButton
+                localState={localState}
+                setLocalState={setLocalState}
+              />
+            )}
+          </div>
         </div>
       </div>
 

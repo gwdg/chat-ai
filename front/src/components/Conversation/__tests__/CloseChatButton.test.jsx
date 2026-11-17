@@ -22,24 +22,12 @@ vi.mock("../../../db", () => ({
 
 import CloseChatButton from "../CloseChatButton";
 
-const POSITIONING_CLASS = /(^|\s)(absolute|fixed)(\s|$)|(^|\s)z-\d+/;
-
 const renderButton = (localState) => {
   const setLocalState = vi.fn();
   const view = render(
     <CloseChatButton localState={localState} setLocalState={setLocalState} />,
   );
   return { ...view, setLocalState };
-};
-
-const expectPlainFlow = (container, element) => {
-  let node = element;
-  while (node) {
-    expect(POSITIONING_CLASS.test(node.className || "")).toBe(false);
-    expect(node.className || "").not.toContain("pointer-events-none");
-    if (node === container) break;
-    node = node.parentElement;
-  }
 };
 
 beforeEach(() => {
@@ -50,19 +38,23 @@ beforeEach(() => {
 });
 
 describe("CloseChatButton", () => {
-  it("renders a plain-flow close control with no overlay positioning", () => {
+  it("renders one circular close control with no overlay class of its own", () => {
     const { container } = renderButton({ id: "chat-1" });
     const button = screen.getByRole("button", { name: "Close chat" });
 
     expect(button).toHaveAttribute("data-guide", "close-chat");
-    expect(button).toHaveClass(
-      "btn",
-      "btn-ghost",
-      "btn-sm",
-      "btn-square",
-      "rounded-full",
-    );
-    expectPlainFlow(container, button);
+    expect(button).toHaveClass("btn", "btn-circle", "shadow-lg");
+    expect(button.className).not.toMatch(/(^|\s)(absolute|fixed|z-\d+)(\s|$)/);
+    expect(button.querySelector("svg")).toBeInTheDocument();
+
+    expect(container.querySelectorAll("button")).toHaveLength(1);
+    expect(container.firstElementChild.tagName).toBe("SPAN");
+    expect(container.firstElementChild).toBe(button.parentElement);
+  });
+
+  it("renders nothing without a conversation id", () => {
+    const { container } = renderButton({});
+    expect(container).toBeEmptyDOMElement();
   });
 
   it("asks to delete a normal chat", async () => {

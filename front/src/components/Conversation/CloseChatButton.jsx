@@ -9,12 +9,7 @@ import { deleteConversation } from "../../db";
 import { getDefaultConversation } from "../../utils/conversationUtils";
 import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
 
-export default function CloseChatButton({
-  localState,
-  setLocalState,
-  className = "",
-  withLabel = false,
-}) {
+export default function CloseChatButton({ localState, setLocalState }) {
   const { t } = useTranslation();
   const { confirmAction } = useModal();
   const navigate = useNavigate();
@@ -69,21 +64,16 @@ export default function CloseChatButton({
     : t("conversation.close_chat");
 
   return (
-    <div className={`shrink-0 ${className}`.trim()}>
-      <Tooltip text={label}>
-        <button
-          type="button"
-          onClick={handleClose}
-          data-guide="close-chat"
-          aria-label={label}
-          className={`btn btn-ghost btn-sm rounded-full bg-base-100/80 text-base-content/70 backdrop-blur hover:bg-error/10 hover:text-error ${
-            withLabel ? "gap-1.5 px-2.5" : "btn-square"
-          }`}
-        >
-          <X className="h-4 w-4 shrink-0" />
-          {withLabel && <span className="text-xs">{label}</span>}
-        </button>
-      </Tooltip>
-    </div>
+    <Tooltip text={label}>
+      <button
+        type="button"
+        onClick={handleClose}
+        aria-label={label}
+        data-guide="close-chat"
+        className="btn btn-circle shadow-lg"
+      >
+        <X className="cursor-pointer h-5 w-5 text-base-content/70 hover:text-error transition-colors" />
+      </button>
+    </Tooltip>
   );
 }
