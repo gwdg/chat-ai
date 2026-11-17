@@ -37,7 +37,6 @@ export default function Conversation({
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [showTopScrollButtons, setShowTopScrollButtons] = useState(false);
-  const [showCloseButton, setShowCloseButton] = useState(true);
   const [highlightedMessageId, setHighlightedMessageId] = useState(null);
 
   // Refs
@@ -76,23 +75,11 @@ export default function Conversation({
       prev !== shouldShowBottom ? shouldShowBottom : prev
     );
 
-    const containerTop = el.getBoundingClientRect().top;
     const shouldShowTop = overflow && el.scrollTop > 8;
     setShowTopScrollButtons((prev) =>
       prev !== shouldShowTop ? shouldShowTop : prev
     );
 
-    const firstMessage = Object.keys(messageRefs.current)
-      .map(Number)
-      .sort((a, b) => a - b)
-      .map((index) => messageRefs.current[index])
-      .find((element) => element && element.getBoundingClientRect().height > 0);
-    const isOnFirstMessage =
-      !firstMessage ||
-      firstMessage.getBoundingClientRect().bottom > containerTop + 8;
-    setShowCloseButton((prev) =>
-      prev !== isOnFirstMessage ? isOnFirstMessage : prev
-    );
   }, [checkIfAtBottom, hasOverflow]);
 
   const scrollToBottom = useCallback((behavior = "auto") => {
@@ -376,8 +363,14 @@ export default function Conversation({
       className={`w-full flex flex-col gap-2 relative min-h-0 h-full overflow-hidden
                   ${emptyConversation ? "justify-start" : "justify-between"}`}
     >
-      {showCloseButton && !hideCloseButton && (
-        <CloseChatButton localState={localState} setLocalState={setLocalState} />
+      {!hideCloseButton && (
+        <div className="mx-auto flex w-full shrink-0 justify-end px-1.5 md:max-w-[85vw] xl:max-w-[1300px]">
+          <CloseChatButton
+            localState={localState}
+            setLocalState={setLocalState}
+            withLabel
+          />
+        </div>
       )}
 
       {/* Empty conversation */}

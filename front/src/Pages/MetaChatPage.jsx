@@ -247,7 +247,6 @@ export default function MetaChatPage() {
                     <CloseChatButton
                       localState={localState}
                       setLocalState={setLocalState}
-                      inline
                     />
                   </div>
                 </div>
