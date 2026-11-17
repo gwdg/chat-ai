@@ -165,7 +165,7 @@ export const featureGuides = {
         completeOnTargetClick: true,
       },
       {
-        target: '[data-guide="attach-from-workspace"]',
+        target: '[data-guide="attach-file"]',
         textKey: "feature_guide.attach_from_workspace.step2",
         check: hasAttachmentCard,
       },

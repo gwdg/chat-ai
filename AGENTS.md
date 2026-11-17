@@ -501,6 +501,10 @@ between the sections in `SidebarContent`. Every header starts with the collapse 
 12 px section icon (chat bubble, workspace grid, robot, server; Pinned uses its pin there), so the
 sections stay distinguishable while collapsed. A new sidebar section should reuse that pattern,
 icon included.
+Agents and MCP Servers are advanced sections: both, with their dividers and pinned agent rows, are
+rendered only while `user_settings.advanced_mode` is on (`selectAdvancedMode`, default off). The one
+switch lives in the prompt box's chat settings panel (`SettingsPanel/SettingsContent.jsx`,
+`data-guide="advanced-mode-preference"`); with it off the sidebar is chats, topics and workspaces.
 
 ### 4.16 Meta chat works from conversation summaries, not messages
 
@@ -814,7 +818,10 @@ only creates the source from the footer's OK, so the chosen folder is visible be
 written; OK stays disabled while no folder is chosen.
 The Local tools panel was removed;
 GWDG Tools now contains the document-creation and image-analysis toggles, while the tool-call limit
-moved to the Workspace popover. The Browser agent is the default and only workflow, so codemode is
+moved to the Workspace popover.
+GWDG Tools renders one row per tool in a list (`data-guide="tools-grid"` is the `<ul>`): icon and
+label on the left, an on/off `toggle` on the right, warning triangles kept for web search and MCP.
+The Browser agent is the default and only workflow, so codemode is
 always on. When a chat has a workspace link, `runAgent` uses
 `workspace/agentVfs.ts` over that workspace's root and mounts for the file tools.
 `agent/workspaceTools.ts` adds the workspace-scoped tools that the plain file tools cannot cover:
@@ -892,6 +899,10 @@ existing chat is linked with the link control in the workspace page's Chats pane
 sidebar row. `workspace_agents` is the matching many-to-many link
 between workspaces and localStorage-backed agent entries; the workspace page's Agents panel attaches
 or detaches them, and links whose agent no longer exists are removed when that page loads.
+Files still come in through one paperclip: when the chat has at least one workspace it opens a small
+menu with **From device** and **From workspace** (`conversation.prompt.attach_device` /
+`attach_workspace`), and the workspace tree is a second view of that same panel; with no workspace
+the paperclip goes straight to the file picker. The separate workspace-attach icon is gone.
 `workspace_agent_sessions` (Dexie v13) is the session-level link: it stores
 `{workspaceId, agentId, sessionId}`, so a workspace shows only the sessions attached to it instead
 of every session of an agent. The workspace page's Agents panel, the sidebar's Workspace section
