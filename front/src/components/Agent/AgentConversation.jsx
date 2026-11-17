@@ -427,9 +427,14 @@ export default function AgentConversation({
 
   const refreshPermissions = useCallback(async () => {
     const currentAgent = agentRef.current;
+    const agentId = currentAgent?.id;
     const sessionId = currentAgent?.sessionId;
     if (!sessionId) return [];
+    const isStale = () =>
+      agentRef.current?.id !== agentId ||
+      agentRef.current?.sessionId !== sessionId;
     const next = await listOpencodePermissions(currentAgent, sessionId);
+    if (isStale()) return [];
     const remaining = [];
     for (const request of next) {
       const policy = matchPermissionPolicy(
@@ -449,6 +454,7 @@ export default function AgentConversation({
         policy.decision,
       )
         .then(() => {
+          if (isStale()) return;
           setPermissions((current) =>
             current.filter((item) => item.id !== request.id),
           );
@@ -464,11 +470,14 @@ export default function AgentConversation({
 
   const refreshForms = useCallback(async () => {
     const currentAgent = agentRef.current;
-    if (!currentAgent?.sessionId) return [];
-    const next = await listOpencodeForms(
-      currentAgent,
-      currentAgent.sessionId,
-    );
+    const agentId = currentAgent?.id;
+    const sessionId = currentAgent?.sessionId;
+    if (!sessionId) return [];
+    const isStale = () =>
+      agentRef.current?.id !== agentId ||
+      agentRef.current?.sessionId !== sessionId;
+    const next = await listOpencodeForms(currentAgent, sessionId);
+    if (isStale()) return [];
     setForms(next);
     const known = new Set(formHistoryRef.current.map((entry) => entry.id));
     const additions = next

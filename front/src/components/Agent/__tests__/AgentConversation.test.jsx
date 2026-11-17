@@ -659,6 +659,39 @@ describe("AgentConversation control commands", () => {
     );
   });
 
+  it("drops permission results that resolve after switching sessions", async () => {
+    let resolveFirst;
+    const first = new Promise((resolve) => {
+      resolveFirst = resolve;
+    });
+    apiMocks.permissions.mockImplementation((_currentAgent, sessionId) =>
+      sessionId === "session-1" ? first : Promise.resolve([]),
+    );
+    const nextAgent = { ...agent, sessionId: "session-2" };
+    const { rerender } = render(<AgentConversation agent={agent} />);
+
+    await waitFor(() =>
+      expect(apiMocks.permissions).toHaveBeenCalledWith(agent, "session-1"),
+    );
+    rerender(
+      <MemoryRouter>
+        <AgentConversation agent={nextAgent} />
+      </MemoryRouter>,
+    );
+    await waitFor(() =>
+      expect(apiMocks.permissions).toHaveBeenCalledWith(
+        nextAgent,
+        "session-2",
+      ),
+    );
+
+    await act(async () => {
+      resolveFirst([{ id: "perm-a", action: "bash", resources: ["ls"] }]);
+    });
+
+    expect(screen.queryByText(/bash/)).not.toBeInTheDocument();
+  });
+
   it("interrupts a running turn", async () => {
     apiMocks.send.mockImplementation(() => new Promise(() => {}));
     render(<AgentConversation agent={agent} />);

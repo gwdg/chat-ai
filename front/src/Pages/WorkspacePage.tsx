@@ -307,6 +307,7 @@ export default function WorkspacePage() {
   const rootRequestRef = useRef(0);
   const rootTreeRequestRef = useRef(0);
   const previewRequestRef = useRef(0);
+  const workspaceGenerationRef = useRef(0);
   const mountedRef = useRef(true);
 
   const selectedSource = sources.find((source) => source.id === selectedSourceId);
@@ -324,6 +325,7 @@ export default function WorkspacePage() {
     sourceId === rootSourceId ? rootProvider : providers.get(sourceId);
 
   useEffect(() => {
+    workspaceGenerationRef.current += 1;
     entriesRequestRef.current += 1;
     rootRequestRef.current += 1;
     rootTreeRequestRef.current += 1;
@@ -422,7 +424,11 @@ export default function WorkspacePage() {
 
   const loadEntries = useCallback(
     async (append = false) => {
+      const generation = workspaceGenerationRef.current;
       const request = ++entriesRequestRef.current;
+      const isStale = () =>
+        generation !== workspaceGenerationRef.current ||
+        request !== entriesRequestRef.current;
       if (!selectedProvider) {
         setEntries([]);
         setNextCursor(undefined);
@@ -440,16 +446,16 @@ export default function WorkspacePage() {
           currentPath,
           append ? nextCursor : undefined,
         );
-        if (request !== entriesRequestRef.current) return;
+        if (isStale()) return;
         setEntries((current) => (append ? [...current, ...page.entries] : page.entries));
         setNextCursor(page.next);
         void refreshQuota(selectedProvider);
       } catch (error) {
-        if (request !== entriesRequestRef.current) return;
+        if (isStale()) return;
         setListError(error instanceof Error ? error.message : String(error));
         if (!append) setEntries([]);
       } finally {
-        if (request === entriesRequestRef.current) setLoading(false);
+        if (!isStale()) setLoading(false);
       }
     },
     [selectedProvider, currentPath, nextCursor, refreshQuota],
@@ -493,7 +499,11 @@ export default function WorkspacePage() {
   );
 
   const loadRoot = useCallback(async () => {
+    const generation = workspaceGenerationRef.current;
     const request = ++rootRequestRef.current;
+    const isStale = () =>
+      generation !== workspaceGenerationRef.current ||
+      request !== rootRequestRef.current;
     if (!rootProvider) {
       setRootEntries([]);
       setRootLoading(false);
@@ -504,17 +514,17 @@ export default function WorkspacePage() {
     setRootError("");
     try {
       const entries = await listRoot(rootPath);
-      if (request !== rootRequestRef.current) return;
+      if (isStale()) return;
       setRootEntries(entries);
       // The left panel always lists the workspace's top level, so keep it in sync while
       // the centre browser is at the root.
       if (rootPath === "/") setRootTreeEntries(entries);
     } catch (error) {
-      if (request !== rootRequestRef.current) return;
+      if (isStale()) return;
       setRootError(error instanceof Error ? error.message : String(error));
       setRootEntries([]);
     } finally {
-      if (request === rootRequestRef.current) setRootLoading(false);
+      if (!isStale()) setRootLoading(false);
     }
   }, [rootProvider, rootPath, listRoot]);
 
@@ -523,13 +533,17 @@ export default function WorkspacePage() {
   }, [loadRoot]);
 
   const loadRootTree = useCallback(async () => {
+    const generation = workspaceGenerationRef.current;
     const request = ++rootTreeRequestRef.current;
+    const isStale = () =>
+      generation !== workspaceGenerationRef.current ||
+      request !== rootTreeRequestRef.current;
     try {
       const entries = await listRoot("/");
-      if (request !== rootTreeRequestRef.current) return;
+      if (isStale()) return;
       setRootTreeEntries(entries);
     } catch (error) {
-      if (request !== rootTreeRequestRef.current) return;
+      if (isStale()) return;
       setRootTreeEntries([]);
       setRootError(error instanceof Error ? error.message : String(error));
     }
@@ -558,6 +572,7 @@ export default function WorkspacePage() {
   };
 
   const closePreview = useCallback(() => {
+    previewRequestRef.current += 1;
     if (previewUrlRef.current) {
       URL.revokeObjectURL(previewUrlRef.current);
       previewUrlRef.current = null;
@@ -835,11 +850,16 @@ export default function WorkspacePage() {
       return;
     }
     closePreview();
+    const generation = workspaceGenerationRef.current;
     const request = ++previewRequestRef.current;
+    const isStale = () =>
+      generation !== workspaceGenerationRef.current ||
+      request !== previewRequestRef.current ||
+      !mountedRef.current;
     setPreview({ entry, loading: true });
     try {
       if ((entry.size ?? 0) > PREVIEW_LIMIT) {
-        if (request !== previewRequestRef.current) return;
+        if (isStale()) return;
         setPreview({
           entry,
           loading: false,
@@ -849,7 +869,7 @@ export default function WorkspacePage() {
       }
       if (isTextFile(entry)) {
         const bytes = await readAll(await provider.read(entry.path));
-        if (request !== previewRequestRef.current || !mountedRef.current) return;
+        if (isStale()) return;
         setPreview({
           entry,
           loading: false,
@@ -860,14 +880,14 @@ export default function WorkspacePage() {
       const bytes = await readAll(await provider.read(entry.path));
       const blob = new Blob([bytes], { type: entry.mime || "application/octet-stream" });
       const url = URL.createObjectURL(blob);
-      if (request !== previewRequestRef.current || !mountedRef.current) {
+      if (isStale()) {
         URL.revokeObjectURL(url);
         return;
       }
       previewUrlRef.current = url;
       setPreview({ entry, loading: false, url });
     } catch (error) {
-      if (request !== previewRequestRef.current || !mountedRef.current) return;
+      if (isStale()) return;
       setPreview({
         entry,
         loading: false,
