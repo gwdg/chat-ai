@@ -23,6 +23,7 @@ import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
 import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
 import WorkspaceRootTree from "../components/Workspace/WorkspaceRootTree";
 import WorkspaceRootBrowser from "../components/Workspace/WorkspaceRootBrowser";
+import SourcePalette from "../components/Workspace/SourcePalette";
 import FilePreviewPanel from "../components/DocumentPanel/FilePreviewPanel";
 import AgentSessionList from "../components/Agent/AgentSessionList";
 import { activeSessionIdFor, useOpenAgent } from "../hooks/useOpenAgent";
@@ -38,6 +39,7 @@ import { useSelector } from "react-redux";
 import { selectUserSettings } from "../Redux/reducers/userSettingsReducer";
 import { getDefaultConversation } from "../utils/conversationUtils";
 import { useAgents } from "../agents/agentStore";
+import { hasLocalMcpServerValue } from "../agent/mcp";
 import {
   fetchAgentSessions,
   sessionSummariesFor,
@@ -314,6 +316,9 @@ export default function WorkspacePage() {
   // The per-chat storage sources are derived mounts of attached chats
   // (`/chats/<id>`), not storage the user added, so the list leaves them out.
   const listedSources = visibleStorageSources(sources);
+  const localMcpEnabled =
+    userSettings?.tools?.mcp === true &&
+    hasLocalMcpServerValue(userSettings?.mcp_servers);
   const selectedProvider = selectedSourceId
     ? providers.get(selectedSourceId)
     : undefined;
@@ -1173,11 +1178,49 @@ export default function WorkspacePage() {
     }
   };
 
-  const addSource = () => {
+  const handleSourceAdded = (result?: {
+    sourceId?: string;
+    mountId?: string;
+    path?: string;
+  }) => {
+    if (result?.sourceId) {
+      setActiveMountId(result.mountId ?? null);
+      setSelectedSourceId(result.sourceId);
+      setPathBySource((current) => ({ ...current, [result.sourceId!]: "/" }));
+      return;
+    }
+    setActiveMountId(null);
+    setSelectedSourceId(null);
+    setRootPath(result?.path ? normalizePath(result.path) : "/");
+  };
+
+  const addSource = (initialKind?: "local" | "mcp") => {
     openModal("workspaceAddSource", {
       workspaceId,
-      onAdded: () => setSelectedSourceId(null),
+      initialKind,
+      onAdded: (id: string) => handleSourceAdded({ sourceId: id }),
     });
+  };
+
+  const pickSourceAction = (action: "local" | "git" | "mcp") => {
+    if (!workspaceId) return;
+    if (action === "local") {
+      openModal("workspaceMountFolder", {
+        workspaceId,
+        mounts,
+        onAdded: handleSourceAdded,
+      });
+      return;
+    }
+    if (action === "git") {
+      openModal("workspaceCloneRepo", {
+        workspaceId,
+        mounts,
+        onAdded: handleSourceAdded,
+      });
+      return;
+    }
+    addSource("mcp");
   };
 
   const addFolder = (sourceId?: string) => {
@@ -1870,7 +1913,7 @@ export default function WorkspacePage() {
                       </button>
                       <button
                         type="button"
-                        onClick={addSource}
+                        onClick={() => addSource()}
                         className="flex h-6 w-6 items-center justify-center rounded-md text-base-content/50 transition hover:bg-base-200 hover:text-accent"
                         title={t("workspace.add_source")}
                         aria-label={t("workspace.add_source")}
@@ -1883,7 +1926,7 @@ export default function WorkspacePage() {
                     {listedSources.length === 0 ? (
                       <button
                         type="button"
-                        onClick={addSource}
+                        onClick={() => addSource()}
                         className="flex w-full flex-col items-start gap-1 rounded-lg border border-dashed border-base-300 px-3 py-2 text-left text-xs text-base-content/60 transition hover:border-accent/40 hover:bg-base-200/60"
                       >
                         {t("workspace.no_sources")}
@@ -2067,6 +2110,12 @@ export default function WorkspacePage() {
                     )}
                   </div>
                   )}
+                  <SourcePalette
+                    mcpEnabled={localMcpEnabled}
+                    onPick={pickSourceAction}
+                    showLabel
+                    className="mt-2 border-t border-base-300 px-1 pt-2 pb-1"
+                  />
                   </div>
                   <div className="border-t border-base-300 p-1.5">
                     <div className="flex items-center justify-between px-1">

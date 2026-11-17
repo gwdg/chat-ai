@@ -13,10 +13,16 @@ import { addLocalSource, pickDirectory } from "../../workspace/localWorkspace";
 
 const KINDS: SourceKind[] = ["local", "mcp"];
 
-export default function AddSourceModal({ isOpen, onClose, workspaceId, onAdded }) {
+export default function AddSourceModal({
+  isOpen,
+  onClose,
+  workspaceId,
+  onAdded,
+  initialKind,
+}) {
   const { t } = useTranslation();
   const userSettings = useSelector(selectUserSettings);
-  const [kind, setKind] = useState<SourceKind>("local");
+  const [kind, setKind] = useState<SourceKind>(initialKind ?? "local");
   const [label, setLabel] = useState("");
   const [readOnly, setReadOnly] = useState(false);
   const [handle, setHandle] = useState<FileSystemDirectoryHandle | null>(null);
@@ -55,7 +61,7 @@ export default function AddSourceModal({ isOpen, onClose, workspaceId, onAdded }
     kind === "local" ? !!handle && !localBlocker : kind === "mcp" ? !!mcpEndpoint.trim() : true;
 
   const reset = () => {
-    setKind("local");
+    setKind(initialKind ?? "local");
     setLabel("");
     setReadOnly(false);
     setHandle(null);
