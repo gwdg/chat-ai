@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [staging]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            front/package-lock.json
+            back/package-lock.json
+            e2e/package-lock.json
+      - name: Copy sample front config
+        run: cp secrets/front.json.sample secrets/front.json
+      - name: Front unit tests and build
+        run: cd front && npm ci && npx vitest run && npm run build
+      - name: Backend bridge tests
+        run: cd back && npm ci && node --test test-bridge.mjs
+      - name: E2E typecheck
+        run: cd e2e && npm ci && npx tsc --noEmit

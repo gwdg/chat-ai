@@ -7,7 +7,7 @@
 // unusable even though any chat model can read it.
 
 /** File kinds whose bytes are plain text (see `utils/attachments.js#getFileType`). */
-export const TEXT_KINDS = new Set(["text", "markdown", "csv", "code"]);
+const TEXT_KINDS = new Set(["text", "markdown", "csv", "code"]);
 
 /**
  * A text file carries its own content; a pdf, docx or image only has readable text once

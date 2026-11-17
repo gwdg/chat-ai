@@ -1,4 +1,4 @@
-export type ConversationSortOrder =
+type ConversationSortOrder =
   | "created_desc"
   | "created_asc"
   | "updated_desc"

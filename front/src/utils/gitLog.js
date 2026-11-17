@@ -16,8 +16,6 @@ export const isInternalShellCommand = (value) => {
   return INTERNAL_SHELL_MARKERS.some((marker) => command.includes(marker));
 };
 
-export const isInternalGitLogCommand = isInternalShellCommand;
-
 /** Git log previews keep the newest commits only; the reflog can be arbitrarily long. */
 export const GIT_LOG_LIMIT = 10;
 

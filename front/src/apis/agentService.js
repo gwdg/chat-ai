@@ -128,20 +128,6 @@ export async function createServiceAgent({ name } = {}) {
   };
 }
 
-export async function startServiceAgent(agentId) {
-  const agent = await request(
-    `/agents/${encodeURIComponent(agentId)}/start`,
-    { method: "POST" },
-  );
-  if (agent?.status !== "running") {
-    throw new Error(
-      agent?.last_error ||
-        `the agent service reports status ${agent?.status ?? "unknown"}`,
-    );
-  }
-  return agent;
-}
-
 export async function deleteServiceAgent(agentId) {
   try {
     await request(`/agents/${encodeURIComponent(agentId)}`, {
@@ -151,8 +137,4 @@ export async function deleteServiceAgent(agentId) {
     // A 404 means the service already forgot it; there is nothing to stop.
     if (!/responded with 404\b/.test(String(error?.message))) throw error;
   }
-}
-
-export async function listServiceAgents() {
-  return (await request("/agents")) ?? [];
 }

@@ -1190,7 +1190,7 @@ it is saved (creates the service agent, stores its proxy prefix, drops the basic
 There is no config flag that bypasses this; a LAN/IP deployment counts as
 deployment.
 
-The [SAIA agent service](agent-service/README.md) has **no config key**: the browser always calls it
+The SAIA agent service, which lives in its own repository, has **no config key**: the browser always calls it
 at `/agents` on the app's own origin, which the SAIA gateway routes to the service. `AddAgentModal`
 defaults to a service-managed agent: it `POST`s `/agents`, stores the returned id as
 `serviceAgentId` and `/agents/<id>/opencode` as `serverUrl`, and stores no basic-auth password (the
