@@ -10,6 +10,7 @@ import {
 } from "../../agent/arcanaTools";
 import { defaultCapabilities } from "../capabilities";
 import { normalizePath } from "../paths";
+import { fromBase64, readAll, streamOf } from "../bytes";
 import type { DirectoryPage, FileProvider } from "./types";
 import { WorkspaceError } from "./types";
 
@@ -75,42 +76,6 @@ const toBase64 = (data: Uint8Array): string => {
   }
   return btoa(binary);
 };
-
-const fromBase64 = (value: string): Uint8Array => {
-  const binary = atob(value);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-  return bytes;
-};
-
-const readAll = async (stream: ReadableStream<Uint8Array>): Promise<Uint8Array> => {
-  const reader = stream.getReader();
-  const chunks: Uint8Array[] = [];
-  let length = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (value) {
-      chunks.push(value);
-      length += value.length;
-    }
-  }
-  const data = new Uint8Array(length);
-  let offset = 0;
-  for (const part of chunks) {
-    data.set(part, offset);
-    offset += part.length;
-  }
-  return data;
-};
-
-const toStream = (data: Uint8Array): ReadableStream<Uint8Array> =>
-  new ReadableStream<Uint8Array>({
-    start(controller) {
-      controller.enqueue(data);
-      controller.close();
-    },
-  });
 
 const page = (entries: WorkspaceFileEntry[], cursor?: string): DirectoryPage => {
   const start = cursor ? Number(cursor) : 0;
@@ -242,7 +207,7 @@ export class ArcanaFilesystemProvider implements FileProvider {
     const result = await readArcanaFile(arcana, name, "base64");
     const data = fromBase64(String(result?.content ?? ""));
     const sliced = range ? data.slice(range.start, range.end) : data;
-    return toStream(sliced);
+    return streamOf(sliced);
   }
 
   async write(
@@ -304,7 +269,7 @@ export class ArcanaFilesystemProvider implements FileProvider {
 
   async copy(from: string, to: string) {
     const content = await readAll(await this.read(from));
-    await this.write(to, toStream(content), {
+    await this.write(to, streamOf(content), {
       size: content.length,
       overwrite: false,
     });

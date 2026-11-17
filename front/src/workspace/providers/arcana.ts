@@ -9,6 +9,7 @@ import {
 } from "../../agent/arcanaTools";
 import { defaultCapabilities } from "../capabilities";
 import { baseName, normalizePath } from "../paths";
+import { fromBase64, readAll } from "../bytes";
 import type { DirectoryPage, FileProvider, QuotaInfo } from "./types";
 import { WorkspaceError } from "./types";
 
@@ -52,34 +53,6 @@ const toBase64 = (data: Uint8Array): string => {
     binary += String.fromCharCode(...data.subarray(i, i + chunk));
   }
   return btoa(binary);
-};
-
-const fromBase64 = (value: string): Uint8Array => {
-  const binary = atob(value);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-  return bytes;
-};
-
-const readAll = async (stream: ReadableStream<Uint8Array>): Promise<Uint8Array> => {
-  const reader = stream.getReader();
-  const chunks: Uint8Array[] = [];
-  let length = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (value) {
-      chunks.push(value);
-      length += value.length;
-    }
-  }
-  const data = new Uint8Array(length);
-  let offset = 0;
-  for (const part of chunks) {
-    data.set(part, offset);
-    offset += part.length;
-  }
-  return data;
 };
 
 export class ArcanaProvider implements FileProvider {

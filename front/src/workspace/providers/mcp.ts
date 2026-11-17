@@ -1,6 +1,7 @@
 import type { WorkspaceCapabilities, WorkspaceFileEntry } from "../../db/dbTypes";
 import { READ_ONLY_CAPABILITIES } from "../capabilities";
 import { baseName, joinPath, normalizePath } from "../paths";
+import { streamOf } from "../bytes";
 import type { DirectoryPage, FileProvider, QuotaInfo } from "./types";
 import { WorkspaceError } from "./types";
 
@@ -14,14 +15,6 @@ const COPY_TOOLS = ["copy_file", "filesystem_copy_file"];
 
 const pick = (tools: Set<string>, names: string[]) =>
   names.find((name) => tools.has(name));
-
-const toBytes = (data: Uint8Array): ReadableStream<Uint8Array> =>
-  new ReadableStream<Uint8Array>({
-    start(controller) {
-      controller.enqueue(data);
-      controller.close();
-    },
-  });
 
 export class McpProvider implements FileProvider {
   readonly kind = "mcp" as const;
@@ -159,8 +152,8 @@ export class McpProvider implements FileProvider {
     });
     const payload = result?.structuredContent ?? result;
     const content = payload?.content ?? payload?.data ?? payload;
-    if (content instanceof Uint8Array) return toBytes(content);
-    if (content instanceof ArrayBuffer) return toBytes(new Uint8Array(content));
+    if (content instanceof Uint8Array) return streamOf(content);
+    if (content instanceof ArrayBuffer) return streamOf(new Uint8Array(content));
     const text =
       typeof content === "string"
         ? content
@@ -169,7 +162,7 @@ export class McpProvider implements FileProvider {
               .map((part: any) => (part?.type === "text" ? part.text : ""))
               .join("")
           : String(content ?? "");
-    return toBytes(new TextEncoder().encode(text));
+    return streamOf(new TextEncoder().encode(text));
   }
 
   async write(

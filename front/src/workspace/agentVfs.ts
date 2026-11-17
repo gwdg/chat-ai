@@ -4,6 +4,7 @@ import type { WorkspaceMountRow } from "../db/dbTypes";
 import type { BrowserProvider } from "./providers/browser";
 import type { FileProvider } from "./providers/types";
 import { joinPath, normalizePath } from "./paths";
+import { streamOf, toBytes } from "./bytes";
 
 type MountBinding = {
   mount: WorkspaceMountRow;
@@ -12,37 +13,6 @@ type MountBinding = {
 
 const UPLOAD_PREFIX = "/uploads";
 const READ_ONLY_MESSAGE = "That mount is read-only.";
-
-const toBytes = async (stream: ReadableStream<Uint8Array>): Promise<Uint8Array> => {
-  const reader = stream.getReader();
-  const chunks: Uint8Array[] = [];
-  let length = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (value) {
-      chunks.push(value);
-      length += value.length;
-    }
-  }
-  const data = new Uint8Array(length);
-  let offset = 0;
-  for (const chunk of chunks) {
-    data.set(chunk, offset);
-    offset += chunk.length;
-  }
-  return data;
-};
-
-const streamOf = (data: Uint8Array | string): ReadableStream<Uint8Array> => {
-  const bytes = typeof data === "string" ? new TextEncoder().encode(data) : data;
-  return new ReadableStream<Uint8Array>({
-    start(controller) {
-      controller.enqueue(bytes);
-      controller.close();
-    },
-  });
-};
 
 const isUploads = (path: string) => {
   const normalized = normalizePath(path);

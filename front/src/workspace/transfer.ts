@@ -4,6 +4,7 @@ import { saveTransfer } from "../db/workspaceDb";
 import { baseName, joinPath, normalizePath } from "./paths";
 import type { FileProvider } from "./providers/types";
 import { WorkspaceError } from "./providers/types";
+import { streamOf, readAll } from "./bytes";
 
 export type TransferProgress = {
   copiedBytes: number;
@@ -21,35 +22,6 @@ export type RunTransferInput = {
   onProgress?: (progress: TransferProgress) => void;
   signal?: AbortSignal;
 };
-
-const readAll = async (stream: ReadableStream<Uint8Array>): Promise<Uint8Array> => {
-  const reader = stream.getReader();
-  const chunks: Uint8Array[] = [];
-  let length = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (value) {
-      chunks.push(value);
-      length += value.length;
-    }
-  }
-  const data = new Uint8Array(length);
-  let offset = 0;
-  for (const part of chunks) {
-    data.set(part, offset);
-    offset += part.length;
-  }
-  return data;
-};
-
-const streamOf = (data: Uint8Array): ReadableStream<Uint8Array> =>
-  new ReadableStream<Uint8Array>({
-    start(controller) {
-      controller.enqueue(data);
-      controller.close();
-    },
-  });
 
 const digest = async (data: Uint8Array): Promise<string> => {
   const hash = await crypto.subtle.digest("SHA-256", data);

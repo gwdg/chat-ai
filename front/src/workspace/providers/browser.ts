@@ -10,29 +10,9 @@ import {
 } from "../../db/workspaceVfs";
 import { defaultCapabilities } from "../capabilities";
 import { baseName, joinPath, normalizePath } from "../paths";
+import { readAll } from "../bytes";
 import type { DirectoryPage, FileProvider, QuotaInfo } from "./types";
 import { WorkspaceError } from "./types";
-
-const readAll = async (stream: ReadableStream<Uint8Array>): Promise<Uint8Array> => {
-  const reader = stream.getReader();
-  const chunks: Uint8Array[] = [];
-  let length = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (value) {
-      chunks.push(value);
-      length += value.length;
-    }
-  }
-  const data = new Uint8Array(length);
-  let offset = 0;
-  for (const chunk of chunks) {
-    data.set(chunk, offset);
-    offset += chunk.length;
-  }
-  return data;
-};
 
 export class BrowserProvider implements FileProvider {
   readonly kind = "browser" as const;

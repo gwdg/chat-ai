@@ -9,31 +9,11 @@ import type { WorkspaceCapabilities, WorkspaceFileEntry } from "../../db/dbTypes
 import { defaultCapabilities } from "../capabilities";
 import { chatStorageDir } from "../chatStorage";
 import { joinPath, normalizePath } from "../paths";
+import { readAll } from "../bytes";
 import type { DirectoryPage, FileProvider, QuotaInfo } from "./types";
 import { WorkspaceError } from "./types";
 
 const PAGE_SIZE = 200;
-
-const readAll = async (stream: ReadableStream<Uint8Array>): Promise<Uint8Array> => {
-  const reader = stream.getReader();
-  const chunks: Uint8Array[] = [];
-  let length = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (value) {
-      chunks.push(value);
-      length += value.length;
-    }
-  }
-  const data = new Uint8Array(length);
-  let offset = 0;
-  for (const chunk of chunks) {
-    data.set(chunk, offset);
-    offset += chunk.length;
-  }
-  return data;
-};
 
 const segments = (path: string) =>
   normalizePath(path).split("/").filter(Boolean);

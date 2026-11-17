@@ -23,6 +23,7 @@ import {
   listWorkspacesByIds,
 } from "../db/workspaceDb";
 import { DEVICE_PLANE_KINDS, getDeviceId } from "../workspace/deviceId";
+import { streamOf, toBytes } from "../workspace/bytes";
 import {
   baseName,
   isWithinPath,
@@ -65,38 +66,6 @@ type FileTarget = {
   path: string;
   /** The mount the path resolved through, when it did. */
   mount?: WorkspaceMountRow;
-};
-
-const toBytes = async (stream: ReadableStream<Uint8Array>) => {
-  const reader = stream.getReader();
-  const chunks: Uint8Array[] = [];
-  let length = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (value) {
-      chunks.push(value);
-      length += value.length;
-    }
-  }
-  const bytes = new Uint8Array(length);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.length;
-  }
-  return bytes;
-};
-
-const streamOf = (data: Uint8Array | string) => {
-  const bytes =
-    typeof data === "string" ? new TextEncoder().encode(data) : data;
-  return new ReadableStream<Uint8Array>({
-    start(controller) {
-      controller.enqueue(bytes);
-      controller.close();
-    },
-  });
 };
 
 const availableOnThisDevice = (source: WorkspaceSourceRow) =>
