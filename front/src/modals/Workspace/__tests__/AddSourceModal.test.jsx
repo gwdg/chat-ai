@@ -1,19 +1,38 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const addSource = vi.fn();
-const userSettings = { tools: { mcp: false }, mcp_servers: [] };
+const api = vi.hoisted(() => ({
+  addSource: vi.fn(),
+  cloneIntoWorkspace: vi.fn(),
+  agents: [],
+  settings: { tools: { mcp: false }, mcp_servers: [] },
+}));
 
 vi.mock("../../../db/workspaceDb", () => ({
-  addSource: (...args) => addSource(...args),
+  addSource: (...args) => api.addSource(...args),
 }));
 
 // The modal only reads whether local MCP servers are configured.
 vi.mock("react-redux", () => ({
-  useSelector: () => userSettings,
+  useSelector: () => api.settings,
+}));
+
+vi.mock("../../../agents/agentStore", () => ({
+  useAgents: () => api.agents,
+}));
+
+vi.mock("../../../workspace/cloneIntoWorkspace", () => ({
+  cloneIntoWorkspace: (...args) => api.cloneIntoWorkspace(...args),
 }));
 
 import AddSourceModal from "../AddSourceModal";
+
+const localAgent = {
+  id: "agent-1",
+  name: "Coder",
+  local: true,
+  sessionId: "session-1",
+};
 
 const stubPicker = (implementation) => {
   Object.defineProperty(window, "showDirectoryPicker", {
@@ -25,20 +44,32 @@ const stubPicker = (implementation) => {
 const choose = (name = "Choose folder…") =>
   fireEvent.click(screen.getByRole("button", { name }));
 const confirm = () => fireEvent.click(screen.getByRole("button", { name: "OK" }));
+const chooseKind = (value) =>
+  fireEvent.change(screen.getByLabelText("Source type"), {
+    target: { value },
+  });
+const chooseGit = () => chooseKind("git");
+
+beforeEach(() => {
+  api.addSource.mockReset();
+  api.addSource.mockResolvedValue("source-1");
+  api.cloneIntoWorkspace.mockReset();
+  api.agents = [];
+  api.settings.tools.mcp = false;
+  api.settings.mcp_servers = [];
+  vi.spyOn(console, "warn").mockImplementation(() => {});
+  Object.defineProperty(window, "isSecureContext", {
+    value: true,
+    configurable: true,
+  });
+});
+
+afterEach(() => {
+  delete window.isSecureContext;
+  vi.restoreAllMocks();
+});
 
 describe("AddSourceModal local folder", () => {
-  beforeEach(() => {
-    addSource.mockReset();
-    addSource.mockResolvedValue("source-1");
-    userSettings.tools.mcp = false;
-    userSettings.mcp_servers = [];
-    vi.spyOn(console, "warn").mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    delete window.isSecureContext;
-  });
-
   it("picks the folder first and adds it on OK", async () => {
     const handle = { name: "project", kind: "directory" };
     stubPicker(async () => handle);
@@ -49,12 +80,12 @@ describe("AddSourceModal local folder", () => {
     expect(await screen.findByTestId("local-source-folder")).toHaveTextContent(
       "project",
     );
-    expect(addSource).not.toHaveBeenCalled();
+    expect(api.addSource).not.toHaveBeenCalled();
 
     confirm();
 
-    await waitFor(() => expect(addSource).toHaveBeenCalledTimes(1));
-    expect(addSource.mock.calls[0][0]).toMatchObject({
+    await waitFor(() => expect(api.addSource).toHaveBeenCalledTimes(1));
+    expect(api.addSource.mock.calls[0][0]).toMatchObject({
       workspaceId: "ws-1",
       kind: "local",
       label: "project",
@@ -72,7 +103,7 @@ describe("AddSourceModal local folder", () => {
     );
     expect(screen.getByRole("button", { name: "OK" })).toBeDisabled();
     confirm();
-    expect(addSource).not.toHaveBeenCalled();
+    expect(api.addSource).not.toHaveBeenCalled();
   });
 
   it("uses a typed label instead of the folder name", async () => {
@@ -86,8 +117,8 @@ describe("AddSourceModal local folder", () => {
     await screen.findByText("project");
     confirm();
 
-    await waitFor(() => expect(addSource).toHaveBeenCalledTimes(1));
-    expect(addSource.mock.calls[0][0]).toMatchObject({ label: "Research data" });
+    await waitFor(() => expect(api.addSource).toHaveBeenCalledTimes(1));
+    expect(api.addSource.mock.calls[0][0]).toMatchObject({ label: "Research data" });
   });
 
   it("explains a picker that returns no folder instead of doing nothing", async () => {
@@ -100,7 +131,7 @@ describe("AddSourceModal local folder", () => {
 
     expect(await screen.findByText(/No folder was taken over/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "OK" })).toBeDisabled();
-    expect(addSource).not.toHaveBeenCalled();
+    expect(api.addSource).not.toHaveBeenCalled();
   });
 
   it("asks for read access only for a read-only source", async () => {
@@ -116,22 +147,19 @@ describe("AddSourceModal local folder", () => {
     await screen.findByText("project");
     confirm();
 
-    await waitFor(() => expect(addSource).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(api.addSource).toHaveBeenCalledTimes(1));
     expect(picker).toHaveBeenCalledWith({ mode: "read" });
-    expect(addSource.mock.calls[0][0]).toMatchObject({ readOnly: true });
+    expect(api.addSource.mock.calls[0][0]).toMatchObject({ readOnly: true });
   });
 
-  it("does not offer the only kind as a button that cannot do anything", () => {
+  it("offers Git alongside Local folder even when local MCP is disabled", () => {
     stubPicker(async () => ({ name: "project", kind: "directory" }));
 
     render(<AddSourceModal isOpen workspaceId="ws-1" onClose={vi.fn()} />);
 
-    // "Local folder" names the source type; the action is the folder picker button.
     expect(
-      screen.queryByRole("button", { name: "Local folder" }),
-    ).not.toBeInTheDocument();
-    expect(screen.getByText("Local folder")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Choose folder…" })).toBeEnabled();
+      screen.getAllByRole("option").map((option) => option.textContent),
+    ).toEqual(["Local folder", "Git repository"]);
   });
 
   it("puts the folder picker above the label, right under the source type", () => {
@@ -165,22 +193,116 @@ describe("AddSourceModal local folder", () => {
   });
 });
 
-describe("AddSourceModal MCP server", () => {
-  beforeEach(() => {
-    addSource.mockReset();
-    addSource.mockResolvedValue("source-1");
-    userSettings.tools.mcp = true;
-    userSettings.mcp_servers = [{ id: "local", name: "Local", url: "http://x" }];
+describe("AddSourceModal Git repository", () => {
+  it("requires a repository URL before OK is enabled", async () => {
+    api.agents = [localAgent];
+
+    render(<AddSourceModal isOpen workspaceId="ws-1" onClose={vi.fn()} />);
+    chooseGit();
+
+    expect(screen.getByRole("button", { name: "OK" })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Public repository URL"), {
+      target: { value: "https://github.com/acme/repo.git" },
+    });
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "OK" })).toBeEnabled(),
+    );
   });
 
-  afterEach(() => {
-    userSettings.tools.mcp = false;
-    userSettings.mcp_servers = [];
+  it("requires a local agent and says so when there is none", () => {
+    render(<AddSourceModal isOpen workspaceId="ws-1" onClose={vi.fn()} />);
+    chooseGit();
+
+    expect(
+      screen.getAllByText(/No local OpenCode agent is configured/).length,
+    ).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "OK" })).toBeDisabled();
+  });
+
+  it("clones into browser storage with the parsed URL and suggested folder", async () => {
+    api.agents = [localAgent];
+    api.cloneIntoWorkspace.mockResolvedValue({ path: "/repo" });
+    const onAdded = vi.fn();
+
+    render(
+      <AddSourceModal
+        isOpen
+        workspaceId="ws-1"
+        onClose={vi.fn()}
+        onAdded={onAdded}
+      />,
+    );
+    chooseGit();
+    fireEvent.change(screen.getByLabelText("Public repository URL"), {
+      target: { value: "https://github.com/acme/repo.git" },
+    });
+    fireEvent.change(screen.getByLabelText("Branch or tag (optional)"), {
+      target: { value: "main" },
+    });
+
+    expect(screen.getByLabelText("Target subfolder")).toHaveValue("repo");
+    confirm();
+
+    await waitFor(() =>
+      expect(api.cloneIntoWorkspace).toHaveBeenCalledTimes(1),
+    );
+    expect(api.cloneIntoWorkspace).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workspaceId: "ws-1",
+        agent: localAgent,
+        url: "https://github.com/acme/repo.git",
+        branch: "main",
+        folder: "repo",
+        target: "browser",
+        onProgress: expect.any(Function),
+      }),
+    );
+    await waitFor(() => expect(onAdded).toHaveBeenCalledWith({ path: "/repo" }));
+    expect(api.addSource).not.toHaveBeenCalled();
+  });
+
+  it("shows a clone failure inline and leaves the source list untouched", async () => {
+    api.agents = [localAgent];
+    api.cloneIntoWorkspace.mockRejectedValue(new Error("git clone failed"));
+    const onAdded = vi.fn();
+
+    render(
+      <AddSourceModal
+        isOpen
+        workspaceId="ws-1"
+        onClose={vi.fn()}
+        onAdded={onAdded}
+      />,
+    );
+    chooseGit();
+    fireEvent.change(screen.getByLabelText("Public repository URL"), {
+      target: { value: "https://github.com/acme/repo.git" },
+    });
+    confirm();
+
+    expect(await screen.findByText("git clone failed")).toBeInTheDocument();
+    expect(api.addSource).not.toHaveBeenCalled();
+    expect(onAdded).not.toHaveBeenCalled();
+  });
+});
+
+describe("AddSourceModal MCP server", () => {
+  beforeEach(() => {
+    api.settings.tools.mcp = true;
+    api.settings.mcp_servers = [{ id: "local", name: "Local", url: "http://x" }];
+  });
+
+  it("offers the three source kinds", () => {
+    render(<AddSourceModal isOpen workspaceId="ws-1" onClose={vi.fn()} />);
+
+    expect(
+      screen.getAllByRole("option").map((option) => option.textContent),
+    ).toEqual(["Local folder", "Git repository", "MCP"]);
   });
 
   it("adds an MCP source on OK, without asking for a folder", () => {
     render(<AddSourceModal isOpen workspaceId="ws-1" onClose={vi.fn()} />);
-    fireEvent.click(screen.getByRole("button", { name: "MCP" }));
+    chooseKind("mcp");
 
     expect(
       screen.queryByRole("button", { name: "Choose folder…" }),
@@ -192,8 +314,8 @@ describe("AddSourceModal MCP server", () => {
     });
     confirm();
 
-    return waitFor(() => expect(addSource).toHaveBeenCalledTimes(1)).then(() => {
-      expect(addSource.mock.calls[0][0]).toMatchObject({
+    return waitFor(() => expect(api.addSource).toHaveBeenCalledTimes(1)).then(() => {
+      expect(api.addSource.mock.calls[0][0]).toMatchObject({
         kind: "mcp",
         label: "MCP",
         config: { endpoint: "http://localhost:8080/mcp" },

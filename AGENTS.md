@@ -1009,15 +1009,19 @@ Both paths are independent of `VITE_MODULE_AGENT`.
 The `workspace_overview` feature guide targets `[data-guide="workspace-add-source"]`,
 `workspace-sources` and `workspace-files`.
 
-Create Workspace can clone a public HTTPS Git repository with a selected local OpenCode agent.
-`workspace/importProject.js` runs `git clone` through the agent's shell into
-`.chat-ai-clones/<id>/repo`, optionally reads `chat-ai-manifest.json`, and copies the complete
-repository tree (including `.git`) into browser, local, or MCP storage, or move the clone into the
-selected local agent's project storage and mount that folder read-only. Flat Arcana sources are
-excluded because they cannot represent a directory tree. The manifest is validated by
-`utils/workspaceManifest.js`, shown in a confirmation summary, and never provides commands,
-scripts, credentials, or server URLs. Confirmed manifests can create an agent using the selected
-agent connection and import full chats attached to the workspace. An agent's optional
+A public HTTPS Git repository is cloned with a selected local OpenCode agent in two places, both
+through `workspace/cloneIntoWorkspace.ts`: the Storage card's `+` on the workspace page opens
+`modals/Workspace/AddSourceModal.tsx`, whose source-type select offers Local folder, Git repository
+and MCP server; Create Workspace is a two-column dialog (source actions on the left, the resulting
+workspace tree on the right) where a Git row is cloned at Create time. `workspace/importProject.js`
+runs `git clone` through the agent's shell into `.chat-ai-clones/<id>/repo`, and the complete
+repository tree (including `.git`) is copied into the workspace's browser storage at a folder named
+after the repository. Flat Arcana sources are excluded because they cannot represent a directory
+tree. `chat-ai-manifest.json` is validated by `utils/workspaceManifest.js` and never provides
+commands, scripts, credentials, or server URLs. Only the Create dialog applies a manifest
+(`workspace/applyWorkspaceManifest.ts`), which can create an agent using the clone connection and
+import full chats attached to the new workspace; cloning from an existing workspace copies files
+only. An agent's optional
 `initialMessage` is stored on the local agent entry and displayed above the session; it is also
 written to the session's OpenCode instruction entries so the agent sees it without executing a
 prompt. The local example repository is

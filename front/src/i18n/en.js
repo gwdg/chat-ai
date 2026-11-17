@@ -17,6 +17,7 @@ export default {
   // Common phrases
   common: {
     loading: "Loading...",
+    back: "Back",
     undo: "Undo",
     scroll: "Scroll to bottom",
     scroll_to_top: "Scroll to top",
@@ -445,7 +446,7 @@ export default {
     },
     workspace_clone: {
       title: "Import a Git repository",
-      step1: "Open Create workspace, choose Clone Git repository, select a local agent, and review the storage/manifest confirmation.",
+      step1: "Open Create workspace, pick Git repository on the left, choose the local agent that runs the clone, then press Create.",
     },
     workspace_upload: {
       title: "Upload files into a workspace",
@@ -2088,13 +2089,6 @@ export default {
     storage: "Storage",
     available_storage: "Available storage",
     add_folder: "Add folder",
-    palette_local: "Local folder",
-    palette_git: "Git repository",
-    add_storage: "Add storage",
-    palette_mcp: "MCP server",
-    mode_empty: "Empty workspace",
-    mode_clone: "Clone Git repository",
-    mode_local: "Mount local folder",
     clone_repo_url: "Public repository URL",
     clone_branch: "Branch or tag (optional)",
     clone_default_branch: "Default branch",
@@ -2237,6 +2231,12 @@ export default {
     name_label: "Workspace name",
     name_placeholder: "e.g. Research",
     create_workspace: "Create workspace",
+    create_tree_title: "Workspace",
+    create_add: "Add to workspace",
+    create_empty_hint:
+      "Nothing added yet — pick a folder or a repository on the left.",
+    create_sources_hint:
+      "Pick a folder or clone a repository — it appears in the workspace.",
     name_required: "Enter a workspace name",
     name_taken: "A workspace with this name already exists",
     create_error: "Could not create the workspace",
@@ -2250,7 +2250,7 @@ export default {
     add_source: "Add source",
     source_kind: "Source type",
     choose_folder: "Choose folder…",
-    no_sources: "Add a local folder or an MCP server.",
+    no_sources: "Add a local folder, a Git repository, or an MCP server.",
     select_source: "Select a source to browse its files.",
     source_label: "Label",
     source_folder: "Folder",

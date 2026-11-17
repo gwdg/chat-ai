@@ -4,14 +4,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const api = vi.hoisted(() => ({
   navigate: vi.fn(),
   onClose: vi.fn(),
-  settings: { tools: { mcp: false }, mcp_servers: [] },
   agents: [],
   createWorkspace: vi.fn(),
-  addSource: vi.fn(),
   addLocalSource: vi.fn(),
   addWorkspaceMount: vi.fn(),
-  getSourceHandle: vi.fn(),
-  listCloneTargets: vi.fn(),
   pickDirectory: vi.fn(),
   cloneIntoWorkspace: vi.fn(),
   applyWorkspaceManifest: vi.fn(),
@@ -22,16 +18,9 @@ vi.mock("react-router", () => ({
   useNavigate: () => api.navigate,
 }));
 
-vi.mock("react-redux", () => ({
-  useSelector: () => api.settings,
-}));
-
 vi.mock("../../../db/workspaceDb", () => ({
   createWorkspace: api.createWorkspace,
-  addSource: api.addSource,
   addWorkspaceMount: api.addWorkspaceMount,
-  getSourceHandle: api.getSourceHandle,
-  listCloneTargets: api.listCloneTargets,
 }));
 
 vi.mock("../../../agents/agentStore", () => ({
@@ -61,41 +50,42 @@ vi.mock("../../../workspace/applyWorkspaceManifest", () => ({
 
 import CreateWorkspaceModal from "../CreateWorkspaceModal";
 
-const renderModal = () =>
-  render(<CreateWorkspaceModal isOpen onClose={api.onClose} />);
+const renderModal = () => render(<CreateWorkspaceModal isOpen onClose={api.onClose} />);
 
-const setName = (value) =>
-  fireEvent.change(screen.getByPlaceholderText("e.g. Research"), {
-    target: { value },
+const nameInput = () => screen.getByPlaceholderText("e.g. Research");
+
+const typeName = (value) => fireEvent.change(nameInput(), { target: { value } });
+
+const pickFolder = (name = "project") => {
+  api.pickDirectory.mockResolvedValue({ name, kind: "directory" });
+  fireEvent.click(screen.getByTestId("create-workspace-source-local"));
+};
+
+const addRepo = (url = "https://github.com/acme/repo.git") => {
+  fireEvent.click(screen.getByTestId("create-workspace-source-git"));
+  fireEvent.change(screen.getByTestId("create-workspace-git-url"), {
+    target: { value: url },
   });
+  fireEvent.click(screen.getByTestId("create-workspace-git-add"));
+};
+
+const submit = () =>
+  fireEvent.click(screen.getByTestId("create-workspace-create"));
 
 describe("CreateWorkspaceModal", () => {
   beforeEach(() => {
     api.navigate.mockReset();
     api.onClose.mockReset();
-    api.settings.tools.mcp = false;
-    api.settings.mcp_servers = [];
-    api.agents = [
-      {
-        id: "agent-1",
-        name: "Coder",
-        local: true,
-        sessionId: "session-1",
-      },
-    ];
+    api.agents = [{ id: "agent-1", name: "Coder", local: true, sessionId: "session-1" }];
     api.createWorkspace.mockReset();
     api.createWorkspace.mockResolvedValue("ws-new");
-    api.addSource.mockReset();
-    api.addSource.mockResolvedValue("source-mcp");
     api.addLocalSource.mockReset();
     api.addLocalSource.mockResolvedValue("source-local");
     api.addWorkspaceMount.mockReset();
     api.addWorkspaceMount.mockResolvedValue("mount-1");
-    api.getSourceHandle.mockReset();
-    api.listCloneTargets.mockReset();
-    api.listCloneTargets.mockResolvedValue([]);
     api.pickDirectory.mockReset();
     api.cloneIntoWorkspace.mockReset();
+    api.cloneIntoWorkspace.mockResolvedValue({ path: "/repo" });
     api.applyWorkspaceManifest.mockReset();
     api.applyWorkspaceManifest.mockResolvedValue({
       agentId: null,
@@ -114,60 +104,77 @@ describe("CreateWorkspaceModal", () => {
     });
   });
 
-  it("creates an empty workspace and navigates without touching sources", async () => {
+  it("shows the two columns with what every workspace already contains", () => {
     renderModal();
 
-    setName("Research");
-    fireEvent.click(screen.getByRole("button", { name: "Create workspace" }));
-
-    await waitFor(() =>
-      expect(api.createWorkspace).toHaveBeenCalledWith("Research"),
-    );
-    await waitFor(() =>
-      expect(api.navigate).toHaveBeenCalledWith("/workspace/ws-new"),
-    );
-    expect(api.createWorkspace).toHaveBeenCalledTimes(1);
-    expect(api.addSource).not.toHaveBeenCalled();
-    expect(api.addLocalSource).not.toHaveBeenCalled();
-    expect(api.cloneIntoWorkspace).not.toHaveBeenCalled();
+    expect(nameInput()).toBeInTheDocument();
+    expect(screen.getByText("Sources")).toBeInTheDocument();
+    expect(screen.getByText("Workspace")).toBeInTheDocument();
+    expect(screen.getByText("Browser storage")).toBeInTheDocument();
+    expect(screen.getByText("Arcana filesystem")).toBeInTheDocument();
+    expect(screen.getAllByText("Included")).toHaveLength(2);
+    expect(
+      screen.getByText(/Nothing added yet/),
+    ).toBeInTheDocument();
   });
 
-  it("adds a picked local folder and mounts it at its folder name", async () => {
+  it("adds a picked folder as a row and prefills the workspace name", async () => {
+    renderModal();
+    pickFolder("my-project");
+
+    expect(await screen.findByTestId("create-workspace-tree-row")).toHaveTextContent(
+      "my-project",
+    );
+    expect(nameInput()).toHaveValue("my-project");
+  });
+
+  it("creates the workspace, the local source and its mount", async () => {
     const handle = { name: "project", kind: "directory" };
     api.pickDirectory.mockResolvedValue(handle);
     renderModal();
 
-    fireEvent.click(screen.getByRole("button", { name: "Local folder" }));
-    expect(await screen.findByDisplayValue("project")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("create-workspace-source-local"));
+    await screen.findByTestId("create-workspace-tree-row");
+    typeName("Research");
+    submit();
 
-    setName("Research");
-    fireEvent.click(screen.getByRole("button", { name: "Create workspace" }));
-
-    await waitFor(() => expect(api.addLocalSource).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(api.navigate).toHaveBeenCalledWith("/workspace/ws-new"));
+    expect(api.createWorkspace).toHaveBeenCalledWith("Research");
     expect(api.addLocalSource).toHaveBeenCalledWith({
       workspaceId: "ws-new",
       handle,
-      label: "project",
-      readOnly: false,
     });
     expect(api.addWorkspaceMount).toHaveBeenCalledWith({
       workspaceId: "ws-new",
       sourceId: "source-local",
       sourcePath: "/",
       path: "/project",
-      readOnly: false,
     });
-    await waitFor(() =>
-      expect(api.navigate).toHaveBeenCalledWith("/workspace/ws-new"),
-    );
   });
 
-  it("clones a git row, reviews the manifest in the row and applies it", async () => {
-    const manifest = {
-      schemaVersion: 1,
-      workspace: { icon: "rocket" },
-      chats: [],
-    };
+  it("clones a repository row into the folder named after the URL", async () => {
+    renderModal();
+    addRepo();
+
+    expect(screen.getByTestId("create-workspace-tree-row")).toHaveTextContent("/repo");
+    typeName("Research");
+    submit();
+
+    await waitFor(() => expect(api.navigate).toHaveBeenCalledWith("/workspace/ws-new"));
+    expect(api.cloneIntoWorkspace).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workspaceId: "ws-new",
+        agent: expect.objectContaining({ id: "agent-1" }),
+        url: "https://github.com/acme/repo.git",
+        folder: "repo",
+        target: "browser",
+      }),
+    );
+    expect(api.applyWorkspaceManifest).not.toHaveBeenCalled();
+  });
+
+  it("applies a repository manifest with the clone agent", async () => {
+    const manifest = { schemaVersion: 1, chats: [] };
     api.cloneIntoWorkspace.mockImplementation(async ({ beforeCopy, onProgress }) => {
       onProgress?.({ step: "clone" });
       await beforeCopy?.({
@@ -180,105 +187,56 @@ describe("CreateWorkspaceModal", () => {
       return { path: "/repo" };
     });
     renderModal();
+    addRepo();
+    typeName("Research");
+    submit();
 
-    fireEvent.click(screen.getByRole("button", { name: "Git repository" }));
-    fireEvent.change(screen.getByLabelText("Public repository URL"), {
-      target: { value: "https://github.com/acme/repo.git" },
-    });
-    expect(screen.getByLabelText("Target subfolder")).toHaveValue("repo");
-
-    setName("Research");
-    fireEvent.click(screen.getByRole("button", { name: "Create workspace" }));
-
-    const continueButton = await screen.findByRole("button", {
-      name: "Continue",
-    });
-    expect(api.cloneIntoWorkspace).toHaveBeenCalledWith(
-      expect.objectContaining({
-        workspaceId: "ws-new",
-        url: "https://github.com/acme/repo.git",
-        folder: "repo",
-        target: "browser",
-      }),
-    );
-    fireEvent.click(continueButton);
-
-    expect(await screen.findByText("Done")).toBeInTheDocument();
-    expect(api.applyWorkspaceManifest).toHaveBeenCalledTimes(1);
-    expect(api.applyWorkspaceManifest).toHaveBeenCalledWith(
-      expect.objectContaining({
-        workspaceId: "ws-new",
-        manifest,
-        connection: expect.objectContaining({ id: "agent-1" }),
-      }),
-    );
     await waitFor(() =>
-      expect(api.navigate).toHaveBeenCalledWith("/workspace/ws-new"),
+      expect(api.applyWorkspaceManifest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          workspaceId: "ws-new",
+          manifest,
+          connection: expect.objectContaining({ id: "agent-1" }),
+          importConversation: api.importConversation,
+        }),
+      ),
     );
+    await waitFor(() => expect(api.navigate).toHaveBeenCalledWith("/workspace/ws-new"));
   });
 
-  it("keeps the dialog open on a failed row and offers the workspace", async () => {
-    api.pickDirectory.mockResolvedValue({ name: "project", kind: "directory" });
-    api.addLocalSource.mockRejectedValue(new Error("permission denied"));
+  it("keeps the dialog open when a row fails and offers the workspace", async () => {
+    api.cloneIntoWorkspace.mockRejectedValue(new Error("clone failed"));
     renderModal();
+    addRepo();
+    typeName("Research");
+    submit();
 
-    fireEvent.click(screen.getByRole("button", { name: "Local folder" }));
-    await screen.findByDisplayValue("project");
-    setName("Research");
-    fireEvent.click(screen.getByRole("button", { name: "Create workspace" }));
-
-    expect(
-      await screen.findByText("Failed · permission denied"),
-    ).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("e.g. Research")).toBeInTheDocument();
+    expect(await screen.findByText("Failed · clone failed")).toBeInTheDocument();
+    expect(nameInput()).toBeInTheDocument();
+    expect(screen.queryByTestId("create-workspace-create")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Open workspace" }));
     expect(api.navigate).toHaveBeenCalledWith("/workspace/ws-new");
   });
 
-  it("offers local and git actions but hides MCP when local MCP is disabled", async () => {
+  it("drops a row again with its remove button", async () => {
     renderModal();
+    pickFolder();
+    await screen.findByTestId("create-workspace-tree-row");
 
-    await waitFor(() => expect(api.listCloneTargets).toHaveBeenCalled());
-    expect(screen.getByRole("button", { name: "Local folder" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Git repository" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "MCP server" }),
-    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Remove source" }));
+
+    expect(screen.queryByTestId("create-workspace-tree-row")).not.toBeInTheDocument();
+    expect(screen.getByText(/Nothing added yet/)).toBeInTheDocument();
   });
 
-  it("adds an MCP row with endpoint, transport and allowlist when enabled", async () => {
-    api.settings.tools.mcp = true;
-    api.settings.mcp_servers = [
-      { id: "local", name: "Local", url: "http://localhost:9000/mcp" },
-    ];
+  it("cannot create without a name", async () => {
     renderModal();
 
-    fireEvent.click(screen.getByRole("button", { name: "MCP server" }));
-    fireEvent.change(screen.getByLabelText("MCP endpoint"), {
-      target: { value: "http://localhost:8080/mcp" },
-    });
-    fireEvent.change(
-      screen.getByLabelText("Tool allowlist (comma separated, optional)"),
-      { target: { value: "read_file, list_directory" } },
-    );
-    setName("Research");
-    fireEvent.click(screen.getByRole("button", { name: "Create workspace" }));
-
-    await waitFor(() => expect(api.addSource).toHaveBeenCalledTimes(1));
-    expect(api.addSource).toHaveBeenCalledWith(
-      expect.objectContaining({
-        workspaceId: "ws-new",
-        kind: "mcp",
-        config: {
-          endpoint: "http://localhost:8080/mcp",
-          transport: "streamable-http",
-          toolAllowlist: ["read_file", "list_directory"],
-        },
-        status: "offline",
-      }),
-    );
+    expect(screen.getByTestId("create-workspace-create")).toBeDisabled();
+    typeName("   ");
+    expect(screen.getByTestId("create-workspace-create")).toBeDisabled();
+    typeName("Research");
+    expect(screen.getByTestId("create-workspace-create")).toBeEnabled();
   });
 });

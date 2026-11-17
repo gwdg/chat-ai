@@ -17,6 +17,7 @@ export default {
   // Common phrases
   common: {
     loading: "Lädt...",
+    back: "Zurück",
     undo: "Rückgängig",
     scroll: "Nach unten scrollen",
     scroll_to_top: "Nach oben scrollen",
@@ -458,7 +459,7 @@ export default {
     },
     workspace_clone: {
       title: "Git-Repository importieren",
-      step1: "Öffnen Sie „Arbeitsbereich erstellen“, wählen Sie „Git-Repository klonen“, einen lokalen Agenten und prüfen Sie die Speicher-/Manifest-Bestätigung.",
+      step1: "Öffnen Sie „Arbeitsbereich erstellen“, wählen Sie links „Git-Repository“, den lokalen Agenten für den Klon und drücken Sie dann „Erstellen“.",
     },
     workspace_upload: {
       title: "Dateien in einen Arbeitsbereich hochladen",
@@ -2117,13 +2118,6 @@ export default {
     storage: "Speicher",
     available_storage: "Verfügbarer Speicher",
     add_folder: "Ordner hinzufügen",
-    palette_local: "Lokaler Ordner",
-    palette_git: "Git-Repository",
-    add_storage: "Speicher hinzufügen",
-    palette_mcp: "MCP-Server",
-    mode_empty: "Leerer Arbeitsbereich",
-    mode_clone: "Git-Repository klonen",
-    mode_local: "Lokalen Ordner einbinden",
     clone_repo_url: "URL des öffentlichen Repositories",
     clone_branch: "Branch oder Tag (optional)",
     clone_default_branch: "Standard-Branch",
@@ -2266,6 +2260,12 @@ export default {
     name_label: "Name des Arbeitsbereichs",
     name_placeholder: "z. B. Recherche",
     create_workspace: "Arbeitsbereich erstellen",
+    create_tree_title: "Arbeitsbereich",
+    create_add: "Zum Arbeitsbereich hinzufügen",
+    create_empty_hint:
+      "Noch nichts hinzugefügt – wähle links einen Ordner oder ein Repository.",
+    create_sources_hint:
+      "Wähle einen Ordner oder klone ein Repository – er erscheint im Arbeitsbereich.",
     name_required: "Geben Sie einen Namen ein",
     name_taken: "Ein Arbeitsbereich mit diesem Namen existiert bereits",
     create_error: "Der Arbeitsbereich konnte nicht erstellt werden",
@@ -2279,7 +2279,7 @@ export default {
     add_source: "Quelle hinzufügen",
     source_kind: "Quellentyp",
     choose_folder: "Ordner auswählen…",
-    no_sources: "Fügen Sie einen lokalen Ordner oder einen MCP-Server hinzu.",
+    no_sources: "Fügen Sie einen lokalen Ordner, ein Git-Repository oder einen MCP-Server hinzu.",
     select_source: "Wählen Sie eine Quelle, um ihre Dateien zu durchsuchen.",
     source_label: "Bezeichnung",
     source_folder: "Ordner",

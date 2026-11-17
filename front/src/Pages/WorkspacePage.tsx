@@ -23,7 +23,6 @@ import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
 import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
 import WorkspaceRootTree from "../components/Workspace/WorkspaceRootTree";
 import WorkspaceRootBrowser from "../components/Workspace/WorkspaceRootBrowser";
-import SourcePalette from "../components/Workspace/SourcePalette";
 import FilePreviewPanel from "../components/DocumentPanel/FilePreviewPanel";
 import AgentSessionList from "../components/Agent/AgentSessionList";
 import { activeSessionIdFor, useOpenAgent } from "../hooks/useOpenAgent";
@@ -39,7 +38,6 @@ import { useSelector } from "react-redux";
 import { selectUserSettings } from "../Redux/reducers/userSettingsReducer";
 import { getDefaultConversation } from "../utils/conversationUtils";
 import { useAgents } from "../agents/agentStore";
-import { hasLocalMcpServerValue } from "../agent/mcp";
 import {
   fetchAgentSessions,
   sessionSummariesFor,
@@ -316,9 +314,6 @@ export default function WorkspacePage() {
   // The per-chat storage sources are derived mounts of attached chats
   // (`/chats/<id>`), not storage the user added, so the list leaves them out.
   const listedSources = visibleStorageSources(sources);
-  const localMcpEnabled =
-    userSettings?.tools?.mcp === true &&
-    hasLocalMcpServerValue(userSettings?.mcp_servers);
   const selectedProvider = selectedSourceId
     ? providers.get(selectedSourceId)
     : undefined;
@@ -1178,49 +1173,28 @@ export default function WorkspacePage() {
     }
   };
 
-  const handleSourceAdded = (result?: {
-    sourceId?: string;
-    mountId?: string;
-    path?: string;
-  }) => {
-    if (result?.sourceId) {
-      setActiveMountId(result.mountId ?? null);
-      setSelectedSourceId(result.sourceId);
-      setPathBySource((current) => ({ ...current, [result.sourceId!]: "/" }));
+  const handleSourceAdded = (
+    result?: string | { sourceId?: string; mountId?: string; path?: string },
+  ) => {
+    const payload =
+      typeof result === "string" ? { sourceId: result } : result ?? {};
+    if (payload.sourceId) {
+      setActiveMountId(payload.mountId ?? null);
+      setSelectedSourceId(payload.sourceId);
+      setPathBySource((current) => ({ ...current, [payload.sourceId!]: "/" }));
       return;
     }
     setActiveMountId(null);
     setSelectedSourceId(null);
-    setRootPath(result?.path ? normalizePath(result.path) : "/");
+    setRootPath(payload.path ? normalizePath(payload.path) : "/");
   };
 
   const addSource = (initialKind?: "local" | "mcp") => {
     openModal("workspaceAddSource", {
       workspaceId,
       initialKind,
-      onAdded: (id: string) => handleSourceAdded({ sourceId: id }),
+      onAdded: handleSourceAdded,
     });
-  };
-
-  const pickSourceAction = (action: "local" | "git" | "mcp") => {
-    if (!workspaceId) return;
-    if (action === "local") {
-      openModal("workspaceMountFolder", {
-        workspaceId,
-        mounts,
-        onAdded: handleSourceAdded,
-      });
-      return;
-    }
-    if (action === "git") {
-      openModal("workspaceCloneRepo", {
-        workspaceId,
-        mounts,
-        onAdded: handleSourceAdded,
-      });
-      return;
-    }
-    addSource("mcp");
   };
 
   const addFolder = (sourceId?: string) => {
@@ -2110,12 +2084,6 @@ export default function WorkspacePage() {
                     )}
                   </div>
                   )}
-                  <SourcePalette
-                    mcpEnabled={localMcpEnabled}
-                    onPick={pickSourceAction}
-                    showLabel
-                    className="mt-2 border-t border-base-300 px-1 pt-2 pb-1"
-                  />
                   </div>
                   <div className="border-t border-base-300 p-1.5">
                     <div className="flex items-center justify-between px-1">

@@ -51,8 +51,6 @@ import AddSourceModal from "./Workspace/AddSourceModal";
 import TransferConfirmModal from "./Workspace/TransferConfirmModal";
 import MoveToModal from "./Workspace/MoveToModal";
 import AddMountModal from "./Workspace/AddMountModal";
-import MountLocalFolderModal from "./Workspace/MountLocalFolderModal";
-import CloneRepositoryModal from "./Workspace/CloneRepositoryModal";
 import AttachChatModal from "./Workspace/AttachChatModal";
 import AttachAgentModal from "./Workspace/AttachAgentModal";
 import AttachAgentSessionModal from "./Workspace/AttachAgentSessionModal";
@@ -219,12 +217,6 @@ export function ModalProvider({ children }) {
       )}
       {modalType === "workspaceAddMount" && (
         <AddMountModal isOpen onClose={closeModal} {...modalProps} />
-      )}
-      {modalType === "workspaceMountFolder" && (
-        <MountLocalFolderModal isOpen onClose={closeModal} {...modalProps} />
-      )}
-      {modalType === "workspaceCloneRepo" && (
-        <CloneRepositoryModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {modalType === "workspaceAttachChat" && (
         <AttachChatModal isOpen onClose={closeModal} {...modalProps} />

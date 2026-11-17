@@ -6,12 +6,30 @@ import BaseModal from "../BaseModal";
 import { addSource } from "../../db/workspaceDb";
 import { newId } from "../../db";
 import { hasLocalMcpServerValue } from "../../agent/mcp";
+import { useAgents } from "../../agents/agentStore";
 import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
 import { defaultCapabilities } from "../../workspace/capabilities";
 import { DEVICE_PLANE_KINDS } from "../../workspace/deviceId";
+import { cloneIntoWorkspace } from "../../workspace/cloneIntoWorkspace";
+import type { CloneIntoWorkspaceProgress } from "../../workspace/cloneIntoWorkspace";
+import { folderName } from "../../workspace/folders";
+import { parsePublicGitUrl } from "../../workspace/importProject";
 import { addLocalSource, pickDirectory } from "../../workspace/localWorkspace";
+import { baseName } from "../../workspace/paths";
+import { formatBytes } from "../../utils/formatBytes";
 
-const KINDS: SourceKind[] = ["local", "mcp"];
+type AddSourceKind = "local" | "git" | "mcp";
+
+const KINDS: AddSourceKind[] = ["local", "git", "mcp"];
+
+const repoNameFromUrl = (value: string) => {
+  try {
+    const url = new URL(value);
+    return baseName(url.pathname.replace(/\.git$/i, "")) || "repository";
+  } catch {
+    return "repository";
+  }
+};
 
 export default function AddSourceModal({
   isOpen,
@@ -22,12 +40,19 @@ export default function AddSourceModal({
 }) {
   const { t } = useTranslation();
   const userSettings = useSelector(selectUserSettings);
-  const [kind, setKind] = useState<SourceKind>(initialKind ?? "local");
+  const agents = useAgents();
+  const [kind, setKind] = useState<AddSourceKind>(initialKind ?? "local");
   const [label, setLabel] = useState("");
   const [readOnly, setReadOnly] = useState(false);
   const [handle, setHandle] = useState<FileSystemDirectoryHandle | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [gitUrl, setGitUrl] = useState("");
+  const [gitBranch, setGitBranch] = useState("");
+  const [gitFolder, setGitFolder] = useState("");
+  const [gitFolderEdited, setGitFolderEdited] = useState(false);
+  const [cloneAgentId, setCloneAgentId] = useState("");
+  const [progress, setProgress] = useState("");
   const [mcpEndpoint, setMcpEndpoint] = useState("");
   const [mcpTransport, setMcpTransport] = useState<"streamable-http" | "sse">(
     "streamable-http",
@@ -43,9 +68,43 @@ export default function AddSourceModal({
     [localMcpEnabled],
   );
 
+  const localAgents = useMemo(
+    () =>
+      agents.filter(
+        (agent: any) => agent.local !== false && agent.sessionId,
+      ),
+    [agents],
+  );
+  const cloneAgent = localAgents.find((agent: any) => agent.id === cloneAgentId);
+
+  const suggestedFolder = useMemo(() => {
+    if (!gitUrl.trim()) return "";
+    try {
+      return repoNameFromUrl(parsePublicGitUrl(gitUrl));
+    } catch {
+      return "";
+    }
+  }, [gitUrl]);
+
   useEffect(() => {
     if (!availableKinds.includes(kind)) setKind(availableKinds[0] ?? "local");
   }, [availableKinds, kind]);
+
+  useEffect(() => {
+    if (!cloneAgentId && localAgents[0]?.id) {
+      setCloneAgentId(localAgents[0].id);
+    }
+    if (
+      cloneAgentId &&
+      !localAgents.some((agent: any) => agent.id === cloneAgentId)
+    ) {
+      setCloneAgentId(localAgents[0]?.id ?? "");
+    }
+  }, [cloneAgentId, localAgents]);
+
+  useEffect(() => {
+    if (!gitFolderEdited) setGitFolder(suggestedFolder);
+  }, [gitFolderEdited, suggestedFolder]);
 
   // Chrome only exposes showDirectoryPicker() on a secure page, and a blocked picker used to look
   // like a dead click. Say why up front instead of failing after the button is pressed.
@@ -58,7 +117,11 @@ export default function AddSourceModal({
 
   /** OK is the only action that creates the source, so it stays off until the form can succeed. */
   const canSubmit =
-    kind === "local" ? !!handle && !localBlocker : kind === "mcp" ? !!mcpEndpoint.trim() : true;
+    kind === "local"
+      ? !!handle && !localBlocker
+      : kind === "mcp"
+        ? !!mcpEndpoint.trim()
+        : !!gitUrl.trim() && !!cloneAgent;
 
   const reset = () => {
     setKind(initialKind ?? "local");
@@ -67,6 +130,12 @@ export default function AddSourceModal({
     setHandle(null);
     setError("");
     setBusy(false);
+    setGitUrl("");
+    setGitBranch("");
+    setGitFolder("");
+    setGitFolderEdited(false);
+    setCloneAgentId("");
+    setProgress("");
     setMcpEndpoint("");
     setMcpTransport("streamable-http");
     setMcpAllowlist("");
@@ -147,6 +216,20 @@ export default function AddSourceModal({
     }
   };
 
+  const progressText = (event: CloneIntoWorkspaceProgress) => {
+    if (event.step === "clone") return t("workspace.clone_progress_clone");
+    if (event.step === "manifest") return t("workspace.clone_progress_manifest");
+    if (event.step === "measure") return t("workspace.clone_progress_measure");
+    if (event.step === "mount") return t("workspace.clone_progress_mount");
+    if (event.files) {
+      return t("workspace.clone_progress_files", {
+        files: event.files,
+        size: formatBytes(event.bytes ?? 0, { fixedDigits: true, maxUnit: 3 }),
+      });
+    }
+    return t("workspace.clone_progress_copy");
+  };
+
   const submit = async () => {
     if (busy) return;
     setError("");
@@ -178,6 +261,27 @@ export default function AddSourceModal({
           },
           status: "offline",
         });
+        return;
+      }
+      if (kind === "git") {
+        if (!cloneAgent) throw new Error(t("workspace.clone_agent_required"));
+        const targetUrl = parsePublicGitUrl(gitUrl);
+        const targetFolder = folderName(gitFolder.trim() || suggestedFolder, {
+          maxLength: 120,
+          rejectEmpty: true,
+        });
+        const result = await cloneIntoWorkspace({
+          workspaceId,
+          agent: cloneAgent,
+          url: targetUrl,
+          branch: gitBranch.trim() || undefined,
+          folder: targetFolder,
+          target: "browser",
+          onProgress: (event: CloneIntoWorkspaceProgress) =>
+            setProgress(progressText(event)),
+        });
+        onAdded?.(result);
+        close();
       }
     } catch (event) {
       const name = (event as Error)?.name;
@@ -192,37 +296,29 @@ export default function AddSourceModal({
   };
 
   return (
-    <BaseModal isOpen={isOpen} onClose={close} titleKey="workspace.add_source">
+    <BaseModal
+      isOpen={isOpen}
+      onClose={close}
+      titleKey="workspace.add_source"
+      isForced={busy && kind === "git"}
+    >
       <div className="flex flex-col gap-3 pb-2">
         <div className="flex flex-col gap-1">
-          {/* With one available kind a row of buttons is a control that cannot do anything, and
-              clicking the already selected "Local folder" chip looked like a dead action. */}
-          {availableKinds.length > 1 ? (
-            <>
-              <span className="text-xs font-medium text-base-content/70">
-                {t("workspace.source_kind")}
-              </span>
-              <div
-                role="group"
-                aria-label={t("workspace.source_kind")}
-                className="flex flex-wrap gap-1"
-              >
-                {availableKinds.map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    aria-pressed={kind === item}
-                    onClick={() => setKind(item)}
-                    className={`btn btn-sm ${kind === item ? "btn-accent" : "btn-ghost"}`}
-                  >
-                    {t(`workspace.kind_${item}`)}
-                  </button>
-                ))}
-              </div>
-            </>
-          ) : (
-            <p className="text-sm font-medium">{t(`workspace.kind_${kind}`)}</p>
-          )}
+          <span className="text-xs font-medium text-base-content/70">
+            {t("workspace.source_kind")}
+          </span>
+          <select
+            value={kind}
+            onChange={(event) => setKind(event.target.value as AddSourceKind)}
+            aria-label={t("workspace.source_kind")}
+            className="select select-bordered w-full"
+          >
+            {availableKinds.map((item) => (
+              <option key={item} value={item}>
+                {t(`workspace.kind_${item}`)}
+              </option>
+            ))}
+          </select>
         </div>
 
         {kind === "local" && (
@@ -260,17 +356,91 @@ export default function AddSourceModal({
           </>
         )}
 
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-xs font-medium text-base-content/70">
-            {t("workspace.source_label")}
-          </span>
-          <input
-            value={label}
-            onChange={(event) => setLabel(event.target.value)}
-            placeholder={t(`workspace.kind_${kind}`)}
-            className="input input-bordered w-full"
-          />
-        </label>
+        {kind === "git" && (
+          <>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-xs font-medium text-base-content/70">
+                {t("workspace.clone_repo_url")}
+              </span>
+              <input
+                value={gitUrl}
+                onChange={(event) => setGitUrl(event.target.value)}
+                placeholder="https://example.org/team/repo.git"
+                aria-label={t("workspace.clone_repo_url")}
+                className="input input-bordered w-full"
+              />
+            </label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-xs font-medium text-base-content/70">
+                  {t("workspace.clone_branch")}
+                </span>
+                <input
+                  value={gitBranch}
+                  onChange={(event) => setGitBranch(event.target.value)}
+                  aria-label={t("workspace.clone_branch")}
+                  className="input input-bordered w-full"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-xs font-medium text-base-content/70">
+                  {t("workspace.clone_folder")}
+                </span>
+                <input
+                  value={gitFolder}
+                  onChange={(event) => {
+                    setGitFolder(event.target.value);
+                    setGitFolderEdited(true);
+                  }}
+                  placeholder={suggestedFolder || t("workspace.clone_folder")}
+                  aria-label={t("workspace.clone_folder")}
+                  className="input input-bordered w-full"
+                />
+              </label>
+            </div>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-xs font-medium text-base-content/70">
+                {t("workspace.clone_agent")}
+              </span>
+              <select
+                value={cloneAgentId}
+                onChange={(event) => setCloneAgentId(event.target.value)}
+                disabled={localAgents.length === 0}
+                aria-label={t("workspace.clone_agent")}
+                className="select select-bordered w-full"
+              >
+                {localAgents.length === 0 ? (
+                  <option value="">—</option>
+                ) : (
+                  localAgents.map((agent: any) => (
+                    <option key={agent.id} value={agent.id}>
+                      {agent.name || agent.id}
+                    </option>
+                  ))
+                )}
+              </select>
+            </label>
+            {localAgents.length === 0 && (
+              <p className="text-xs text-warning">
+                {t("workspace.clone_no_agent")}
+              </p>
+            )}
+          </>
+        )}
+
+        {kind !== "git" && (
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-xs font-medium text-base-content/70">
+              {t("workspace.source_label")}
+            </span>
+            <input
+              value={label}
+              onChange={(event) => setLabel(event.target.value)}
+              placeholder={t(`workspace.kind_${kind}`)}
+              className="input input-bordered w-full"
+            />
+          </label>
+        )}
 
         {kind === "mcp" && (
           <>
@@ -320,35 +490,48 @@ export default function AddSourceModal({
         {DEVICE_PLANE_KINDS.has(kind) && (
           <p className="text-xs text-warning">{t("workspace.device_only_hint")}</p>
         )}
-        <label className="flex items-center gap-2 text-xs text-base-content/70">
-          <input
-            type="checkbox"
-            checked={readOnly}
-            onChange={(event) => setReadOnly(event.target.checked)}
-            className="checkbox checkbox-sm"
-          />
-          <span>
-            {t("workspace.source_read_only")}
-            <span className="ml-1 text-base-content/45">
-              {t("workspace.source_read_only_hint")}
+        {kind !== "git" && (
+          <label className="flex items-center gap-2 text-xs text-base-content/70">
+            <input
+              type="checkbox"
+              checked={readOnly}
+              onChange={(event) => setReadOnly(event.target.checked)}
+              className="checkbox checkbox-sm"
+            />
+            <span>
+              {t("workspace.source_read_only")}
+              <span className="ml-1 text-base-content/45">
+                {t("workspace.source_read_only_hint")}
+              </span>
             </span>
-          </span>
-        </label>
+          </label>
+        )}
 
         {error && <p className="text-xs text-error">{error}</p>}
 
         <div className="mt-2 flex justify-end gap-2">
-          <button type="button" className="btn" onClick={close}>
-            {t("common.cancel")}
-          </button>
           <button
             type="button"
-            className="btn btn-accent"
-            onClick={submit}
-            disabled={busy || !canSubmit}
+            className="btn"
+            onClick={close}
+            disabled={busy && kind === "git"}
           >
-            {t("common.ok")}
+            {t("common.cancel")}
           </button>
+          {kind === "git" && busy ? (
+            <p className="text-xs text-base-content/60" role="status">
+              {progress || t("workspace.clone_progress_clone")}
+            </p>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-accent"
+              onClick={submit}
+              disabled={busy || !canSubmit}
+            >
+              {t("common.ok")}
+            </button>
+          )}
         </div>
       </div>
     </BaseModal>
