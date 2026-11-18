@@ -36,6 +36,7 @@ import { selectGlobalMcpServers } from "../Redux/reducers/userSettingsReducer";
 
 import { useNavigate } from "react-router";
 import AnnouncementBar from "../components/Header/AnnouncementBar";
+import { isFeatureEnabled } from "../config/deployment";
 
 export default function ChatPage() {
   const params = useParams();
@@ -139,7 +140,7 @@ export default function ChatPage() {
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       {/* Header + optional Announcement */}
       <div className="min-w-0 overflow-x-clip">
-        <TourManager />
+        {isFeatureEnabled("tutorials") && <TourManager />}
         <AnnouncementBar />
         <Header
           className="md:hidden"
@@ -188,7 +189,7 @@ export default function ChatPage() {
               />
             </div>
           </div>
-          {!filePreview && !chatFilePreview && (
+          {isFeatureEnabled("workspaces") && !filePreview && !chatFilePreview && (
             <ChatAgentSidebar conversationId={localState?.id} />
           )}
         </div>

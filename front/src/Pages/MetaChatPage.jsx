@@ -24,6 +24,7 @@ import Conversation from "../components/Conversation/Conversation";
 import CloseChatButton from "../components/Conversation/CloseChatButton";
 import TourManager from "../components/SettingsPanel/TourManager";
 import AnnouncementBar from "../components/Header/AnnouncementBar";
+import { isFeatureEnabled } from "../config/deployment";
 import FeatureGuideCard from "../components/Others/FeatureGuideCard";
 import TutorialCatalog from "../components/Others/TutorialCatalog";
 import UseCaseCatalog from "../components/Others/UseCaseCatalog";
@@ -199,7 +200,7 @@ export default function MetaChatPage() {
       <div className="flex h-dvh min-h-0">
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="min-w-0 overflow-x-clip">
-          <TourManager />
+          {isFeatureEnabled("tutorials") && <TourManager />}
           <AnnouncementBar />
           <Header
             className="md:hidden"

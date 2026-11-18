@@ -26,6 +26,7 @@ import { createProvider } from "../../workspace/providers";
 import { createWorkspaceRootProvider } from "../../workspace/workspaceRoot";
 import { defaultCapabilities } from "../../workspace/capabilities";
 import { useImportConversation } from "../../hooks/useImportConversation";
+import { isFeatureEnabled } from "../../config/deployment";
 import { useUpdateModelsData } from "../../hooks/useUpdateModelsData";
 import { useToast } from "../../hooks/useToast";
 import { deleteConversation, newId } from "../../db";
@@ -624,7 +625,11 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
           <div className="flex flex-wrap gap-1">
             {[
               ["empty", "workspace.mode_empty"],
-              ["clone", "workspace.mode_clone"],
+              // Cloning a public repository runs git through a local agent; a
+              // deployment without that feature offers only empty/local.
+              ...(isFeatureEnabled("import_git")
+                ? [["clone", "workspace.mode_clone"]]
+                : []),
               ["local", "workspace.mode_local"],
             ].map(([value, key]) => (
               <button

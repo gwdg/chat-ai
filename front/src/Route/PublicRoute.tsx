@@ -12,15 +12,20 @@ import WorkspacePage from "../Pages/WorkspacePage";
 import AgentPage from "../Pages/AgentPage";
 import ToolFormDemoPage from "../Pages/ToolFormDemoPage";
 import { isAgentsEnabled } from "../utils/modules";
+import { isFeatureEnabled } from "../config/deployment";
 
 const PublicRoute = () => {
   return (
     <Routes>
       <Route path="/landing" element={<LandingPage />} />
       <Route path="/notfound" element={<NotFoundPage />} />
-      <Route path="/meta" element={<MetaChatPage />} />
+      {isFeatureEnabled("meta_chat") && (
+        <Route path="/meta" element={<MetaChatPage />} />
+      )}
       <Route path="/topic/:topicId" element={<TopicMasterPage />} />
-      <Route path="/workspace/:workspaceId" element={<WorkspacePage />} />
+      {isFeatureEnabled("workspaces") && (
+        <Route path="/workspace/:workspaceId" element={<WorkspacePage />} />
+      )}
       {isAgentsEnabled() && (
         <Route path="/agent/:agentId" element={<AgentPage />} />
       )}

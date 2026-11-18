@@ -23,6 +23,7 @@ import { getFeatureGuideMarker } from "../../../config/featureGuides";
 import { getUseCaseMarker } from "../../../config/useCases";
 import { getPersonaMarkers } from "../../../utils/personaCatalog";
 import { getMetaActionProposals } from "../../../utils/metaActions";
+import { isFeedbackEnabled } from "../../../utils/modules";
 
 // Constants
 const MAX_HEIGHT = 200;
@@ -55,7 +56,7 @@ export default React.memo(({ localState, setLocalState, message_index, modelsDat
   const sendMessage = useSendMessage();
   const { forkConversation } = useForkConversation(localState);
   const { confirmAction } = useModal();
-  const feedbackModule = import.meta.env.VITE_MODULE_FEEDBACK === "true";
+  const feedbackModule = isFeedbackEnabled();
 
   //Functions
   const adjustHeight = () => {

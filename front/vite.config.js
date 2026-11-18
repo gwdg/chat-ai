@@ -95,7 +95,10 @@ try {
 
   // Inject VITE_ variables into the environment
   for (const [key, value] of Object.entries(config)) {
-    if (key == "modelsPath") {
+    if (key == "deployment") {
+      process.env["VITE_DEPLOYMENT"] = value;
+      console.log("Deployment:", value);
+    } else if (key == "modelsPath") {
       process.env["VITE_MODELS_ENDPOINT"] = value;
       console.log("Models path:", value);
     } else if (key == "backendPath") {

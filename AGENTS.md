@@ -1443,6 +1443,91 @@ list `https://chat-ai.academiccloud.de/v1/models`, which is what `make` uses whe
 unset. The key is `--api-key` (or `API_KEY=`), then `$SAIA_API_KEY`, then `apiKey` in the front
 config, then `apiKey` in the `back.json` beside it; GWDG needs one and answers 401 without it.
 
+### 4.30 Deployments (build time) and brands (runtime) are two tiers
+
+A **deployment** picks features and modules and is chosen at build time; a **brand**
+picks name, logo, colours and favicon per user at runtime. `docs/deployment-profiles.md`
+is the full design; §15 there lists what is implemented. The invariants that matter
+while editing:
+
+- **Selection.** `deployment` in `secrets/front.json` becomes `VITE_DEPLOYMENT` (mapped in
+  `vite.config.js`, so it is a build input and needs a dev-server restart). It selects
+  `front/src/config/deployments/<id>/index.json`. **An unknown id falls back to
+  `chat-ai`, silently** — a typo does not fail the build, so check the `Deployment:` line
+  `vite.config.js` logs at startup.
+- **Profiles are inlined.** `deployment.js` uses
+  `import.meta.glob("./deployments/*/index.json", { eager: true })`, so every profile is in
+  every bundle. This is deliberate: the files hold no secrets and it keeps `useBrand()`
+  synchronous. Do not put anything secret there.
+- **Modules have one source of truth.** Read `utils/modules.js#isXEnabled()` (or
+  `isFeatureEnabled(name)` from `config/deployment`) — never `import.meta.env.VITE_MODULE_*`
+  in a component. A deployment profile overrides the env value, so the two can disagree;
+  the accessor is what the UI must follow. Per-key defaults are preserved: `tools`,
+  `feedback`, `choices` are opt-in (`"true"`), `agent`, `agents`, `arcanas` are opt-out
+  (`!== "false"`), `speech` carries a value (`"browser"` or `{model, voice}`). A local
+  variable must not reuse an accessor's name in the same scope: `const isToolsEnabled = …`
+  next to a call of `isToolsEnabled()` shadows the import (and the call then throws
+  `Cannot access 'isToolsEnabled' before initialization` on every send), so name the local
+  flag for what it means, e.g. `toolsActive`.
+- **A feature switch needs three wirings**, or a user sees a dead entry point: the route
+  (`Route/PublicRoute.tsx`), the entry point (sidebar section, prompt button, settings tab,
+  header icon) and the behaviour (agent tools, request fields). Also gate the feature guide,
+  or a tour points at an element that is no longer rendered. `import_git` is the worked
+  example: it hides the "clone repository" mode in `CreateWorkspaceModal` and nothing else.
+- **A brand may not change features or layout.** Brand objects are only read for presentation
+  (`BrandLogo`, `AiServicesMenu`, `LogoContainer`, `useTabTitle`, `CollapsibleFooter`, the
+  `brand-sidebar` surface); the feature/module accessors never look at a brand. Keep it that
+  way, or the guarantee in the design doc stops being true.
+- **Brand CSS goes into `<style id="brand-theme">` at runtime**, and the dark block must
+  target `body.dark`. `index.css` re-declares `--chat` and the `base-*` colours on `.dark`,
+  so a root-only rule is shadowed on `<body>`. Only values matching `/^#[0-9a-f]{3,8}$/i`
+  are emitted (`brands.js#brandCss`). The map of settable tokens is
+  `brands.js#THEME_TOKENS` (primary/secondary/accent + `*Content`, neutral, base100–300,
+  baseContent, info/success/warning/error, chat): a new CSS variable must be added there, or
+  a profile cannot set it.
+- **Surfaces repaint a subtree, not the page.** `brands.js#SURFACE_TOKENS` maps
+  `surfaces.sidebar.{background,hover,border,content,accent}` to `--color-base-100/-200/-300`,
+  `--color-base-content` and `--color-accent`, emitted against `body:not(.dark) .brand-sidebar`
+  and `body.dark .brand-sidebar`. `SidebarRail`, `SidebarPanel` and `SidebarDrawer` carry the
+  class; a new surface needs its class on the component root and an entry in `SURFACE_TOKENS`,
+  because the rule works by overriding daisyUI variables for the utilities already there.
+- **The footer is brand data.** `CollapsibleFooter` iterates `brand.footer.links` (default:
+  imprint, privacy, terms, docs), taking `label` (string or `{en, de}`), `url` (falling back
+  to `brand.links[id]`) and `visible`; a new id appends a link. `footer.isoCertified: false`
+  removes the ISO 27001 line, which is GWDG's certificate and must not appear under another
+  institution's brand.
+- **Brands are resolved, not persisted.** Precedence is `?brand=` (test override, kept in
+  `sessionStorage` for the visit) → `userData[brands.trustedField]` → the first matching
+  claim rule → `brands.default`. Nothing brand-related goes into Redux or `localStorage`.
+  `config/brandIds.js#clearBrandOverride()` removes the override; `UserInfoContainer` calls it
+  before the logout redirect so it cannot follow another user into the same tab.
+- **`/user` has no group claims in this repo.** `back/service.mjs` returns a hard-coded
+  `sample-user`, so the UGOE rule (`contains "UGOE"` over `oidc_claim_groups` and friends)
+  cannot fire locally. Test with `?brand=UGOE`; a real deployment needs the claims (or a
+  gateway `brand` field) in the profile response.
+- **Logo sizing trap.** `config/branding/chatai/logo.svg` has `width="100%"` and **no
+  height**, so `max-h-10 w-auto` collapses it to 0×0. Use a fixed height (`h-10 w-auto`) and
+  add `max-w-*` for wide lockups. A brand whose lockup is very wide (UGOE is 5.6:1, and its
+  wordmark is illegible in the 40 px sidebar slot) sets `logo.headerVariant: "mark"`.
+- **A brand is one folder.** `front/src/config/branding/<folder>/` holds `brand.json` plus
+  every image it names; `brand.json` carries name, logo variant, aliases, links, **footer**,
+  theme and surface colours, so nothing about a brand is spread over the deployment profile
+  or a defaults module. The loader (`brands.js`, `import.meta.glob("./branding/*/brand.json")`)
+  resolves the file names with `?url&no-inline`, so they become hashed build assets and are
+  service-worker cached. `front/public/chat-ai.ico` remains only for the pre-boot favicon in
+  `index.html`; the brand's `favicon` replaces it on mount. PDF exports use
+  `brand.assets.export`, not a direct `assets/logos` import.
+- **`minimal` is the regression deployment.** `CONFIG_LOCATION=../secrets/front-minimal.json
+  npm run dev` (copy `front-minimal.json.sample` first) turns every module off and every feature
+  off except `meta_chat`; `/workspace/*` and `/agent/*` must redirect to `/chat`, `/meta` must
+  still load, and the Encryption tab must be absent. The Meta chat needs no module: it reads
+  stored summaries and sends its own `function_tools`, and `getMetaToolDefinitions()` drops the
+  tour tools while `tutorials` is off. Verify a module-off change there, not only with the env
+  var.
+- **Brand or deployment tests** are `front/src/config/__tests__/{brands,deployment}.test.js`
+  and `BrandProvider.test.jsx`. A new brand needs `config/branding/<folder>/brand.json` plus its
+  images, and a case in `brands.test.js` (id/alias match plus the merged values).
+
 ## 5. Conventions
 
 - **Gradual TypeScript.** `.jsx` and `.tsx` coexist. `front/tsconfig.json` is `strict: false`,
@@ -1512,7 +1597,10 @@ config, then `apiKey` in the `back.json` beside it; GWDG needs one and answers 4
 - [ ] new persisted Redux key → `whitelist` + `getDefaultState()` (+ a migration if the shape changed)
 - [ ] new setting → exposed in the Meta chat context and propose/apply/revert support (§4.16)
 - [ ] new `front.json` key → mapped in `vite.config.js`
-- [ ] touched a `VITE_MODULE_*` area → still correct with the module off
+- [ ] touched a `VITE_MODULE_*` area → read through `utils/modules.js`, and still correct with the
+      module off (check `minimal`, §4.30)
+- [ ] new feature switch → route + entry point + behaviour, and the feature guide respects it
+- [ ] new brand → `config/branding/<folder>/brand.json` + its images + a `brands.test.js` case
 - [ ] conversation write → `lastModified` threaded through and `-1` handled
 - [ ] behaviour exercised in a browser, not just compiled
 

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import {
   createMetaToolRunner,
+  getMetaToolDefinitions,
   META_TOOL_DEFINITIONS,
 } from "../metaTools";
 import {
@@ -356,5 +357,17 @@ describe("Meta chat local tools", () => {
     const result = await run("list_tutorials");
     expect(result).toContain(Object.keys(featureGuides)[0]);
     expect(result).toContain(Object.keys(useCases)[0]);
+  });
+
+  it("only offers tour tools when the deployment renders tours", () => {
+    const names = (tutorials) =>
+      getMetaToolDefinitions(tutorials).map((tool) => tool.function.name);
+
+    expect(names(true)).toEqual(META_TOOL_DEFINITIONS.map((tool) => tool.function.name));
+    expect(names(false)).toContain("list_chats");
+    expect(names(false)).toContain("get_user_settings");
+    expect(names(false)).not.toContain("list_tutorials");
+    expect(names(false)).not.toContain("start_tutorial");
+    expect(names(false)).not.toContain("start_use_case");
   });
 });
