@@ -6,7 +6,7 @@ import icon_file_pdf from "../../../assets/icons/file_pdf.svg";
 import icon_file_text from "../../../assets/icons/file_text.svg";
 import { getConversation } from "../../../db";
 import { useToast } from "../../../hooks/useToast";
-import Logo from "../../../assets/logos/chat_ai.png"
+import { useBrand } from "../../../config/BrandProvider";
 import { processContentItems } from "../../../utils/sendMessage";
 import { hasMcpServerValue, withoutHeaders } from "../../../agent/mcp";
 import { isArcanasEnabled } from "../../../utils/modules";
@@ -26,6 +26,7 @@ export default function ExportChatModal({
   const [conversation, setConversation] = useState(null);
 
   const { notifyError, notifySuccess } = useToast();
+  const { brand } = useBrand();
 
   // Async function to load conversation from DB
   const refreshConversation = async () => {
@@ -282,9 +283,8 @@ export default function ExportChatModal({
       // Add header to each page
       const addHeader = (isFirstPage) => {
         y = margin;
-        // TODO fix logo
-        if (isFirstPage) {
-          doc.addImage(Logo, "PNG", margin, margin, 20, 8);
+        if (isFirstPage && brand?.assets?.export) {
+          doc.addImage(brand.assets.export, "PNG", margin, margin, 20, 8);
         }
         const date = new Date().toLocaleDateString();
         doc.setFontSize(10);

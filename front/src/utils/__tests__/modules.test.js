@@ -1,11 +1,14 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { isAgentsEnabled } from "../modules";
+import { isAgentEnabled, isAgentsEnabled } from "../modules";
 
-const original = import.meta.env.VITE_MODULE_AGENTS;
+const originalAgents = import.meta.env.VITE_MODULE_AGENTS;
+const originalAgent = import.meta.env.VITE_MODULE_AGENT;
 
 afterEach(() => {
-  if (original === undefined) delete import.meta.env.VITE_MODULE_AGENTS;
-  else import.meta.env.VITE_MODULE_AGENTS = original;
+  if (originalAgents === undefined) delete import.meta.env.VITE_MODULE_AGENTS;
+  else import.meta.env.VITE_MODULE_AGENTS = originalAgents;
+  if (originalAgent === undefined) delete import.meta.env.VITE_MODULE_AGENT;
+  else import.meta.env.VITE_MODULE_AGENT = originalAgent;
 });
 
 describe("isAgentsEnabled", () => {
@@ -18,5 +21,20 @@ describe("isAgentsEnabled", () => {
 
     import.meta.env.VITE_MODULE_AGENTS = "false";
     expect(isAgentsEnabled()).toBe(false);
+  });
+});
+
+describe("isAgentEnabled", () => {
+  // vite.config.js forces the browser agent on unless front.json disables it, so
+  // an unset flag is "on" too; only an explicit "false" turns it off.
+  it("is opt-out, like the agent/agents/arcanas module defaults", () => {
+    delete import.meta.env.VITE_MODULE_AGENT;
+    expect(isAgentEnabled()).toBe(true);
+
+    import.meta.env.VITE_MODULE_AGENT = "true";
+    expect(isAgentEnabled()).toBe(true);
+
+    import.meta.env.VITE_MODULE_AGENT = "false";
+    expect(isAgentEnabled()).toBe(false);
   });
 });

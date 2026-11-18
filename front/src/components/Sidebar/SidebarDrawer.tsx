@@ -19,7 +19,7 @@ export default function SidebarDrawer({ children }: { children: ReactNode }) {
       {/* height is: screenheight-header_size which is h-14 */}
       <div
         id="sidebardrawer"
-        className={`fixed top-0 left-0 pt-1 z-40 h-dvh md:h-dvh transition-transform duration-200
+        className={`brand-sidebar fixed top-0 left-0 pt-1 z-40 h-dvh md:h-dvh transition-transform duration-200
           ${showSidebar ? "translate-x-0" : "-translate-x-full"} 
  bg-base-100 shadow-lg`}
       >

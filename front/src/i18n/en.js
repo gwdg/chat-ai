@@ -1234,7 +1234,7 @@ export default {
     imprint: "Imprint",
     terms: "Terms of Use",
     docs: "Docs",
-    privacy: "Privacy",
+    privacy: "Data Privacy (ChatAI)",
     faq: "FAQ",
     contact: "Contact Us",
     about: "About",

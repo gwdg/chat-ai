@@ -206,6 +206,42 @@ The stack runs no TTS or transcription service (`kokoro-82m` / `whisperx`), so e
 
 Two things to keep in mind: the key is compiled into the bundle, so this is a local development setup, not a deployment pattern, and the engine's `/public/v1` routes are rate-limited per key just like any other client. The modules are enabled in this file: the browser agent (`modules.agent`) works against a direct endpoint because it sends `apiKey` as its bearer token, and the Agents sidebar uses the same-origin `/agents` path, which the dev server forwards when `AGENT_SERVICE_DEV_PROXY` is set; MCP and Arcana Tools remain `back`-only routes. The agent bridge is served by the agent service for a service-managed agent, and only a direct (non-service) agent still needs `back` for it.
 
+### Minimal deployment on the same engine
+
+The `minimal` deployment is a separate front config, not a separate app, so it can use the same direct-engine setup. The local `secrets/front-minimal.json` (gitignored, so the key stays out of the repo) points at the local stack:
+
+```json
+{
+  "mode": "dev",
+  "deployment": "minimal",
+  "port": 8083,
+  "backendPath": "http://localhost:10000/public/v1",
+  "modelsPath": "http://localhost:10000/public/v1/models",
+  "userDataPath": "/assumes_behind_oidc/user",
+  "apiKey": "35c1e0a9f8d24b6f9c0a1e2d3f4a5b6c",
+  "fakeAuthHeaders": {
+    "oidc_claim_goe_id": "local-fake-minimal",
+    "oidc_claim_uid": "local-fake-minimal",
+    "oidc_claim_o": "GWD",
+    "oidc_claim_ou": "GWDG",
+    "oidc_claim_email": "local-fake-minimal@example.org",
+    "oidc_claim_given_name": "Minimal",
+    "oidc_claim_family_name": "User"
+  },
+  "titleGenerationModel": "bridge/qwen3-30b-a3b-instruct-2507",
+  "memoryGenerationModel": "bridge/qwen3-30b-a3b-instruct-2507",
+  "proposalGenerationModel": "bridge/qwen3-30b-a3b-instruct-2507",
+  "default": {
+    "model": {
+      "id": "bridge/qwen3-30b-a3b-instruct-2507",
+      "name": "Qwen 3 30B A3B Instruct (local SAIA engine)"
+    }
+  }
+}
+```
+
+`deployment: "minimal"` turns off every module and every feature except the Meta chat; the rest of the file is what `front-local-conf.json` does for the full UI. `CONFIG_LOCATION=../secrets/front-minimal.json npm run dev` then serves it on `:8083` without `back`. The model id must exist in the stack's `/public/v1/models`; without GWDG federation that is `bridge/local-echo-1` / `bridge/local-slow-1`. `secrets/front-minimal.json.sample` remains the portable variant that expects `back` on `:8081`.
+
 ## Serving a Static Build (Apache / Nginx)
 
 Setting `"mode": "build"` in `secrets/front.json` makes the front container run `npm run build` (`vite build`) instead of starting a server. Because `docker-compose.yml` mounts `./front` into the container, the generated bundle is written to `front/dist/` on the host:

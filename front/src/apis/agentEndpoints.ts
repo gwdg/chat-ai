@@ -6,7 +6,7 @@ import { resolveBaseURL } from "./openaiClient";
 import { e2eeFetch } from "../e2ee/fetch";
 
 export const agentEndpoint = () => resolveBaseURL().replace(/\/$/, "");
-export const isAgentEnabled = () => import.meta.env.VITE_MODULE_AGENT === "true";
+export { isAgentEnabled } from "../utils/modules";
 
 // pi-ai insists on a key. `back` ignores it and adds the real one, so the placeholder only has
 // to be non-empty. A direct endpoint (a SAIA engine) checks it, so the configured key wins.

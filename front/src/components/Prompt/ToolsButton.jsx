@@ -5,10 +5,11 @@ import { Tools } from "@carbon/icons-react";
 import Tooltip from "../Others/Tooltip";
 import ToolsContainer from "../SettingsPanel/ToolsContainer";
 import { isAgentEnabled } from "../../apis/agentEndpoints";
+import { isToolsEnabled } from "../../utils/modules";
 
 export default function ToolsButton({ localState, setLocalState }) {
     const { t } = useTranslation();
-    const toolsModule = import.meta.env.VITE_MODULE_TOOLS === "true";
+    const toolsModule = isToolsEnabled();
     // The agent always has tools to choose from
     if (!toolsModule && !isAgentEnabled()) return null;
 

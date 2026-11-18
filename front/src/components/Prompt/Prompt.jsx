@@ -12,6 +12,7 @@ import ToolsButton from "./ToolsButton";
 import AttachButton from "./AttachButton";
 import AttachFromWorkspaceButton from "./AttachFromWorkspaceButton";
 import WorkspaceAttachButton from "./WorkspaceAttachButton";
+import { isFeatureEnabled } from "../../config/deployment";
 import AttachMediaButton from "./AttachMediaButton";
 import PromptTextArea from "./PromptTextArea";
 import ModelNoToolsWarning from "./ModelNoToolsWarning";
@@ -192,10 +193,12 @@ export default function Prompt({
               localState={localState}
               setLocalState={setLocalState}
             />
-            <AttachFromWorkspaceButton
-              localState={localState}
-              setLocalState={setLocalState}
-            />
+            {isFeatureEnabled("workspaces") && (
+              <AttachFromWorkspaceButton
+                localState={localState}
+                setLocalState={setLocalState}
+              />
+            )}
                {/* Mic Button */}
             <MicButton
               localState={localState}
@@ -208,10 +211,12 @@ export default function Prompt({
           <div className="flex gap-4 items-center justify-center">
             {!metaChatSend && (
               <>
-                <WorkspaceAttachButton
-                  localState={localState}
-                  setLocalState={setLocalState}
-                />
+                {isFeatureEnabled("workspaces") && (
+                  <WorkspaceAttachButton
+                    localState={localState}
+                    setLocalState={setLocalState}
+                  />
+                )}
                 {/* Tools Button */}
                 <ToolsButton
                   localState={localState}

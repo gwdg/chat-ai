@@ -9,7 +9,7 @@ import { loadFile, loadFileMeta, saveFile, updateConversation, updateConversatio
 import { getFileType, readFileAsBase64, readFileAsText } from "./attachments";
 import { isAgentEnabled, modelSupportsTools } from "../apis/agentEndpoints";
 import { remoteMcpEnabled, resolveMcpServers } from "../agent/mcp";
-import { isArcanasEnabled } from "./modules";
+import { isArcanasEnabled, isChoicesEnabled, isFeedbackEnabled, isToolsEnabled } from "./modules";
 import { confirmMcpNameChange } from "./mcpNameChange";
 import { BINARY_DOCUMENT_TYPES, modelSupportsFileType } from "./modelCapabilities";
 
@@ -336,9 +336,9 @@ const sendMessage = async ({
   const assistantIndex = localState.messages.length
 
   try {
-    const feedbackModule = import.meta.env.VITE_MODULE_FEEDBACK === "true";
-    const toolsModule = import.meta.env.VITE_MODULE_TOOLS === "true";
-    const choicesModule = import.meta.env.VITE_MODULE_CHOICES === "true";
+    const feedbackModule = isFeedbackEnabled();
+    const toolsModule = isToolsEnabled();
+    const choicesModule = isChoicesEnabled();
 
     const arcanasModule = isArcanasEnabled();
     const isExternalModel =
@@ -348,13 +348,15 @@ const sendMessage = async ({
     // the Browser agent, which needs tools to act on files.
     const useBrowserAgent = shouldUseBrowserAgent(localState.settings.model);
     const modelSupports = modelSupportsTools(localState.settings.model);
-    const isToolsEnabled =
+    // Named separately from the `isToolsEnabled()` module gate above: a local
+    // binding with that name would shadow the import and throw a TDZ error.
+    const toolsActive =
       modelSupports &&
       toolsModule &&
       !isExternalModel &&
       localState.settings?.enable_tools;
     const isArcanaSupported =
-      arcanasModule && isToolsEnabled && !!localState.settings.tools.arcana;
+      arcanasModule && toolsActive && !!localState.settings.tools.arcana;
   
     let finalConversationForState; // For local state updates
     let conversationForAPI = await buildConversationForAPI(localState, {
@@ -375,12 +377,12 @@ const sendMessage = async ({
     }
     
     // Handle tools
-    if (isToolsEnabled || speechMode) {
+    if (toolsActive || speechMode) {
       // Inject the current date and time to the system prompt in human-readable format
       const currentDate = new Date().toLocaleString();
       systemPromptAPI = `\n\n--- Begin System Context ---\nCurrent Date: ${currentDate}\n--- End System Context ---` + systemPromptAPI;
       // Convert tools dictionary to OpenAI-compatible tools list
-      if (isToolsEnabled) {
+      if (toolsActive) {
         conversationForAPI.settings.tools = Object.entries(localState.settings.tools)
                   .filter(
                     ([toolKey, enabled]) =>

@@ -1252,7 +1252,7 @@ export default {
     imprint: "Impressum",
     terms: "Nutzungsbedingungen",
     docs: "Doku",
-    privacy: "Datenschutz",
+    privacy: "Datenschutz (ChatAI)",
     faq: "FAQ",
     contact: "Kontakt",
     about: "Über uns",

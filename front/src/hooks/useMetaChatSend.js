@@ -32,7 +32,8 @@ import {
   selectTimeout,
   selectUserSettings,
 } from "../Redux/reducers/userSettingsReducer";
-import { createMetaToolRunner, META_TOOL_DEFINITIONS } from "../utils/metaTools";
+import { createMetaToolRunner, getMetaToolDefinitions } from "../utils/metaTools";
+import { isFeatureEnabled } from "../config/deployment";
 import { saveFileReady } from "../db";
 
 const MAX_TOOL_ROUNDS = 6;
@@ -40,7 +41,7 @@ export const META_LAST_CHECK_KEY = "chatai.meta.last-check";
 export const META_LAST_CHECK_RESULT_KEY = "chatai.meta.last-check-result";
 
 function buildSystemPrompt() {
-  return `You are the Meta chat assistant and a helpful tutor for a local chat application. You help the user understand and use Chat AI, including its features and workflows, and find and understand their past conversations and topics. You are the only assistant that can start in-app tutorials.
+  const prompt = `You are the Meta chat assistant and a helpful tutor for a local chat application. You help the user understand and use Chat AI, including its features and workflows, and find and understand their past conversations and topics. You are the only assistant that can start in-app tutorials.
 
 The app data is not embedded in this prompt. Use the provided tools to read it when needed: list_chats, list_topics, get_chat, search_messages, list_memories, get_user_settings, list_e2ee_keys, list_models, list_personas, list_tutorials, start_tutorial, and start_use_case. For OpenCode agents use list_agents, list_agent_sessions, get_agent_history, and the agent file tools. The data can change between user messages, so call the relevant tool again instead of assuming an earlier value still applies. Never invent a conversation, topic, title, id, setting, memory, model, persona, tutorial, or use case. If a tool returns nothing useful, say so plainly. Memories can be grouped: list_memories returns the available memory groups, each memory's group, and the default memory group. Use it when the user asks about memory groups instead of saying memories are not grouped.
 
@@ -122,6 +123,13 @@ MCP servers are per-chat. "local" servers are added to Local tools with a URL; "
 For any other setting, do not propose a marker; use get_user_settings to find the relevant settings tab and give its deep link instead. Use list_memories before ADD_MEMORY, UPDATE_MEMORY, DELETE_MEMORY, or CLEAR_MEMORIES; indices come from that tool. Memories can be grouped: set group to an existing group name from list_memories, or omit it to use this chat's effective memory group. Never invent a group name. Do not combine proposal markers with persona links or tutorial requests in the same answer.
 
 Answer in the same language as the user's question. Be concise and concrete.`;
+
+  // A deployment can switch the tour runtime off; then the Meta chat must not
+  // promise a walkthrough it cannot start.
+  if (isFeatureEnabled("tutorials")) return prompt;
+  return `${prompt}
+
+Feature guides and use-case walkthroughs are disabled in this deployment: do not call start_tutorial or start_use_case, do not offer /tutorial/ or /use-case/ links, and tell the user that guided tours are unavailable.`;
 }
 
 export function useMetaChatSend(modelsData = []) {
@@ -296,7 +304,7 @@ export function useMetaChatSend(modelsData = []) {
           tools: {},
           ...(modelSupportsTools({ id: modelId })
             ? {
-                function_tools: META_TOOL_DEFINITIONS,
+                function_tools: getMetaToolDefinitions(),
                 tool_choice: "auto",
               }
             : {}),

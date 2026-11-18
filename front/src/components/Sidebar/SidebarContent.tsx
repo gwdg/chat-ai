@@ -86,6 +86,7 @@ import TutorialStatus from "../Others/TutorialStatus";
 import WorkspaceList from "../Workspace/WorkspaceList";
 import AgentList from "./AgentList";
 import McpServerList from "./McpServerList";
+import { isFeatureEnabled } from "../../config/deployment";
 
 export default function SidebarContent({
   localState,
@@ -776,30 +777,34 @@ export default function SidebarContent({
         </ShortcutTooltip>
       </div>
 
-      <div className="px-3 pb-1">
-        <Tooltip text={t("meta_chat.help_tooltip")}>
-          <button
-            type="button"
-            onClick={() => navigate("/meta")}
-            data-guide="meta-chat"
-            className={`flex w-full items-center gap-1.5 rounded-lg px-1.5 py-1 text-left text-xs transition ${
-              location.pathname === "/meta"
-                ? "bg-accent/10 text-accent"
-                : "text-base-content/80 hover:bg-base-200 hover:text-base-content"
-            }`}
-          >
-            <ChattyLogo className="h-4 w-4 shrink-0" />
-            <span className="min-w-0 truncate font-medium">
-              {t("meta_chat.help_label")}
-            </span>
-          </button>
-        </Tooltip>
-      </div>
+      {isFeatureEnabled("meta_chat") && (
+        <div className="px-3 pb-1">
+          <Tooltip text={t("meta_chat.help_tooltip")}>
+            <button
+              type="button"
+              onClick={() => navigate("/meta")}
+              data-guide="meta-chat"
+              className={`flex w-full items-center gap-1.5 rounded-lg px-1.5 py-1 text-left text-xs transition ${
+                location.pathname === "/meta"
+                  ? "bg-accent/10 text-accent"
+                  : "text-base-content/80 hover:bg-base-200 hover:text-base-content"
+              }`}
+            >
+              <ChattyLogo className="h-4 w-4 shrink-0" />
+              <span className="min-w-0 truncate font-medium">
+                {t("meta_chat.help_label")}
+              </span>
+            </button>
+          </Tooltip>
+        </div>
+      )}
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="px-3 pb-1">
-          <TutorialStatus />
-        </div>
+        {isFeatureEnabled("tutorials") && (
+          <div className="px-3 pb-1">
+            <TutorialStatus />
+          </div>
+        )}
         <div
           ref={scrollContainerRef}
           onScroll={syncChatsHeaderShadow}
@@ -811,7 +816,9 @@ export default function SidebarContent({
               chatCount={pinnedTopics.length + pinnedConversations.length}
             >
               <TopicList {...topicListProps} variant="pinned" />
-              <WorkspaceList variant="pinned" />
+              {isFeatureEnabled("workspaces") && (
+                <WorkspaceList variant="pinned" />
+              )}
               {isAgentsEnabled() && <AgentList variant="pinned" />}
             </PinnedSection>
           )}
@@ -1071,16 +1078,24 @@ export default function SidebarContent({
           )}
           {!hasSearch && (
             <>
-              <div className="mx-2 my-1.5 border-t border-base-300" />
-              <WorkspaceList />
+              {isFeatureEnabled("workspaces") && (
+                <>
+                  <div className="mx-2 my-1.5 border-t border-base-300" />
+                  <WorkspaceList />
+                </>
+              )}
               {isAgentsEnabled() && (
                 <>
                   <div className="mx-2 my-1.5 border-t border-base-300" />
                   <AgentList />
                 </>
               )}
-              <div className="mx-2 my-1.5 border-t border-base-300" />
-              <McpServerList />
+              {isFeatureEnabled("mcp_servers") && (
+                <>
+                  <div className="mx-2 my-1.5 border-t border-base-300" />
+                  <McpServerList />
+                </>
+              )}
             </>
           )}
         </div>
