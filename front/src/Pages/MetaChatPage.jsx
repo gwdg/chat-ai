@@ -256,14 +256,16 @@ export default function MetaChatPage() {
                   {t("meta_chat.banner_description")}
                 </p>
                 <ul className="mt-1 list-disc space-y-1 pl-4 text-[11px] leading-relaxed text-base-content/70">
-                  <li>
-                    <span className="font-medium text-base-content/80">
-                      {t("meta_chat.purposes.tutor")}
-                    </span>
-                    {" — "}
-                    {t("meta_chat.purposes.tutor_example")}
-                    <FeatureGuideCard featureId="meta_chat_catalogs" compact />
-                  </li>
+                  {isFeatureEnabled("tutorials") && (
+                    <li>
+                      <span className="font-medium text-base-content/80">
+                        {t("meta_chat.purposes.tutor")}
+                      </span>
+                      {" — "}
+                      {t("meta_chat.purposes.tutor_example")}
+                      <FeatureGuideCard featureId="meta_chat_catalogs" compact />
+                    </li>
+                  )}
                   <li>
                     <span className="font-medium text-base-content/80">
                       {t("meta_chat.purposes.find")}
@@ -274,24 +276,27 @@ export default function MetaChatPage() {
                 </ul>
                 {/* The catalogs anchor their panel to this row, so the panel
                     stays inside the conversation when the buttons wrap or the
-                    second button sits far right on a phone. */}
-                <div
-                  ref={catalogRef}
-                  className="relative mt-2 flex flex-wrap items-center gap-2"
-                >
-                  <TutorialCatalog
-                    open={openCatalog === "tutorials"}
-                    onOpenChange={(next) =>
-                      setOpenCatalog(next ? "tutorials" : null)
-                    }
-                  />
-                  <UseCaseCatalog
-                    open={openCatalog === "useCases"}
-                    onOpenChange={(next) =>
-                      setOpenCatalog(next ? "useCases" : null)
-                    }
-                  />
-                </div>
+                    second button sits far right on a phone. A deployment with
+                    tours off renders no runtime, so the buttons would be dead. */}
+                {isFeatureEnabled("tutorials") && (
+                  <div
+                    ref={catalogRef}
+                    className="relative mt-2 flex flex-wrap items-center gap-2"
+                  >
+                    <TutorialCatalog
+                      open={openCatalog === "tutorials"}
+                      onOpenChange={(next) =>
+                        setOpenCatalog(next ? "tutorials" : null)
+                      }
+                    />
+                    <UseCaseCatalog
+                      open={openCatalog === "useCases"}
+                      onOpenChange={(next) =>
+                        setOpenCatalog(next ? "useCases" : null)
+                      }
+                    />
+                  </div>
+                )}
               </div>
             </div>
             <div className="min-h-0 flex-1">
