@@ -5,6 +5,7 @@ import { GitBranch } from "lucide-react";
 import WorkspaceRootBrowser from "../Workspace/WorkspaceRootBrowser";
 import {
   findOpencodeFiles,
+  isAgentServerUnavailable,
   listOpencodeFiles,
   readOpencodeFile,
   runOpencodeShellAndWait,
@@ -53,16 +54,6 @@ export default function AgentFilesPanel({
   agent,
   onOpenFile,
   onShowText,
-  workspaces = [],
-  workspaceId = null,
-  workspaceName = "",
-  bridgeStatus = "off",
-  bridgeError = "",
-  bridgeWritable = false,
-  bridgeMcp = false,
-  onWorkspaceChange,
-  onBridgeWritableChange,
-  onBridgeMcpChange,
 }) {
   const { t } = useTranslation();
   const { notifySuccess, notifyError } = useToast();
@@ -72,6 +63,11 @@ export default function AgentFilesPanel({
   const [gitLoading, setGitLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  // The agent server did not answer with the OpenCode API at all (it is down
+  // and a gateway returned an HTML error page, or the request failed). There is
+  // no file list to show then, so the panel hides itself entirely instead of
+  // printing a JSON parse error; the poll brings it back when the server does.
+  const [unavailable, setUnavailable] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [creatingFile, setCreatingFile] = useState(false);
   const [newFileName, setNewFileName] = useState("");
@@ -92,10 +88,18 @@ export default function AgentFilesPanel({
       try {
         const rows = await listOpencodeFiles(agent, nextPath);
         if (requestId !== requestRef.current) return;
+        setUnavailable(false);
         setEntries(rows.map((row) => toRootEntry(agent.id, row)));
         if (silent) setError("");
       } catch (reason) {
         if (requestId !== requestRef.current) return;
+        if (isAgentServerUnavailable(reason)) {
+          setUnavailable(true);
+          setEntries([]);
+          setError("");
+          return;
+        }
+        setUnavailable(false);
         if (!silent) {
           setError(reason instanceof Error ? reason.message : String(reason));
           setEntries([]);
@@ -319,15 +323,6 @@ export default function AgentFilesPanel({
     }
   };
 
-  const bridgeBadge =
-    bridgeStatus === "online"
-      ? "badge-success"
-      : bridgeStatus === "connecting"
-        ? "badge-warning"
-        : bridgeStatus === "off"
-          ? "badge-ghost"
-          : "badge-error";
-
   const newFileEditor = creatingFile ? (
     <div className="flex items-center gap-1 border-b border-base-300 px-2 py-1.5">
       <input
@@ -355,6 +350,9 @@ export default function AgentFilesPanel({
     </div>
   ) : null;
 
+  // No hooks may run after this point.
+  if (unavailable) return null;
+
   return (
     <div
       data-guide="agent-files"
@@ -367,72 +365,6 @@ export default function AgentFilesPanel({
         className="hidden"
         onChange={uploadFiles}
       />
-      <div className="space-y-1 border-b border-base-300 p-2">
-        <div className="flex items-center gap-1">
-          <span className="min-w-0 flex-1 truncate text-[10px] font-semibold uppercase tracking-wider text-base-content/50">
-            {t("agents.bridge.title")}
-          </span>
-          {workspaceId && (
-            <span className={`badge badge-xs ${bridgeBadge}`}>
-              {t(`agents.bridge.status_${bridgeStatus}`)}
-            </span>
-          )}
-        </div>
-        <select
-          value={workspaceId ?? ""}
-          onChange={(event) => onWorkspaceChange?.(event.target.value)}
-          aria-label={t("agents.bridge.workspace")}
-          className="select select-bordered select-xs w-full"
-        >
-          <option value="">{t("agents.bridge.none")}</option>
-          {workspaces.map((workspace) => (
-            <option key={workspace.id} value={workspace.id}>
-              {workspace.name}
-            </option>
-          ))}
-        </select>
-        {workspaceId && (
-          <>
-            <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px]">
-              <label className="flex items-center gap-1">
-                <input
-                  type="checkbox"
-                  className="checkbox checkbox-xs"
-                  checked={bridgeWritable}
-                  onChange={(event) =>
-                    onBridgeWritableChange?.(event.target.checked)
-                  }
-                />
-                {t("agents.bridge.writable")}
-              </label>
-              <label className="flex items-center gap-1">
-                <input
-                  type="checkbox"
-                  className="checkbox checkbox-xs"
-                  checked={bridgeMcp}
-                  onChange={(event) =>
-                    onBridgeMcpChange?.(event.target.checked)
-                  }
-                />
-                {t("agents.bridge.mcp")}
-              </label>
-            </div>
-            <p className="text-[10px] leading-snug text-warning">
-              {t("agents.bridge.keep_open")}
-            </p>
-            {workspaceName && (
-              <p className="truncate text-[10px] text-base-content/50">
-                {workspaceName}
-              </p>
-            )}
-            {bridgeError && (
-              <p className="break-words text-[10px] text-error">
-                {bridgeError}
-              </p>
-            )}
-          </>
-        )}
-      </div>
       <div className="flex items-center gap-1 border-b border-base-300 px-2 py-1.5">
         <input
           value={query}

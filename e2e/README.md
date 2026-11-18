@@ -15,6 +15,7 @@ Each user scenario is its own readable file in `tests/`, so it can be run alone:
 | --- | --- |
 | `chat-send.spec.ts` | type a prompt, send it, see the streamed answer |
 | `chat-persistence.spec.ts` | reload and find the exchange still there |
+| `mcp-persistence.spec.ts` | a configured MCP server survives a reload, also with a second tab open |
 | `model-selector.spec.ts` | switch the conversation model |
 | `theme-toggle.spec.ts` | toggle dark mode and keep it after a reload |
 | `language-toggle.spec.ts` | switch the interface to German |
@@ -27,6 +28,7 @@ Each user scenario is its own readable file in `tests/`, so it can be run alone:
 | `chat-latex-rendering.spec.ts` | inline KaTeX math and a fenced LaTeX block |
 | `chat-codemode-png.spec.ts` | create a PNG through the codemode tool in a workspace |
 | `agent-opencode.spec.ts` | connect a local OpenCode agent and run a shell turn (opt-in) |
+| `agent-agentic-tasks.spec.ts` | a local OpenCode agent writes, runs and edits a script (opt-in) |
 | `chat-real-model.spec.ts` | ask a real model behind your own back service (opt-in) |
 
 ### Setup
@@ -202,7 +204,7 @@ E2E_WEBKIT=1 npm run test:e2e
 ### Local OpenCode agent (opt-in)
 
 `tests/agent-opencode.spec.ts` exercises the real browser→OpenCode path instead of mocking it. The
-scenario adds an agent in **Local agent** mode with the server URL and password, checks that the
+scenario adds an agent in **OpenCode server** mode with the server URL and password, checks that the
 created session exists on the server, opens the agent page and runs a `!echo` shell turn, which
 comes back through the same event stream as model replies.
 
@@ -229,6 +231,37 @@ so the test is deterministic, and waits for the server before the browser starts
 The shell turn is deliberate: it proves session creation, prompt delivery and event streaming
 without depending on a model provider or network access. If `E2E_OPENCODE_URL` points at an
 existing server, start it with the same password (`OPENCODE_SERVER_PASSWORD=... opencode serve`).
+
+#### Agentic tasks with a scripted model
+
+`tests/agent-agentic-tasks.spec.ts` goes one step further and sends a **prompt**, so OpenCode has
+to run a real tool loop. A real model would make that non-deterministic, so the run also starts
+`scripts/scripted-model.mjs`: an OpenAI-compatible server that answers with a fixed script —
+
+1. `write hello.py`, then `shell python3 hello.py`, then `read hello.py`, then a text answer;
+2. on the second prompt, `edit hello.py`, run it again, and report the new output.
+
+OpenCode executes those tools itself, so the file on disk, the exit status, the tool results and
+the rendered cards are genuine; only the choice of tool is scripted. The scenario adds an agent,
+opens its page, expands the `write`, `shell` and `read` cards, previews `hello.py` in the docked
+panel, edits the greeting and checks the file on disk both times.
+
+`scripts/opencode-server.mjs` writes the `scripted` provider into the project's `opencode.json`
+when `E2E_SCRIPTED_MODEL_URL` is set, which Playwright does for this run. Start the two specs
+separately or together:
+
+```bash
+npm run test:opencode           # both local-agent specs
+npm run test:opencode:agentic   # only the agentic scenario
+```
+
+| env | default | meaning |
+| --- | --- | --- |
+| `E2E_SCRIPTED_MODEL_URL` | `http://127.0.0.1:4100` | an already running scripted model; when set, the bundled one is not started |
+| `E2E_SCRIPTED_MODEL_PORT` | `4100` | port the bundled scripted model binds |
+
+With `E2E_OPENCODE_URL` set, the agentic scenario skips itself: a server you started has to
+configure the `scripted` provider (and `scripted/agentic` as a model) on its own.
 
 ### Real model behind a back service you started (opt-in)
 

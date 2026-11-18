@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams, useSearchParams } from "react-router";
 
@@ -8,8 +8,14 @@ import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
 import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
 import AgentConversation from "../components/Agent/AgentConversation";
 import AgentFilesPanel from "../components/Agent/AgentFilesPanel";
-import WorkspaceFilePanel from "../components/Workspace/WorkspaceFilePanel";
+import FilePreviewPanel from "../components/DocumentPanel/FilePreviewPanel";
 import { updateAgent, useAgent } from "../agents/agentStore";
+import {
+  attachedWorkspaces,
+  disableAgentBridgeAfterFailure,
+  isAgentBridgeEnabled,
+  resolveBridgeWorkspace,
+} from "../agents/agentBridgeAccess";
 import {
   fetchAgentSessions,
   switchAgentSession,
@@ -19,7 +25,7 @@ import { useUpdateUserData } from "../hooks/useUpdateUserData";
 import { useOpencodeFilePreview } from "../hooks/useOpencodeFilePreview";
 import { useAgentBridge } from "../hooks/useAgentBridge";
 import {
-  useWorkspace,
+  useAgentWorkspaceLinks,
   useWorkspaceList,
   useWorkspaceMounts,
   useWorkspaceSources,
@@ -36,8 +42,23 @@ export default function AgentPage() {
   const agent = useAgent(agentId);
   const modelsData = useUpdateModelsData();
   const userData = useUpdateUserData();
-  const { preview, openFile, openText, closePreview, download } =
+  const { preview, openFile, toggleFile, openText, closePreview, download } =
     useOpencodeFilePreview(agent);
+  // Tool cards of the conversation open the file they read or wrote in the same
+  // right-hand panel the file list uses, and close it when clicked again.
+  const openConversationFile = useCallback(
+    (path: string) => {
+      if (!agent?.id || !path) return;
+      void toggleFile({
+        sourceId: agent.id,
+        path,
+        name: path.split("/").filter(Boolean).pop() || path,
+        kind: "file",
+        local: false,
+      });
+    },
+    [agent?.id, toggleFile],
+  );
   useEffect(() => {
     if (!agent?.id || !sessionParam || sessionParam === agent.sessionId) return;
     let cancelled = false;
@@ -65,8 +86,16 @@ export default function AgentPage() {
     });
   }, [agent, focusedFilePath, openFile]);
   const workspaces = useWorkspaceList();
-  const workspaceId = agent?.bridgeWorkspaceId ?? null;
-  const workspace = useWorkspace(workspaceId ?? undefined);
+  const agentLinks = useAgentWorkspaceLinks(agent?.id);
+  // Only attached workspaces can be exposed: the bridge must never fall back to another
+  // workspace of the account, or the agent would read files the user never connected to it.
+  const bridgeCandidates = useMemo(
+    () => attachedWorkspaces(workspaces, agentLinks),
+    [agentLinks, workspaces],
+  );
+  const bridgeWorkspace = resolveBridgeWorkspace(agent, bridgeCandidates);
+  const bridgeEnabled = isAgentBridgeEnabled(agent) && !!bridgeWorkspace;
+  const workspaceId = bridgeEnabled ? bridgeWorkspace.id : null;
   const sources = useWorkspaceSources(workspaceId ?? undefined);
   const mounts = useWorkspaceMounts(workspaceId ?? undefined);
   const { providers } = useWorkspaceProviders(sources);
@@ -74,6 +103,14 @@ export default function AgentPage() {
     () => (workspaceId ? createWorkspaceRootProvider(workspaceId) : null),
     [workspaceId],
   );
+  // An access flag without an attached workspace can only come from data written before the
+  // bridge required one; clear it so a workspace attached later does not silently switch on.
+  useEffect(() => {
+    if (!agent || bridgeCandidates.length || !isAgentBridgeEnabled(agent)) return;
+    updateAgent(agent.id, { bridgeEnabled: false });
+  }, [agent, bridgeCandidates]);
+  // The bridge runs from this page; its switch, status and options live in the composer's
+  // workspace popover (components/Agent/AgentWorkspaceButton.jsx).
   const bridge = useAgentBridge({
     agent,
     workspaceId,
@@ -83,6 +120,22 @@ export default function AgentPage() {
     providers,
     rootProvider,
   });
+  // Reason of a bridge that could not start. Access is switched off in that case, so the hook
+  // reports "off" afterwards; the popover still shows why until access is turned on again.
+  const [bridgeFailure, setBridgeFailure] = useState("");
+
+  useEffect(() => {
+    if (!agent) return;
+    if (bridge.status === "error") {
+      if (disableAgentBridgeAfterFailure(agent)) {
+        setBridgeFailure(bridge.error || t("agents.bridge.not_working"));
+      }
+      return;
+    }
+    if (bridge.status === "online" || bridge.status === "connecting") {
+      setBridgeFailure("");
+    }
+  }, [agent, bridge.status, bridge.error, t]);
 
   const sidebarState = useMemo(
     () => ({ id: "", title: "", messages: [], folderId: null, settings: { model: "" } }),
@@ -112,31 +165,21 @@ export default function AgentPage() {
           {agent && (
             <AgentFilesPanel
               agent={agent}
-              onOpenFile={openFile}
+              onOpenFile={toggleFile}
               onShowText={openText}
-              workspaces={workspaces}
-              workspaceId={workspaceId}
-              workspaceName={workspace?.name}
-              bridgeStatus={bridge.status}
-              bridgeError={bridge.error}
-              bridgeWritable={agent?.bridgeWritable === true}
-              bridgeMcp={agent?.bridgeMcp === true}
-              onWorkspaceChange={(nextWorkspaceId) =>
-                updateAgent(agent.id, {
-                  bridgeWorkspaceId: nextWorkspaceId || null,
-                })
-              }
-              onBridgeWritableChange={(value) =>
-                updateAgent(agent.id, { bridgeWritable: value })
-              }
-              onBridgeMcpChange={(value) =>
-                updateAgent(agent.id, { bridgeMcp: value })
-              }
             />
           )}
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             {agent ? (
-              <AgentConversation agent={agent} modelsData={modelsData} />
+              <AgentConversation
+                agent={agent}
+                modelsData={modelsData}
+                onOpenFile={openConversationFile}
+                bridgeStatus={bridge.status}
+                bridgeError={bridge.error}
+                bridgeFailure={bridgeFailure}
+                bridgeUnavailable={bridge.unavailable}
+              />
             ) : (
               <div className="flex flex-1 items-center justify-center text-sm text-base-content/60">
                 {t("agents.not_found")}
@@ -144,7 +187,7 @@ export default function AgentPage() {
             )}
           </div>
           {agent && preview && (
-            <WorkspaceFilePanel
+            <FilePreviewPanel
               preview={preview}
               onClose={closePreview}
               onDownload={download}

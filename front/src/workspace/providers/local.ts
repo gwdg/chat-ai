@@ -55,9 +55,12 @@ async function entryFor(
   };
 }
 
-async function permission(handle: FileSystemDirectoryHandle): Promise<PermissionState> {
+async function permission(
+  handle: FileSystemDirectoryHandle,
+  mode: FileSystemPermissionMode,
+): Promise<PermissionState> {
   if (!handle.queryPermission) return "granted";
-  return handle.queryPermission({ mode: "readwrite" });
+  return handle.queryPermission({ mode });
 }
 
 export class LocalProvider implements FileProvider {
@@ -65,11 +68,17 @@ export class LocalProvider implements FileProvider {
   readonly capabilities: WorkspaceCapabilities = defaultCapabilities("local");
   status: "connected" | "needs-permission" | "offline" | "error" = "offline";
   private root: FileSystemDirectoryHandle | null = null;
+  /** A read-only source only asks for read permission; a write guard on the browser must not
+   * block attaching a folder that is never written to. */
+  private readonly permissionMode: FileSystemPermissionMode;
 
   constructor(
     readonly sourceId: string,
     readonly handleKey: string,
-  ) {}
+    readOnly = false,
+  ) {
+    this.permissionMode = readOnly ? "read" : "readwrite";
+  }
 
   async connect() {
     const handle = await getSourceHandle(this.handleKey);
@@ -78,7 +87,7 @@ export class LocalProvider implements FileProvider {
       throw new WorkspaceError("NOT_FOUND", "Folder handle is missing");
     }
     this.root = handle;
-    const state = await permission(handle);
+    const state = await permission(handle, this.permissionMode);
     if (state !== "granted") {
       this.status = "needs-permission";
       throw new WorkspaceError("PERMISSION_DENIED");
@@ -92,7 +101,7 @@ export class LocalProvider implements FileProvider {
       if (!handle) throw new WorkspaceError("NOT_FOUND", "Folder handle is missing");
       this.root = handle;
     }
-    const granted = await this.root.requestPermission({ mode: "readwrite" });
+    const granted = await this.root.requestPermission({ mode: this.permissionMode });
     if (granted !== "granted") throw new WorkspaceError("PERMISSION_DENIED");
     this.status = "connected";
   }

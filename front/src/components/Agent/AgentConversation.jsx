@@ -157,7 +157,15 @@ const sessionIsWorking = (value) =>
     sessionStatusValue(value),
   );
 
-export default function AgentConversation({ agent, modelsData = [] }) {
+export default function AgentConversation({
+  agent,
+  modelsData = [],
+  onOpenFile,
+  bridgeStatus = "off",
+  bridgeError = "",
+  bridgeFailure = "",
+  bridgeUnavailable = false,
+}) {
   const { t, i18n } = useTranslation();
   const [searchParams] = useSearchParams();
   const focusMessageId = searchParams.get("message");
@@ -1666,6 +1674,7 @@ export default function AgentConversation({ agent, modelsData = [] }) {
                     <AgentAssistantParts
                       parts={item.parts}
                       fallback={item.text}
+                      onOpenFile={onOpenFile}
                     />
                   )}
                 </div>
@@ -1880,7 +1889,13 @@ export default function AgentConversation({ agent, modelsData = [] }) {
                 ))}
               </select>
             </Tooltip>
-            <AgentWorkspaceButton agent={agent} />
+            <AgentWorkspaceButton
+              agent={agent}
+              bridgeStatus={bridgeStatus}
+              bridgeError={bridgeError}
+              bridgeFailure={bridgeFailure}
+              bridgeUnavailable={bridgeUnavailable}
+            />
             <button
               type="button"
               data-guide="agent-tools-button"

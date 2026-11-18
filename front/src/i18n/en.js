@@ -288,6 +288,8 @@ export default {
     update_memory_group_summary: "Update memory “{{from}}” to “{{to}}” in group “{{group}}”",
     delete_memory_summary: "Delete memory “{{text}}”",
     clear_memories_summary: "Delete all saved memories",
+    e2ee_assign_summary: "Encrypt model {{model}} with key “{{key}}”",
+    e2ee_clear_summary: "Stop encrypting model {{model}}",
     memory_item: "Memory {{index}}",
     setting_on: "on",
     setting_off: "off",
@@ -295,6 +297,122 @@ export default {
     unsorted_topic: "Unsorted",
     error: "Could not answer. Please try again.",
     no_model: "No default model is configured.",
+  },
+  e2ee: {
+    badge: "End-to-end encrypted",
+    description:
+      "A bound key adds a second layer of encryption on top of the transport encryption that already protects every request: your message is sealed in this browser and stays ciphertext until it reaches the machine that runs the model, usually a GPU. Keys are distributed out of band, so import only from a source you trust.",
+    keys_title: "Encryption keys",
+    no_keys: "No keys yet. Add one above.",
+    invalid_key: "Not a valid 32-byte X25519 public key",
+    download: "Download public key",
+    remove: "Remove",
+    remove_confirm: "Remove this key and its model bindings?",
+    removed: "Key removed",
+    clear_all: "Remove all keys",
+    clear_all_confirm: "Remove every key and model binding?",
+    clear_all_done: "All encryption keys removed",
+    test: "Test",
+    test_all: "Test all",
+    test_ok: "Key works: {{count}} model(s) answered the sealed test.",
+    test_failed: "No sealed answer from {{models}} ({{reason}}).",
+    test_no_models: "Bind this key to a model before testing it",
+    test_no_bindings: "No key is bound to a model, so there is nothing to test.",
+    test_all_done: "{{working}} of {{tested}} tested keys work.",
+    test_failed_keys: "Failing: {{keys}}",
+    status_working: "Works",
+    status_working_hint:
+      "The last sealed test request passed for {{count}} model(s)",
+    status_failed: "Test failed",
+    status_failed_hint:
+      "The last sealed test request did not pass for any bound model",
+    status_untested: "Not tested",
+    status_untested_hint:
+      "The key is well formed, but it has not been tested against a model",
+    verifying: "Testing key…",
+    verified_added: "Key tested and bound to {{count}} model(s)",
+    added_unverified:
+      "Key added without a test. Enter at least one known model so it can be checked.",
+    add_keys_title: "Add encryption keys",
+    add_keys_description:
+      "Each key is tested with one sealed request per model before it is stored. Models that fail the test stay unencrypted.",
+    verify_failed_all:
+      "The key was not added: the test request for {{model}} failed ({{reason}}).",
+    verify_failed_models:
+      "Not encrypted because the test failed for {{models}} ({{reason}}).",
+    no_models_matched:
+      "None of these are known models: {{models}}. The key was not added.",
+    import_method: "How to add a key",
+    modes: {
+      published: "Published keys",
+      paste: "Paste or file",
+      url: "From URL",
+      directory: "Key directory",
+    },
+    published_url: "Key base URL",
+    published_hint:
+      "Use only a key URL you trust. Each downloaded key is tested against its model before it is stored.",
+    published_load: "Load keys for all models",
+    published_loading: "Loading keys…",
+    published_url_required: "Enter the URL of the key directory.",
+    published_progress_fetch: "Downloading keys… {{done}}/{{total}}",
+    published_progress_verify: "Verifying keys… {{done}}/{{total}}",
+    published_imported: "Imported {{count}} verified key(s)",
+    published_none:
+      "No key passed verification. Check the key base URL and that the models have an E2EE node.",
+    published_none_needed: "Every model already has a usable key.",
+    published_summary:
+      "{{imported}} imported · {{missing}} without a published key · {{failed}} failed",
+    published_failed_title: "Not imported:",
+    published_more: "and {{count}} more",
+    models_field: "Applies to models",
+    models_field_placeholder: "qwen3-235b-a22b, Mistral Large",
+    models_field_hint:
+      "Comma-separated model ids or names; a bridged \"(External)\" entry is a separate model. Unknown entries are skipped.",
+    unknown_models: "Key added, but these are not known models: {{models}}",
+    fallback_name: "Key {{fingerprint}}",
+    public_key: "Public key",
+    public_key_placeholder: "Base64url X25519 public key",
+    add_key: "Add key",
+    choose_file: "Choose .pub file…",
+    key_url: "Key URL",
+    fetch_key: "Download key",
+    directory_url: "Directory URL",
+    import_directory: "Import directory",
+    directory_imported: "Imported {{count}} keys",
+    directory_hint:
+      "One document with every key and its model bindings. Each key is still tested before it is stored.",
+    choose_folder: "Choose key folder…",
+    folder_hint:
+      "Reads every .pub file in a local folder. Files that are not valid public keys are reported and skipped.",
+    folder_imported: "Imported {{count}} keys, bound {{bound}} models",
+    folder_partial:
+      "Imported {{count}} keys ({{bound}} models). Skipped {{skipped}} file(s): {{files}}",
+    folder_empty: "No .pub files in that folder.",
+    folder_no_valid: "No valid public key in that folder ({{count}} file(s) rejected).",
+    folder_unsupported:
+      "This browser cannot open a folder here. Use the directory URL instead, or open the app over HTTPS or localhost.",
+    folder_error: "Could not read the folder: {{reason}}",
+    import_error: "Could not import the key.",
+    models_title: "Unencrypted models",
+    models_keyed: "{{count}} encrypted",
+    models_description:
+      "These models are used by an internal feature and have no working key, so their requests only get the transport encryption.",
+    models_empty:
+      "No model used by an internal feature is missing a key.",
+    used_for: "Used for",
+    features: {
+      titles: "Titles",
+      memory: "Memory",
+      proposals: "Proposals",
+      summaries: "Summaries",
+      image_analysis: "Image analysis",
+    },
+    models_blocked: "Key missing or invalid",
+    not_encrypted: "Not encrypted",
+    model_not_offered: "Not in model list",
+    model_not_offered_hint:
+      "An internal feature is configured to use this model, but the deployment's model list does not contain it, so no key can be bound to it here.",
   },
   mcp_confirmation: {
     title: "Run MCP tool?",
@@ -353,7 +471,7 @@ export default {
     },
     remote_agents: {
       title: "Spawn a remote agent",
-      step1: "Use the + button in the Agents section to add an agent and select its HPC project.",
+      step1: "Use the + button in the Agents section to add an agent. Pick the GWDG HPC agentic service and its HPC project, or connect an OpenCode server.",
       step2: "Agents appear in the list; click one to open its chat on the right.",
       step3: "Expand an agent with the chevron to see each workspace with the sessions attached there, plus sessions that are not in a workspace. Click a session to switch, use + to create one, or open the ... menu to rename, detach or close it.",
     },
@@ -361,6 +479,11 @@ export default {
       title: "Close all sessions of a group",
       step1: "Expand an agent to see its sessions grouped by workspace and under “Not in a workspace”.",
       step2: "The trash icon in the group header closes every session of that group. Running turns are interrupted first, and you must confirm the action in a dialog before any session is removed.",
+    },
+    agent_workspace_access: {
+      title: "Give an agent access to workspace files",
+      step1: "Open an agent. The left panel is its file browser.",
+      step2: "Open the workspace button next to the prompt box and turn Agent workspace access on to provide the reverse proxy for this agent. Attach a workspace, choose which one the bridge uses, allow writes if the agent may change files, and keep this tab open while the agent works.",
     },
     catalog: {
       open: "Browse tutorials",
@@ -627,6 +750,19 @@ export default {
       step1: "Open your user settings.",
       step2:
         "Choose the Chat tab to change the default model, send key, summaries, timestamps, rendering, and document conversion.",
+    },
+    e2ee: {
+      title: "Encrypt a model end to end",
+      step1: "Open your user settings.",
+      step2: "Choose the Encryption tab.",
+      step3:
+        "Import the model's public key: paste it, choose a .pub file, load it from a URL, import a key directory, or pick a local folder and read every .pub file in it.",
+      step_published:
+        "Or load the keys the deployment publishes: the key base URL is prefilled from the configuration, and Load keys for all models imports and verifies every published .pub file.",
+      step4:
+        "Enter the models the key applies to when you add it. They then show a green lock and every request through them is encrypted in this browser.",
+      step_test:
+        "Test a key again against the models it is bound to. A key that answers the sealed test is marked green; an untested or failed key is not.",
     },
     message_timestamps: {
       title: "Show message timestamps",
@@ -971,7 +1107,6 @@ export default {
     label_mcp_server: "MCP Server",
     label_write_access: "Allow write",
     label_browser_storage: "Browser storage",
-    label_codemode: "Codemode",
     label_create_docx: "Word document",
     tools_requires_browser_storage: "Enable browser storage or share a local folder first",
     tools_requires_workspace: "Attach a workspace first",
@@ -979,6 +1114,8 @@ export default {
     label_tool_limit: "Limit tool calls per response",
     tool_limit_hint: "Maximum tool invocations per response; calls made together count once",
     tools_agent_external: "This model runs without tools",
+    model_no_tools_warning:
+      "This model does not support tools. The chat runs without file access, web search, or MCP tools.",
     placeholder_arcana_id: "Arcana id",
     placeholder_mcp_id: "Server id",
     placeholder_mcp_url: "http://localhost:3000/mcp",
@@ -1124,6 +1261,12 @@ export default {
         label: "Memories",
         title: "Saved memories",
         description: "Review and manage details Chat AI has learned.",
+      },
+      encryption: {
+        label: "Encryption",
+        title: "End-to-end encryption",
+        description:
+          "Manage the public keys of encryption-capable models and choose which models use them.",
       },
       data: {
         label: "Data",
@@ -1590,6 +1733,8 @@ export default {
     yes: "Yes, clear everything",
     system_prompt_empty: "System prompt is empty. Model may not respond.",
     data_security_notice: "Your data will be processed securely within our servers. No information will be transmitted outside of the GWDG.",
+    data_security_notice_e2ee:
+      "Your data will be processed securely within our servers. No information will be transmitted outside of the GWDG. This model is additionally end-to-end encrypted: your messages are sealed in this browser.",
     data_security_warning: 
       "You are using an external model or external tools. Your messages may be processed outside of GWDG. Custom settings and GWDG tools may not be available. Please refrain from entering confidential or personal data.",
     data_security_warning_mpg:
@@ -1719,16 +1864,33 @@ export default {
     bridge: {
       title: "Agent workspace access",
       none: "No workspace bridge",
-      workspace: "Workspace",
+      disabled_hint:
+        "Off. The agent cannot see workspace files. Turn access on to provide the reverse proxy for this agent.",
+      use_workspace: "Use for the bridge",
+      working: "Agent bridge working",
+      connecting: "Agent bridge connecting…",
+      not_working: "Agent bridge not working",
+      off: "Agent bridge off",
+      unavailable: "Agent bridge not available",
+      unavailable_detail: "No bridge endpoint at {{url}} (HTTP {{status}}).",
+      unavailable_hint:
+        "This deployment does not provide the agent bridge. It is served by the Chat AI back service (/bridge/*) or by the SAIA agent service (/agents/<id>/bridge).",
+      offline_hint:
+        "The browser lost its connection to the bridge. It reconnects automatically.",
+      disabled_after_failure:
+        "Access was switched off because the bridge could not start. Turn it on to try again.",
+      needs_workspace:
+        "Attach a workspace first. The bridge exposes only attached workspaces.",
+      options: "Options",
       writable: "Allow writes",
+      writable_hint:
+        "Lets the agent create, change and delete files in the attached workspace. Without it the workspace stays read-only.",
       mcp: "Local MCP tools",
+      mcp_hint:
+        "Lets the agent call the MCP servers of this browser session. Their results and data leave the app through those servers.",
       keep_open: "Keep this tab open. Workspace and MCP tools are available only while the browser is connected.",
       tab_warning: "The agent bridge needs this tab to stay connected. Workspace and MCP tools may stop until you return.",
-      status_off: "Off",
-      status_connecting: "Connecting",
-      status_online: "Connected",
-      status_offline: "Browser offline",
-      status_error: "Bridge error",
+      start_failed: "Could not start the workspace bridge: {{message}}",
     },
     spawn: "Spawn agent",
     add_title: "Add agent",
@@ -1738,11 +1900,21 @@ export default {
     options: "Agent options",
     pin_action: "Pin agent",
     unpin_action: "Unpin agent",
-    add_hint: "Select one of the HPC projects available to you.",
-    local: "Local agent",
-    use_service: "Run through the agent service",
+    connection_label: "Connection",
+    mode_service: "GWDG HPC agentic service",
+    mode_external: "OpenCode server",
+    hpc_project_hint: "Select one of the HPC projects available to you.",
+    default_name: "OpenCode agent",
     service_hint:
       "The agent service starts an OpenCode container for this agent and stops it when you remove the agent. No server URL or password is needed.",
+    service_unavailable:
+      "The GWDG HPC agentic service is not enabled for your account.",
+    service_request_access:
+      "If you are eligible for an HPC account, you can request access to this service by sending a request to support@gwdg.de.",
+    service_checking:
+      "Checking whether the GWDG HPC agentic service is available for your account…",
+    service_forced_hint:
+      "In a deployment agents run through the agent service (SAIA). Direct OpenCode connections are only possible when Chat AI runs locally.",
     hpc_project_label: "HPC project",
     server_url_label: "opencode server",
     server_password_label: "Server password",
@@ -1868,6 +2040,8 @@ export default {
     tool_call: "Tool call",
     tool_input: "Input",
     tool_output: "Output",
+    open_preview: "Preview",
+    open_preview_of: "Preview {{name}}",
     reasoning: "Reasoning",
     files: "Files",
     search_files: "Search files",
@@ -1961,8 +2135,7 @@ export default {
     remove_mount: "Remove folder",
     mount_source: "Source",
     mount_source_path: "Folder in the source",
-    mount_source_path_hint: "The folder inside the selected source, for example /shoe.",
-    mount_path: "Workspace path",
+    mount_parent: "Folder in the workspace",
     make_read_only: "Make read-only",
     make_writable: "Make writable",
     make_source_read_only: "Make source read-only",
@@ -1975,14 +2148,22 @@ export default {
     cannot_move_mount: "Mounted folders cannot be moved.",
     mount_read_only: "Read-only",
     mount_read_only_hint: "Do not allow changes through this mount.",
-    mount_path_hint: "Where it appears in the workspace, for example /{{name}}.",
+    folder_picker_up: "Up one level",
+    folder_picker_loading: "Loading folders…",
+    folder_picker_empty: "No subfolders here.",
+    folder_picker_result: "Mounts at {{path}}",
+    folder_picker_error: "Could not load folders.",
     mount_source_required: "Select a source.",
-    mount_path_required: "Enter a path below the workspace root.",
-    mount_path_taken: "This workspace path is already used.",
+    mount_target_folder: "The workspace already has a folder at {{path}}.",
+    mount_target_nonempty: "The folder {{path}} already contains files.",
+    mount_target_file: "A file already exists at {{path}}.",
+    mount_target_covers: "The folder {{path}} already contains a mounted folder.",
+    mount_target_nested: "{{path}} is inside the mounted folder {{mount}}.",
     attached_chats: "Chats",
     attached_items: "Attached chats, agents and sessions",
     no_attached_chats: "No chats attached yet.",
     attach_chat: "Attach chat",
+    new_chat: "New chat in this workspace",
     detach_chat: "Detach chat",
     attach_chat_hint: "Attach any chat to this workspace.",
     attach_agent: "Attach agent",
@@ -2006,13 +2187,15 @@ export default {
       "This chat is attached to several workspaces. Open one to manage its files.",
     access_storage: "Access storage",
     access_storage_hint:
-      "The model may read and write the files of this chat and of its attached workspaces.",
+      "The model may read the files of this chat and of its attached workspaces. It may always write in this chat; an attached workspace has its own switch below.",
     access_storage_off_hint:
       "The model gets no file tools. Attachments are still included in the message where their text can be read.",
+    workspace_write_access_hint:
+      "Let the model change files in the attached workspaces.",
     chat_files: "Files in this chat",
     chat_files_hint:
       "Kept in this browser for this chat only. The model writes here when no workspace is attached.",
-    settings_title: "Workspace settings",
+    settings_title: "Local agent",
     attach_from_workspace: "Attach from workspace",
     attach_from_workspace_hint:
       "Pick a file from an attached workspace and add it to this message.",
@@ -2036,19 +2219,29 @@ export default {
     delete_error: "Could not delete the workspace",
     sources: "Sources",
     add_source: "Add source",
-    no_sources: "Add a browser, local, Arcana or MCP source.",
+    source_kind: "Source type",
+    choose_folder: "Choose folder…",
+    no_sources: "Add a local folder or an MCP server.",
     select_source: "Select a source to browse its files.",
     source_label: "Label",
+    source_folder: "Folder",
+    choose_folder_required: "Choose a folder first.",
+    no_folder_chosen: "No folder chosen yet.",
     source_browser: "Browser storage",
     kind_browser: "Browser",
     kind_local: "Local folder",
     kind_agent: "Agent filesystem",
+    kind_chat: "Chat folder",
     kind_arcana: "Arcana",
     "kind_arcana-filesystem": "Arcana filesystem",
     kind_mcp: "MCP",
     local_hint:
       "The browser asks for access to the folder. The folder stays on this device and is never uploaded.",
     local_unsupported: "This browser cannot open local folders.",
+    local_insecure:
+      "Opening local folders needs a secure page: use https:// or http://localhost.",
+    local_aborted:
+      "No folder was taken over. If no dialog appeared, Chrome blocked the folder dialog or the system file dialog could not open. Check the site permission for editing files and use a normal project folder, not your whole home or downloads folder.",
     mcp_endpoint: "MCP endpoint",
     mcp_transport: "Transport",
     mcp_allowlist: "Tool allowlist (comma separated, optional)",
@@ -2147,6 +2340,13 @@ export default {
     image_failed: "Failed to load image",
     video_failed: "Failed to load video",
     video_unsupported: "Your browser does not support the video tag.",
+    html_mode: "HTML rendering",
+    html_strict: "Strict",
+    html_relaxed: "Relaxed",
+    html_relaxed_hint:
+      "Strict only shows the page; relaxed also runs its scripts. Network access follows the \"Load external references\" preference, as in rendered HTML blocks.",
+    html_relaxed_warning:
+      "This page can run scripts and load external resources.",
     pdf_failed: "Failed to display PDF",
     pdf_mobile_title: "PDF preview is not available on mobile devices",
     pdf_mobile_hint: "Please use a desktop browser to preview PDF files",

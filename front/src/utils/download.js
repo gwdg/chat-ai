@@ -1,4 +1,11 @@
+/**
+ * Save a blob to the user's disk. Every download goes through here so a caller cannot hand over
+ * undefined content by accident: only a real blob becomes a download link.
+ */
 export const downloadBlob = (blob, filename) => {
+  if (!(blob instanceof Blob)) {
+    throw new Error("Nothing to download");
+  }
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;

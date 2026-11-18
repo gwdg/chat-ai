@@ -15,6 +15,7 @@
     "prebuild": "node scripts/copy-tikzjax.mjs",
     "validate:guides": "node scripts/validate-feature-guides.mjs",
     "test": "vitest run",
+    "test:live": "vitest run --config vitest.live.config.js",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
   },
@@ -36,6 +37,9 @@
     "@myriaddreamin/typst-ts-renderer": "^0.7.0",
     "@myriaddreamin/typst-ts-web-compiler": "^0.7.0",
     "@myriaddreamin/typst.ts": "^0.7.0",
+    "@noble/ciphers": "^2.4.0",
+    "@noble/curves": "^2.4.0",
+    "@noble/hashes": "^2.4.0",
     "@reduxjs/toolkit": "^2.13.0",
     "@rod2ik/tikzjax": "1.6.0",
     "@tailwindcss/vite": "^4.3.3",

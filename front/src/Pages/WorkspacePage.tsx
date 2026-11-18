@@ -10,6 +10,7 @@ import {
   Folder,
   FolderAdd,
   Home,
+  Link,
   Locked,
   Unlocked,
   TrashCan,
@@ -22,7 +23,7 @@ import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
 import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
 import WorkspaceRootTree from "../components/Workspace/WorkspaceRootTree";
 import WorkspaceRootBrowser from "../components/Workspace/WorkspaceRootBrowser";
-import WorkspaceFilePanel from "../components/Workspace/WorkspaceFilePanel";
+import FilePreviewPanel from "../components/DocumentPanel/FilePreviewPanel";
 import AgentSessionList from "../components/Agent/AgentSessionList";
 import { activeSessionIdFor, useOpenAgent } from "../hooks/useOpenAgent";
 import { useModal } from "../modals/ModalContext";
@@ -33,6 +34,9 @@ import { formatBytes } from "../utils/formatBytes";
 import { formatModifiedTime } from "../utils/conversationDates";
 import { formatGitLog } from "../utils/gitLog";
 import { useConversationList } from "../db";
+import { useSelector } from "react-redux";
+import { selectUserSettings } from "../Redux/reducers/userSettingsReducer";
+import { getDefaultConversation } from "../utils/conversationUtils";
 import { useAgents } from "../agents/agentStore";
 import {
   fetchAgentSessions,
@@ -46,6 +50,7 @@ import {
   workspaceSessionIds,
 } from "../agents/workspaceAgentSessions";
 import {
+  createAttachedChat,
   deleteWorkspace,
   detachWorkspaceChat,
   getDeviceId,
@@ -66,6 +71,7 @@ import {
   removeAgentFilesSource,
   removeOrphanWorkspaceAgents,
   syncAgentFilesSources,
+  syncChatStorageSources,
 } from "../db/workspaceDb";
 import type { WorkspaceFileEntry, WorkspaceMountRow } from "../db/dbTypes";
 import { DEVICE_PLANE_KINDS } from "../workspace/deviceId";
@@ -80,29 +86,12 @@ import { planTransfer } from "../workspace/transferPlanner";
 import { entriesForAction } from "../workspace/selection";
 import { runTransfer } from "../workspace/transfer";
 import { uploadLocalFiles } from "../workspace/upload";
+import { downloadProviderEntry, readAll } from "../workspace/download";
 import { baseName, joinPath, normalizePath, parentPath } from "../workspace/paths";
+import { buildSourceBreadcrumbs, sourceUpPath } from "../workspace/breadcrumbs";
+import { sourceRowActions, visibleStorageSources } from "../workspace/sources";
+import { rootEntryAction } from "../workspace/rootNavigation";
 import type { FileProvider, QuotaInfo } from "../workspace/providers/types";
-
-const readAll = async (stream: ReadableStream<Uint8Array>): Promise<Uint8Array> => {
-  const reader = stream.getReader();
-  const chunks: Uint8Array[] = [];
-  let length = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (value) {
-      chunks.push(value);
-      length += value.length;
-    }
-  }
-  const data = new Uint8Array(length);
-  let offset = 0;
-  for (const part of chunks) {
-    data.set(part, offset);
-    offset += part.length;
-  }
-  return data;
-};
 
 const PREVIEW_LIMIT = 8 * 1024 * 1024;
 
@@ -153,7 +142,7 @@ const quotaLabel = (
     return { label: "—", percent: null };
   }
   const percent = quota.quota ? Math.round((quota.usage / quota.quota) * 100) : null;
-  if (kind === "browser") {
+  if (kind === "browser" || kind === "chat") {
     return {
       label: `${formatBytes(quota.usage)} of ${formatBytes(quota.quota)} used — shared with this app`,
       percent,
@@ -174,6 +163,7 @@ export default function WorkspacePage() {
   const { notifyError, notifySuccess } = useToast();
   const modelsData = useUpdateModelsData();
   const userData = useUpdateUserData();
+  const userSettings = useSelector(selectUserSettings);
 
   const workspace = useWorkspace(workspaceId);
   const sources = useWorkspaceSources(workspaceId);
@@ -224,6 +214,13 @@ export default function WorkspacePage() {
     // agent list changes: attach creates the source, detach or deleting an agent removes it.
     void syncAgentFilesSources(workspaceId, agents);
   }, [workspaceId, agents, attachedAgents]);
+
+  useEffect(() => {
+    if (!workspaceId) return;
+    // Same for the chat folders: every attached chat shows its own tree at /chats/<id>, and the
+    // label follows the chat title. Old links get their source here.
+    void syncChatStorageSources(workspaceId, attachedChats);
+  }, [workspaceId, attachedChats]);
 
   useEffect(() => {
     for (const agentId of expandedAgentSessions) {
@@ -308,6 +305,9 @@ export default function WorkspacePage() {
   const previewUrlRef = useRef<string | null>(null);
 
   const selectedSource = sources.find((source) => source.id === selectedSourceId);
+  // The per-chat storage sources are derived mounts of attached chats
+  // (`/chats/<id>`), not storage the user added, so the list leaves them out.
+  const listedSources = visibleStorageSources(sources);
   const selectedProvider = selectedSourceId
     ? providers.get(selectedSourceId)
     : undefined;
@@ -725,17 +725,7 @@ export default function WorkspacePage() {
   ) => {
     if (!provider || entry.kind !== "file") return;
     try {
-      if (provider.status !== "connected") await provider.connect();
-      const bytes = await readAll(await provider.read(entry.path));
-      const blob = new Blob([bytes], {
-        type: entry.mime || "application/octet-stream",
-      });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = entry.name;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      await downloadProviderEntry(provider, entry);
     } catch (error) {
       notifyError(error instanceof Error ? error.message : String(error));
     }
@@ -833,15 +823,17 @@ export default function WorkspacePage() {
   };
 
   const openRootEntry = (entry: RootEntry) => {
-    if (entry.mount) {
-      openMount(entry.mount);
+    // A row of the left workspace root always shows its result in the root
+    // view, even while the centre is showing a source.
+    setSelectedSourceId(null);
+    setActiveMountId(null);
+    const action = rootEntryAction(entry);
+    if (action.kind === "mount") {
+      openMount(action.mount);
       return;
     }
-    if (entry.kind === "dir") {
-      setRootPath(entry.path);
-      return;
-    }
-    void openFile(entry, rootProvider);
+    setRootPath(action.kind === "folder" ? action.path : action.folder);
+    if (action.kind === "file") void openFile(entry, rootProvider);
   };
 
   const gitProviderFor = (entry: RootEntry) => {
@@ -936,6 +928,8 @@ export default function WorkspacePage() {
     const source = sources.find(
       (candidate) => candidate.id === entry.mount!.sourceId,
     );
+    // A chat folder is named by its conversation id, which a rename never changes.
+    if (source?.kind === "chat") return undefined;
     return source?.label ?? entry.mount.sourceId;
   };
 
@@ -985,6 +979,9 @@ export default function WorkspacePage() {
     const source = sources.find(
       (candidate) => candidate.id === entry.mount!.sourceId,
     );
+    // A chat folder is linked in by attaching the chat, so it has no per-row unmount or
+    // read-only switch; detaching the chat removes it.
+    if (source?.kind === "chat") return null;
     const sourceReadOnly = source?.readOnly === true;
     const effectiveReadOnly =
       entry.mount.readOnly === true || sourceReadOnly;
@@ -1142,6 +1139,21 @@ export default function WorkspacePage() {
       conversations,
       attachedIds: workspaceChats.map((link) => link.conversationId),
     });
+  };
+
+  // The "+" adds a chat that belongs to this workspace right away; linking an
+  // existing chat is the button next to it.
+  const createChat = async () => {
+    if (!workspaceId) return;
+    try {
+      const id = await createAttachedChat(
+        workspaceId,
+        getDefaultConversation(userSettings),
+      );
+      navigate(`/chat/${id}`);
+    } catch (error) {
+      notifyError(error instanceof Error ? error.message : String(error));
+    }
   };
 
   const detachChat = (conversationId: string) => {
@@ -1591,16 +1603,61 @@ export default function WorkspacePage() {
     }
   };
 
-  const breadcrumbs = useMemo(() => {
-    const parts = normalizePath(currentPath).split("/").filter(Boolean);
-    const items = [{ label: t("workspace.root"), path: "/" }];
-    let path = "/";
-    for (const part of parts) {
-      path = joinPath(path, part);
-      items.push({ label: part, path });
+  // Breadcrumbs of the source view. A mount is a window into a provider, so the
+  // trail keeps the workspace folders above the mount (`/chats/<id>`), and only
+  // the crumbs at or below the mount switch the source view's own path.
+  const sourceBreadcrumbs = useMemo(
+    () =>
+      buildSourceBreadcrumbs({
+        currentPath,
+        mountPath: activeMount?.path,
+        sourcePath: activeMount?.sourcePath,
+        rootLabel: t("workspace.root"),
+      }),
+    [activeMount, currentPath, t],
+  );
+
+  // The ".." row leaves the source view when the parent is the mount's parent
+  // folder in the workspace.
+  const sourceParentPath = useMemo(
+    () =>
+      sourceUpPath({
+        currentPath,
+        mountPath: activeMount?.path,
+        sourcePath: activeMount?.sourcePath,
+      }),
+    [activeMount, currentPath],
+  );
+
+  // Switching back to the workspace browser. The mount path is a workspace path,
+  // so it cannot be derived from the provider path.
+  const leaveSource = useCallback((path: string) => {
+    setSelectedSourceId(null);
+    setActiveMountId(null);
+    setRootPath(normalizePath(path));
+  }, []);
+
+  const navigateSource = (nextPath: string) => {
+    setPathBySource((current) => ({
+      ...current,
+      [selectedSourceId!]: normalizePath(nextPath),
+    }));
+  };
+
+  // The ".." row walks up inside the source and leaves it at the mount root.
+  // A mount whose `sourcePath` is `/` contains every path, so the boundary has
+  // to come from the mount, not from the path prefix.
+  const sourceUp = () => {
+    if (!sourceParentPath) return;
+    const atMountRoot =
+      activeMount &&
+      normalizePath(currentPath) === normalizePath(activeMount.sourcePath);
+    if (atMountRoot) {
+      leaveSource(sourceParentPath);
+      return;
     }
-    return items;
-  }, [currentPath, t]);
+    navigateSource(sourceParentPath);
+  };
 
   const rootBreadcrumbs = useMemo(() => {
     const parts = normalizePath(rootPath).split("/").filter(Boolean);
@@ -1722,7 +1779,7 @@ export default function WorkspacePage() {
                     </div>
                   {availableStorageOpen && (
                   <div className="mt-1 max-h-[45vh] overflow-y-auto">
-                    {sources.length === 0 ? (
+                    {listedSources.length === 0 ? (
                       <button
                         type="button"
                         onClick={addSource}
@@ -1731,7 +1788,7 @@ export default function WorkspacePage() {
                         {t("workspace.no_sources")}
                       </button>
                     ) : (
-                      sources.map((source) => {
+                      listedSources.map((source) => {
                         const active = source.id === selectedSourceId;
                         const provider = providers.get(source.id);
                         const unavailable =
@@ -1739,7 +1796,7 @@ export default function WorkspacePage() {
                         const quota = quotas[source.id];
                         const storage = quotaLabel(source.kind, quota);
                         const isDevicePlane = DEVICE_PLANE_KINDS.has(source.kind);
-                        const fixedSource = source.kind === "agent";
+                        const actions = sourceRowActions(source);
                         return (
                           <div
                             key={source.id}
@@ -1785,56 +1842,62 @@ export default function WorkspacePage() {
                                   {t(`workspace.kind_${source.kind}`)}
                                 </span>
                               </button>
-                              <button
-                                type="button"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  addFolder(source.id);
-                                }}
-                                className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 transition hover:bg-base-200 hover:text-accent"
-                                title={t("workspace.add_folder")}
-                                aria-label={t("workspace.add_folder")}
-                              >
-                                <FolderAdd size={12} />
-                              </button>
-                              {!fixedSource && (
+                              {actions.addFolder && (
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    addFolder(source.id);
+                                  }}
+                                  className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 transition hover:bg-base-200 hover:text-accent"
+                                  title={t("workspace.add_folder")}
+                                  aria-label={t("workspace.add_folder")}
+                                >
+                                  <FolderAdd size={12} />
+                                </button>
+                              )}
+                              {(actions.toggleReadOnly || actions.remove) && (
                                 <>
-                                  <button
-                                    type="button"
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                      toggleSourceReadOnly(source);
-                                    }}
-                                    className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 transition hover:bg-base-200 hover:text-base-content"
-                                    title={
-                                      source.readOnly
-                                        ? t("workspace.make_source_writable")
-                                        : t("workspace.make_source_read_only")
-                                    }
-                                    aria-label={
-                                      source.readOnly
-                                        ? t("workspace.make_source_writable")
-                                        : t("workspace.make_source_read_only")
-                                    }
-                                  >
-                                    {source.readOnly ? (
-                                      <Locked size={12} />
-                                    ) : (
-                                      <Unlocked size={12} />
-                                    )}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                      removeSelectedSource(source.id, source.label);
-                                    }}
-                                    className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 transition hover:bg-error/10 hover:text-error"
-                                    aria-label={t("workspace.remove_source")}
-                                    title={t("workspace.remove_source")}
-                                  >
-                                    <TrashCan size={12} />
-                                  </button>
+                                  {actions.toggleReadOnly && (
+                                    <button
+                                      type="button"
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        toggleSourceReadOnly(source);
+                                      }}
+                                      className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 transition hover:bg-base-200 hover:text-base-content"
+                                      title={
+                                        source.readOnly
+                                          ? t("workspace.make_source_writable")
+                                          : t("workspace.make_source_read_only")
+                                      }
+                                      aria-label={
+                                        source.readOnly
+                                          ? t("workspace.make_source_writable")
+                                          : t("workspace.make_source_read_only")
+                                      }
+                                    >
+                                      {source.readOnly ? (
+                                        <Locked size={12} />
+                                      ) : (
+                                        <Unlocked size={12} />
+                                      )}
+                                    </button>
+                                  )}
+                                  {actions.remove && (
+                                    <button
+                                      type="button"
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        removeSelectedSource(source.id, source.label);
+                                      }}
+                                      className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 transition hover:bg-error/10 hover:text-error"
+                                      aria-label={t("workspace.remove_source")}
+                                      title={t("workspace.remove_source")}
+                                    >
+                                      <TrashCan size={12} />
+                                    </button>
+                                  )}
                                 </>
                               )}
                             </div>
@@ -1918,15 +1981,6 @@ export default function WorkspacePage() {
                       >
                         {t("workspace.workspace_root")}
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => addFolder()}
-                        className="flex h-6 w-6 items-center justify-center rounded-md text-base-content/50 transition hover:bg-base-200 hover:text-accent"
-                        title={t("workspace.add_folder")}
-                        aria-label={t("workspace.add_folder")}
-                      >
-                        <FolderAdd size={15} />
-                      </button>
                     </div>
                     <div className="mt-1 max-h-44 overflow-y-auto">
                       {rootTreeEntries.length === 0 ? (
@@ -1944,17 +1998,16 @@ export default function WorkspacePage() {
                           checkGit={checkRootGit}
                           onRemoveLocal={requestDeleteRootEntry}
                           onRemoveMount={removeRootMount}
+                          canRemoveMount={(entry) =>
+                            sources.find(
+                              (candidate) =>
+                                candidate.id === entry.mount?.sourceId,
+                            )?.kind !== "chat"
+                          }
                           onToggleMountReadOnly={toggleRootMountReadOnly}
                           isReadOnly={rootEntryReadOnly}
                           isSourceReadOnly={rootEntrySourceReadOnly}
-                          sourceLabel={(entry) =>
-                            entry.mount
-                              ? sources.find(
-                                  (candidate) =>
-                                    candidate.id === entry.mount!.sourceId,
-                                )?.label ?? entry.mount.sourceId
-                              : undefined
-                          }
+                          sourceLabel={rootEntrySourceLabel}
                         />
                       )}
                     </div>
@@ -1969,15 +2022,26 @@ export default function WorkspacePage() {
                       <span className="text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
                         {t("workspace.attached_chats")}
                       </span>
-                      <button
-                        type="button"
-                        onClick={attachChat}
-                        className="flex h-6 w-6 items-center justify-center rounded-md text-base-content/50 transition hover:bg-base-200 hover:text-accent"
-                        title={t("workspace.attach_chat")}
-                        aria-label={t("workspace.attach_chat")}
-                      >
-                        <Add size={15} />
-                      </button>
+                      <div className="flex items-center gap-0.5">
+                        <button
+                          type="button"
+                          onClick={attachChat}
+                          className="flex h-6 w-6 items-center justify-center rounded-md text-base-content/50 transition hover:bg-base-200 hover:text-accent"
+                          title={t("workspace.attach_chat")}
+                          aria-label={t("workspace.attach_chat")}
+                        >
+                          <Link size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void createChat()}
+                          className="flex h-6 w-6 items-center justify-center rounded-md text-base-content/50 transition hover:bg-base-200 hover:text-accent"
+                          title={t("workspace.new_chat")}
+                          aria-label={t("workspace.new_chat")}
+                        >
+                          <Add size={15} />
+                        </button>
+                      </div>
                     </div>
                     <div className="mt-1 max-h-44 overflow-y-auto">
                       {attachedChats.length === 0 ? (
@@ -2230,7 +2294,8 @@ export default function WorkspacePage() {
                     <WorkspaceRootBrowser
                       path={currentPath}
                       rootPath="/"
-                      breadcrumbs={breadcrumbs}
+                      breadcrumbs={sourceBreadcrumbs}
+                      upPath={sourceParentPath}
                       entries={entries}
                       loading={loading}
                       error={
@@ -2238,27 +2303,16 @@ export default function WorkspacePage() {
                           ? t("workspace.source_unavailable")
                           : listError
                       }
-                      onHome={() => {
-                        setActiveMountId(null);
-                        setSelectedSourceId(null);
-                      }}
-                      onBreadcrumb={(crumb, index) => {
-                        if (index === 0) {
-                          setActiveMountId(null);
-                          setSelectedSourceId(null);
+                      onHome={() => leaveSource("/")}
+                      onBreadcrumb={(crumb) => {
+                        if (crumb.mode === "root") {
+                          leaveSource(crumb.target);
                           return;
                         }
-                        setPathBySource((current) => ({
-                          ...current,
-                          [selectedSourceId!]: crumb.path,
-                        }));
+                        navigateSource(crumb.target);
                       }}
-                      onNavigate={(nextPath) =>
-                        setPathBySource((current) => ({
-                          ...current,
-                          [selectedSourceId!]: nextPath,
-                        }))
-                      }
+                      onNavigate={navigateSource}
+                      onUp={sourceUp}
                       onRetry={() => void loadEntries(false)}
                       onOpen={(entry) => {
                         if (entry.kind === "dir") {
@@ -2481,7 +2535,7 @@ export default function WorkspacePage() {
       </div>
       </div>
       {preview && (
-        <WorkspaceFilePanel
+        <FilePreviewPanel
           preview={preview}
           onClose={closePreview}
           onDownload={download}

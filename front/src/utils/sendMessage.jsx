@@ -7,11 +7,18 @@ import generateChoiceProposal from "../apis/generateChoiceProposal";
 import generateTitle from "../apis/generateTitle";
 import { loadFile, loadFileMeta, saveFile, updateConversation, updateConversationMeta } from "../db";
 import { getFileType, readFileAsBase64, readFileAsText } from "./attachments";
-import { isAgentEnabled } from "../apis/agentEndpoints";
+import { isAgentEnabled, modelSupportsTools } from "../apis/agentEndpoints";
 import { remoteMcpEnabled, resolveMcpServers } from "../agent/mcp";
 import { isArcanasEnabled } from "./modules";
 import { confirmMcpNameChange } from "./mcpNameChange";
 import { BINARY_DOCUMENT_TYPES, modelSupportsFileType } from "./modelCapabilities";
+
+/**
+ * The Browser agent is the default workflow. A model without tool support cannot run it, so that
+ * chat uses the plain chat path instead and never gets a tool.
+ */
+export const shouldUseBrowserAgent = (model) =>
+  isAgentEnabled() && modelSupportsTools(model);
 
 // Text to be appended to system prompt for memories
 const memoryExplanation = "The following list of memories was gathered by the system from previous conversations and may be irrelevant now. You may refer to relevant items only if justified to provide a more personalized and contextual response. Do not make any assumptions based on memories, instead focus on the user messages and requests:"
@@ -337,7 +344,15 @@ const sendMessage = async ({
     const isExternalModel =
       typeof localState.settings.model?.name === "string" &&
       localState.settings.model.name.toLowerCase().includes("external");
-    const isToolsEnabled = toolsModule && !isExternalModel && localState.settings?.enable_tools;
+    // A model without tool support never gets a tool. It uses the plain chat workflow instead of
+    // the Browser agent, which needs tools to act on files.
+    const useBrowserAgent = shouldUseBrowserAgent(localState.settings.model);
+    const modelSupports = modelSupportsTools(localState.settings.model);
+    const isToolsEnabled =
+      modelSupports &&
+      toolsModule &&
+      !isExternalModel &&
+      localState.settings?.enable_tools;
     const isArcanaSupported =
       arcanasModule && isToolsEnabled && !!localState.settings.tools.arcana;
   
@@ -400,6 +415,8 @@ const sendMessage = async ({
     } else {
       delete conversationForAPI.settings.enable_tools;
       delete conversationForAPI.settings.tools;
+      delete conversationForAPI.settings.function_tools;
+      delete conversationForAPI.settings.tool_choice;
     }
 
     // Clean conversation for API call
@@ -717,7 +734,7 @@ const sendMessage = async ({
     let choicesProposed = [];
     try {
       // Get chat completion response
-      chatChunk = isAgentEnabled()
+      chatChunk = useBrowserAgent
         ? await getAgentChunk(conversationId)
         : await getChatChunk(conversationId);
       responseContent = chatChunk?.answer || ""

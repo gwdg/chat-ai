@@ -298,6 +298,8 @@ export default {
     update_memory_group_summary: "Erinnerung „{{from}}“ in „{{to}}“ in Gruppe „{{group}}“ ändern",
     delete_memory_summary: "Erinnerung „{{text}}“ löschen",
     clear_memories_summary: "Alle gespeicherten Erinnerungen löschen",
+    e2ee_assign_summary: "Modell {{model}} mit Schlüssel „{{key}}“ verschlüsseln",
+    e2ee_clear_summary: "Verschlüsselung für Modell {{model}} beenden",
     memory_item: "Erinnerung {{index}}",
     setting_on: "an",
     setting_off: "aus",
@@ -305,6 +307,125 @@ export default {
     unsorted_topic: "Nicht zugeordnet",
     error: "Antwort fehlgeschlagen. Bitte versuchen Sie es erneut.",
     no_model: "Kein Standardmodell konfiguriert.",
+  },
+  e2ee: {
+    badge: "Ende-zu-Ende verschlüsselt",
+    description:
+      "Ein gebundener Schlüssel ergänzt eine zweite Verschlüsselungsebene über der Transportverschlüsselung, die jede Anfrage ohnehin schützt: Ihre Nachricht wird in diesem Browser versiegelt und bleibt Geheimtext bis zu der Maschine, die das Modell ausführt, in der Regel eine GPU. Schlüssel werden außerhalb des Kanals verteilt, importieren Sie sie deshalb nur aus einer vertrauenswürdigen Quelle.",
+    keys_title: "Verschlüsselungsschlüssel",
+    no_keys: "Noch keine Schlüssel. Fügen Sie oben einen hinzu.",
+    invalid_key: "Kein gültiger 32-Byte-X25519-Public-Key",
+    download: "Public Key herunterladen",
+    remove: "Entfernen",
+    remove_confirm: "Diesen Schlüssel und seine Modellzuordnungen entfernen?",
+    removed: "Schlüssel entfernt",
+    clear_all: "Alle Schlüssel entfernen",
+    clear_all_confirm: "Jeden Schlüssel und jede Modellzuordnung entfernen?",
+    clear_all_done: "Alle Verschlüsselungsschlüssel entfernt",
+    test: "Testen",
+    test_all: "Alle testen",
+    test_ok: "Schlüssel funktioniert: {{count}} Modell(e) haben die versiegelte Testanfrage beantwortet.",
+    test_failed: "Keine versiegelte Antwort von {{models}} ({{reason}}).",
+    test_no_models: "Ordnen Sie den Schlüssel zuerst einem Modell zu",
+    test_no_bindings:
+      "Kein Schlüssel ist einem Modell zugeordnet, es gibt nichts zu testen.",
+    test_all_done: "{{working}} von {{tested}} getesteten Schlüsseln funktionieren.",
+    test_failed_keys: "Fehlerhaft: {{keys}}",
+    status_working: "Funktioniert",
+    status_working_hint:
+      "Die letzte versiegelte Testanfrage war für {{count}} Modell(e) erfolgreich",
+    status_failed: "Test fehlgeschlagen",
+    status_failed_hint:
+      "Die letzte versiegelte Testanfrage war für kein gebundenes Modell erfolgreich",
+    status_untested: "Nicht getestet",
+    status_untested_hint:
+      "Der Schlüssel ist wohlgeformt, wurde aber noch nicht gegen ein Modell getestet",
+    verifying: "Schlüssel wird getestet…",
+    verified_added: "Schlüssel getestet und {{count}} Modell(en) zugeordnet",
+    added_unverified:
+      "Schlüssel ohne Test hinzugefügt. Geben Sie mindestens ein bekanntes Modell an, damit er geprüft werden kann.",
+    add_keys_title: "Verschlüsselungsschlüssel hinzufügen",
+    add_keys_description:
+      "Jeder Schlüssel wird vor dem Speichern mit einer versiegelten Anfrage je Modell getestet. Modelle, deren Test scheitert, bleiben unverschlüsselt.",
+    verify_failed_all:
+      "Der Schlüssel wurde nicht hinzugefügt: Die Testanfrage für {{model}} ist fehlgeschlagen ({{reason}}).",
+    verify_failed_models:
+      "Nicht verschlüsselt, weil der Test für {{models}} fehlgeschlagen ist ({{reason}}).",
+    no_models_matched:
+      "Keines davon ist ein bekanntes Modell: {{models}}. Der Schlüssel wurde nicht hinzugefügt.",
+    import_method: "Schlüssel hinzufügen",
+    modes: {
+      published: "Veröffentlichte Schlüssel",
+      paste: "Einfügen oder Datei",
+      url: "Aus URL",
+      directory: "Schlüsselverzeichnis",
+    },
+    published_url: "Basis-URL der Schlüssel",
+    published_hint:
+      "Verwenden Sie nur eine Schlüssel-URL, der Sie vertrauen. Jeder heruntergeladene Schlüssel wird vor dem Speichern gegen sein Modell getestet.",
+    published_load: "Schlüssel für alle Modelle laden",
+    published_loading: "Schlüssel werden geladen …",
+    published_url_required: "Geben Sie die URL des Schlüsselverzeichnisses an.",
+    published_progress_fetch: "Schlüssel werden geladen … {{done}}/{{total}}",
+    published_progress_verify: "Schlüssel werden geprüft … {{done}}/{{total}}",
+    published_imported: "{{count}} geprüfte Schlüssel importiert",
+    published_none:
+      "Kein Schlüssel hat die Prüfung bestanden. Prüfen Sie die Basis-URL und ob die Modelle einen E2EE-Knoten haben.",
+    published_none_needed:
+      "Jedes Modell hat bereits einen nutzbaren Schlüssel.",
+    published_summary:
+      "{{imported}} importiert · {{missing}} ohne veröffentlichten Schlüssel · {{failed}} fehlgeschlagen",
+    published_failed_title: "Nicht importiert:",
+    published_more: "und {{count}} weitere",
+    models_field: "Gilt für Modelle",
+    models_field_placeholder: "qwen3-235b-a22b, Mistral Large",
+    models_field_hint:
+      "Kommagetrennte Modell-IDs oder -Namen; eine Brücken-Variante mit „(External)“ ist ein eigenes Modell. Unbekannte Einträge werden übersprungen.",
+    unknown_models:
+      "Schlüssel hinzugefügt, aber diese Modelle sind unbekannt: {{models}}",
+    fallback_name: "Schlüssel {{fingerprint}}",
+    public_key: "Public Key",
+    public_key_placeholder: "Base64url-X25519-Public-Key",
+    add_key: "Schlüssel hinzufügen",
+    choose_file: ".pub-Datei wählen…",
+    key_url: "Schlüssel-URL",
+    fetch_key: "Schlüssel laden",
+    directory_url: "Verzeichnis-URL",
+    import_directory: "Verzeichnis importieren",
+    directory_imported: "{{count}} Schlüssel importiert",
+    directory_hint:
+      "Ein Dokument mit allen Schlüsseln und ihren Modellzuordnungen. Jeder Schlüssel wird weiterhin vor dem Speichern getestet.",
+    choose_folder: "Schlüsselordner wählen…",
+    folder_hint:
+      "Liest alle .pub-Dateien in einem lokalen Ordner. Dateien, die keine gültigen Public Keys sind, werden gemeldet und übersprungen.",
+    folder_imported: "{{count}} Schlüssel importiert, {{bound}} Modelle gebunden",
+    folder_partial:
+      "{{count}} Schlüssel importiert ({{bound}} Modelle). {{skipped}} Datei(en) übersprungen: {{files}}",
+    folder_empty: "Keine .pub-Dateien in diesem Ordner.",
+    folder_no_valid: "Kein gültiger Public Key in diesem Ordner ({{count}} Datei(en) abgelehnt).",
+    folder_unsupported:
+      "Dieser Browser kann hier keinen Ordner öffnen. Nutze stattdessen die Verzeichnis-URL oder öffne die App über HTTPS bzw. localhost.",
+    folder_error: "Der Ordner konnte nicht gelesen werden: {{reason}}",
+    import_error: "Der Schlüssel konnte nicht importiert werden.",
+    models_title: "Unverschlüsselte Modelle",
+    models_keyed: "{{count}} verschlüsselt",
+    models_description:
+      "Diese Modelle werden von einer internen Funktion verwendet und haben keinen funktionierenden Schlüssel, ihre Anfragen erhalten also nur die Transportverschlüsselung.",
+    models_empty:
+      "Kein von einer internen Funktion verwendetes Modell ist ohne Schlüssel.",
+    used_for: "Verwendet für",
+    features: {
+      titles: "Titel",
+      memory: "Gedächtnis",
+      proposals: "Vorschläge",
+      summaries: "Zusammenfassungen",
+      image_analysis: "Bildanalyse",
+    },
+    models_blocked: "Schlüssel fehlt oder ist ungültig",
+    not_encrypted: "Nicht verschlüsselt",
+    model_not_offered: "Nicht in der Modellliste",
+    model_not_offered_hint:
+      "Ein internes Feature ist für dieses Modell konfiguriert, aber die Modellliste des Deployments enthält es nicht; hier kann ihm kein Schlüssel zugeordnet werden.",
   },
   mcp_confirmation: {
     title: "MCP-Werkzeug ausführen?",
@@ -363,7 +484,7 @@ export default {
     },
     remote_agents: {
       title: "Einen Remote-Agenten starten",
-      step1: "Verwenden Sie die +-Schaltfläche im Bereich Agenten, um einen Agenten hinzuzufügen und sein HPC-Projekt auszuwählen.",
+      step1: "Verwenden Sie die +-Schaltfläche im Bereich Agenten, um einen Agenten hinzuzufügen. Wählen Sie den GWDG HPC-Agenten-Dienst und sein HPC-Projekt oder verbinden Sie einen OpenCode-Server.",
       step2: "Agenten erscheinen in der Liste; klicken Sie auf einen, um seinen Chat rechts zu öffnen.",
       step3: "Klappen Sie einen Agenten über das Chevron auf, um jeden Arbeitsbereich mit den zugeordneten Sitzungen sowie Sitzungen ohne Arbeitsbereich zu sehen. Klicken Sie eine Sitzung zum Wechseln an, erstellen Sie mit + eine neue oder öffnen Sie das ...-Menü zum Umbenennen, Entfernen oder Schließen.",
     },
@@ -371,6 +492,11 @@ export default {
       title: "Alle Sitzungen einer Gruppe schließen",
       step1: "Klappen Sie einen Agenten auf, um seine Sitzungen nach Arbeitsbereich gruppiert und unter „Nicht in einem Arbeitsbereich“ zu sehen.",
       step2: "Das Papierkorb-Symbol in der Gruppenüberschrift schließt alle Sitzungen dieser Gruppe. Laufende Antworten werden zuerst unterbrochen, und Sie müssen die Aktion in einem Dialog bestätigen, bevor eine Sitzung entfernt wird.",
+    },
+    agent_workspace_access: {
+      title: "Einem Agenten Zugriff auf Arbeitsbereichsdateien geben",
+      step1: "Öffnen Sie einen Agenten. Das Fenster links ist sein Dateibrowser.",
+      step2: "Öffnen Sie die Arbeitsbereich-Schaltfläche neben dem Eingabefeld und schalten Sie den Arbeitsbereich-Zugriff ein, um den Reverse-Proxy für diesen Agenten bereitzustellen. Verbinden Sie einen Arbeitsbereich, wählen Sie, welchen die Brücke nutzt, erlauben Sie Schreibzugriff, wenn der Agent Dateien ändern darf, und lassen Sie diesen Tab geöffnet, während der Agent arbeitet.",
     },
     catalog: {
       open: "Tutorials durchsuchen",
@@ -642,6 +768,19 @@ export default {
       step1: "Öffnen Sie Ihre Benutzereinstellungen.",
       step2:
         "Wählen Sie den Tab Chat, um Standardmodell, Sendetaste, Zusammenfassungen, Zeitstempel, Darstellung und Dokumentkonvertierung zu ändern.",
+    },
+    e2ee: {
+      title: "Ein Modell Ende-zu-Ende verschlüsseln",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Tab Verschlüsselung.",
+      step3:
+        "Importieren Sie den Public Key des Modells: einfügen, .pub-Datei wählen, aus einer URL laden, ein Schlüsselverzeichnis importieren oder einen lokalen Ordner wählen und alle .pub-Dateien darin einlesen.",
+      step_published:
+        "Oder laden Sie die vom Deployment veröffentlichten Schlüssel: Die Basis-URL ist aus der Konfiguration vorbelegt, und „Schlüssel für alle Modelle laden“ importiert und prüft jede veröffentlichte .pub-Datei.",
+      step4:
+        "Geben Sie beim Hinzufügen die Modelle an, für die der Schlüssel gilt. Sie zeigen dann ein grünes Schloss, und jede Anfrage darüber wird in diesem Browser verschlüsselt.",
+      step_test:
+        "Testen Sie einen Schlüssel erneut gegen die Modelle, denen er zugeordnet ist. Ein Schlüssel, der die versiegelte Testanfrage beantwortet, wird grün markiert; ein ungetesteter oder fehlgeschlagener nicht.",
     },
     message_timestamps: {
       title: "Zeitstempel für Nachrichten anzeigen",
@@ -985,7 +1124,6 @@ export default {
     label_mcp_server: "MCP-Server",
     label_write_access: "Schreiben erlauben",
     label_browser_storage: "Browserspeicher",
-    label_codemode: "Codemode",
     label_create_docx: "Word-Dokument",
     tools_requires_browser_storage: "Zuerst den Browserspeicher aktivieren oder einen lokalen Ordner freigeben",
     tools_requires_workspace: "Zuerst einen Arbeitsbereich verknüpfen",
@@ -993,6 +1131,8 @@ export default {
     label_tool_limit: "Werkzeugaufrufe pro Antwort begrenzen",
     tool_limit_hint: "Maximale Werkzeugaufrufe pro Antwort; gemeinsam ausgeführte Aufrufe zählen einmal",
     tools_agent_external: "Dieses Modell läuft ohne Werkzeuge",
+    model_no_tools_warning:
+      "Dieses Modell unterstützt keine Werkzeuge. Der Chat läuft ohne Dateizugriff, Websuche oder MCP-Werkzeuge.",
     placeholder_arcana_id: "Arcana-ID",
     placeholder_mcp_id: "Server-ID",
     placeholder_mcp_url: "http://localhost:3000/mcp",
@@ -1140,6 +1280,12 @@ export default {
         title: "Gespeicherte Erinnerungen",
         description:
           "Prüfen und verwalten Sie die von Chat AI gespeicherten Details.",
+      },
+      encryption: {
+        label: "Verschlüsselung",
+        title: "Ende-zu-Ende-Verschlüsselung",
+        description:
+          "Verwalten Sie die Public Keys verschlüsselungsfähiger Modelle und wählen Sie, welche Modelle sie nutzen.",
       },
       data: {
         label: "Daten",
@@ -1614,6 +1760,8 @@ export default {
     data_security_warning_mpg:
       "Sie verwenden ein externes Modell oder externe Tools. Ihre Nachrichten können außerhalb der GWDG verarbeitet werden. Benutzerdefinierte Einstellungen und GWDG-Tools sind möglicherweise nicht verfügbar. Bitte unterlassen Sie die Eingabe vertraulicher oder personenbezogener Daten. Externe Modelle sind nur nutzbar für wissenschaftliche Beschäftigte für wissenschaftliche Arbeiten, sofern keine personenbezogenen Daten eingegeben werden.",
     data_security_notice: "Ihre Daten werden sicher innerhalb unserer Server verarbeitet. Es werden keine Informationen außerhalb der GWDG übertragen.",
+    data_security_notice_e2ee:
+      "Ihre Daten werden sicher innerhalb unserer Server verarbeitet. Es werden keine Informationen außerhalb der GWDG übertragen. Dieses Modell ist zusätzlich Ende-zu-Ende verschlüsselt: Ihre Nachrichten werden in diesem Browser versiegelt.",
     arcana_usage:
       "Halten Sie Temperatur auf 0 und top_p auf 0.05 für optimale Arcana-Ergebnisse",
     arcana_create_collection_prefix:
@@ -1743,16 +1891,33 @@ export default {
     bridge: {
       title: "Arbeitsbereich-Zugriff",
       none: "Keine Arbeitsbereich-Brücke",
-      workspace: "Arbeitsbereich",
+      disabled_hint:
+        "Aus. Der Agent sieht keine Dateien aus Arbeitsbereichen. Schalten Sie den Zugriff ein, um den Reverse-Proxy für diesen Agenten bereitzustellen.",
+      use_workspace: "Für die Brücke verwenden",
+      working: "Agenten-Brücke aktiv",
+      connecting: "Agenten-Brücke verbindet …",
+      not_working: "Agenten-Brücke funktioniert nicht",
+      off: "Agenten-Brücke aus",
+      unavailable: "Agenten-Brücke nicht verfügbar",
+      unavailable_detail: "Kein Brücken-Endpunkt unter {{url}} (HTTP {{status}}).",
+      unavailable_hint:
+        "Diese Installation bietet keine Agenten-Brücke. Sie wird vom Chat-AI-Dienst back (/bridge/*) oder vom SAIA-Agenten-Dienst (/agents/<id>/bridge) bereitgestellt.",
+      offline_hint:
+        "Der Browser hat die Verbindung zur Brücke verloren. Sie verbindet sich automatisch neu.",
+      disabled_after_failure:
+        "Der Zugriff wurde ausgeschaltet, weil die Brücke nicht starten konnte. Schalten Sie ihn wieder ein, um es erneut zu versuchen.",
+      needs_workspace:
+        "Verknüpfen Sie zuerst einen Arbeitsbereich. Die Brücke stellt nur verknüpfte Arbeitsbereiche bereit.",
+      options: "Optionen",
       writable: "Schreiben erlauben",
+      writable_hint:
+        "Erlaubt dem Agenten, Dateien im verknüpften Arbeitsbereich zu erstellen, zu ändern und zu löschen. Ohne diese Option bleibt der Arbeitsbereich schreibgeschützt.",
       mcp: "Lokale MCP-Werkzeuge",
+      mcp_hint:
+        "Erlaubt dem Agenten, die MCP-Server dieser Browsersitzung aufzurufen. Deren Ergebnisse und Daten verlassen die App über diese Server.",
       keep_open: "Lassen Sie diesen Tab geöffnet. Arbeitsbereichs- und MCP-Werkzeuge sind nur verfügbar, solange der Browser verbunden ist.",
       tab_warning: "Die Agenten-Brücke benötigt diesen Tab. Arbeitsbereichs- und MCP-Werkzeuge sind möglicherweise nicht verfügbar, bis Sie zurückkehren.",
-      status_off: "Aus",
-      status_connecting: "Verbinde",
-      status_online: "Verbunden",
-      status_offline: "Browser offline",
-      status_error: "Brückenfehler",
+      start_failed: "Die Arbeitsbereich-Brücke konnte nicht gestartet werden: {{message}}",
     },
     spawn: "Agent starten",
     add_title: "Agent hinzufügen",
@@ -1762,11 +1927,21 @@ export default {
     options: "Agent-Optionen",
     pin_action: "Agenten anheften",
     unpin_action: "Agenten nicht mehr anheften",
-    add_hint: "Wählen Sie eines der HPC-Projekte aus, die Ihnen zur Verfügung stehen.",
-    local: "Lokaler Agent",
-    use_service: "Über den Agenten-Dienst ausführen",
+    connection_label: "Verbindung",
+    mode_service: "GWDG HPC-Agenten-Dienst",
+    mode_external: "OpenCode-Server",
+    hpc_project_hint: "Wählen Sie eines der HPC-Projekte aus, die Ihnen zur Verfügung stehen.",
+    default_name: "OpenCode-Agent",
     service_hint:
       "Der Agenten-Dienst startet für diesen Agenten einen OpenCode-Container und beendet ihn, wenn Sie den Agenten entfernen. Eine Server-URL oder ein Passwort ist nicht nötig.",
+    service_unavailable:
+      "Der GWDG HPC-Agenten-Dienst ist für Ihr Konto nicht freigeschaltet.",
+    service_request_access:
+      "Wenn Sie für ein HPC-Konto berechtigt sind, können Sie den Zugang zu diesem Service per Anfrage an support@gwdg.de beantragen.",
+    service_checking:
+      "Es wird geprüft, ob der GWDG HPC-Agenten-Dienst für Ihr Konto verfügbar ist…",
+    service_forced_hint:
+      "Im Deployment laufen Agenten über den Agenten-Dienst (SAIA). Direkte OpenCode-Verbindungen sind nur möglich, wenn Chat AI lokal läuft.",
     hpc_project_label: "HPC-Projekt",
     server_url_label: "opencode-Server",
     server_password_label: "Server-Passwort",
@@ -1894,6 +2069,8 @@ export default {
     tool_call: "Werkzeugaufruf",
     tool_input: "Eingabe",
     tool_output: "Ausgabe",
+    open_preview: "Vorschau",
+    open_preview_of: "Vorschau von {{name}}",
     reasoning: "Denkprozess",
     files: "Dateien",
     search_files: "Dateien durchsuchen",
@@ -1987,8 +2164,7 @@ export default {
     remove_mount: "Ordner entfernen",
     mount_source: "Quelle",
     mount_source_path: "Ordner in der Quelle",
-    mount_source_path_hint: "Der Ordner innerhalb der gewählten Quelle, zum Beispiel /shoe.",
-    mount_path: "Pfad im Arbeitsbereich",
+    mount_parent: "Ordner im Arbeitsbereich",
     make_read_only: "Schreibgeschützt machen",
     make_writable: "Beschreibbar machen",
     make_source_read_only: "Quelle schreibgeschützt machen",
@@ -2001,14 +2177,22 @@ export default {
     cannot_move_mount: "Eingehängte Ordner können nicht verschoben werden.",
     mount_read_only: "Nur lesen",
     mount_read_only_hint: "Keine Änderungen über diesen Einhängepunkt erlauben.",
-    mount_path_hint: "Wo er im Arbeitsbereich erscheint, zum Beispiel /{{name}}.",
+    folder_picker_up: "Eine Ebene höher",
+    folder_picker_loading: "Ordner werden geladen…",
+    folder_picker_empty: "Keine Unterordner vorhanden.",
+    folder_picker_result: "Wird unter {{path}} eingebunden",
+    folder_picker_error: "Ordner konnten nicht geladen werden.",
     mount_source_required: "Wählen Sie eine Quelle.",
-    mount_path_required: "Geben Sie einen Pfad unterhalb des Arbeitsbereichs-Stamms ein.",
-    mount_path_taken: "Dieser Pfad wird bereits verwendet.",
+    mount_target_folder: "Im Arbeitsbereich gibt es bereits einen Ordner unter {{path}}.",
+    mount_target_nonempty: "Der Ordner {{path}} enthält bereits Dateien.",
+    mount_target_file: "Unter {{path}} gibt es bereits eine Datei.",
+    mount_target_covers: "Der Ordner {{path}} enthält bereits einen eingebundenen Ordner.",
+    mount_target_nested: "{{path}} liegt in dem eingebundenen Ordner {{mount}}.",
     attached_chats: "Chats",
     attached_items: "Verknüpfte Chats, Agenten und Sitzungen",
     no_attached_chats: "Noch keine Chats verknüpft.",
     attach_chat: "Chat verknüpfen",
+    new_chat: "Neuer Chat in diesem Arbeitsbereich",
     detach_chat: "Chat trennen",
     attach_chat_hint: "Verknüpfen Sie einen Chat mit diesem Arbeitsbereich.",
     attach_agent: "Agent verknüpfen",
@@ -2032,13 +2216,15 @@ export default {
       "Dieser Chat ist mit mehreren Arbeitsbereichen verknüpft. Öffnen Sie einen, um seine Dateien zu verwalten.",
     access_storage: "Auf Speicher zugreifen",
     access_storage_hint:
-      "Das Modell darf die Dateien dieses Chats und seiner verknüpften Arbeitsbereiche lesen und schreiben.",
+      "Das Modell darf die Dateien dieses Chats und seiner verknüpften Arbeitsbereiche lesen. In diesem Chat darf es immer schreiben; für einen verknüpften Arbeitsbereich gibt es den Schalter darunter.",
     access_storage_off_hint:
       "Das Modell erhält keine Dateiwerkzeuge. Anhänge werden weiterhin in die Nachricht aufgenommen, sofern ihr Text lesbar ist.",
+    workspace_write_access_hint:
+      "Das Modell darf Dateien in den verknüpften Arbeitsbereichen ändern.",
     chat_files: "Dateien in diesem Chat",
     chat_files_hint:
       "Nur in diesem Browser für diesen Chat gespeichert. Das Modell schreibt hier, wenn kein Arbeitsbereich verknüpft ist.",
-    settings_title: "Arbeitsbereich-Einstellungen",
+    settings_title: "Lokaler Agent",
     attach_from_workspace: "Aus Arbeitsbereich anhängen",
     attach_from_workspace_hint:
       "Wählen Sie eine Datei aus einem verknüpften Arbeitsbereich und fügen Sie sie dieser Nachricht hinzu.",
@@ -2062,19 +2248,29 @@ export default {
     delete_error: "Der Arbeitsbereich konnte nicht gelöscht werden",
     sources: "Quellen",
     add_source: "Quelle hinzufügen",
-    no_sources: "Fügen Sie eine Browser-, lokale, Arcana- oder MCP-Quelle hinzu.",
+    source_kind: "Quellentyp",
+    choose_folder: "Ordner auswählen…",
+    no_sources: "Fügen Sie einen lokalen Ordner oder einen MCP-Server hinzu.",
     select_source: "Wählen Sie eine Quelle, um ihre Dateien zu durchsuchen.",
     source_label: "Bezeichnung",
+    source_folder: "Ordner",
+    choose_folder_required: "Wählen Sie zuerst einen Ordner.",
+    no_folder_chosen: "Noch kein Ordner ausgewählt.",
     source_browser: "Browserspeicher",
     kind_browser: "Browser",
     kind_local: "Lokaler Ordner",
     kind_agent: "Agent-Dateisystem",
+    kind_chat: "Chat-Ordner",
     kind_arcana: "Arcana",
     "kind_arcana-filesystem": "Arcana-Dateisystem",
     kind_mcp: "MCP",
     local_hint:
       "Der Browser fragt nach Zugriff auf den Ordner. Der Ordner bleibt auf diesem Gerät und wird nie hochgeladen.",
     local_unsupported: "Dieser Browser kann keine lokalen Ordner öffnen.",
+    local_insecure:
+      "Lokale Ordner brauchen eine sichere Seite: https:// oder http://localhost.",
+    local_aborted:
+      "Kein Ordner übernommen. Falls kein Dialog erschien, hat Chrome den Ordner-Dialog blockiert oder der Datei-Dialog des Systems ließ sich nicht öffnen. Prüfe die Website-Berechtigung zum Bearbeiten von Dateien und wähle einen normalen Projektordner, nicht das gesamte Benutzer- oder Download-Verzeichnis.",
     mcp_endpoint: "MCP-Endpunkt",
     mcp_transport: "Transport",
     mcp_allowlist: "Tool-Allowlist (kommagetrennt, optional)",
@@ -2175,6 +2371,13 @@ export default {
     image_failed: "Bild konnte nicht geladen werden",
     video_failed: "Video konnte nicht geladen werden",
     video_unsupported: "Ihr Browser unterstützt das Video-Element nicht.",
+    html_mode: "HTML-Darstellung",
+    html_strict: "Streng",
+    html_relaxed: "Gelockert",
+    html_relaxed_hint:
+      "Streng zeigt die Seite nur an; gelockert führt auch ihre Skripte aus. Der Netzwerkzugriff folgt der Einstellung \"Externe Referenzen laden\", wie bei gerenderten HTML-Blöcken.",
+    html_relaxed_warning:
+      "Diese Seite kann Skripte ausführen und externe Ressourcen laden.",
     pdf_failed: "PDF konnte nicht angezeigt werden",
     pdf_mobile_title: "Die PDF-Vorschau ist auf Mobilgeräten nicht verfügbar",
     pdf_mobile_hint: "Bitte nutzen Sie einen Desktop-Browser für die PDF-Vorschau",

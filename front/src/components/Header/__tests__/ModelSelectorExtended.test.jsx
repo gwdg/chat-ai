@@ -1,6 +1,14 @@
 import { render, screen } from "@testing-library/react";
+import { Provider } from "react-redux";
+import { configureStore } from "@reduxjs/toolkit";
 import { describe, expect, it } from "vitest";
 import ModelSelectorExtended from "../ModelSelectorExtended";
+
+// The selector shows the E2EE lock from the user settings, so it needs a store.
+const store = configureStore({
+  reducer: (state = { user_settings: { e2ee_keys: [], e2ee_models: {} } }) =>
+    state,
+});
 
 const model = {
   id: "alpha",
@@ -16,12 +24,14 @@ const model = {
 
 const renderSelector = (inHeader) =>
   render(
-    <ModelSelectorExtended
-      selectedModel={model}
-      modelsData={[model]}
-      inHeader={inHeader}
-      onChange={() => {}}
-    />
+    <Provider store={store}>
+      <ModelSelectorExtended
+        selectedModel={model}
+        modelsData={[model]}
+        inHeader={inHeader}
+        onChange={() => {}}
+      />
+    </Provider>
   );
 
 describe("ModelSelectorExtended header trigger", () => {

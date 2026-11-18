@@ -142,5 +142,19 @@ export const migrations = {
     );
     console.log("Migrating redux to v9");
   },
-  // Future migrations here (e.g., 10: (state) => {...})
+  10: (state) => {
+    // End-to-end encryption keys and model bindings; existing installs have none.
+    state.user_settings = state.user_settings ?? {};
+    state.user_settings.e2ee_keys = Array.isArray(state.user_settings.e2ee_keys)
+      ? state.user_settings.e2ee_keys
+      : [];
+    state.user_settings.e2ee_models =
+      state.user_settings.e2ee_models &&
+      typeof state.user_settings.e2ee_models === "object" &&
+      !Array.isArray(state.user_settings.e2ee_models)
+        ? state.user_settings.e2ee_models
+        : {};
+    console.log("Migrating redux to v10");
+  },
+  // Future migrations here (e.g., 11: (state) => {...})
 };

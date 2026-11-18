@@ -31,20 +31,18 @@ import { isArcanasEnabled } from "../../utils/modules";
 const AGENT_UNAVAILABLE = new Set(
   agentGatewayTools() ? [] : ["arcana"],
 );
-// Agent tools that are off unless switched on: web search and writing files (agent/tools.ts),
-// Arcana Tools (agent/arcanaTools.ts), arcana, which the gateway runs (agent/gateway.ts), and MCP
-// servers (agent/mcp.ts)
+// Agent tools that are off unless switched on: web search (agent/tools.ts), Arcana Tools
+// (agent/arcanaTools.ts), arcana, which the gateway runs (agent/gateway.ts), and MCP servers
+// (agent/mcp.ts). Writing files is part of Access storage (agent/storageAccess.ts).
 const AGENT_OPT_IN = new Set([
   "web_search",
   "arcana",
   "arcana_tools",
-  "write_access",
   "mcp",
   "mcp_remote",
 ]);
 // Tools that only exist in agent mode
 const AGENT_ONLY = new Set([
-  "write_access",
   "create_docx",
   "image_analysis",
 ]);
@@ -166,7 +164,6 @@ export default function ToolsContainer({ localState, setLocalState }) {
       patch[key] = true;
       if (key === "mcp") patch.mcp_remote = true;
     });
-    if (agentMode) patch.codemode = true;
     const apply = () =>
       setLocalState((prev) => ({
         ...prev,
@@ -195,7 +192,6 @@ export default function ToolsContainer({ localState, setLocalState }) {
       patch[key] = false;
       if (key === "mcp") patch.mcp_remote = false;
     });
-    if (agentMode) patch.codemode = false;
     setTools(patch);
   };
 

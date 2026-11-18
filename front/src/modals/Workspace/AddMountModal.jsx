@@ -1,9 +1,44 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import BaseModal from "../BaseModal";
+import FolderPickerPanel from "../../components/Workspace/FolderPickerPanel";
 import { addWorkspaceMount } from "../../db/workspaceDb";
-import { baseName, normalizePath } from "../../workspace/paths";
+import { createProvider } from "../../workspace/providers";
+import { baseName, joinPath, normalizePath } from "../../workspace/paths";
+import { createWorkspaceRootProvider } from "../../workspace/workspaceRoot";
+import { inspectMountTarget } from "./mountTarget";
+
+/**
+ * Reads every page of a directory and keeps only its folders. Provider listings are paginated
+ * (Arcana, MCP), and stopping at the first page would hide folders in a large directory.
+ */
+const listFolders = async (provider, path) => {
+  const folders = [];
+  let cursor;
+  for (let page = 0; page < 20; page += 1) {
+    const result = await provider.list(path, cursor);
+    for (const entry of result.entries) {
+      if (entry.kind === "dir") {
+        folders.push({ path: entry.path, name: entry.name });
+      }
+    }
+    cursor = result.next;
+    if (!cursor) break;
+  }
+  return folders;
+};
+
+/** The folder name a source root mounts as, e.g. a "Browser storage" source becomes "/Browser
+ * storage"; the name is only a label, so path separators are flattened. */
+const sourceLeaf = (source) => {
+  const label = String(source?.label ?? "")
+    .trim()
+    .replace(/[\\/]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return label || "folder";
+};
 
 export default function AddMountModal({
   isOpen,
@@ -18,46 +53,120 @@ export default function AddMountModal({
   const fixedSource = initialSourceId
     ? sources.find((source) => source.id === initialSourceId)
     : undefined;
-  const [sourceId, setSourceId] = useState(
-    fixedSource?.id ?? sources[0]?.id ?? "",
-  );
+  const initialSource =
+    fixedSource ??
+    // "Add folder" from the workspace root adds to its own browser tree, so start there instead of
+    // on whichever source happens to sort first (an Arcana source can be unreachable).
+    sources.find((source) => source.kind === "browser") ??
+    sources[0];
+  const [sourceId, setSourceId] = useState(initialSource?.id ?? "");
   const [sourcePath, setSourcePath] = useState("/");
-  const [mountPath, setMountPath] = useState("/");
+  /** The workspace folder the mount is placed in; its own name comes from the source folder. */
+  const [mountParent, setMountParent] = useState("/");
   const [readOnly, setReadOnly] = useState(fixedSource?.readOnly === true);
   const [error, setError] = useState("");
+  const [targetProblem, setTargetProblem] = useState(null);
   const [saving, setSaving] = useState(false);
 
-  const existingPaths = useMemo(
-    () => new Set(mounts.map((mount) => normalizePath(mount.path))),
+  const currentSource = sources.find((entry) => entry.id === sourceId);
+  const mountName =
+    baseName(normalizePath(sourcePath)) || sourceLeaf(currentSource);
+  const mountPath = joinPath(mountParent, mountName);
+
+  const mountedPaths = useMemo(
+    () => mounts.map((mount) => normalizePath(mount.path)),
     [mounts],
   );
+  // `mounts` can be a fresh array with unchanged contents, so effects key on the joined paths.
+  const mountedSignature = mountedPaths.join("\n");
+
+  const loadSourceFolders = useCallback(
+    async (path) => {
+      const source = sources.find((entry) => entry.id === sourceId);
+      if (!source) throw new Error(t("workspace.mount_source_required"));
+      const provider = createProvider(source);
+      try {
+        await provider.connect();
+        return await listFolders(provider, path);
+      } finally {
+        provider.close?.();
+      }
+    },
+    [sourceId, sources, t],
+  );
+
+  const loadWorkspaceFolders = useCallback(
+    async (path) => {
+      const root = createWorkspaceRootProvider(workspaceId);
+      await root.connect();
+      const folders = await listFolders(root, path);
+      // Mounted folders are virtual entries of the workspace root (see WorkspacePage#listRoot), so
+      // a mount can be placed next to them. A mounted folder itself is no destination: opening it
+      // shows its source, so a mount put inside would never be reachable.
+      const seen = new Set(folders.map((folder) => folder.name));
+      const prefix = path === "/" ? "/" : `${path}/`;
+      for (const mount of mounts) {
+        const mounted = normalizePath(mount.path);
+        if (mounted === path || !mounted.startsWith(prefix)) continue;
+        const first = mounted.slice(prefix.length).split("/")[0];
+        const entryPath = joinPath(path, first);
+        if (!first || seen.has(first) || mounted === entryPath) continue;
+        seen.add(first);
+        folders.push({ path: entryPath, name: first });
+      }
+      return folders;
+    },
+    [mounts, workspaceId],
+  );
+
+  // Warn while picking, so the conflict is visible before the dialog is submitted.
+  useEffect(() => {
+    if (!isOpen || !sourceId) return undefined;
+    let cancelled = false;
+    setTargetProblem(null);
+    inspectMountTarget({
+      workspaceId,
+      path: mountPath,
+      mountedPaths: mountedSignature ? mountedSignature.split("\n") : [],
+    })
+      .then((problem) => {
+        if (!cancelled) setTargetProblem(problem);
+      })
+      .catch(() => {
+        // A live hint must not break the dialog; submit reports a real provider failure.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, sourceId, workspaceId, mountPath, mountedSignature]);
 
   const submit = async () => {
     if (saving) return;
-    const normalizedMount = normalizePath(mountPath);
     if (!sourceId) {
       setError(t("workspace.mount_source_required"));
       return;
     }
-    if (normalizedMount === "/") {
-      setError(t("workspace.mount_path_required"));
-      return;
-    }
-    if (existingPaths.has(normalizedMount)) {
-      setError(t("workspace.mount_path_taken"));
-      return;
-    }
-    setSaving(true);
+    const target = normalizePath(mountPath);
     setError("");
+    setSaving(true);
     try {
+      const problem = await inspectMountTarget({
+        workspaceId,
+        path: target,
+        mountedPaths,
+      });
+      if (problem) {
+        setTargetProblem(problem);
+        return;
+      }
       await addWorkspaceMount({
         workspaceId,
         sourceId,
         sourcePath: normalizePath(sourcePath),
-        path: normalizedMount,
+        path: target,
         readOnly,
       });
-      onAdded?.(normalizedMount);
+      onAdded?.(target);
       onClose();
     } catch (event) {
       setError(event instanceof Error ? event.message : String(event));
@@ -85,7 +194,11 @@ export default function AddMountModal({
             </span>
             <select
               value={sourceId}
-              onChange={(event) => setSourceId(event.target.value)}
+              onChange={(event) => {
+                // A folder path only means something inside its own source.
+                setSourceId(event.target.value);
+                setSourcePath("/");
+              }}
               className="select select-bordered w-full"
             >
               {sources.map((source) => (
@@ -96,39 +209,34 @@ export default function AddMountModal({
             </select>
           </label>
         )}
-        <label className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1">
           <span className="text-xs font-medium text-base-content/70">
             {t("workspace.mount_source_path")}
           </span>
-          <input
-            value={sourcePath}
-            onChange={(event) => setSourcePath(event.target.value)}
-            placeholder="/shoe"
-            className="input input-bordered w-full font-mono text-xs"
+          <FolderPickerPanel
+            testId="folder-picker-source"
+            path={sourcePath}
+            load={loadSourceFolders}
+            onChange={setSourcePath}
           />
-          <span className="text-[10px] text-base-content/50">
-            {t("workspace.mount_source_path_hint")}
-          </span>
-        </label>
-        <label className="flex flex-col gap-1">
+        </div>
+        <div className="flex flex-col gap-1">
           <span className="text-xs font-medium text-base-content/70">
-            {t("workspace.mount_path")}
+            {t("workspace.mount_parent")}
           </span>
-          <input
-            value={mountPath}
-            onChange={(event) => {
-              setMountPath(event.target.value);
-              setError("");
-            }}
-            placeholder="/shoe"
-            className="input input-bordered w-full font-mono text-xs"
+          <FolderPickerPanel
+            testId="folder-picker-workspace"
+            path={mountParent}
+            load={loadWorkspaceFolders}
+            onChange={setMountParent}
+            footer={t("workspace.folder_picker_result", { path: mountPath })}
           />
-          <span className="text-[10px] text-base-content/50">
-            {t("workspace.mount_path_hint", {
-              name: baseName(mountPath) || "shoe",
-            })}
-          </span>
-        </label>
+          {targetProblem && (
+            <p data-testid="mount-target-problem" className="text-xs text-error">
+              {t(targetProblem.key, targetProblem.values)}
+            </p>
+          )}
+        </div>
         <label className="flex items-center gap-2 text-xs text-base-content/70">
           <input
             type="checkbox"
@@ -153,7 +261,7 @@ export default function AddMountModal({
             type="button"
             className="btn btn-accent"
             onClick={submit}
-            disabled={saving || !sourceId}
+            disabled={saving || !sourceId || Boolean(targetProblem)}
           >
             {t("workspace.add_folder")}
           </button>

@@ -32,6 +32,7 @@ export default function WorkspaceRootBrowser({
   loading = false,
   error = "",
   onNavigate,
+  onUp,
   onHome,
   onBreadcrumb,
   onRetry,
@@ -60,6 +61,7 @@ export default function WorkspaceRootBrowser({
   sourceLabel,
   emptyHint,
   parentOf = parentPath,
+  upPath,
   dataGuide = "workspace-files",
   selectable = false,
   canSelectEntry,
@@ -76,6 +78,14 @@ export default function WorkspaceRootBrowser({
   const allSelected =
     selectableEntries.length > 0 &&
     selectableEntries.every((entry) => selected.has(entry.path));
+  // `upPath` lets the caller steer the ".." row (a mount can have a parent
+  // outside the provider's own root). `undefined` keeps the default rule.
+  const upTarget =
+    upPath !== undefined
+      ? upPath
+      : path !== rootPath
+        ? parentOf(path)
+        : null;
 
   return (
     <>
@@ -89,7 +99,7 @@ export default function WorkspaceRootBrowser({
           <Home size={14} />
         </button>
         {breadcrumbs.map((crumb, index) => (
-          <span key={crumb.path} className="flex items-center gap-1">
+          <span key={`${index}:${crumb.path}`} className="flex items-center gap-1">
             {index > 0 && (
               <ChevronRight size={12} className="text-base-content/30" />
             )}
@@ -226,22 +236,17 @@ export default function WorkspaceRootBrowser({
               </button>
             )}
           </div>
-        ) : entries.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 p-8 text-center text-xs text-base-content/60">
-            <Folder size={20} className="text-base-content/30" />
-            <p>{t("workspace.empty_folder")}</p>
-            {emptyHint && (
-              <p className="text-[10px] text-base-content/40">{emptyHint}</p>
-            )}
-          </div>
         ) : (
           <div className="space-y-0.5">
-            {path !== rootPath && (
+            {upTarget !== null && (
               <button
                 type="button"
-                onClick={() => onNavigate?.(parentOf(path))}
+                onClick={() => (onUp ? onUp() : onNavigate?.(upTarget))}
                 className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/70 hover:bg-base-200"
               >
+                {selectable && (
+                  <span className="h-3 w-3 shrink-0" aria-hidden="true" />
+                )}
                 <Folder size={14} />
                 ..
               </button>
@@ -271,17 +276,22 @@ export default function WorkspaceRootBrowser({
                 }
                 className="group flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs transition hover:bg-base-200"
               >
-                {selectable && (!canSelectEntry || canSelectEntry(entry)) && (
-                  <input
-                    type="checkbox"
-                    className="checkbox checkbox-xs shrink-0"
-                    checked={selected.has(entry.path)}
-                    onChange={(event) =>
-                      onToggleSelect?.(entry, event.target.checked)
-                    }
-                    aria-label={entry.name}
-                  />
-                )}
+                {selectable &&
+                  ((!canSelectEntry || canSelectEntry(entry)) ? (
+                    <input
+                      type="checkbox"
+                      className="checkbox checkbox-xs shrink-0"
+                      checked={selected.has(entry.path)}
+                      onChange={(event) =>
+                        onToggleSelect?.(entry, event.target.checked)
+                      }
+                      aria-label={entry.name}
+                    />
+                  ) : (
+                    // Keep the row aligned with selectable rows without
+                    // showing a checkbox the user cannot use.
+                    <span className="h-3 w-3 shrink-0" aria-hidden="true" />
+                  ))}
                 <button
                   type="button"
                   onClick={() => onOpen?.(entry)}
@@ -325,6 +335,15 @@ export default function WorkspaceRootBrowser({
                 {entryActions?.(entry)}
               </div>
             ))}
+            {entries.length === 0 && (
+              <div className="flex flex-col items-center gap-2 p-8 text-center text-xs text-base-content/60">
+                <Folder size={20} className="text-base-content/30" />
+                <p>{t("workspace.empty_folder")}</p>
+                {emptyHint && (
+                  <p className="text-[10px] text-base-content/40">{emptyHint}</p>
+                )}
+              </div>
+            )}
           </div>
         )}
         {footer}

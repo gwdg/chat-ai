@@ -1,12 +1,50 @@
-// Client for a local `opencode serve` instance. The browser talks to the server directly;
-// opencode allows CORS from the app origin and protects the API with HTTP basic auth.
+// Client for an `opencode serve` instance. A local one is called directly;
+// opencode allows CORS from the app origin and protects the API with HTTP basic
+// auth. In a deployment the same client talks to the agent service's per-agent
+// proxy (`<gateway>/agents/<id>/opencode`), which is why only the base URL differs.
 import {
   reportAgentConflict,
   serviceErrorDetails,
+  serviceOpencodeUrl,
 } from "./agentService";
+import {
+  directAgentAccessAllowed,
+  isServiceManagedAgent,
+} from "./agentAccess";
 
 const DEFAULT_SERVER_URL = "http://127.0.0.1:9000";
 const DEFAULT_SERVER_USERNAME = "opencode";
+
+/**
+ * A direct OpenCode server is only reachable from a local Chat AI. Everything
+ * else must go through the agent service, which sits behind SAIA.
+ */
+export const DIRECT_AGENT_BLOCKED =
+  "Direct agent connections are only available when Chat AI runs locally. In a deployment, agents run through the agent service (SAIA).";
+
+/**
+ * The server did not answer with the OpenCode API at all.
+ *
+ * A deployment answers on the app's own origin, so a service that is down (or a
+ * gateway that cannot reach it) replies with an HTML error page — sometimes even
+ * with status 200. Parsing that as JSON produced `Unexpected token '<'`, which
+ * told a user nothing; callers get this error instead and can decide to hide the
+ * affected UI.
+ */
+export const AGENT_SERVER_UNAVAILABLE = "The agent server is unavailable.";
+
+/** True for the "no API behind this URL" error, as opposed to an API error. */
+export const isAgentServerUnavailable = (error) =>
+  error?.code === "AGENT_SERVER_UNAVAILABLE";
+
+const unavailableError = (detail) => {
+  const error = new Error(AGENT_SERVER_UNAVAILABLE);
+  error.code = "AGENT_SERVER_UNAVAILABLE";
+  if (detail) error.cause = detail;
+  return error;
+};
+
+const looksLikeHtml = (text) => /^\s*(?:<!doctype|<html|<\?xml)/i.test(text);
 
 export const opencodeDefaults = () => ({
   serverUrl: import.meta.env.VITE_OPENCODE_SERVER_URL || DEFAULT_SERVER_URL,
@@ -16,7 +54,12 @@ export const opencodeDefaults = () => ({
 });
 
 const baseUrl = (agent) =>
-  String(agent?.serverUrl || DEFAULT_SERVER_URL).replace(/\/+$/, "");
+  // A service-managed agent is served by the agent service on this origin; the
+  // `serverUrl` stored at creation is only a display value, so a changed
+  // deployment or a copied config cannot pin the browser to another host.
+  isServiceManagedAgent(agent)
+    ? serviceOpencodeUrl(agent.serviceAgentId)
+    : String(agent?.serverUrl || DEFAULT_SERVER_URL).replace(/\/+$/, "");
 
 const authHeaders = (agent) => {
   const username = agent?.username || DEFAULT_SERVER_USERNAME;
@@ -26,19 +69,36 @@ const authHeaders = (agent) => {
 };
 
 async function rawRequest(agent, path, init = {}) {
-  const response = await fetch(`${baseUrl(agent)}/api${path}`, {
-    ...init,
-    headers: {
-      ...(init.body ? { "Content-Type": "application/json" } : {}),
-      ...authHeaders(agent),
-      ...init.headers,
-    },
-  });
+  // Outside a locally opened Chat AI only the agent service may be used, and it
+  // is always the app's own origin: a direct OpenCode server is never contacted.
+  if (!directAgentAccessAllowed() && !isServiceManagedAgent(agent)) {
+    throw new Error(DIRECT_AGENT_BLOCKED);
+  }
+  let response;
+  try {
+    response = await fetch(`${baseUrl(agent)}/api${path}`, {
+      ...init,
+      headers: {
+        ...(init.body ? { "Content-Type": "application/json" } : {}),
+        ...authHeaders(agent),
+        ...init.headers,
+      },
+    });
+  } catch (reason) {
+    // An abort is the caller's own signal, not a server problem.
+    if (init.signal?.aborted || reason?.name === "AbortError") throw reason;
+    throw unavailableError(reason);
+  }
   if (!response.ok) {
     if (response.status === 401) {
       throw new Error("The opencode server rejected the password.");
     }
     const detail = await response.text().catch(() => "");
+    // A gateway in front of the agent service answers with its own error page
+    // when the service is down; that is not an OpenCode API error.
+    if (looksLikeHtml(detail) || [502, 503, 504].includes(response.status)) {
+      throw unavailableError(`HTTP ${response.status}`);
+    }
     // A service-managed agent is proxied through the agent service. A 409 with
     // its conflict code means the service will not serve that row at all (for
     // example after a restart marked it failed), which no retry can fix.
@@ -64,10 +124,27 @@ async function rawRequest(agent, path, init = {}) {
   return response;
 }
 
+/**
+ * Parse a JSON body, but treat a non-JSON answer as "no API here" instead of
+ * letting `JSON.parse` leak a syntax error to the user.
+ */
+async function parseJson(response) {
+  const text = await response.text().catch(() => "");
+  if (!text.trim()) return null;
+  if (looksLikeHtml(text)) {
+    throw unavailableError(`HTTP ${response.status} served HTML`);
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw unavailableError(`HTTP ${response.status} served invalid JSON`);
+  }
+}
+
 async function request(agent, path, init = {}) {
   const response = await rawRequest(agent, path, init);
   if (response.status === 204) return null;
-  return response.json();
+  return parseJson(response);
 }
 
 export async function getOpencodeInfo(agent) {
@@ -105,19 +182,32 @@ export async function listOpencodeSessions(agent) {
 }
 
 export async function listOpencodeSessionChildren(agent, sessionId) {
+  const parentId = String(sessionId);
+  // Current OpenCode filters the session list by parentID; `/session/<id>/children` is gone
+  // and answers 404 there. Older servers only have the dedicated endpoint, so try the filter
+  // first and fall back when the server ignored it.
   try {
-    const result = await request(
+    const listed = await request(
       agent,
-      `/session/${encodeURIComponent(sessionId)}/children`,
+      `/session?parentID=${encodeURIComponent(parentId)}&limit=200`,
     );
-    return result?.data ?? result ?? [];
+    const sessions = listed?.data ?? listed;
+    if (
+      Array.isArray(sessions) &&
+      sessions.every(
+        (session) => (session.parentID || session.parentId) === parentId,
+      )
+    ) {
+      return sessions;
+    }
   } catch {
-    const result = await request(
-      agent,
-      `/session?parentID=${encodeURIComponent(sessionId)}&limit=200`,
-    );
-    return result?.data ?? result ?? [];
+    // Fall through to the dedicated endpoint.
   }
+  const result = await request(
+    agent,
+    `/session/${encodeURIComponent(parentId)}/children`,
+  );
+  return result?.data ?? result ?? [];
 }
 
 export async function createOpencodeSession(agent, title) {
@@ -163,7 +253,7 @@ export async function writeOpencodeFile(
     },
   );
   if (response.status === 204) return null;
-  return response.json();
+  return parseJson(response);
 }
 
 export async function getOpencodeDiff(agent, sessionId) {

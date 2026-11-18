@@ -62,6 +62,23 @@ describe("Meta chat action markers", () => {
     ]);
   });
 
+  it("parses encryption key assignments and removals", () => {
+    const proposals = getMetaActionProposals(
+      [
+        '[[E2EE_ASSIGN:{"modelId":"qwen-a","key":"Node A"}]]',
+        '[[E2EE_ASSIGN:{"modelId":"qwen-b","keyId":"node-b"}]]',
+        '[[E2EE_ASSIGN:{"modelId":"qwen-c","key":null}]]',
+        '[[E2EE_ASSIGN:{"key":"Node A"}]]',
+      ].join("\n"),
+    );
+
+    expect(proposals).toEqual([
+      { type: "e2ee_assign", modelId: "qwen-a", key: "Node A" },
+      { type: "e2ee_assign", modelId: "qwen-b", key: "node-b" },
+      { type: "e2ee_assign", modelId: "qwen-c", key: null },
+    ]);
+  });
+
   it("parses workspace and agent pin proposals", () => {
     const proposals = getMetaActionProposals(
       [
@@ -131,6 +148,20 @@ describe("Meta chat action markers", () => {
       conversationId: "c1",
       key: "browser_storage",
       value: true,
+    });
+  });
+
+  it("accepts the workspace writing tool setting", () => {
+    const proposals = getMetaActionProposals(
+      '[[SET_CONVERSATION_SETTING:{"id":"c1","key":"workspace_write_access","value":false}]]',
+    );
+    expect(proposals).toHaveLength(1);
+    expect(proposals[0]).toMatchObject({
+      type: "conversation_setting",
+      scope: "conversation",
+      conversationId: "c1",
+      key: "workspace_write_access",
+      value: false,
     });
   });
 

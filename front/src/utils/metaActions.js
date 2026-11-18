@@ -1,5 +1,5 @@
 const ACTION_TYPES =
-  "CREATE_CHAT|RENAME_CHAT|MOVE_CHAT|PIN_CHAT|PIN_TOPIC|PIN_WORKSPACE|PIN_AGENT|SET_SETTING|SET_CONVERSATION_SETTING|WORKSPACE_LINK|AGENT_ACTION|AGENT_SESSION|MCP_SERVER|ADD_MEMORY|UPDATE_MEMORY|DELETE_MEMORY|CLEAR_MEMORIES";
+  "CREATE_CHAT|RENAME_CHAT|MOVE_CHAT|PIN_CHAT|PIN_TOPIC|PIN_WORKSPACE|PIN_AGENT|SET_SETTING|SET_CONVERSATION_SETTING|WORKSPACE_LINK|AGENT_ACTION|AGENT_SESSION|MCP_SERVER|ADD_MEMORY|UPDATE_MEMORY|DELETE_MEMORY|CLEAR_MEMORIES|E2EE_ASSIGN";
 const ACTION_SOURCE = `\\[\\[(${ACTION_TYPES}):\\s*(\\{[\\s\\S]*?\\})\\]\\]`;
 
 const BARE_CLEAR_SOURCE =
@@ -34,6 +34,7 @@ const SUPPORTED_CONVERSATION_SETTING_KEYS = new Set([
   "enable_tools",
   "enable_web_search",
   "browser_storage",
+  "workspace_write_access",
   "arcana_tools",
 ]);
 
@@ -62,9 +63,8 @@ const CREATE_CHAT_TOOL_KEYS = new Set([
   "arcana",
   "mcp",
   "mcp_remote",
-  "write_access",
+  "workspace_write_access",
   "browser_storage",
-  "codemode",
   "create_docx",
 ]);
 
@@ -228,6 +228,27 @@ export function getMetaActionProposals(text) {
         type: "setting",
         key,
         value: payload.value,
+      });
+      continue;
+    }
+
+    if (type === "E2EE_ASSIGN") {
+      const modelId = String(payload.modelId || payload.model || "").trim();
+      if (!modelId) continue;
+      const keyField = ["keyId", "key", "keyName"].find((field) =>
+        Object.prototype.hasOwnProperty.call(payload, field),
+      );
+      // Without a key field the marker is incomplete; `null` or "" clears it.
+      if (!keyField) continue;
+      const rawKey = payload[keyField];
+      const key =
+        rawKey === null || rawKey === undefined || !String(rawKey).trim()
+          ? null
+          : String(rawKey).trim();
+      proposals.set(`e2ee:${modelId}`, {
+        type: "e2ee_assign",
+        modelId,
+        key,
       });
       continue;
     }

@@ -102,6 +102,33 @@ A public Git repository can bootstrap a workspace. See
 `chat-ai-manifest.json` schema and confirmation flow. An example repository is
 prepared under `remote-example/`.
 
+## End-to-end encryption
+
+Chat AI can seal the traffic of individual models in the browser. In
+**User settings → Encryption**, import the public key of an encryption-capable
+model (paste it, choose a `.pub` file, load a single key from a URL, or import a
+key directory) and enter the models it applies to as a comma-separated list of
+ids or names. The key is tested against those models with a real sealed request
+before it is saved; a key the node does not accept is not stored. The model list
+in the tab is read-only and only shows models bound to a key plus models that
+internal features use in the background (titles, memory, proposals, conversation
+summaries, image analysis), labelled with the feature. Rows report whether the
+model is encrypted, blocked by a missing/invalid key, or stays in cleartext; to
+change a model's binding, remove the key and import it again. The OpenCode agent
+picks its model per session and is not covered by model keys. A bound model shows a green lock
+wherever it is listed, and every `/chat/completions` request it sends leaves the
+browser as ciphertext; the node seals its answer the same way.
+
+- Keys are **public** X25519 material and may be imported from a trusted source.
+  They are stored with your user settings, not in `secrets/`.
+- Only `/chat/completions` is encrypted. Document conversion, speech, image and
+  web-search endpoints stay cleartext.
+- If a bound key is missing or invalid, the request is **blocked** instead of
+  sent in cleartext.
+
+The protocol is the v3 protocol of `saia/saia-e2ee`; the browser port lives in
+`front/src/e2ee/` and `back/service.mjs` forwards a sealed envelope untouched.
+
 ## Configuration
 
 You can set the port numbers for both the `front` and `back` services in the `front.json` and `back.json` files.
@@ -114,11 +141,11 @@ The `front` service uses the following configurable attributes in `front.json`:
 - `userDataPath`: (Optional) Path to get user data. Simply set to `<backendPath>/user` if unsure
 - `apiKey`: (Optional) Bearer token sent to `backendPath`, `modelsPath` and `userDataPath`. Leave it out when the OIDC proxy authenticates the user, as in the default setup. It exists for endpoints that the browser may call directly, such as a SAIA engine (see [Calling a SAIA Engine Directly](#calling-a-saia-engine-directly-local-testing)). Vite compiles it into the bundle, so treat it as public
 - `fakeAuthHeaders`: (Optional) Object of extra headers sent with direct API calls (`backendPath`, `modelsPath`, `userDataPath`, chat, files, speech). It exists for a direct SAIA engine whose Chat AI compatibility routes under `/assumes_behind_oidc` expect the `oidc_claim_*` headers that Apache/`auth_openidc` normally adds. Setting it makes the browser impersonate that identity, so only use it against a local or test engine whose protected routes are not otherwise reachable; never set it in a deployment. The values are compiled into the bundle
-- `agentServiceUrl`: (Optional) Base URL of the [SAIA agent service](agent-service/README.md). When set, a new agent in the sidebar is created through that service instead of pointing at a hand-configured `opencodeServe` URL: the service starts one OpenCode backend per user/agent and the UI talks to its proxy. Removing the agent also deletes it in the service
-- `opencodeServerUrl` / `opencodeServerUsername` / `opencodeServerPassword`: (Optional) Defaults for a direct OpenCode server connection. They are still used when `agentServiceUrl` is unset or the service toggle is turned off in the add-agent window
+- `opencodeServerUrl` / `opencodeServerUsername` / `opencodeServerPassword`: (Optional) Defaults for a direct OpenCode server connection. A direct connection is only offered when Chat AI itself is opened from `localhost`/`127.0.0.1`; everywhere else agents run through the [SAIA agent service](agent-service/README.md) at `/agents` on the app's own origin, and a direct agent cannot be created (an existing one is migrated when saved). These defaults are then used only for that local access and for the container's own credentials. The agent service needs no URL in `front.json`: the SAIA gateway routes `/agents/*` to it. A dev server has no gateway, so it forwards `/agents` only when `AGENT_SERVICE_DEV_PROXY` names a service, for example `AGENT_SERVICE_DEV_PROXY=http://127.0.0.1:8090 npm run dev`; there is no default port
 - `default`: Default settings for new conversations, including default `model` with `model.id` and `model.name`, as well as `top_p` and `temperature`.
 - `titleGenerationModel`: Model ID for title generation
 - `memoryGenerationModel`: Model ID for memory generation and updates
+- `e2eeKeyUrl`: (Optional) Base URL of the directory that publishes the E2EE model node keys as `<MODELNAME>.pub` plus a `keys.json` manifest that binds every key to its model. The Encryption tab prefills it and loads every published key from it after verification (the Directory tab prefills `<e2eeKeyUrl>keys.json` and can also read a local folder of `.pub` files). Default: `https://docs.ai.gwdg.de/technical/saia-platform/keys/`. Generate the pairs and `keys.json` with `make -C encryption keys` or `node encryption/generate-model-keys.mjs` (see [encryption/README.md](encryption/README.md))
 - `announcement`: Text to be displayed in the announcement bar at the top of the window
 - `useOpenAISdk`: (Optional) `true` sends chat requests through the official `openai` SDK instead of the built-in lightweight `fetch` client. The SDK is then loaded on first use. Default: `false`
 
@@ -163,9 +190,9 @@ docker compose -f saia/saia-engine/local-testing/compose.yml up -d --build
 cd front && CONFIG_LOCATION=../secrets/front-local-conf.json npm run dev
 ```
 
-The file ships with the local test settings: the fixed dev key from the stack's `.env.example`, `bridge/local-echo-1` as the default and title/memory/proposal model, `agentServiceUrl` pointing at the local [agent service](agent-service/README.md), the fake OIDC claims for the profile, and all UI modules switched on. The echo models answer every prompt with `local-echo-1 says: …`, including the title prompt, so chat titles look odd there; set `titleGenerationModel` (and the memory/proposal keys) to a model from the selector to change that. `back`-only features — MCP, the OpenCode agent bridge (`/bridge/*`) and Arcana Tools — still have no route in this mode, and document conversion still needs the engine's docling-serve backend (the browser-side conversion in Chat preferences works without it).
+The file ships with the local test settings: the fixed dev key from the stack's `.env.example`, `bridge/deepseek-v4.1-flash-1017` as the default and title/memory/proposal model, the fake OIDC claims for the profile, and all UI modules switched on. That id is a real GWDG model reached through the bridge, so it needs `GWDG_ENABLED=true` and a valid `GWDG_API_KEY` in `local-testing/.env`, and its public id is `bridge/` + the GWDG id. Without a GWDG key the stack lists only the local mocks (`bridge/local-echo-1`, `bridge/local-slow-1`), which answer every prompt with `local-echo-1 says: …`; point the four model entries at a model the selector actually lists then. The browser only ever calls the agent service at `/agents` on the app's own origin, so to use one from the dev server start it with `AGENT_SERVICE_DEV_PROXY` pointing at it (for example `AGENT_SERVICE_DEV_PROXY=http://127.0.0.1:8090 CONFIG_LOCATION=../secrets/front-local-conf.json npm run dev`); without that variable the path stays same-origin and there is no service behind it. `back`-only features — MCP, Arcana Tools and the OpenCode bridge on `/bridge/*` — still have no route in this mode, and document conversion still needs the engine's docling-serve backend (the browser-side conversion in Chat preferences works without it). The agent bridge does work with a [service-managed agent](agent-service/README.md): it uses `/agents/<id>/bridge` on the app origin, which the dev server proxies when `AGENT_SERVICE_DEV_PROXY` is set. For a direct (non-service) agent the workspace popover reports "Agent bridge not available" with the 404 from `<backendPath>/bridge/sessions` instead of a broken bridge, and its access switch is disabled.
 
-The Agents sidebar is wired to the agent service, not to a fixed `opencodeServerUrl`. Start it before adding an agent:
+The Agents sidebar is wired to the agent service, not to a fixed `opencodeServerUrl`. The browser always calls it at `/agents` on the app's own origin. A deployment relies on the SAIA gateway routing `/agents/*` to the service; the Vite dev server has no gateway, so it forwards that path only when `AGENT_SERVICE_DEV_PROXY` names the service (there is no default port). Start it before adding an agent:
 
 ```bash
 cd agent-service
@@ -177,7 +204,7 @@ With the bundled dummy backend the UI works but the agent has no tools; a `kind:
 
 The stack runs no TTS or transcription service (`kokoro-82m` / `whisperx`), so engine-backed speech cannot work there. Set `"speech": "browser"` instead of a `{"model", "voice"}` object: that turns speech on and speaks through the browser's own voices, without calling the engine. (The legacy `"speech": true` is still accepted.) Voice **input** still goes through the selected chat model, so it needs a model that accepts audio (for example `bridge/qwen3-omni-30b-a3b-instruct` in a stack federating GWDG).
 
-Two things to keep in mind: the key is compiled into the bundle, so this is a local development setup, not a deployment pattern, and the engine's `/public/v1` routes are rate-limited per key just like any other client. The modules are enabled in this file: the browser agent (`modules.agent`) works against a direct endpoint because it sends `apiKey` as its bearer token, and the Agents sidebar uses `agentServiceUrl`, but MCP, the agent bridge (`/bridge/*`) and Arcana Tools remain `back`-only routes and stay unavailable.
+Two things to keep in mind: the key is compiled into the bundle, so this is a local development setup, not a deployment pattern, and the engine's `/public/v1` routes are rate-limited per key just like any other client. The modules are enabled in this file: the browser agent (`modules.agent`) works against a direct endpoint because it sends `apiKey` as its bearer token, and the Agents sidebar uses the same-origin `/agents` path, which the dev server forwards when `AGENT_SERVICE_DEV_PROXY` is set; MCP and Arcana Tools remain `back`-only routes. The agent bridge is served by the agent service for a service-managed agent, and only a direct (non-service) agent still needs `back` for it.
 
 ## Serving a Static Build (Apache / Nginx)
 

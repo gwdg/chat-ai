@@ -97,4 +97,15 @@ describe("McpServerList", () => {
       id: "server-1",
     });
   });
+
+  it("marks the section with an icon beside the collapse control", () => {
+    render(<McpServerList />);
+
+    // Two icons: the collapse chevron and the section icon, like Pinned.
+    expect(
+      screen
+        .getByRole("button", { name: "MCP Servers" })
+        .querySelectorAll("svg"),
+    ).toHaveLength(2);
+  });
 });

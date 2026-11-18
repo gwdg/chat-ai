@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { FileText } from "lucide-react";
 
 import {
   rendererComponents,
@@ -65,6 +66,18 @@ const toolArgument = (name, input) => {
   return "";
 };
 
+// OpenCode returns a tool's result as text content parts. Older versions put it
+// in `output`/`result`, so `toolDetail` falls back to this when neither exists;
+// without it a shell call's stdout and a read call's file text stay invisible.
+const contentText = (state) => {
+  if (!Array.isArray(state?.content)) return undefined;
+  const text = state.content
+    .map((item) => (item?.type === "text" ? item.text ?? "" : ""))
+    .filter(Boolean)
+    .join("\n");
+  return text || undefined;
+};
+
 const toolDetail = (part) => {
   const state = part.state ?? part;
   return {
@@ -74,12 +87,37 @@ const toolDetail = (part) => {
       state.result ??
       part.output ??
       part.result ??
-      state.metadata?.output,
+      state.metadata?.output ??
+      contentText(state),
     status: state.status ?? part.status ?? state.title,
   };
 };
 
-export default function AgentAssistantParts({ parts = [], fallback = "" }) {
+// A read or write call is about exactly one file, so its card can open that file
+// in the right-hand preview panel.
+const FILE_TOOLS = new Set(["read", "write"]);
+
+const toolFilePath = (name, input) => {
+  const key = String(name || "").toLowerCase();
+  if (!FILE_TOOLS.has(key)) return "";
+  if (typeof input !== "object" || input === null || Array.isArray(input)) {
+    return "";
+  }
+  const keys = TOOL_ARGUMENT_KEYS[key] ?? DEFAULT_ARGUMENT_KEYS;
+  for (const candidate of keys) {
+    const value = input[candidate];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return "";
+};
+
+const baseName = (path) => path.split("/").filter(Boolean).pop() || path;
+
+export default function AgentAssistantParts({
+  parts = [],
+  fallback = "",
+  onOpenFile,
+}) {
   const { t } = useTranslation();
   const visible = parts.filter(
     (part) => part?.type === "text" || part?.type === "tool" || part?.type === "reasoning",
@@ -115,55 +153,79 @@ export default function AgentAssistantParts({ parts = [], fallback = "" }) {
         const toolName = part.name ?? part.title ?? "tool";
         const argument = toolArgument(toolName, detail.input);
         const label = argument ? `${toolName}(${argument})` : toolName;
+        const filePath = onOpenFile ? toolFilePath(toolName, detail.input) : "";
         return (
-          <details
-            key={`tool:${index}`}
-            className="rounded-lg border border-base-300 bg-base-100/60"
-          >
-            <summary className="flex cursor-pointer flex-wrap items-center gap-1.5 p-2 text-xs">
-              <span className="badge badge-warning badge-xs">
-                {t("agents.tool_call")}
-              </span>
-              <span
-                className="min-w-0 flex-1 truncate font-mono font-medium"
-                title={label}
-              >
-                {label}
-              </span>
-              {detail.status && (
-                <span className="badge badge-ghost badge-xs">
-                  {String(detail.status)}
+          <div key={`tool:${index}`} className="space-y-1">
+            <details className="rounded-lg border border-base-300 bg-base-100/60">
+              <summary className="flex cursor-pointer flex-wrap items-center gap-1.5 p-2 text-xs">
+                <span className="badge badge-warning badge-xs">
+                  {t("agents.tool_call")}
                 </span>
-              )}
-            </summary>
-            <div className="space-y-2 border-t border-base-300 p-2">
-              {detail.input === undefined && detail.output === undefined && (
-                <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-words rounded bg-base-200 p-2 font-mono text-[11px]">
-                  {asText(part)}
-                </pre>
-              )}
-              {detail.input !== undefined && (
-                <div>
-                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-base-content/45">
-                    {t("agents.tool_input")}
-                  </p>
-                  <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words rounded bg-base-200 p-2 font-mono text-[11px]">
-                    {asText(detail.input)}
-                  </pre>
-                </div>
-              )}
-              {detail.output !== undefined && (
-                <div>
-                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-base-content/45">
-                    {t("agents.tool_output")}
-                  </p>
+                <span
+                  className="min-w-0 flex-1 truncate font-mono font-medium"
+                  title={label}
+                >
+                  {label}
+                </span>
+                {detail.status && (
+                  <span className="badge badge-ghost badge-xs">
+                    {String(detail.status)}
+                  </span>
+                )}
+              </summary>
+              <div className="space-y-2 border-t border-base-300 p-2">
+                {detail.input === undefined && detail.output === undefined && (
                   <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-words rounded bg-base-200 p-2 font-mono text-[11px]">
-                    {asText(detail.output)}
+                    {asText(part)}
                   </pre>
-                </div>
-              )}
-            </div>
-          </details>
+                )}
+                {detail.input !== undefined && (
+                  <div>
+                    <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-base-content/45">
+                      {t("agents.tool_input")}
+                    </p>
+                    <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words rounded bg-base-200 p-2 font-mono text-[11px]">
+                      {asText(detail.input)}
+                    </pre>
+                  </div>
+                )}
+                {detail.output !== undefined && (
+                  <div>
+                    <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-base-content/45">
+                      {t("agents.tool_output")}
+                    </p>
+                    <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-words rounded bg-base-200 p-2 font-mono text-[11px]">
+                      {asText(detail.output)}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            </details>
+            {filePath && (
+              <button
+                type="button"
+                onClick={() => onOpenFile(filePath)}
+                className="flex w-full items-center gap-2 rounded-lg border border-base-300 bg-base-100 px-2 py-1.5 text-left text-xs transition hover:border-accent/40 hover:bg-base-200"
+                title={filePath}
+                aria-label={t("agents.open_preview_of", {
+                  name: baseName(filePath),
+                })}
+              >
+                <FileText size={14} className="shrink-0 text-base-content/60" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium">
+                    {baseName(filePath)}
+                  </span>
+                  <span className="block truncate font-mono text-[10px] text-base-content/50">
+                    {filePath}
+                  </span>
+                </span>
+                <span className="shrink-0 text-[10px] font-medium text-accent">
+                  {t("agents.open_preview")}
+                </span>
+              </button>
+            )}
+          </div>
         );
       })}
     </div>

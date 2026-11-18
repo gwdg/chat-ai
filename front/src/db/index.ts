@@ -7,6 +7,7 @@ import i18n from '../i18n'
 import { isArcanasEnabled } from '../utils/modules'
 import { defaultCapabilities } from '../workspace/capabilities'
 import { SHARED_BROWSER_STORAGE_ID, workspaceBrowserStorageId } from '../workspace/browserStorage'
+import { chatStorageSourceId } from '../workspace/chatStorage'
 
 import type { 
   ConversationRow, 
@@ -1102,6 +1103,8 @@ export async function deleteConversation(conversationId: string) {
     db.files_data,
     db.conversations,
     db.workspace_chats,
+    db.workspace_sources,
+    db.workspace_mounts,
     db.workspace_file_references],
     async () => {
       // Delete all files for this conversation (meta + data)
@@ -1131,6 +1134,13 @@ export async function deleteConversation(conversationId: string) {
       // Finally, delete the conversation record itself
       await db.conversations.delete(conversationId);
       await db.workspace_chats.where('conversationId').equals(conversationId).delete();
+      // The chat's own folder disappears from the workspaces it was attached to; the files are
+      // deleted with the chat below (workspace/chatStorage.ts).
+      for (const link of chatLinks) {
+        const sourceId = chatStorageSourceId(link.workspaceId, conversationId);
+        await db.workspace_mounts.where('sourceId').equals(sourceId).delete();
+        await db.workspace_sources.delete(sourceId);
+      }
       await db.workspace_file_references
         .where('conversationId')
         .equals(conversationId)
@@ -1400,6 +1410,8 @@ export function useFileMeta(fileId : string) {
       setFile(null);
       return;
     }
+    // A new id must not keep showing the previous file while it loads.
+    setFile(null);
     let cancelled = false;
     async function checkUntilReady() {
       while (!cancelled) {
@@ -1427,8 +1439,12 @@ export function useFile(fileId : string) {
   useEffect(() => {
     if (!fileId) {
       setFile(null);
+      setData(null);
       return;
     }
+    // A new id must not keep showing the previous file while it loads.
+    setFile(null);
+    setData(null);
     let cancelled = false;
     async function checkMetaUntilReady() {
       while (!cancelled) {
@@ -1469,6 +1485,9 @@ export function useFileBase64(fileId: string) {
       setBase64(null);
       return;
     }
+    // A new id must not keep the previous file's data URL, which an <img> would try
+    // to decode and report as a broken image.
+    setBase64(null);
     let cancelled = false;
     async function checkUntilReady() {
       while (!cancelled) {
@@ -1508,6 +1527,8 @@ export function useFileContent(fileId: string, encoding: string = "utf-8") {
       setContent(null);
       return;
     }
+    // A new id must not keep showing the previous file while it loads.
+    setContent(null);
 
     let cancelled = false;
 

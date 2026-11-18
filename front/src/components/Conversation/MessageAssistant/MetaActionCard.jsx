@@ -67,6 +67,7 @@ const cloneMcpServers = (servers) => JSON.parse(JSON.stringify(servers ?? []));
 
 const CONVERSATION_TOOL_SETTING_KEYS = new Set([
   "browser_storage",
+  "workspace_write_access",
   "arcana_tools",
 ]);
 
@@ -412,6 +413,7 @@ export default function MetaActionCard({
     enable_tools: "settings.tools_title",
     enable_web_search: "settings.label_web_search",
     browser_storage: "settings.label_browser_storage",
+    workspace_write_access: "settings.label_write_access",
     arcana_tools: "settings.label_arcana_tools",
   };
 
@@ -632,6 +634,19 @@ export default function MetaActionCard({
         text: memoryText(action.index),
       });
     }
+    if (action.type === "e2ee_assign") {
+      const key = (userSettings.e2ee_keys ?? []).find(
+        (entry) =>
+          entry.id === action.key ||
+          (entry.name || "").toLowerCase() === (action.key || "").toLowerCase(),
+      );
+      return action.key
+        ? t("meta_chat.e2ee_assign_summary", {
+            model: action.modelId,
+            key: key?.name || action.key,
+          })
+        : t("meta_chat.e2ee_clear_summary", { model: action.modelId });
+    }
     return t("meta_chat.clear_memories_summary");
   };
 
@@ -674,6 +689,7 @@ export default function MetaActionCard({
       const prepared = [];
       const createdChats = [];
       const settingUpdates = {};
+      const e2eeAssignments = [];
       const memoryActions = actions.filter((action) =>
         [
           "add_memory",
@@ -687,6 +703,11 @@ export default function MetaActionCard({
       for (const action of actions) {
         if (action.type === "setting") {
           settingUpdates[action.key] = action.value;
+          continue;
+        }
+
+        if (action.type === "e2ee_assign") {
+          e2eeAssignments.push(action);
           continue;
         }
 
@@ -956,6 +977,30 @@ export default function MetaActionCard({
         });
       }
 
+      let e2eeModelsSnapshot = null;
+      if (e2eeAssignments.length > 0) {
+        const knownKeys = Array.isArray(userSettings.e2ee_keys)
+          ? userSettings.e2ee_keys
+          : [];
+        const previous = { ...(userSettings.e2ee_models || {}) };
+        const expected = { ...previous };
+        for (const action of e2eeAssignments) {
+          if (!action.key) {
+            delete expected[action.modelId];
+            continue;
+          }
+          const needle = action.key.toLowerCase();
+          const key =
+            knownKeys.find((entry) => entry.id === action.key) ||
+            knownKeys.find(
+              (entry) => (entry.name || "").toLowerCase() === needle,
+            );
+          if (!key) throw new Error("Encryption key not found");
+          expected[action.modelId] = key.id;
+        }
+        e2eeModelsSnapshot = { previous, expected };
+      }
+
       previousState.current = {
         chats: prepared.map((action) => {
           if (action.type === "rename") {
@@ -1038,6 +1083,7 @@ export default function MetaActionCard({
         createdChats,
         workspaceLinks: workspaceLinks.map((link) => ({ ...link })),
         agentSessions: [],
+        e2eeModels: e2eeModelsSnapshot,
       };
 
       for (const action of prepared) {
@@ -1207,6 +1253,9 @@ export default function MetaActionCard({
       if (Object.keys(settingUpdates).length > 0) {
         dispatch(importUserSettings(settingUpdates));
       }
+      if (e2eeModelsSnapshot) {
+        dispatch(importUserSettings({ e2ee_models: e2eeModelsSnapshot.expected }));
+      }
       if (updatedMemories) {
         dispatch(importUserSettings({ memories: updatedMemories }));
       }
@@ -1320,6 +1369,16 @@ export default function MetaActionCard({
         if (!valuesEqual(userSettings[key], values.expected)) {
           throw new Error("Setting changed");
         }
+      }
+
+      if (
+        snapshot.e2eeModels &&
+        !valuesEqual(
+          userSettings.e2ee_models || {},
+          snapshot.e2eeModels.expected,
+        )
+      ) {
+        throw new Error("Encryption assignment changed");
       }
 
       for (const entry of snapshot.conversationSettings || []) {
@@ -1509,6 +1568,11 @@ export default function MetaActionCard({
       }
       if (Object.keys(previousSettings).length > 0) {
         dispatch(importUserSettings(previousSettings));
+      }
+      if (snapshot.e2eeModels) {
+        dispatch(
+          importUserSettings({ e2ee_models: snapshot.e2eeModels.previous }),
+        );
       }
       if (snapshot.memories) {
         dispatch(

@@ -24,6 +24,9 @@ const initialState = {
   show_timestamps: false,
   // null = device default (Enter on desktop, Shift+Enter on mobile).
   send_with_enter: null,
+  // End-to-end encryption: published model public keys, and model → key bindings.
+  e2ee_keys: [],
+  e2ee_models: {},
 };
 
 const MEMORY_MODES = [0, 1, 2];
@@ -36,6 +39,17 @@ function ensureMemoryState(state) {
   if (!Array.isArray(state.memory_groups)) state.memory_groups = [];
   if (typeof state.default_memory_group !== "string") {
     state.default_memory_group = "default";
+  }
+}
+
+function ensureE2eeState(state) {
+  if (!Array.isArray(state.e2ee_keys)) state.e2ee_keys = [];
+  if (
+    !state.e2ee_models ||
+    typeof state.e2ee_models !== "object" ||
+    Array.isArray(state.e2ee_models)
+  ) {
+    state.e2ee_models = {};
   }
 }
 
@@ -108,6 +122,52 @@ function importUserSettingsState(state, incoming) {
   const timeout = Number(incoming.timeout);
   if (Number.isFinite(timeout)) {
     state.timeout = Math.min(Math.max(timeout, 5000), 900000);
+  }
+  // E2EE keys are public material only; anything else in the entry is dropped.
+  if (Array.isArray(incoming.e2ee_keys)) {
+    ensureE2eeState(state);
+    state.e2ee_keys = incoming.e2ee_keys
+      .filter(
+        (key) =>
+          key &&
+          typeof key === "object" &&
+          typeof key.id === "string" &&
+          key.id &&
+          typeof key.publicKey === "string" &&
+          key.publicKey.trim(),
+      )
+      .map((key) => ({
+        id: key.id,
+        name: typeof key.name === "string" ? key.name : "",
+        publicKey: key.publicKey.trim(),
+        ...(typeof key.source === "string" ? { source: key.source } : {}),
+        ...(typeof key.url === "string" ? { url: key.url } : {}),
+        ...(typeof key.addedAt === "string" ? { addedAt: key.addedAt } : {}),
+        ...(typeof key.testedAt === "string" ? { testedAt: key.testedAt } : {}),
+        ...(Array.isArray(key.testedModels)
+          ? {
+              testedModels: key.testedModels.filter(
+                (modelId) => typeof modelId === "string" && modelId,
+              ),
+            }
+          : {}),
+      }));
+  }
+  if (
+    incoming.e2ee_models &&
+    typeof incoming.e2ee_models === "object" &&
+    !Array.isArray(incoming.e2ee_models)
+  ) {
+    ensureE2eeState(state);
+    const keyIds = new Set(state.e2ee_keys.map((key) => key.id));
+    state.e2ee_models = Object.fromEntries(
+      Object.entries(incoming.e2ee_models).filter(
+        ([modelId, keyId]) =>
+          modelId &&
+          typeof keyId === "string" &&
+          keyIds.has(keyId),
+      ),
+    );
   }
   const memoryMode = Number(incoming.memory_mode);
   if (MEMORY_MODES.includes(memoryMode)) state.memory_mode = memoryMode;
@@ -359,6 +419,78 @@ const userSettingsSlice = createSlice({
       state.send_with_enter = Boolean(action.payload);
     },
 
+    addE2eeKey: (state, action) => {
+      ensureE2eeState(state);
+      const key = action.payload;
+      if (!key?.id || typeof key.publicKey !== "string" || !key.publicKey.trim()) {
+        return;
+      }
+      const entry = {
+        id: key.id,
+        name: typeof key.name === "string" ? key.name : "",
+        publicKey: key.publicKey.trim(),
+        ...(typeof key.source === "string" ? { source: key.source } : {}),
+        ...(typeof key.url === "string" ? { url: key.url } : {}),
+        addedAt: key.addedAt || new Date().toISOString(),
+        // The last sealed test, per model, so the key list can show whether the
+        // key still works instead of only whether it parses. Absent means it was
+        // never tested; an empty list means the last test failed everywhere.
+        ...(typeof key.testedAt === "string" ? { testedAt: key.testedAt } : {}),
+        ...(Array.isArray(key.testedModels)
+          ? {
+              testedModels: key.testedModels.filter(
+                (modelId) => typeof modelId === "string" && modelId,
+              ),
+            }
+          : {}),
+      };
+      const index = state.e2ee_keys.findIndex((item) => item.id === key.id);
+      if (index >= 0) state.e2ee_keys[index] = { ...state.e2ee_keys[index], ...entry };
+      else state.e2ee_keys.push(entry);
+    },
+
+    updateE2eeKey: (state, action) => {
+      ensureE2eeState(state);
+      const { id, patch } = action.payload || {};
+      if (!id || !patch) return;
+      const index = state.e2ee_keys.findIndex((item) => item.id === id);
+      if (index < 0) return;
+      const next = { ...state.e2ee_keys[index], ...patch, id };
+      if (typeof next.publicKey === "string") next.publicKey = next.publicKey.trim();
+      state.e2ee_keys[index] = next;
+    },
+
+    removeE2eeKey: (state, action) => {
+      ensureE2eeState(state);
+      const id = action.payload;
+      if (!id) return;
+      state.e2ee_keys = state.e2ee_keys.filter((key) => key.id !== id);
+      // An assignment without its key would fail closed on every send, so it goes too.
+      state.e2ee_models = Object.fromEntries(
+        Object.entries(state.e2ee_models).filter(([, keyId]) => keyId !== id),
+      );
+    },
+
+    // Removes every key and every binding in one step. A binding without its
+    // key fails closed, so the two always move together.
+    clearE2eeKeys: (state) => {
+      ensureE2eeState(state);
+      state.e2ee_keys = [];
+      state.e2ee_models = {};
+    },
+
+    setE2eeModelKey: (state, action) => {
+      ensureE2eeState(state);
+      const { modelId, keyId } = action.payload || {};
+      if (!modelId) return;
+      if (!keyId) {
+        delete state.e2ee_models[modelId];
+        return;
+      }
+      if (!state.e2ee_keys.some((key) => key.id === keyId)) return;
+      state.e2ee_models[modelId] = keyId;
+    },
+
     addMcpServer: (state, action) => {
       if (!Array.isArray(state.mcp_servers)) state.mcp_servers = [];
       const server = action.payload;
@@ -412,6 +544,7 @@ export const {
   addMemoryGroup, renameMemoryGroup, deleteMemoryGroup,
   setDefaultMemoryGroup, setMemoryGroup,
   addMcpServer, updateMcpServer, removeMcpServer,
+  addE2eeKey, updateE2eeKey, removeE2eeKey, clearE2eeKeys, setE2eeModelKey,
   setTimeoutTime, resetTimeoutTime, setTimeoutInSeconds,
   setDefaultModel, setMemoryMode, setSuggestUserPrompts, setHtmlRenderMode,
   setHtmlLoadExternal, setHtmlSanitization, setSetTitleOnce, setRenderTypst,
@@ -473,4 +606,6 @@ export const selectShowTimestamps = (state) =>
 export const selectSendWithEnter = (state) =>
   state.user_settings.send_with_enter ?? null;
 export const selectUserSettings = (state) => state.user_settings;
+export const selectE2eeKeys = (state) => state.user_settings?.e2ee_keys ?? [];
+export const selectE2eeModels = (state) => state.user_settings?.e2ee_models ?? {};
 export default userSettingsSlice.reducer;

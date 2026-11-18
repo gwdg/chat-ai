@@ -25,6 +25,8 @@ type TreeProps = {
   isReadOnly: (entry: RootEntry) => boolean;
   isSourceReadOnly: (entry: RootEntry) => boolean;
   sourceLabel?: (entry: RootEntry) => string | undefined;
+  /** A mount the UI must not offer to unmount, e.g. an attached chat's own folder. */
+  canRemoveMount?: (entry: RootEntry) => boolean;
 };
 
 function TreeRow({
@@ -185,15 +187,17 @@ function TreeRow({
                 <Locked size={11} />
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => props.onRemoveMount(entry)}
-              className="flex h-4 w-4 items-center justify-center rounded text-base-content/40 opacity-0 hover:text-error group-hover:opacity-100"
-              title={t("workspace.remove_mount")}
-              aria-label={t("workspace.remove_mount")}
-            >
-              <TrashCan size={11} />
-            </button>
+            {(props.canRemoveMount ? props.canRemoveMount(entry) : true) && (
+              <button
+                type="button"
+                onClick={() => props.onRemoveMount(entry)}
+                className="flex h-4 w-4 items-center justify-center rounded text-base-content/40 opacity-0 hover:text-error group-hover:opacity-100"
+                title={t("workspace.remove_mount")}
+                aria-label={t("workspace.remove_mount")}
+              >
+                <TrashCan size={11} />
+              </button>
+            )}
           </>
         ) : null}
       </div>

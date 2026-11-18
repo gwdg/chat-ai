@@ -9,6 +9,7 @@ import { buildFeatureGuidePrompt, featureGuides } from "../config/featureGuides"
 import { buildUseCasePrompt, useCases } from "../config/useCases";
 import { loadPersonaCatalog } from "./personaCatalog";
 import { getSpeechModule } from "./speechAudio";
+import { usableKey } from "../e2ee/registry";
 import {
   listMcpServerTools,
   normalizeMcpUrl,
@@ -87,6 +88,19 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
     typeof model === "string"
       ? model
       : model?.name || model?.id || "not set";
+  const e2eeKeys = Array.isArray(userSettings.e2ee_keys)
+    ? userSettings.e2ee_keys
+    : [];
+  const e2eeModels =
+    userSettings.e2ee_models &&
+    typeof userSettings.e2ee_models === "object" &&
+    !Array.isArray(userSettings.e2ee_models)
+      ? userSettings.e2ee_models
+      : {};
+  const keyedModels = Object.entries(e2eeModels).map(([modelId, keyId]) => {
+    const key = e2eeKeys.find((entry) => entry.id === keyId);
+    return `${modelId} (key: ${key?.name || keyId})`;
+  });
 
   return [
     `- Default model: ${modelName}`,
@@ -105,6 +119,7 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
     }`,
     `- Default memory group: ${memoryGroupName(userSettings, userSettings.default_memory_group)} (id: ${userSettings.default_memory_group ?? "default"})`,
     `- Request timeout: ${Math.round((userSettings.timeout ?? 300000) / 1000)} seconds`,
+    `- End-to-end encryption: ${e2eeKeys.length} key${e2eeKeys.length === 1 ? "" : "s"} configured; encrypted models: ${keyedModels.length ? keyedModels.join(", ") : "none"}`,
     `- Suggest follow-up prompts: ${yesNo(userSettings.suggest_user_prompts)}`,
     `- Set title only on first prompt: ${yesNo(userSettings.set_title_once)}`,
     `- Conversation summaries: ${yesNo(userSettings.conversation_summaries)}`,
@@ -144,6 +159,7 @@ export function buildConversationSettingsSummary(settings = {}) {
     .filter(([, enabled]) => enabled)
     .map(([name]) => name);
   const browserStorage = tools.browser_storage !== false;
+  const workspaceWrite = tools.workspace_write_access !== false;
   const memoryOverride =
     settings.memory_mode_override === "default" ||
     settings.memory_mode_override === undefined
@@ -183,6 +199,7 @@ export function buildConversationSettingsSummary(settings = {}) {
         : ""
     }`,
     `storage access ${browserStorage ? "enabled" : "disabled"}`,
+    `writing in this chat ${browserStorage ? "enabled" : "disabled"}; writing in attached workspaces ${workspaceWrite ? "enabled" : "disabled"}`,
     `arcana ${arcanaId || "none"}`,
     `MCP local ${tools.mcp ? "enabled" : "disabled"}, remote ${remoteMcpEnabled(settings) ? "enabled" : "disabled"}${mcpDescription ? ` (${mcpDescription})` : ""}`,
   ].join("; ");
@@ -666,7 +683,11 @@ export const META_TOOL_DEFINITIONS = [
   ),
   tool(
     "get_user_settings",
-    "Get the current global user preferences, interface settings, module flags, MCP servers, and the Meta chat's own settings.",
+    "Get the current global user preferences, interface settings, module flags, MCP servers, end-to-end encryption keys and model bindings, and the Meta chat's own settings.",
+  ),
+  tool(
+    "list_e2ee_keys",
+    "List the user's end-to-end encryption public keys (name, id, fingerprint, source), which models are bound to each key, and whether the last sealed test passed.",
   ),
   tool(
     "test_mcp_server",
@@ -1239,6 +1260,42 @@ export function createMetaToolRunner({
           ...buildSettingsLines(userSettings, interfaceSettings),
           `- Meta chat settings: ${buildConversationSettingsSummary(metaSettings)}`,
         ].join("\n");
+      }
+
+      case "list_e2ee_keys": {
+        const keys = Array.isArray(userSettings.e2ee_keys)
+          ? userSettings.e2ee_keys
+          : [];
+        const bindings =
+          userSettings.e2ee_models &&
+          typeof userSettings.e2ee_models === "object" &&
+          !Array.isArray(userSettings.e2ee_models)
+            ? userSettings.e2ee_models
+            : {};
+        if (!keys.length) {
+          return "No end-to-end encryption keys are configured. Models without a key use the platform's normal transport encryption, without the extra end-to-end layer.";
+        }
+        return keys
+          .map((key) => {
+            const models = Object.entries(bindings)
+              .filter(([, keyId]) => keyId === key.id)
+              .map(([modelId]) => modelId);
+            const tested = key.testedAt
+              ? `tested ${
+                  Array.isArray(key.testedModels) && key.testedModels.length
+                    ? `passing for ${key.testedModels.join(", ")}`
+                    : "without a passing model"
+                } at ${key.testedAt}`
+              : "not tested";
+            return [
+              `- ${key.name || key.id} (id: ${key.id})`,
+              `  fingerprint: ${usableKey(key)?.kid || "unknown"}`,
+              `  source: ${key.source || "paste"}${key.url ? `, url: ${key.url}` : ""}`,
+              `  models: ${models.length ? models.join(", ") : "none"}`,
+              `  test: ${tested}`,
+            ].join("\n");
+          })
+          .join("\n");
       }
 
       case "test_mcp_server": {

@@ -131,6 +131,7 @@ export async function createWorkspaceTools(
   conversationId: string,
   workspace: Vfs,
   primaryWorkspaceId?: string,
+  { writable = true }: { writable?: boolean } = {},
 ): Promise<{ tools: AgentTool<any>[]; context: WorkspaceToolContext }> {
   const workspaceIds = await getConversationWorkspaceIds(conversationId);
   const context: WorkspaceToolContext = { workspaceIds, workspaces: [] };
@@ -766,7 +767,14 @@ export async function createWorkspaceTools(
   };
 
   return {
-    tools: [listTool, agentsTool, filesTool, readTool, writeTool, fetchTool],
+    tools: [
+      listTool,
+      agentsTool,
+      filesTool,
+      readTool,
+      ...(writable ? [writeTool] : []),
+      fetchTool,
+    ],
     context,
   };
 }

@@ -146,15 +146,17 @@ try {
     } else if (key == "opencodeServerPassword") {
       process.env["VITE_OPENCODE_SERVER_PASSWORD"] = value;
       console.log("opencode server password:", value ? "set" : "not set");
-    } else if (key == "agentServiceUrl") {
-      process.env["VITE_AGENT_SERVICE_URL"] = value;
-      console.log("Agent service URL:", value);
     } else if (key == "opencodeBridgeSidecarCommand") {
       process.env["VITE_OPENCODE_BRIDGE_SIDECAR_COMMAND"] = JSON.stringify(value);
       console.log("opencode bridge sidecar:", JSON.stringify(value));
     } else if (key == "explainImageModel") {
       process.env["VITE_EXPLAIN_IMAGE_MODEL"] = value;
       console.log("Explain-image model:", value);
+    } else if (key == "e2eeKeyUrl") {
+      // Where the published `.pub` files of the model nodes live. The app only
+      // reads it, and the compression/static pipeline does not touch it.
+      process.env["VITE_E2EE_KEY_URL"] = value;
+      console.log("E2EE key URL:", value);
     } else if (key == "announcement") {
       process.env["VITE_ANNOUNCEMENT"] = value;
       console.log("Announcement:", value);
@@ -195,6 +197,15 @@ try {
   oidcProxy = undefined;
 }
 
+// The agent service is addressed on the app's own origin (`/agents`), exactly as
+// the SAIA gateway serves it in a deployment, so the browser never needs a
+// service URL or port. A dev server has no gateway in front of it, so it can
+// forward that path to a local service — only when `AGENT_SERVICE_DEV_PROXY`
+// names one. There is deliberately no default: the app must not assume that a
+// service is listening on a fixed local port. Preview/production builds get the
+// prefix from the gateway, never from this proxy.
+const AGENT_SERVICE_DEV_TARGET = (process.env.AGENT_SERVICE_DEV_PROXY || "").trim();
+
 // pi's tool modules, and some of their dependencies, import Node built-ins at load time even
 // though the agent replaces their file access (see src/agent/tools.ts). Map them to browser
 // stand-ins; without this Vite substitutes empty modules that throw on first use.
@@ -228,13 +239,13 @@ const nodeShimsEsbuild = {
 // It also terminates the worker on every finish and timeout, so a plain ArrayBuffer is enough.
 function codemodeWithoutIsolation() {
   return {
-    name: "codemode-without-isolation",
-    transform(code, id) {
-      if (id.includes("pi-codemode/dist/runtime/host.js"))
-        return code.replace("new SharedArrayBuffer(4)", "new (globalThis.SharedArrayBuffer ?? ArrayBuffer)(4)");
-    },
-  };
-}
+      name: "codemode-without-isolation",
+      transform(code, id) {
+        if (id.includes("pi-codemode/dist/runtime/host.js"))
+          return code.replace("new SharedArrayBuffer(4)", "new (globalThis.SharedArrayBuffer ?? ArrayBuffer)(4)");
+      },
+    };
+  }
 const codemodeEsbuild = {
   name: "codemode-without-isolation",
   setup(build) {
@@ -250,44 +261,62 @@ const codemodeEsbuild = {
 const piCodingAgent = path.resolve(__dirname, "node_modules/@earendil-works/pi-coding-agent/dist");
 
 // Export the Vite config
-export default defineConfig({
-  plugins: [
-    react(),
-    tailwindcss(),
-    nodeShimsPlugin(),
-    codemodeWithoutIsolation(),
-    tikzAssetsPlugin,
-    servePrecompressed(),
-    staticAssetsBuild(),
-  ],
-  resolve: {
-    alias: [
-      { find: /^pi-coding-agent\//, replacement: `${piCodingAgent}/` },
-      {
-        find: /^faster-latex-wasm/,
-        replacement: path.join(fasterLatexRoot, "web/faster_latex_bg.wasm"),
-      },
-      {
-        find: /^html2canvas$/,
-        replacement: path.resolve(__dirname, "src/utils/emptyHtml2canvas.js"),
-      },
+export default defineConfig(({ mode }) => {
+  // The local agent service stands in for the gateway only in the dev server, and only
+  // when it was named explicitly (see AGENT_SERVICE_DEV_TARGET).
+  const proxy = {
+    ...(oidcProxy ?? {}),
+    ...(mode === "development" && AGENT_SERVICE_DEV_TARGET
+      ? {
+          "/agents": {
+            target: AGENT_SERVICE_DEV_TARGET,
+            changeOrigin: true,
+            // The browser bridge keeps a WebSocket open under this prefix.
+            ws: true,
+          },
+        }
+      : {}),
+  };
+
+  return {
+    plugins: [
+      react(),
+      tailwindcss(),
+      nodeShimsPlugin(),
+      codemodeWithoutIsolation(),
+      tikzAssetsPlugin,
+      servePrecompressed(),
+      staticAssetsBuild(),
     ],
-  },
-  optimizeDeps: {
-    include: ["@earendil-works/pi-codemode/worker"],
-    esbuildOptions: { plugins: [nodeShimsEsbuild, codemodeEsbuild] },
-  },
-  // The codemode worker is an ES module
-  worker: { format: "es", plugins: () => [nodeShimsPlugin(), codemodeWithoutIsolation()] },
-  base: "/",
-  server: {
-    port: port,
-    open: false,
-    ...(oidcProxy ? { proxy: oidcProxy } : {}),
-  },
-  preview: {
-    port: port,
-    open: false,
-    ...(oidcProxy ? { proxy: oidcProxy } : {}),
-  },
+    resolve: {
+      alias: [
+        { find: /^pi-coding-agent\//, replacement: `${piCodingAgent}/` },
+        {
+          find: /^faster-latex-wasm/,
+          replacement: path.join(fasterLatexRoot, "web/faster_latex_bg.wasm"),
+        },
+        {
+          find: /^html2canvas$/,
+          replacement: path.resolve(__dirname, "src/utils/emptyHtml2canvas.js"),
+        },
+      ],
+    },
+    optimizeDeps: {
+      include: ["@earendil-works/pi-codemode/worker"],
+      esbuildOptions: { plugins: [nodeShimsEsbuild, codemodeEsbuild] },
+    },
+    // The codemode worker is an ES module
+    worker: { format: "es", plugins: () => [nodeShimsPlugin(), codemodeWithoutIsolation()] },
+    base: "/",
+    server: {
+      port: port,
+      open: false,
+      ...(Object.keys(proxy).length ? { proxy } : {}),
+    },
+    preview: {
+      port: port,
+      open: false,
+      ...(Object.keys(proxy).length ? { proxy } : {}),
+    },
+  };
 });

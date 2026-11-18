@@ -8,6 +8,7 @@ import {
   initMessageListener,
 } from "redux-state-sync";
 import { migrations } from "./migrations";
+import { stateSyncConfig } from "./stateSync";
 
 const persistConfig = {
   key: "root",
@@ -18,7 +19,7 @@ const persistConfig = {
     "user_settings",
     "migration_data",
   ],
-  version: 9,
+  version: 10,
   migrate: createMigrate(migrations, { debug: true })
 };
 
@@ -73,6 +74,8 @@ const getDefaultState = () => {
       conversation_summaries: true,
       show_timestamps: false,
       send_with_enter: null,
+      e2ee_keys: [],
+      e2ee_models: {},
     },
   };
 };
@@ -94,38 +97,8 @@ const persistedRootReducer = persistReducer(
   rootReducerWithReset
 );
 
-// Configuration for redux-state-sync - REMOVED setCurrentConversation from whitelist
-const stateSyncConfig = {
-  // Whitelist the actions that should sync across tabs
-  whitelist: [
-    // "conversations/addConversation",
-    // "conversations/updateConversation",
-    // "conversations/deleteConversation",
-    // "conversations/resetStore",
-    // "conversations/setIsResponding",
-    // "defaultModel/setDefaultModel",
-    // "defaultModel/resetDefaultModel",
-    // "theme/toggleTheme",
-    // "theme/setDarkMode",
-    // "theme/setLightMode",
-    // "userMemory/addMemory",
-    // "userMemory/editMemory",
-    // "userMemory/deleteMemory",
-    // "userMemory/deleteAllMemories",
-    // "timeout/setTimeoutTime",
-    // "timeout/resetTimeoutTime",
-    // "timeout/setTimeoutInSeconds",
-    "SET_ADV",
-    "RESET_ALL",
-    "MIGRATE",
-    "SET_COUNT",
-    "user_settings/importUserSettings",
-  ],
-  // Use localStorage for better compatibility
-  broadcastChannelOption: {
-    type: "localstorage",
-  },
-};
+// Configuration for redux-state-sync lives in ./stateSync.js: every `user_settings` action syncs,
+// because redux-persist rewrites the whole persisted state from each tab (see that file).
 
 // Create the Redux store with the persisted reducer and middleware
 export const store = configureStore({

@@ -25,6 +25,11 @@ describe("agent tools", () => {
     expect(codemode?.description).toContain("No file tools are available");
   });
 
+  it("always offers the Browser agent even when an old chat stored codemode:false", () => {
+    const names = toolNames({ vision: true, enabled: { codemode: false } });
+    expect(names).toContain("codemode");
+  });
+
   it("disables every file-dependent tool when browser storage is off", () => {
     const names = toolNames({
       vision: true,

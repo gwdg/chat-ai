@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 
 import BaseModal from "../BaseModal";
 import { newId } from "../../db";
@@ -12,11 +14,20 @@ import {
 import {
   createServiceAgent,
   deleteServiceAgent,
-  hasAgentService,
 } from "../../apis/agentService";
+import { directAgentAccessAllowed } from "../../apis/agentAccess";
+import {
+  AGENT_SERVICE_CHECKING,
+  AGENT_SERVICE_DENIED,
+  useAgentServiceAccess,
+} from "../../hooks/useAgentServiceAccess";
 
 // Placeholder project list; the real projects will come from the GWDG backend.
 const PROJECT_COUNT = 3;
+
+// The two connection kinds this dialog offers: an agent running on the GWDG HPC
+// agentic service, or an OpenCode server the user runs and points at itself.
+const CONNECTION_MODES = ["service", "external"];
 
 export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
   const { t } = useTranslation();
@@ -34,13 +45,19 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
   const [projectId, setProjectId] = useState(
     agent?.projectId ?? projects[0]?.id ?? "",
   );
-  const [local, setLocal] = useState(agent?.local !== false);
-  const serviceAvailable = hasAgentService();
-  // A new agent uses the service when one is configured; an existing agent
-  // keeps the mode it was created with so editing never migrates it silently.
-  const [useService, setUseService] = useState(
-    agent?.serviceAgentId ? true : !agent && serviceAvailable,
+  // New agents run on the GWDG HPC agentic service (the default deployment
+  // path); an existing agent keeps the mode it was created with so editing never
+  // migrates it silently.
+  const [mode, setMode] = useState(
+    agent ? (agent.serviceAgentId ? "service" : "external") : "service",
   );
+  // Direct `opencode serve` connections are a local-only affordance. Outside a
+  // locally opened Chat AI every agent must run through the service behind SAIA,
+  // so the external server is not offered and an existing direct agent is
+  // migrated when it is saved.
+  const directAllowed = directAgentAccessAllowed();
+  const connectionMode = directAllowed ? mode : "service";
+  const serviceMode = connectionMode === "service";
   const [serverUrl, setServerUrl] = useState(
     agent?.serverUrl ?? defaults.serverUrl,
   );
@@ -51,63 +68,75 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
   const [error, setError] = useState("");
   const project = projects.find((item) => item.id === projectId);
 
+  // The HPC service exists per user and is granted through an engine access
+  // group, so a user without the grant cannot create one at all: the model list
+  // answers that before any request is sent, and the service fields stay locked
+  // behind the access request instead of failing after the click.
+  const access = useAgentServiceAccess();
+  const serviceLocked =
+    serviceMode &&
+    (access === AGENT_SERVICE_CHECKING || access === AGENT_SERVICE_DENIED);
+
   const submit = async () => {
-    if (!project || saving) return;
+    if (saving || serviceLocked || (serviceMode && !project)) return;
     setSaving(true);
     setError("");
-    const effectiveServerUrl = local
-      ? serverUrl.trim()
-      : defaults.serverUrl;
-    const effectivePassword = local ? password : defaults.password;
     let next = {
       ...(agent ?? {}),
       id: agent?.id ?? newId(),
-      projectId: project.id,
-      name: name.trim() || project.name,
-      local,
-      serverUrl: effectiveServerUrl,
+      name: name.trim() || project?.name || t("agents.default_name"),
+      // `local` is no longer a user choice: an external server is always
+      // configured here, while a service agent keeps the flag it had so
+      // features that gate on `local !== false` are unaffected.
+      local: serviceMode ? agent?.local !== false : true,
+      serverUrl: serverUrl.trim(),
       username: agent?.username ?? defaults.username,
-      password: effectivePassword,
-      passwordSource:
-        effectivePassword === defaults.password ? "config" : "custom",
+      password,
+      passwordSource: password === defaults.password ? "config" : "custom",
     };
     let createdServiceId = null;
     let replacedServiceId = null;
-    if (useService) {
-      // The service starts an OpenCode backend for this agent; its proxy prefix
-      // becomes the agent's server URL and no basic auth is stored.
-      let serviceAgentId = agent?.serviceAgentId;
-      if (!serviceAgentId) {
-        const created = await createServiceAgent({ name: next.name });
-        serviceAgentId = created.serviceAgentId;
-        createdServiceId = serviceAgentId;
-        next.serverUrl = created.serverUrl;
-      }
-      next = {
-        ...next,
-        serviceAgentId,
-        serviceManaged: true,
-        username: defaults.username,
-        password: "",
-        passwordSource: "service",
-      };
-    } else {
-      const { serviceAgentId: _id, serviceManaged: _managed, ...direct } =
-        next;
-      next = direct;
-      if (agent?.serviceAgentId) replacedServiceId = agent.serviceAgentId;
-    }
-    const connectionChanged =
-      !editing ||
-      next.serverUrl !== agent.serverUrl ||
-      next.password !== agent.password;
     try {
+      if (serviceMode) {
+        // The service starts an OpenCode backend for this agent; its proxy prefix
+        // becomes the agent's server URL and no basic auth is stored.
+        let serviceAgentId = agent?.serviceAgentId;
+        if (!serviceAgentId) {
+          const created = await createServiceAgent({ name: next.name });
+          serviceAgentId = created.serviceAgentId;
+          createdServiceId = serviceAgentId;
+          next.serverUrl = created.serverUrl;
+        }
+        next = {
+          ...next,
+          projectId: project.id,
+          serviceAgentId,
+          serviceManaged: true,
+          username: defaults.username,
+          password: "",
+          passwordSource: "service",
+        };
+      } else {
+        const {
+          serviceAgentId: _id,
+          serviceManaged: _managed,
+          projectId: _project,
+          ...direct
+        } = next;
+        next = direct;
+        if (agent?.serviceAgentId) replacedServiceId = agent.serviceAgentId;
+      }
+      const connectionChanged =
+        !editing ||
+        next.serverUrl !== agent.serverUrl ||
+        next.password !== agent.password;
+
       let patch = next;
       if (connectionChanged) {
         await getOpencodeInfo(next);
         const session = await createOpencodeSession(
           next,
-          `${next.name || project.name} agent`,
+          `${next.name || project?.name || ""} agent`,
         );
         patch = { ...next, sessionId: session.id };
       }
@@ -124,6 +153,8 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
         // Do not leave a container behind for an agent that was never saved.
         await deleteServiceAgent(createdServiceId).catch(() => {});
       }
+      // A 409 is the service's own capacity answer (a backend is full) or a row
+      // it will not serve; its message names the reason, so show it verbatim.
       setError(
         t("agents.connect_failed", {
           error: reason instanceof Error ? reason.message : String(reason),
@@ -137,28 +168,43 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} titleKey="agents.add_title">
       <div className="flex flex-col gap-3 pb-2 text-sm">
-        <p className="text-xs text-base-content/70">{t("agents.add_hint")}</p>
-        {(serviceAvailable || agent?.serviceAgentId) && (
-          <label className="flex items-center gap-2 text-xs">
-            <input
-              type="checkbox"
-              className="toggle toggle-sm"
-              checked={useService}
-              onChange={(event) => setUseService(event.target.checked)}
-            />
-            {t("agents.use_service")}
-          </label>
-        )}
-        {!useService && (
-          <label className="flex items-center gap-2 text-xs">
-            <input
-              type="checkbox"
-              className="toggle toggle-sm"
-              checked={local}
-              onChange={(event) => setLocal(event.target.checked)}
-            />
-            {t("agents.local")}
-          </label>
+        {directAllowed ? (
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-base-content/70">
+              {t("agents.connection_label")}
+            </span>
+            <div
+              role="group"
+              aria-label={t("agents.connection_label")}
+              className="tabs tabs-box tabs-sm grid min-h-10 grid-cols-2"
+            >
+              {CONNECTION_MODES.map((option) => {
+                const selected = option === connectionMode;
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => {
+                      setMode(option);
+                      // The previous attempt's error belongs to the mode that
+                      // produced it.
+                      setError("");
+                    }}
+                    className={`tab h-auto min-w-0 whitespace-normal px-2 py-2 text-center text-xs font-medium leading-tight ${
+                      selected ? "tab-active text-accent!" : ""
+                    }`}
+                  >
+                    {t(`agents.mode_${option}`)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <p className="text-[11px] leading-relaxed text-base-content/60">
+            {t("agents.service_forced_hint")}
+          </p>
         )}
         <label className="flex flex-col gap-1">
           <span className="text-xs font-medium text-base-content/70">
@@ -168,33 +214,60 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder={t("agents.name_placeholder")}
+            disabled={serviceLocked}
             className="input input-bordered w-full"
           />
         </label>
-        {useService && (
-          <p className="text-[11px] leading-relaxed text-base-content/50">
-            {t("agents.service_hint")}
-          </p>
+        {serviceMode && (
+          <>
+            <div className="flex flex-col gap-1">
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-base-content/70">
+                  {t("agents.hpc_project_label")}
+                </span>
+                <select
+                  value={projectId}
+                  onChange={(event) => setProjectId(event.target.value)}
+                  disabled={serviceLocked}
+                  className="select select-bordered w-full"
+                >
+                  {projects.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {/* The hint describes picking a project, which no denied user can
+                  do; the warning below says why instead. */}
+              {access !== AGENT_SERVICE_DENIED && (
+                <p className="text-[11px] leading-relaxed text-base-content/50">
+                  {t("agents.hpc_project_hint")}
+                </p>
+              )}
+            </div>
+            {access === AGENT_SERVICE_DENIED ? (
+              <div role="alert" className="alert alert-warning text-xs">
+                <FontAwesomeIcon icon={faCircleInfo} className="text-base shrink-0" />
+                <span>
+                  <span className="block font-medium">
+                    {t("agents.service_unavailable")}
+                  </span>
+                  {t("agents.service_request_access")}
+                </span>
+              </div>
+            ) : access === AGENT_SERVICE_CHECKING ? (
+              <p className="text-[11px] leading-relaxed text-base-content/50">
+                {t("agents.service_checking")}
+              </p>
+            ) : (
+              <p className="text-[11px] leading-relaxed text-base-content/50">
+                {t("agents.service_hint")}
+              </p>
+            )}
+          </>
         )}
-        {!useService && !local && (
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-base-content/70">
-              {t("agents.hpc_project_label")}
-            </span>
-            <select
-              value={projectId}
-              onChange={(event) => setProjectId(event.target.value)}
-              className="select select-bordered w-full"
-            >
-              {projects.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        {!useService && local && (
+        {!serviceMode && (
           <>
             <label className="flex flex-col gap-1">
               <span className="text-xs font-medium text-base-content/70">
@@ -233,7 +306,7 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
             type="button"
             className="btn btn-accent"
             onClick={submit}
-            disabled={!project || saving}
+            disabled={saving || serviceLocked || (serviceMode && !project)}
           >
             {saving
               ? t("agents.connecting")

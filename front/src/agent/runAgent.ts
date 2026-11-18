@@ -10,10 +10,12 @@ import { createModels, createProvider, type Model } from "@earendil-works/pi-ai"
 import { openAICompletionsApi } from "@earendil-works/pi-ai/api/openai-completions.lazy";
 import { agentApiKey, agentEndpoint, agentGatewayTools, markToolless, modelSupportsTools } from "../apis/agentEndpoints";
 import { onAbortRequest, reasoningParams } from "../apis/chatCompletions";
-import { loadFileMeta, saveFile } from "../db";
+import { loadFileMeta } from "../db";
 import { getFileType } from "../utils/attachments";
 import { ARTEFACTS, prepareAttachment, uploadPath } from "./prepare";
+import { createWrittenFiles, resultImages } from "./writtenFiles";
 import { addGatewayFields, gatewayFetch, gatewayRequestFields, nameResults, toAgentMessage } from "./gateway";
+import { e2eeFetch } from "../e2ee/fetch";
 import { attachmentsNote, hasReadableText, type AttachmentEntry } from "./attachmentContext";
 import i18n from "../i18n";
 import { activeMcpServers, connectMcpServers, McpUnavailableError, type McpServer, type McpTools } from "./mcp";
@@ -21,7 +23,7 @@ import { beginMcpConfirmationSession } from "./mcpConfirmation";
 import { createTools } from "./tools";
 import { createConnectedAgentTools, type ConnectedAgentContext } from "./connectedAgentTools";
 import { createWorkspaceTools, type WorkspaceToolContext } from "./workspaceTools";
-import { storageAccessEnabled, storageToolSettings } from "./storageAccess";
+import { storageAccessEnabled, storageToolSettings, writeAccessEnabled } from "./storageAccess";
 import { type Change, observe } from "./vfs";
 import { getWorkspace, listMounts } from "./workspace";
 import { WorkspaceAgentVfs } from "../workspace/agentVfs";
@@ -279,6 +281,13 @@ export async function runAgentTurn({
   const attachedWorkspace = await getChatWorkspaceBundle(conversationId).catch(
     () => null,
   );
+  // Writing is always on in the chat's own storage; an attached workspace has its own switch.
+  const writeAccess =
+    useTools &&
+    browserStorage &&
+    writeAccessEnabled(settings, {
+      attachedWorkspace: !!attachedWorkspace,
+    });
   const agentStorage = attachedWorkspace
     ? new WorkspaceAgentVfs(
         storage,
@@ -287,11 +296,9 @@ export async function runAgentTurn({
         attachedWorkspace.mounts,
       )
     : storage;
-  // Files written under ARTEFACTS are inputs (uploads and their converted variants), not results to show
-  const written = new Set<string>();
-  const workspace = observe(agentStorage, (change: Change) => {
-    if (change.kind === "write" && !change.path.startsWith(`${ARTEFACTS}/`)) written.add(change.path);
-  });
+  // Files the agent writes outside /artefacts become attachments of its reply.
+  const written = createWrittenFiles(conversationId, agentStorage);
+  const workspace = observe(agentStorage, (change: Change) => written.observe(change));
   // Mounted folders show up in the prompt and count as local storage while access storage is on.
   const mounts = [
     ...listMounts(conversationId),
@@ -369,8 +376,12 @@ export async function runAgentTurn({
   // following requests of this turn (transformContext) and the stored transcript (done).
   let gatewayMessages: AgentMessage[] = [];
   const before = new Map<AgentMessage, AgentMessage[]>();
-  const fetchFn = gatewayFetch((exchange) =>
-    gatewayMessages.push(toAgentMessage(exchange, { api: model.api, provider: PROVIDER, model: spec.id })),
+  // E2EE sits *under* the gateway wrapper, so the status-event filter only ever
+  // sees the decrypted stream.
+  const fetchFn = gatewayFetch(
+    (exchange) =>
+      gatewayMessages.push(toAgentMessage(exchange, { api: model.api, provider: PROVIDER, model: spec.id })),
+    e2eeFetch,
   );
 
   const tools = useTools
@@ -390,6 +401,7 @@ export async function runAgentTurn({
         conversationId,
         workspace,
         attachedWorkspace?.workspaceId,
+        { writable: writeAccess },
       );
       tools.push(...workspaceTools.tools);
       workspaceContext = workspaceTools.context;
@@ -441,7 +453,7 @@ export async function runAgentTurn({
               .map((workspace) => `${workspace.name} (${workspace.id})`)
               .join(
                 ", ",
-              )}. Use workspace_list for its sources, mounts and agents, workspace_list_agents for the agents attached to each workspace, and workspace_files, workspace_read_file, workspace_write_file and workspace_fetch_file for files in it, including sources that are not mounted. The read, ls and find tools work on the workspace root and its mounted folders.`
+              )}. Use workspace_list for its sources, mounts and agents, workspace_list_agents for the agents attached to each workspace, and workspace_files, workspace_read_file, workspace_write_file and workspace_fetch_file for files in it, including sources that are not mounted. The read, ls and find tools work on the workspace root and its mounted folders. This chat's own folder is mounted at /chats/${conversationId}: it belongs to the chat and stays there if the workspace is detached, so keep the chat's private files there and the shared ones in the workspace.`
           : "",
         connectedAgentContext?.workspaceIds.length
           ? connectedAgentContext.agents.length
@@ -455,8 +467,7 @@ export async function runAgentTurn({
         useTools && browserStorage && mounts.length ? `The user's folders are mounted at: ${mounts.join(", ")}.` : "",
         useTools &&
         browserStorage &&
-        !attachedWorkspace &&
-        settings.tools?.write_access !== true
+        !writeAccess
           ? "The user has turned off writing and editing files: you can read files but not change them."
           : "",
         `Current date: ${new Date().toLocaleString()}`,
@@ -475,27 +486,28 @@ export async function runAgentTurn({
     },
   });
 
-  // Files the agent wrote, by path. A file written twice keeps one place in the message.
-  const files = new Map<string, string>();
-  const saveWritten = async () => {
-    for (const path of [...written]) {
-      written.delete(path);
-      try {
-        const bytes = await workspace.readFile(path);
-        const name = path.split("/").pop() || "file";
-        const file = new File([bytes as Uint8Array<ArrayBuffer>], name, { type: guessType(name) });
-        files.set(path, saveFile(conversationId, file));
-      } catch (error) {
-        console.warn(`Could not attach ${path}:`, error);
-      }
-    }
-  };
-
   const done: AgentMessage[] = [];
   let streaming: AgentMessage | undefined;
   const snapshot = (): TurnUpdate => {
     const agentMessages = streaming ? [...done, streaming] : [...done];
-    return { agentMessages, text: agentText(agentMessages), files: [...files.values()].map((fileId) => ({ type: "file", fileId })) };
+    return { agentMessages, text: agentText(agentMessages), files: written.items() };
+  };
+
+  // Arguments of each tool call, by id, to name the images its result carries after the path.
+  const toolArgs = new Map<string, any>();
+  // pi's read and MCP tools return images; attach them like a generated image.
+  const attachResultImages = async (event: {
+    toolCallId: string;
+    toolName: string;
+    result?: { content?: any[] };
+  }) => {
+    const path = toolArgs.get(event.toolCallId)?.path;
+    for (const image of resultImages(event.result, {
+      path: typeof path === "string" ? path : undefined,
+      toolName: event.toolName,
+    })) {
+      await written.attachImage(image);
+    }
   };
 
   let error: string | undefined;
@@ -507,6 +519,11 @@ export async function runAgentTurn({
       case "message_end":
         streaming = undefined;
         if (event.message.role === "user") return;
+        if (event.message.role === "assistant") {
+          for (const block of event.message.content ?? []) {
+            if (block?.type === "toolCall" && block.id) toolArgs.set(block.id, block.arguments);
+          }
+        }
         if (event.message.role === "assistant" && gatewayMessages.length) {
           before.set(event.message, gatewayMessages);
           done.push(...nameResults(gatewayMessages));
@@ -518,7 +535,8 @@ export async function runAgentTurn({
         }
         break;
       case "tool_execution_end":
-        await saveWritten();
+        await written.save();
+        await attachResultImages(event);
         break;
       default:
         return;
@@ -532,7 +550,7 @@ export async function runAgentTurn({
   } finally {
     stopListening();
   }
-  await saveWritten();
+  await written.save();
 
   const usage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
   for (const message of done) {
@@ -556,26 +574,3 @@ const DEFAULT_MAX_TOOL_CALLS = 10;
 const TOOL_LIMIT_REASON = "Tool limit exceeded for this response. The user can increase tool limits.";
 
 const NO_TOOL_CALLING = /tool[- ]choice|tool-call-parser|does not support tool|tools? (is|are) not supported/i;
-
-const TYPES: Record<string, string> = {
-  png: "image/png",
-  jpg: "image/jpeg",
-  jpeg: "image/jpeg",
-  gif: "image/gif",
-  webp: "image/webp",
-  svg: "image/svg+xml",
-  mp3: "audio/mpeg",
-  wav: "audio/wav",
-  ogg: "audio/ogg",
-  opus: "audio/ogg",
-  pdf: "application/pdf",
-  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  md: "text/markdown",
-  csv: "text/csv",
-  json: "application/json",
-  html: "text/html",
-  txt: "text/plain",
-};
-
-const guessType = (name: string) => TYPES[name.split(".").pop()?.toLowerCase() ?? ""] ?? "text/plain";

@@ -84,6 +84,20 @@ export default function WorkspaceAttachButton({ localState, setLocalState }) {
       flush: true,
     }));
 
+  // An attached workspace owns the files, so its writing is a switch of its own. The chat's own
+  // storage (no workspace) always allows writing.
+  const workspaceWriteOn =
+    localState?.settings?.tools?.workspace_write_access !== false;
+  const setWorkspaceWrite = (enabled) =>
+    setLocalState((prev) => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        tools: { ...prev.settings?.tools, workspace_write_access: enabled },
+      },
+      flush: true,
+    }));
+
   // A workspace owns the files of an attached chat, so a single attachment is opened directly
   // instead of repeating the workspace in the Manage data view. Several attachments need a choice.
   const soleWorkspace =
@@ -158,6 +172,33 @@ export default function WorkspaceAttachButton({ localState, setLocalState }) {
                 </span>
               </span>
             </label>
+            {attachedWorkspaces.length > 0 && (
+              <label
+                data-guide="workspace-write-access"
+                className={`mt-2 flex select-none items-start gap-2 pl-6 ${
+                  storageOn ? "cursor-pointer" : "cursor-not-allowed opacity-50"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+                  checked={workspaceWriteOn}
+                  disabled={!storageOn}
+                  onChange={(event) =>
+                    setWorkspaceWrite(event.target.checked)
+                  }
+                  aria-label={t("settings.label_write_access")}
+                />
+                <span className="min-w-0">
+                  <span className="block text-xs font-medium">
+                    {t("settings.label_write_access")}
+                  </span>
+                  <span className="mt-0.5 block text-[10px] leading-relaxed text-base-content/60">
+                    {t("workspace.workspace_write_access_hint")}
+                  </span>
+                </span>
+              </label>
+            )}
             <ManageDataRow label={manageDataLabel} onSelect={manageData} />
           </div>
 

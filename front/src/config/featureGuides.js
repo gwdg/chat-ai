@@ -208,8 +208,8 @@ export const featureGuides = {
   remote_agents: {
     titleKey: "feature_guide.remote_agents.title",
     prompt:
-      "Spawn a remote agent from the Agents section in the sidebar. Agents run on GWDG infrastructure; expand an agent to switch between its sessions and subagent sessions, or use + to create a new session.",
-    keywords: ["agent", "agents", "remote agent", "hpc project", "gwdg infrastructure", "agent session", "subagent", "new session"],
+      "Spawn a remote agent from the Agents section in the sidebar. An agent runs either on the GWDG HPC agentic service, where you pick one of your HPC projects, or on an OpenCode server you connect with its URL and password. Expand an agent to switch between its sessions and subagent sessions, or use + to create a new session.",
+    keywords: ["agent", "agents", "remote agent", "hpc project", "gwdg infrastructure", "external opencode server", "agent session", "subagent", "new session"],
     steps: [
       {
         target: '[data-guide="agents-spawn"]',
@@ -245,6 +245,29 @@ export const featureGuides = {
       {
         target: '[data-guide="close-group-sessions"]',
         textKey: "feature_guide.close_group_sessions.step2",
+      },
+    ],
+  },
+  agent_workspace_access: {
+    titleKey: "feature_guide.agent_workspace_access.title",
+    prompt:
+      "Open an agent, then open the workspace button next to its prompt box and switch on Agent workspace access. While it is on, Chat AI keeps a reverse proxy (the agent bridge) to the browser open, so the agent can list, read and optionally write the files of the workspace chosen there.",
+    keywords: [
+      "agent workspace access",
+      "agent bridge",
+      "workspace access",
+      "agent files",
+      "reverse proxy",
+      "allow writes",
+    ],
+    steps: [
+      {
+        target: '[data-guide="agent-files"]',
+        textKey: "feature_guide.agent_workspace_access.step1",
+      },
+      {
+        target: '[data-guide="agent-workspaces"]',
+        textKey: "feature_guide.agent_workspace_access.step2",
       },
     ],
   },
@@ -1003,6 +1026,53 @@ export const featureGuides = {
       },
     ],
   },
+  e2ee: {
+    titleKey: "feature_guide.e2ee.title",
+    prompt:
+      "Encrypt a model end to end: open user settings, choose the Encryption tab, import the public key of an encryption-capable model (load the keys published under the configured key directory for all models at once, or paste one, choose a .pub file, load it from a URL, import a key directory, or pick a local folder and read every .pub file in it), then bind the model to that key. The model shows a lock and every request through it is encrypted in this browser.",
+    keywords: [
+      "encryption",
+      "end-to-end encryption",
+      "e2ee",
+      "public key",
+      "key",
+      "verschlüsselung",
+      "schlüssel",
+    ],
+    steps: [
+      {
+        target: ['[data-guide="user-settings"]', ".user-profile-button", ".user-profile-block"],
+        textKey: "feature_guide.e2ee.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="settings-tab-encryption"]',
+        prepare: openUserSettings,
+        textKey: "feature_guide.e2ee.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="e2ee-add"]',
+        textKey: "feature_guide.e2ee.step3",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="e2ee-published"]',
+        textKey: "feature_guide.e2ee.step_published",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="e2ee-models"]',
+        textKey: "feature_guide.e2ee.step4",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="e2ee-keys"]',
+        textKey: "feature_guide.e2ee.step_test",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
   chat_preferences: {
     titleKey: "feature_guide.chat_preferences.title",
     prompt:
@@ -1528,10 +1598,11 @@ export const FEATURE_CATEGORIES = {
     "summarize_conversation",
     "close_chat",
   ],
-  workspace: ["workspace_overview", "manage_chat_data", "pin_workspace", "pin_agent", "workspace_clone", "workspace_upload", "workspace_multiselect", "arcana_filesystem", "attach_from_workspace", "remote_agents", "agent_recovery", "close_group_sessions"],
+  workspace: ["workspace_overview", "manage_chat_data", "pin_workspace", "pin_agent", "workspace_clone", "workspace_upload", "workspace_multiselect", "arcana_filesystem", "attach_from_workspace", "remote_agents", "agent_recovery", "close_group_sessions", "agent_workspace_access"],
   personas: ["chat_with_persona"],
   settings: [
     "settings_overview",
+    "e2ee",
     "chat_preferences",
     "message_timestamps",
     "memories",

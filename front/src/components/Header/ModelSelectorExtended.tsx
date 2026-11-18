@@ -15,6 +15,7 @@ import {
 import { faCalendar, faRectangleList } from '@fortawesome/free-regular-svg-icons'
 
 import DemandIndicator from "./DemandIndicator";
+import E2eeLock from "../Others/E2eeLock";
 
 import type { ExtendedModelInfo } from "../../types/models";
 
@@ -194,6 +195,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
               <DemandIndicator demand={model.demand} status={model?.status} />
             </div>
             <span className="font-medium truncate min-w-0">{model.name}</span>
+            <E2eeLock modelId={model.id} size={12} />
             <SecureIndicator external={model.external} />
             <Chip text={model.company} />
 
@@ -237,6 +239,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
             <DemandIndicator demand={model.demand} status={model?.status} />
           </div>
           <span className="font-medium">{model.name}</span>
+          <E2eeLock modelId={model.id} size={12} />
           <SecureIndicator external={model.external} />
           <span className="text-xs text-base-content/70">
             <FontAwesomeIcon icon={faCalendar} className="mr-1" />
@@ -285,6 +288,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
                 <SecureIndicator external={model.external} />
               </span>
               {model.name}
+              <E2eeLock modelId={model.id} size={12} className="ml-1" />
             </div>
             <Chip text={model.company} />
 
@@ -358,6 +362,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
               <DemandIndicator demand={selectedModel?.demand} status={selectedModel?.status} />
             </div>
             <span className="font-medium truncate min-w-0">{selectedModel?.name}</span>
+            <E2eeLock modelId={selectedModel?.id} size={13} />
             {selectedModel?.external == true && (<Chip text={"External"} colorPreset={"orange"} />)}
             <Chip text={selectedModel?.company} />
             <span className="text-xs text-base-content/70 hidden sm:inline-block shrink-0">

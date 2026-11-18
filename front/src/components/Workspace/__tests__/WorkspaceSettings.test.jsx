@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import WorkspaceSettings from "../WorkspaceSettings";
 
@@ -20,25 +20,28 @@ beforeEach(() => {
 });
 
 describe("WorkspaceSettings", () => {
-  it("toggles codemode with a tool tile in agent mode", () => {
-    const setLocalState = vi.fn((updater) => updater(localState));
+  it("keeps only the tool limit in the Local agent section", () => {
     render(
       <WorkspaceSettings
         localState={localState}
-        setLocalState={setLocalState}
+        setLocalState={vi.fn()}
       />,
     );
 
-    const codemode = screen.getByRole("button", { name: /codemode/i });
-    expect(codemode.className).toContain("border-success");
-
-    fireEvent.click(codemode);
-
-    const next = setLocalState.mock.results[0].value;
-    expect(next.settings.tools.codemode).toBe(false);
+    expect(screen.getByText("Local agent")).toBeInTheDocument();
+    expect(
+      screen.getByText("Limit tool calls per response"),
+    ).toBeInTheDocument();
+    // The Browser agent is the default workflow and writing lives under Access storage.
+    expect(
+      screen.queryByRole("button", { name: /browser agent/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /allow write/i }),
+    ).not.toBeInTheDocument();
   });
 
-  it("keeps the tool limit without agent mode", () => {
+  it("hides the tool limit without agent mode", () => {
     agentMocks.agent = false;
     render(
       <WorkspaceSettings
@@ -47,11 +50,9 @@ describe("WorkspaceSettings", () => {
       />,
     );
 
+    expect(screen.getByText("Local agent")).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: /codemode/i }),
+      screen.queryByText("Limit tool calls per response"),
     ).not.toBeInTheDocument();
-    expect(
-      screen.getByText("Limit tool calls per response"),
-    ).toBeInTheDocument();
   });
 });

@@ -4,6 +4,7 @@ import { useSelector } from "react-redux";
 
 import { callMcpServerTool, listMcpServerTools } from "../agent/mcp";
 import type { Vfs } from "../agent/vfs";
+import { AGENT_SERVICE_PATH } from "../apis/agentService";
 import {
   addOpencodeMcpServer,
   connectOpencodeMcpServer,
@@ -18,6 +19,18 @@ import type { FileProvider } from "../workspace/providers/types";
 import { useToast } from "./useToast";
 
 type BridgeStatus = "off" | "connecting" | "online" | "offline" | "error";
+
+/** The backend answers 404/405 on `/bridge/sessions`: this deployment has no bridge. */
+class BridgeUnavailableError extends Error {
+  readonly url: string;
+  readonly status: number;
+
+  constructor(url: string, status: number) {
+    super(`No bridge endpoint at ${url} (HTTP ${status})`);
+    this.url = url;
+    this.status = status;
+  }
+}
 
 type BridgeInput = {
   agent: any;
@@ -34,8 +47,34 @@ const BACKEND = String(import.meta.env.VITE_BACKEND_ENDPOINT || "").replace(
   "",
 );
 
-const bridgeBase = () =>
-  BACKEND || (typeof window !== "undefined" ? window.location.origin : "");
+/**
+ * Where the bridge routes live.
+ *
+ * An agent owned by the SAIA agent service is served by that service on the
+ * app's own origin (`/agents/<id>/bridge/...`), which is what a SAIA deployment
+ * has. A direct OpenCode agent falls back to the configured backend, where
+ * `back` serves the same protocol at `/bridge`. The service URL stays relative
+ * so the page origin decides where the browser connects, not the backend config.
+ */
+export const bridgeBaseFor = (agent: any, backend: string) =>
+  agent?.serviceAgentId
+    ? `${AGENT_SERVICE_PATH}/${encodeURIComponent(agent.serviceAgentId)}`
+    : backend || (typeof window !== "undefined" ? window.location.origin : "");
+
+const bridgeBase = (agent: any) => bridgeBaseFor(agent, BACKEND);
+
+/**
+ * The service returns the browser leg as a path; a WebSocket needs an absolute
+ * URL. Absolute URLs from `back` are passed through unchanged.
+ */
+const socketUrl = (url: string) => {
+  if (!url || /^wss?:\/\//i.test(url)) return url;
+  const origin =
+    typeof window !== "undefined"
+      ? `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}`
+      : "";
+  return `${origin}${url.startsWith("/") ? url : `/${url}`}`;
+};
 
 const SIDECAR_COMMAND = (() => {
   const raw = import.meta.env.VITE_OPENCODE_BRIDGE_SIDECAR_COMMAND;
@@ -49,6 +88,18 @@ const SIDECAR_COMMAND = (() => {
     return null;
   }
 })();
+
+/**
+ * Whether the bridge talks MCP through the local stdio sidecar instead of the HTTP
+ * fallback.
+ *
+ * The sidecar is a local affordance: its command is a path next to the browser's own
+ * OpenCode, and it is spawned by that process. A service-managed agent runs its OpenCode
+ * in the agent service, where this path does not exist, so it must use the service's
+ * `mcpUrl` — the same `opencodeBridgeSidecarCommand` in `front.json` cannot serve both.
+ */
+export const wantsSidecar = (command: string[] | null, agent: any) =>
+  !!command?.length && !agent?.serviceAgentId;
 
 const stubVfs: Vfs = {
   readFile: async () => {
@@ -102,6 +153,7 @@ export function useAgentBridge({
   const rootRef = useRef(rootProvider);
   const [status, setStatus] = useState<BridgeStatus>("off");
   const [error, setError] = useState("");
+  const [unavailable, setUnavailable] = useState(false);
   const [tabAway, setTabAway] = useState(false);
 
   notifyRef.current = notifyError;
@@ -114,8 +166,11 @@ export function useAgentBridge({
 
   useEffect(() => {
     if (!agent?.id || !workspaceId) {
+      // Idle means idle: a "this deployment has no bridge" verdict belongs to the attempt it
+      // was learned from, so it must not outlive the workspace that was detached since.
       setStatus("off");
       setError("");
+      setUnavailable(false);
       return;
     }
     let cancelled = false;
@@ -292,8 +347,10 @@ export function useAgentBridge({
     const start = async () => {
       setStatus("connecting");
       setError("");
+      setUnavailable(false);
       try {
-        const response = await fetch(`${bridgeBase()}/bridge/sessions`, {
+        const sessionUrl = `${bridgeBase(agent)}/bridge/sessions`;
+        const response = await fetch(sessionUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -303,11 +360,16 @@ export function useAgentBridge({
             mcp,
           }),
         });
+        if (response.status === 404 || response.status === 405) {
+          // Only `back` serves `/bridge/*`. A direct engine endpoint answers this URL itself
+          // with 404, which means the deployment simply has no bridge to start.
+          throw new BridgeUnavailableError(sessionUrl, response.status);
+        }
         if (!response.ok) throw new Error(`Bridge session failed (${response.status})`);
         session = await response.json();
         if (cancelled) return;
         mcpName = `chatai-bridge-${String(session.id).slice(0, 8)}`;
-        if (SIDECAR_COMMAND && session.agentWsUrl && session.agentToken) {
+        if (wantsSidecar(SIDECAR_COMMAND, agent) && session.agentWsUrl && session.agentToken) {
           const scopes = [
             "workspace",
             writable ? "write" : "",
@@ -333,11 +395,27 @@ export function useAgentBridge({
           });
         }
         await connectOpencodeMcpServer(agent, mcpName);
-        if (!cancelled) connectSocket(session.wsUrl);
+        if (!cancelled) connectSocket(socketUrl(session.wsUrl));
       } catch (reason) {
         if (!cancelled) {
+          const missing = reason instanceof BridgeUnavailableError;
+          const message = reason instanceof Error ? reason.message : String(reason);
+          const detail = missing
+            ? tRef.current("agents.bridge.unavailable_detail", {
+                url: reason.url,
+                status: reason.status,
+              })
+            : message;
+          setUnavailable(missing);
           setStatus("error");
-          setError(reason instanceof Error ? reason.message : String(reason));
+          setError(detail);
+          // The file panel used to print this; it has no bridge section any more, so report the
+          // failure where the user is instead of leaving the switch silently ineffective.
+          notifyRef.current(
+            missing
+              ? detail
+              : tRef.current("agents.bridge.start_failed", { message }),
+          );
         }
       }
     };
@@ -374,7 +452,7 @@ export function useAgentBridge({
         void removeOpencodeMcpServer(agent, mcpName).catch(() => {});
       }
       if (session?.id && session?.token) {
-        void fetch(`${bridgeBase()}/bridge/sessions/${session.id}`, {
+        void fetch(`${bridgeBase(agent)}/bridge/sessions/${session.id}`, {
           method: "DELETE",
           headers: { Authorization: `Bearer ${session.token}` },
         }).catch(() => {});
@@ -382,5 +460,5 @@ export function useAgentBridge({
     };
   }, [agent, workspaceId, writable, mcp, mcpServers]);
 
-  return { status, error, tabAway };
+  return { status, error, tabAway, unavailable };
 }

@@ -80,4 +80,44 @@ describe("WorkspaceRootBrowser multi-select", () => {
     expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
     expect(screen.queryByText(/selected/)).not.toBeInTheDocument();
   });
+
+  it("keeps a non-selectable row aligned without showing a checkbox", () => {
+    renderBrowser({
+      canSelectEntry: (entry) => entry.path !== "/b.txt",
+    });
+
+    expect(screen.queryByRole("checkbox", { name: "b.txt" })).toBeNull();
+    expect(screen.getByRole("checkbox", { name: "a.txt" })).toBeInTheDocument();
+
+    const row = screen.getByText("b.txt").closest(".group");
+    expect(row?.querySelector("input")).toBeNull();
+    // The spacer occupies the checkbox column so the rows line up.
+    expect(row?.firstElementChild?.tagName).toBe("SPAN");
+  });
+});
+
+describe("WorkspaceRootBrowser parent row", () => {
+  it("follows an explicit up path outside the provider root", () => {
+    const onNavigate = vi.fn();
+    renderBrowser({ onNavigate, upPath: "/chats" });
+
+    fireEvent.click(screen.getByRole("button", { name: /\.\./ }));
+
+    expect(onNavigate).toHaveBeenCalledWith("/chats");
+  });
+
+  it("hides the parent row when there is no parent", () => {
+    renderBrowser({ upPath: null });
+
+    expect(screen.queryByRole("button", { name: /\.\./ })).toBeNull();
+  });
+
+  it("shows the parent row in an empty folder", () => {
+    const onNavigate = vi.fn();
+    renderBrowser({ entries: [], upPath: "/chats", onNavigate });
+
+    expect(screen.getByText("This folder is empty.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /\.\./ }));
+    expect(onNavigate).toHaveBeenCalledWith("/chats");
+  });
 });

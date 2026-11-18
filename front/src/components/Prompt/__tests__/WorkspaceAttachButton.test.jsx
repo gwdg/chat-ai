@@ -98,4 +98,51 @@ describe("WorkspaceAttachButton", () => {
     expect(next.settings.tools.browser_storage).toBe(false);
     expect(next.flush).toBe(true);
   });
+
+  it("offers the write switch only for a chat with an attached workspace", () => {
+    renderButton();
+    openMenu();
+
+    expect(
+      screen.queryByRole("checkbox", { name: "Allow write" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("toggles writing for the attached workspace right under access storage", () => {
+    dbMocks.links = [{ workspaceId: "w1" }];
+    const state = { id: "conversation", settings: { tools: {} } };
+    const setLocalState = vi.fn((updater) => updater(state));
+    render(
+      <WorkspaceAttachButton
+        localState={state}
+        setLocalState={setLocalState}
+      />,
+    );
+    openMenu();
+
+    const write = screen.getByRole("checkbox", { name: "Allow write" });
+    expect(write.checked).toBe(true);
+
+    fireEvent.click(write);
+
+    const next = setLocalState.mock.results[0].value;
+    expect(next.settings.tools.workspace_write_access).toBe(false);
+    expect(next.flush).toBe(true);
+  });
+
+  it("disables the workspace write switch while access storage is off", () => {
+    dbMocks.links = [{ workspaceId: "w1" }];
+    const state = {
+      id: "conversation",
+      settings: { tools: { browser_storage: false } },
+    };
+    render(
+      <WorkspaceAttachButton localState={state} setLocalState={vi.fn()} />,
+    );
+    openMenu();
+
+    expect(
+      screen.getByRole("checkbox", { name: "Allow write" }),
+    ).toBeDisabled();
+  });
 });

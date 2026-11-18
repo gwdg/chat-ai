@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import { Popover, PopoverButton, PopoverPanel, Transition } from "@headlessui/react";
 import { useTranslation } from "react-i18next";
-import { Code, FileText, ScanEye, Server } from "lucide-react";
+import { FileText, ScanEye, Server } from "lucide-react";
 import { ToolBox } from "@carbon/icons-react";
 import Tooltip from "../Others/Tooltip";
 import McpServerPicker from "../SettingsPanel/McpServerPicker";
@@ -19,7 +19,6 @@ export default function MountFolderButton({ localState, setLocalState }) {
   const workspaceAttached = workspaceLinks.length > 0;
   const mcpEnabled = localState?.settings?.tools?.mcp === true;
   const createDocxEnabled = localState?.settings?.tools?.create_docx !== false;
-  const codemodeEnabled = localState?.settings?.tools?.codemode !== false;
   const imageAnalysisEnabled = localState?.settings?.tools?.image_analysis !== false;
   const mcpDisabled = !modelSupportsTools(localState?.settings?.model);
   const showMcpConfig = mcpEnabled && !mcpDisabled;
@@ -48,18 +47,6 @@ export default function MountFolderButton({ localState, setLocalState }) {
       settings: {
         ...prev.settings,
         tools: { ...prev.settings?.tools, create_docx: !createDocxEnabled },
-      },
-      flush: true,
-    }));
-  };
-
-  const toggleCodemode = () => {
-    if (mcpDisabled) return;
-    setLocalState((prev) => ({
-      ...prev,
-      settings: {
-        ...prev.settings,
-        tools: { ...prev.settings?.tools, codemode: !codemodeEnabled },
       },
       flush: true,
     }));
@@ -99,7 +86,6 @@ export default function MountFolderButton({ localState, setLocalState }) {
     const patch = {};
     if (!mcpDisabled) {
       patch.mcp = true;
-      patch.codemode = true;
       if (workspaceAttached) {
         patch.create_docx = true;
         patch.image_analysis = true;
@@ -112,7 +98,6 @@ export default function MountFolderButton({ localState, setLocalState }) {
     setTools({
       mcp: false,
       create_docx: false,
-      codemode: false,
       image_analysis: false,
     });
   };
@@ -197,19 +182,6 @@ export default function MountFolderButton({ localState, setLocalState }) {
                   label={t("settings.label_image_analysis")}
                   title={dependencyTitle(t("settings.label_image_analysis"))}
                   guideKey="image_analysis"
-                />
-                <MiniToolButton
-                  active={codemodeEnabled}
-                  disabled={mcpDisabled}
-                  onClick={toggleCodemode}
-                  Icon={Code}
-                  label={t("settings.label_codemode")}
-                  title={
-                    mcpDisabled
-                      ? `${t("settings.label_codemode")}: ${t("settings.tools_agent_unavailable")}`
-                      : undefined
-                  }
-                  guideKey="codemode"
                 />
               </div>
               {!mcpDisabled && (

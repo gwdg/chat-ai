@@ -9,6 +9,7 @@ import {
 import {
   Edit,
   OverflowMenuVertical,
+  ServerDns,
   TrashCan,
 } from "@carbon/icons-react";
 import { ChevronDown, Plus, Server, TriangleAlert } from "lucide-react";
@@ -99,6 +100,7 @@ export default function McpServerList() {
             size={12}
             className={`shrink-0 transition-transform ${collapsed ? "-rotate-90" : ""}`}
           />
+          <ServerDns size={12} className="shrink-0" />
           <Tooltip text={t("mcp.tooltip")}>
             <span className="truncate">{t("mcp.section_title")}</span>
           </Tooltip>

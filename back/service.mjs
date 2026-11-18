@@ -1119,6 +1119,61 @@ app.post("/chat/completions", async (req, res) => {
   const mcp_servers = req.body["mcp-servers"] || null;
   const inference_id = req.headers["inference-id"];
   const uid = req.headers["oidc_claim_uid"];
+
+  // ----- END-TO-END ENCRYPTED CHAT -----
+  // The body is a sealed envelope only the model node can open, so nothing here
+  // may validate or rebuild it: `messages` is inside the ciphertext, and adding
+  // a cleartext field would break the envelope. The node seals its answer the
+  // same way; this proxy only routes bytes, so a keyed model can never fall back
+  // to a cleartext request or response.
+  if (
+    req.body &&
+    typeof req.body === "object" &&
+    req.body.e2ee &&
+    typeof req.body.e2ee === "object"
+  ) {
+    const e2eeModel = req.body.model;
+    if (typeof e2eeModel !== "string" || !e2eeModel) {
+      return res.status(422).json({ error: "Invalid model provided" });
+    }
+    const controller = new AbortController();
+    res.on("close", () => controller.abort());
+    try {
+      const upstream = await globalThis.fetch(`${apiEndpoint}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "inference-service": e2eeModel,
+          "inference-portal": serviceName,
+          ...(uid ? { user: uid } : {}),
+          ...(inference_id ? { "inference-id": inference_id } : {}),
+          ...(apiKey || inference_id
+            ? { Authorization: "Bearer " + (apiKey || inference_id) }
+            : {}),
+        },
+        body: JSON.stringify(req.body),
+        signal: controller.signal,
+      });
+      res.status(upstream.status);
+      const contentType = upstream.headers.get("content-type");
+      if (contentType) res.setHeader("Content-Type", contentType);
+      const e2eeStatus = upstream.headers.get("x-saia-e2ee");
+      if (e2eeStatus) res.setHeader("x-saia-e2ee", e2eeStatus);
+      if (upstream.body) {
+        pipeline(Readable.fromWeb(upstream.body), res, () => {});
+      } else {
+        res.end();
+      }
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      console.error("Error in encrypted /chat/completions:", error);
+      if (!res.headersSent) res.status(502);
+      res.end("Upstream request failed.");
+    }
+    return;
+  }
+  // ----- END END-TO-END ENCRYPTED CHAT -----
+
   if (!Array.isArray(messages)) {
     return res.status(422).json({ error: "Invalid messages provided" });
   }

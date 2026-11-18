@@ -26,11 +26,13 @@ export const READ_ONLY_CAPABILITIES: WorkspaceCapabilities = {
 };
 
 export function defaultCapabilities(kind: SourceKind): WorkspaceCapabilities {
-  if (kind === "browser") {
+  if (kind === "browser" || kind === "chat") {
+    // A chat's own tree is OPFS like a browser source; it is watched through the chat itself, so
+    // it has no change feed of its own.
     return {
       ...FULL_CAPABILITIES,
       quota: true,
-      watch: true,
+      watch: kind === "browser",
       range: true,
     };
   }

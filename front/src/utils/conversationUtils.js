@@ -38,11 +38,10 @@ export const getDefaultSettings = (userSettings = {}) => {
       "arcana": true,
       "mcp": false,
       "mcp_remote": false,
-      // Agent mode only. Access storage is on by default: the model may read
-      // and write the files of this chat (see agent/storageAccess.ts).
-      "write_access": false,
+      // Agent mode only. Access storage is on by default: the model may read and write the files
+      // of this chat (see agent/storageAccess.ts). An attached workspace has its own write switch.
+      "workspace_write_access": true,
       "browser_storage": true,
-      "codemode": true,
       "create_docx": true,
     },
     audio: {

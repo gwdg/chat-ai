@@ -14,30 +14,10 @@ import {
   ConversationStorageProvider,
 } from "../../workspace/providers/conversation";
 import { emptyStream } from "../../workspace/workspaceRoot";
+import { downloadProviderEntry } from "../../workspace/download";
 import { joinPath, parentPath } from "../../workspace/paths";
 import { storageAccessEnabled } from "../../agent/storageAccess";
 import { selectWarning } from "../../Redux/reducers/interfaceSettingsSlice";
-
-const readAll = async (stream) => {
-  const reader = stream.getReader();
-  const chunks = [];
-  let length = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (value) {
-      chunks.push(value);
-      length += value.length;
-    }
-  }
-  const data = new Uint8Array(length);
-  let offset = 0;
-  for (const chunk of chunks) {
-    data.set(chunk, offset);
-    offset += chunk.length;
-  }
-  return data;
-};
 
 /**
  * "Manage data": links a chat attached to a workspace to that workspace's file system, and browses
@@ -161,17 +141,7 @@ export default function ManageDataModal({
   const download = async (entry) => {
     if (!provider || entry.kind !== "file") return;
     try {
-      if (provider.status !== "connected") await provider.connect();
-      const bytes = await readAll(await provider.read(entry.path));
-      const blob = new Blob([bytes], {
-        type: entry.mime || "application/octet-stream",
-      });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = entry.name;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      await downloadProviderEntry(provider, entry);
     } catch (error) {
       notifyError(error instanceof Error ? error.message : String(error));
     }
