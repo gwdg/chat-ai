@@ -12,12 +12,13 @@ import {
   ServerDns,
   TrashCan,
 } from "@carbon/icons-react";
-import { ChevronDown, Plus, Server, TriangleAlert } from "lucide-react";
+import { ChevronDown, Info, Plus, Server, TriangleAlert } from "lucide-react";
 
 import Tooltip from "../Others/Tooltip";
 
 import { useModal } from "../../modals/ModalContext";
 import { useToast } from "../../hooks/useToast";
+import { useDelayedSingleClick } from "../../hooks/useDelayedSingleClick";
 import {
   removeMcpServer,
   selectGlobalMcpServers,
@@ -26,40 +27,82 @@ import {
   selectCollapsedTopics,
   toggleTopic,
 } from "../../Redux/reducers/interfaceSettingsSlice";
-import { normalizeMcpUrl, testMcpServer } from "../../agent/mcp";
+import { normalizeMcpUrl, getMcpServerStatus, testMcpServer } from "../../agent/mcp";
 import type { GlobalMcpServer } from "../../agent/mcp";
+
+type McpListStatus = "unchecked" | "checking" | "ready" | "error";
+
+/** Statuses already learned for these servers, so a working one starts green. */
+const seedStatuses = (servers: GlobalMcpServer[]) => {
+  const seeded: Record<string, McpListStatus> = {};
+  for (const server of servers) {
+    const known =
+      server.kind === "local" ? getMcpServerStatus(server.url ?? "") : undefined;
+    if (known) seeded[server.id] = known;
+  }
+  return seeded;
+};
 
 export default function McpServerList() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const { openModal } = useModal();
   const { notifySuccess, notifyError } = useToast();
+  const { schedule, cancel } = useDelayedSingleClick();
   const servers = useSelector(selectGlobalMcpServers) as GlobalMcpServer[];
   const collapsedTopicIds = useSelector(selectCollapsedTopics) ?? [];
   const collapsed = collapsedTopicIds.includes("__mcp_servers__");
-  const [statuses, setStatuses] = useState<
-    Record<string, "unchecked" | "checking" | "ready" | "error">
-  >({});
+  const [statuses, setStatuses] = useState<Record<string, McpListStatus>>(() =>
+    seedStatuses(servers),
+  );
 
+  // A server that worked stays green after the list is re-created, not "not tested" again.
   useEffect(() => {
-    setStatuses({});
+    setStatuses((current) => {
+      const seeded = seedStatuses(servers);
+      // A test that is still running keeps its pulsing light.
+      for (const server of servers) {
+        if (current[server.id] === "checking" && !seeded[server.id]) {
+          seeded[server.id] = "checking";
+        }
+      }
+      return seeded;
+    });
   }, [servers]);
 
   useEffect(() => {
     const onStatus = (event: Event) => {
       const detail = (event as CustomEvent).detail;
-      if (!detail?.id || !detail?.status) return;
-      setStatuses((current) => ({
-        ...current,
-        [detail.id]: detail.status,
-      }));
+      if ((!detail?.id && !detail?.url) || !detail?.status) return;
+      setStatuses((current) => {
+        const next = { ...current };
+        let changed = false;
+        for (const server of servers) {
+          // Ids come from the Meta chat, URLs from a test or a connection made by the agent.
+          const match = detail.id
+            ? server.id === detail.id
+            : server.kind === "local" &&
+              !!server.url &&
+              normalizeMcpUrl(server.url) === detail.url;
+          if (match && next[server.id] !== detail.status) {
+            next[server.id] = detail.status;
+            changed = true;
+          }
+        }
+        return changed ? next : current;
+      });
     };
     window.addEventListener("chatai:mcp-status", onStatus);
     return () => window.removeEventListener("chatai:mcp-status", onStatus);
-  }, []);
+  }, [servers]);
 
   const edit = (server?: GlobalMcpServer) =>
     openModal("mcpServerEdit", { server });
+
+  const details = (server: GlobalMcpServer) => {
+    cancel();
+    openModal("mcpServerDetails", { server });
+  };
 
   const test = async (server: GlobalMcpServer) => {
     if (server.kind !== "local" || statuses[server.id] === "checking") return;
@@ -85,6 +128,12 @@ export default function McpServerList() {
         }),
       );
     }
+  };
+
+  // One click tests the server, a double click shows its details: let the second click cancel
+  // the test rather than running it twice behind the dialog.
+  const testSoon = (server: GlobalMcpServer) => {
+    schedule(() => void test(server));
   };
 
   return (
@@ -131,6 +180,8 @@ export default function McpServerList() {
           {servers.map((server) => (
             <div
               key={server.id}
+              data-guide="mcp-server-details"
+              onDoubleClick={() => details(server)}
               className="group flex items-center gap-1 rounded-xl px-2 py-1.5 text-base-content transition hover:bg-base-200"
             >
               {(() => {
@@ -148,6 +199,7 @@ export default function McpServerList() {
                   <button
                     type="button"
                     onClick={() => void test(server)}
+                    onDoubleClick={(event) => event.stopPropagation()}
                     disabled={status === "checking"}
                     className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full"
                     title={statusLabel}
@@ -167,7 +219,7 @@ export default function McpServerList() {
               })()}
               <button
                 type="button"
-                onClick={() => void test(server)}
+                onClick={() => testSoon(server)}
                 disabled={
                   server.kind !== "local" ||
                   statuses[server.id] === "checking"
@@ -203,6 +255,7 @@ export default function McpServerList() {
               </button>
               <Popover className="relative shrink-0">
                 <PopoverButton
+                  onDoubleClick={(event) => event.stopPropagation()}
                   className={`flex h-6 w-6 items-center justify-center rounded-md text-base-content/40 transition hover:bg-base-300 hover:text-base-content focus:opacity-100 group-hover:opacity-100 ${
                     window.innerWidth < 1024 ? "opacity-100" : "opacity-0"
                   }`}
@@ -217,6 +270,17 @@ export default function McpServerList() {
                 >
                   {({ close }) => (
                     <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          close();
+                          details(server);
+                        }}
+                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
+                      >
+                        <Info size={14} />
+                        {t("mcp.details")}
+                      </button>
                       <button
                         type="button"
                         onClick={() => {

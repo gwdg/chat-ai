@@ -661,6 +661,10 @@ export const featureGuides = {
         check: mcpConfigured,
       },
       {
+        target: '[data-guide="mcp-server-details"]',
+        textKey: "feature_guide.mcp_server.details",
+      },
+      {
         target: '[data-guide="mcp-server-picker"]',
         prepare: () => ensureTool("mcp"),
         textKey: "feature_guide.mcp_server.step3",

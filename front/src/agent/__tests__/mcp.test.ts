@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   activeMcpServers,
   connectMcpServers,
+  describeMcpServer,
   getMcpServerStatus,
   hasLocalMcpServerValue,
   hasMcpServerValue,
@@ -22,19 +23,40 @@ const sdk = vi.hoisted(() => ({
 vi.mock("@modelcontextprotocol/sdk/client/index.js", () => ({
   Client: class {
     name = "";
-    async connect(transport: { url: string }) {
+    transport?: { url: string; protocolVersion?: string };
+    async connect(transport: { url: string; protocolVersion?: string }) {
       if (sdk.failing.has(transport.url)) throw new Error("unreachable");
       // What the browser throws for a refused connection, a rejected CORS preflight
       // and a mixed-content block alike.
       if (sdk.fetchFailures.has(transport.url)) throw new TypeError("Failed to fetch");
+      this.transport = transport;
       this.name = sdk.names.get(transport.url) ?? "server";
     }
     getServerVersion() {
-      return { name: this.name };
+      return {
+        name: this.name,
+        title: `${this.name} title`,
+        version: "1.2.3",
+        description: `${this.name} description`,
+        websiteUrl: "https://example.test/server",
+      };
+    }
+    getServerCapabilities() {
+      return { tools: { listChanged: true }, resources: {} };
+    }
+    getInstructions() {
+      return "Use the echo tool.";
     }
     async listTools() {
       return {
-        tools: [{ name: "echo", inputSchema: { type: "object", properties: {} } }],
+        tools: [
+          {
+            name: "echo",
+            title: "Echo",
+            description: "Returns its input.",
+            inputSchema: { type: "object", properties: {} },
+          },
+        ],
       };
     }
     async close() {}
@@ -44,6 +66,7 @@ vi.mock("@modelcontextprotocol/sdk/client/index.js", () => ({
 vi.mock("@modelcontextprotocol/sdk/client/streamableHttp.js", () => ({
   StreamableHTTPClientTransport: class {
     url: string;
+    protocolVersion = "2025-06-18";
     constructor(url: URL) {
       this.url = String(url);
     }
@@ -276,5 +299,35 @@ describe("MCP server status", () => {
 
     expect(getMcpServerStatus("http://status-bad.test/mcp")).toBe("error");
     expect(getMcpServerStatus("http://status-unknown.test/mcp")).toBeUndefined();
+  });
+});
+
+describe("MCP server details", () => {
+  it("reports the implementation, protocol version, capabilities and tools", async () => {
+    const details = await describeMcpServer({
+      url: "http://details.test/mcp",
+      enabled: true,
+    });
+
+    expect(details).toMatchObject({
+      name: "server",
+      title: "server title",
+      version: "1.2.3",
+      description: "server description",
+      websiteUrl: "https://example.test/server",
+      protocolVersion: "2025-06-18",
+      instructions: "Use the echo tool.",
+    });
+    expect(details.capabilities).toContainEqual({
+      name: "tools",
+      detail: "listChanged",
+    });
+    expect(details.capabilities).toContainEqual({
+      name: "resources",
+      detail: undefined,
+    });
+    expect(details.tools).toEqual([
+      { name: "echo", title: "Echo", description: "Returns its input." },
+    ]);
   });
 });

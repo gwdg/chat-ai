@@ -1,6 +1,7 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import McpServerList from "../McpServerList";
+import { reportMcpServerStatus } from "../../../agent/mcp";
 
 const mocks = vi.hoisted(() => ({
   openModal: vi.fn(),
@@ -75,6 +76,44 @@ describe("McpServerList", () => {
     });
   });
 
+  it("starts green for a server that was tested elsewhere", () => {
+    reportMcpServerStatus("http://127.0.0.1:9000", "ready");
+
+    render(<McpServerList />);
+
+    expect(
+      screen.getByRole("button", { name: "Test server: Connected" }),
+    ).toBeInTheDocument();
+  });
+
+  it("follows a status announced for the server URL", () => {
+    render(<McpServerList />);
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent("chatai:mcp-status", {
+          detail: { url: "http://127.0.0.1:9000/", status: "error" },
+        }),
+      );
+    });
+    expect(
+      screen.getByRole("button", {
+        name: "Test server: Not reachable — click to retry",
+      }),
+    ).toBeInTheDocument();
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent("chatai:mcp-status", {
+          detail: { url: "http://127.0.0.1:9000/", status: "ready" },
+        }),
+      );
+    });
+    expect(
+      screen.getByRole("button", { name: "Test server: Connected" }),
+    ).toBeInTheDocument();
+  });
+
   it("opens the editor from the options menu", () => {
     render(<McpServerList />);
 
@@ -95,6 +134,38 @@ describe("McpServerList", () => {
     expect(mocks.dispatch).toHaveBeenCalledWith({
       type: "removeMcpServer",
       id: "server-1",
+    });
+  });
+
+  it("opens the server details on a double click instead of testing it", () => {
+    vi.useFakeTimers();
+    try {
+      render(<McpServerList />);
+      const row = screen.getByText("Test server");
+
+      // A real double click is two clicks followed by dblclick.
+      fireEvent.click(row);
+      fireEvent.click(row);
+      fireEvent.doubleClick(row);
+
+      expect(mocks.openModal).toHaveBeenCalledWith("mcpServerDetails", {
+        server: mocks.servers[0],
+      });
+      vi.advanceTimersByTime(500);
+      expect(mocks.testMcp).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("opens the server details from the options menu", () => {
+    render(<McpServerList />);
+
+    fireEvent.click(screen.getByRole("button", { name: "MCP server options" }));
+    fireEvent.click(screen.getByRole("button", { name: "Details" }));
+
+    expect(mocks.openModal).toHaveBeenCalledWith("mcpServerDetails", {
+      server: mocks.servers[0],
     });
   });
 
