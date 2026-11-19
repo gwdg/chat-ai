@@ -22,11 +22,23 @@ async function createTopic(page: Page, name: string): Promise<void> {
 /**
  * Click a sidebar row without Playwright's scroll-into-view: the leftover
  * position is what the test measures, so the click must not move the list.
+ *
+ * A freshly mounted sidebar paints the previous rows from the list snapshot and
+ * swaps them for the query's rows a frame later, so a node that was resolved
+ * just before the swap is detached and its click is lost. Retry until the click
+ * actually navigates.
  */
-async function clickRow(page: Page, name: string): Promise<void> {
-  await page
-    .getByText(name, { exact: true })
-    .evaluate((element) => (element as HTMLElement).click());
+async function clickRow(
+  page: Page,
+  name: string,
+  target: RegExp,
+): Promise<void> {
+  await expect(async () => {
+    await page
+      .getByText(name, { exact: true })
+      .evaluate((element) => (element as HTMLElement).click());
+    await expect(page).toHaveURL(target, { timeout: 800 });
+  }).toPass({ timeout: 10_000 });
 }
 
 async function listScrollTop(page: Page): Promise<number> {
@@ -71,8 +83,7 @@ test.describe("sidebar list scroll", () => {
     const before = await scrollToListEnd(page);
     expect(before).toBeGreaterThan(0);
 
-    await clickRow(page, `Scroll topic ${TOPIC_COUNT}`);
-    await expect(page).toHaveURL(/\/topic\//);
+    await clickRow(page, `Scroll topic ${TOPIC_COUNT}`, /\/topic\//);
 
     // The new sidebar restores the offset before painting, but its rows arrive
     // from IndexedDB after the first render, so allow a short retry window.
@@ -95,14 +106,12 @@ test.describe("sidebar list scroll", () => {
 
     // The workspace page has its own sidebar; leave it for a topic page, so the
     // measured offset is taken on the same list the workspace row sits in.
-    await clickRow(page, "Scroll topic 1");
-    await expect(page).toHaveURL(/\/topic\//);
+    await clickRow(page, "Scroll topic 1", /\/topic\//);
 
     const before = await scrollToListEnd(page);
     expect(before).toBeGreaterThan(0);
 
-    await clickRow(page, "Scroll workspace");
-    await expect(page).toHaveURL(/\/workspace\/[^/]+$/);
+    await clickRow(page, "Scroll workspace", /\/workspace\/[^/]+$/);
 
     await expectListNear(page, before);
   });

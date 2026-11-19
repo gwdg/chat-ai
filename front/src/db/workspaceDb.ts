@@ -483,14 +483,20 @@ export async function listWorkspaceSummaries() {
   }));
 }
 
+// Same snapshot default as `useConversationList`: every page mounts its own
+// sidebar, and an empty default empties the workspace section for the first
+// frames of a page swap.
+let workspaceListSnapshot: WorkspaceRow[] = [];
+
 export function useWorkspaceList(): WorkspaceRow[] {
-  return (
+  const workspaces =
     useLiveQuery(
       () => db.workspaces.orderBy("lastModified").reverse().toArray(),
       [],
-      [] as WorkspaceRow[],
-    ) ?? []
-  );
+      workspaceListSnapshot,
+    ) ?? [];
+  workspaceListSnapshot = workspaces;
+  return workspaces;
 }
 
 export function useWorkspace(id?: string): WorkspaceRow | undefined {
@@ -935,6 +941,17 @@ export function useAgentWorkspaceLinks(agentId?: string): WorkspaceAgentRow[] {
       [] as WorkspaceAgentRow[],
     ) ?? []
   );
+}
+
+/**
+ * Drop every workspace link of one agent. Removing an agent deletes it here instead of
+ * waiting for a workspace page to notice the orphan, so its sessions leave the
+ * workspaces immediately, wherever the agent was removed.
+ */
+export async function removeWorkspaceAgentLinks(agentId: string): Promise<void> {
+  if (!agentId) return;
+  await db.workspace_agents.where("agentId").equals(agentId).delete();
+  await db.workspace_agent_sessions.where("agentId").equals(agentId).delete();
 }
 
 export async function removeOrphanWorkspaceAgents(

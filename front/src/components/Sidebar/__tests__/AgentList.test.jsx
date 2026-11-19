@@ -413,25 +413,30 @@ describe("AgentList", () => {
       };
     };
 
-    const grouped = (await screen.findByText("Active session")).closest(
-      "[draggable]",
-    );
-    const groupedTransfer = dataTransferFor();
-    fireEvent.dragStart(grouped, { dataTransfer: groupedTransfer });
-    expect(JSON.parse(groupedTransfer.getData(AGENT_SESSION_DRAG_MIME))).toEqual(
-      { agentId: "agent-1", sessionId: "session-1" },
-    );
-    expect(groupedTransfer.getData(AGENT_SESSION_SOURCE_WORKSPACE_MIME)).toBe(
-      workspaceId,
-    );
+    // Query the row right before the drag and retry the whole thing: the live
+    // queries that fill this list keep re-rendering for a tick after `Research`
+    // appears, and a node captured before such a render is detached, so React
+    // never delivers its dragStart and the payload stays empty.
+    const drag = (label) => {
+      const row = screen.getByText(label).closest("[draggable]");
+      const transfer = dataTransferFor();
+      fireEvent.dragStart(row, { dataTransfer: transfer });
+      return transfer;
+    };
+
+    await waitFor(() => {
+      const groupedTransfer = drag("Active session");
+      expect(
+        JSON.parse(groupedTransfer.getData(AGENT_SESSION_DRAG_MIME)),
+      ).toEqual({ agentId: "agent-1", sessionId: "session-1" });
+      expect(
+        groupedTransfer.getData(AGENT_SESSION_SOURCE_WORKSPACE_MIME),
+      ).toBe(workspaceId);
+    });
 
     // An unassigned session has no source workspace to detach from.
-    const loose = screen.getByText("Loose session").closest("[draggable]");
-    const looseTransfer = dataTransferFor();
-    fireEvent.dragStart(loose, { dataTransfer: looseTransfer });
-    expect(looseTransfer.getData(AGENT_SESSION_SOURCE_WORKSPACE_MIME)).toBe(
-      "",
-    );
+    const looseTransfer = drag("Loose session");
+    expect(looseTransfer.getData(AGENT_SESSION_SOURCE_WORKSPACE_MIME)).toBe("");
   });
 
   it("marks the section with an icon beside the collapse control", () => {

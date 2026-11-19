@@ -499,6 +499,12 @@ returns an empty list. The restore accepts a 64 px tolerance because the same li
 pixels shorter on the next page; without it a 4 px difference kept the list at the top. Never read
 the offset from sessionStorage or persist it — a reload should start at the top.
 
+Restoring the offset is not enough on its own: the new sidebar must not paint an empty list either.
+`useConversationList` / `useFolderList` (`db/index.ts`) and `useWorkspaceList`
+(`db/workspaceDb.ts`) therefore pass the previous result as `useLiveQuery`'s default (a module-level
+snapshot) instead of `[]`. Without it the topic page painted one frame with a single row and
+`scrollTop` 0 before Dexie answered, which read as a flash even with the offset restored.
+
 A colored group (topic or workspace) tints its name row with a light wash of the group color, and the
 chats, agents and sessions below it are bracketed left and right in the same color. The alphas live
 in `groupRowTint` / `groupRule` (`Sidebar/topicColors.ts`) and differ by theme and by whether the

@@ -1166,6 +1166,14 @@ function debounce<T extends (...args: any[]) => any>(fn: T, wait = 1000) {
 }
 
 // Hook to list conversation metas for a sidebar
+//
+// Every page mounts its own sidebar, and `useLiveQuery` starts from its default
+// result until the query resolves. An empty default empties the list for the
+// first frames of a topic or workspace page, which reads as a flash while the
+// page swaps, so the last snapshot is the default. The query still replaces it
+// as soon as it answers.
+let conversationListSnapshot: ConversationRow[] = []
+
 export function useConversationList() {
   const list = useLiveQuery(
     async () => {
@@ -1182,8 +1190,9 @@ export function useConversationList() {
         )
     },
   [],
-  [] as ConversationRow[]
+  conversationListSnapshot
   )
+  conversationListSnapshot = list
   return list
 }
 
@@ -1301,11 +1310,15 @@ export async function ensureFolder(name: string, id?: string | null): Promise<st
   return await createFolder(trimmed, {}, id);
 }
 
+// Same snapshot default as `useConversationList`: without it the topics vanish
+// for the first frames of every page that mounts its own sidebar.
+let folderListSnapshot: FolderRow[] = []
+
 export function useFolderList() {
-  return useLiveQuery(
+  const folders = useLiveQuery(
     async () => {
-      const folders = await db.folders.toArray();
-      return folders.sort((a, b) => {
+      const rows = await db.folders.toArray();
+      return rows.sort((a, b) => {
         const aOrder = typeof a.sortOrder === 'number' ? a.sortOrder : null;
         const bOrder = typeof b.sortOrder === 'number' ? b.sortOrder : null;
         if (aOrder !== null && bOrder !== null) return aOrder - bOrder;
@@ -1315,8 +1328,10 @@ export function useFolderList() {
       });
     },
     [],
-    [] as FolderRow[],
+    folderListSnapshot,
   );
+  folderListSnapshot = folders;
+  return folders;
 }
 
 // ---------- Files ----------
