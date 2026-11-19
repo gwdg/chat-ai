@@ -200,7 +200,7 @@ describe("WorkspaceSourceBrowser", () => {
     expect(addButton()).toBeInTheDocument();
     expect(addButton()).toBeDisabled();
     expect(addButton()).toHaveTextContent("Add to Workspace");
-    expect(screen.getByText("Storage location")).toBeInTheDocument();
+    expect(screen.getByText("Storage locations")).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Back" }),
     ).not.toBeInTheDocument();

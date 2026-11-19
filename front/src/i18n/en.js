@@ -2350,7 +2350,7 @@ export default {
     delete_error: "Could not delete the workspace",
     sources: "Sources",
     source_browser: {
-      title: "Storage location",
+      title: "Storage locations",
       source_broken: "{{name}} is not working right now.",
       device: "Your Device",
       chats: "Browser",

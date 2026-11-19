@@ -2382,7 +2382,7 @@ export default {
     delete_error: "Der Arbeitsbereich konnte nicht gelöscht werden",
     sources: "Quellen",
     source_browser: {
-      title: "Speicherort",
+      title: "Speicherorte",
       source_broken: "„{{name}}“ funktioniert gerade nicht.",
       device: "Dieses Gerät",
       chats: "Browser",

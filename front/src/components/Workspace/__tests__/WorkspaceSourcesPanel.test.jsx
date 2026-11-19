@@ -156,7 +156,7 @@ describe("WorkspaceSourcesPanel", () => {
   it("renders the three drives with subtitles and opens the add-source modal", async () => {
     renderPanel();
 
-    expect(screen.getByText("Storage location")).toBeInTheDocument();
+    expect(screen.getByText("Storage locations")).toBeInTheDocument();
     expect(screen.getByText("Your Device")).toBeInTheDocument();
     expect(screen.getByText("Browser")).toBeInTheDocument();
     expect(screen.getByText("Arcanas")).toBeInTheDocument();

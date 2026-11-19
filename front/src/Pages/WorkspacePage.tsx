@@ -37,7 +37,7 @@ import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
 import MetaChangesPanel from "../components/Meta/MetaChangesPanel";
 import WorkspaceAgentPanel from "../components/Workspace/WorkspaceAgentPanel";
 import WorkspaceComposer from "../components/Workspace/WorkspaceComposer";
-import WorkspaceFilesTab from "../components/Workspace/WorkspaceFilesTab";
+import WorkspaceStorageTree from "../components/Workspace/WorkspaceStorageTree";
 import { isTopicIconId, topicIconById } from "../components/Sidebar/topicIcons";
 import { topicColor, withAlpha } from "../components/Sidebar/topicColors";
 
@@ -161,7 +161,12 @@ export default function WorkspacePage() {
       {
         id: "files",
         label: t("workspace.files_tab"),
-        content: <WorkspaceFilesTab workspaceId={workspaceId} />,
+        content: (
+          <WorkspaceStorageTree
+            workspaceId={workspaceId}
+            className="min-h-0 min-w-0"
+          />
+        ),
       },
       {
         id: "agents",
