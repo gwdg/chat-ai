@@ -11,6 +11,12 @@ import {
   directAgentAccessAllowed,
   isServiceManagedAgent,
 } from "./agentAccess";
+import {
+  agentTunnelEnabled,
+  tunnelBody,
+  tunnelRequest,
+  tunnelStream,
+} from "./agentTunnel";
 
 const DEFAULT_SERVER_URL = "http://127.0.0.1:9000";
 const DEFAULT_SERVER_USERNAME = "opencode";
@@ -69,24 +75,42 @@ const authHeaders = (agent) => {
 };
 
 async function rawRequest(agent, path, init = {}) {
+  // `tunnelStream` is ours, not a `RequestInit` field: it asks for the SSE
+  // variant of the tunnel, whose chunks are base64 deltas.
+  const { tunnelStream: wantsStream = false, ...options } = init;
   // Outside a locally opened Chat AI only the agent service may be used, and it
   // is always the app's own origin: a direct OpenCode server is never contacted.
   if (!directAgentAccessAllowed() && !isServiceManagedAgent(agent)) {
     throw new Error(DIRECT_AGENT_BLOCKED);
   }
+  // A deployment where SAIA forwards only the agent model has no `/agents` path:
+  // the service is then reached by carrying this request in a chat completion
+  // (agentTunnel.js). Direct servers keep the plain fetch below.
+  const viaTunnel = agentTunnelEnabled() && isServiceManagedAgent(agent);
   let response;
   try {
-    response = await fetch(`${baseUrl(agent)}/api${path}`, {
-      ...init,
-      headers: {
-        ...(init.body ? { "Content-Type": "application/json" } : {}),
-        ...authHeaders(agent),
-        ...init.headers,
-      },
-    });
+    if (viaTunnel) {
+      const call = {
+        method: options.method || "GET",
+        path: `${baseUrl(agent)}/api${path}`,
+        body: tunnelBody(options.body),
+      };
+      response = wantsStream
+        ? await tunnelStream(call, options.signal)
+        : await tunnelRequest(call, options.signal);
+    } else {
+      response = await fetch(`${baseUrl(agent)}/api${path}`, {
+        ...options,
+        headers: {
+          ...(options.body ? { "Content-Type": "application/json" } : {}),
+          ...authHeaders(agent),
+          ...options.headers,
+        },
+      });
+    }
   } catch (reason) {
     // An abort is the caller's own signal, not a server problem.
-    if (init.signal?.aborted || reason?.name === "AbortError") throw reason;
+    if (options.signal?.aborted || reason?.name === "AbortError") throw reason;
     throw unavailableError(reason);
   }
   if (!response.ok) {
@@ -377,7 +401,10 @@ export async function findOpencodeFiles(agent, query, limit = 100) {
 }
 
 export async function subscribeOpencodeEvents(agent, onEvent, signal) {
-  const response = await rawRequest(agent, "/event", { signal });
+  // A tunneled `/event` has no socket either, so its chunks arrive as base64
+  // deltas of a chat completion; the tunnel decodes them back into the SSE the
+  // parser below already understands.
+  const response = await rawRequest(agent, "/event", { signal, tunnelStream: true });
   if (!response.body) return;
   const reader = response.body.getReader();
   const decoder = new TextDecoder();

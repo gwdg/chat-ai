@@ -303,3 +303,70 @@ describe("opencodeAgents unavailable server", () => {
     expect(isAgentServerUnavailable(new Error("other"))).toBe(false);
   });
 });
+
+describe("opencodeAgents tunnel mode", () => {
+  // A deployment whose gateway forwards only the agent model has no `/agents`
+  // path, so the client carries the call in a chat completion instead.
+  const completion = (boxed) =>
+    jsonResponse({ choices: [], chat_ai_http: boxed });
+
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("carries a service-managed call through the model endpoint", async () => {
+    vi.stubEnv("VITE_AGENT_SERVICE_MODE", "tunnel");
+    vi.stubEnv("VITE_BACKEND_ENDPOINT", "http://backend.test/v1");
+    const fetch = vi.fn(async () =>
+      completion({ status: 200, headers: {}, body: { version: "1.2" } }),
+    );
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(getOpencodeInfo(serviceAgent)).resolves.toEqual({
+      version: "1.2",
+    });
+
+    const [url, init] = fetch.mock.calls[0];
+    expect(url).toBe("http://backend.test/v1/chat/completions");
+    expect(JSON.parse(init.body).chat_ai_http).toMatchObject({
+      method: "GET",
+      path: "/agents/service-1/opencode/api/info",
+    });
+  });
+
+  it("leaves a direct agent on its own server", async () => {
+    vi.stubEnv("VITE_AGENT_SERVICE_MODE", "tunnel");
+    const fetch = vi.fn(async () => jsonResponse({ version: "1.2" }));
+    vi.stubGlobal("fetch", fetch);
+
+    await getOpencodeInfo({ id: "direct", serverUrl: "http://127.0.0.1:9000" });
+
+    expect(fetch.mock.calls[0][0]).toBe("http://127.0.0.1:9000/api/info");
+  });
+
+  it("decodes the tunneled event stream for the existing parser", async () => {
+    vi.stubEnv("VITE_AGENT_SERVICE_MODE", "tunnel");
+    vi.stubEnv("VITE_BACKEND_ENDPOINT", "http://backend.test/v1");
+    const encoder = new TextEncoder();
+    const frame = (text) =>
+      `data: ${JSON.stringify({ choices: [{ delta: { content: btoa(text) } }] })}\n\n`;
+    const body = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(frame('data: {"type":"idle"}\n\n')));
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.close();
+      },
+    });
+    const fetch = vi.fn(
+      async () => new Response(body, { headers: { "content-type": "text/event-stream" } }),
+    );
+    vi.stubGlobal("fetch", fetch);
+
+    const events = [];
+    await subscribeOpencodeEvents(serviceAgent, (event) => events.push(event));
+
+    expect(events).toEqual([{ type: "idle" }]);
+    expect(JSON.parse(fetch.mock.calls[0][1].body).chat_ai_http).toMatchObject({
+      path: "/agents/service-1/opencode/api/event",
+      stream: true,
+    });
+  });
+});

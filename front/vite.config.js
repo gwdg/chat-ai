@@ -152,6 +152,16 @@ try {
     } else if (key == "opencodeBridgeSidecarCommand") {
       process.env["VITE_OPENCODE_BRIDGE_SIDECAR_COMMAND"] = JSON.stringify(value);
       console.log("opencode bridge sidecar:", JSON.stringify(value));
+    } else if (key == "agentServiceMode") {
+      // "tunnel" reaches the agent service through the model endpoint, for a
+      // deployment whose gateway forwards only `saia-agent` and has no `/agents`
+      // route. Empty/unset keeps the plain `/agents` path.
+      process.env["VITE_AGENT_SERVICE_MODE"] = value || "";
+      console.log("Agent service mode:", value || "direct");
+    } else if (key == "agentServiceModel") {
+      // The model that carries a tunneled request; the service's own id.
+      process.env["VITE_AGENT_SERVICE_MODEL"] = value;
+      console.log("Agent service model:", value);
     } else if (key == "explainImageModel") {
       process.env["VITE_EXPLAIN_IMAGE_MODEL"] = value;
       console.log("Explain-image model:", value);

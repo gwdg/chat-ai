@@ -98,6 +98,24 @@ describe("useAgentBridge", () => {
     );
   });
 
+  it("reports the bridge as unavailable in tunnel mode without calling it", async () => {
+    // The tunnel carries HTTP bodies through a chat completion, so a WebSocket
+    // cannot ride on it: the deployment has no bridge at all.
+    vi.stubEnv("VITE_AGENT_SERVICE_MODE", "tunnel");
+    const fetchMock = respond(200);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useAgentBridge({ ...props, agent: { id: "a", serviceAgentId: "svc-1" } }),
+    );
+
+    await waitFor(() => expect(result.current.status).toBe("error"));
+
+    expect(result.current.unavailable).toBe(true);
+    expect(fetchMock).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
+  });
+
   it("forgets an unavailable deployment once nothing is exposed any more", async () => {
     // Detaching the last workspace must not leave a red "not available" behind: with no
     // workspace there is no bridge to report on at all.

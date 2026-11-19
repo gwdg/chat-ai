@@ -5,6 +5,8 @@
 // stores `/agents/<id>/opencode` as its proxy prefix, and the OpenCode client
 // then talks to `<prefix>/api/...` unchanged.
 
+import { agentTunnelEnabled, tunnelBody, tunnelRequest } from "./agentTunnel";
+
 /** The service's routes on the app origin, served by the SAIA gateway. */
 export const AGENT_SERVICE_PATH = "/agents";
 
@@ -78,13 +80,18 @@ export function reportAgentConflict({
 }
 
 async function request(path, init = {}) {
-  const response = await fetch(path, {
-    ...init,
-    headers: {
-      ...(init.body ? { "Content-Type": "application/json" } : {}),
-      ...init.headers,
-    },
-  });
+  const response = agentTunnelEnabled()
+    ? await tunnelRequest(
+        { method: init.method || "GET", path, body: tunnelBody(init.body) },
+        init.signal,
+      )
+    : await fetch(path, {
+        ...init,
+        headers: {
+          ...(init.body ? { "Content-Type": "application/json" } : {}),
+          ...init.headers,
+        },
+      });
   if (!response.ok) {
     const raw = await response.text().catch(() => "");
     const details = serviceErrorDetails(raw);

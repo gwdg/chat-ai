@@ -5,6 +5,7 @@ import { useSelector } from "react-redux";
 import { callMcpServerTool, listMcpServerTools } from "../agent/mcp";
 import type { Vfs } from "../agent/vfs";
 import { AGENT_SERVICE_PATH } from "../apis/agentService";
+import { agentTunnelEnabled } from "../apis/agentTunnel";
 import {
   addOpencodeMcpServer,
   connectOpencodeMcpServer,
@@ -362,6 +363,13 @@ export function useAgentBridge({
       setUnavailable(false);
       try {
         const sessionUrl = `${bridgeBase(agent)}/bridge/sessions`;
+        if (agentTunnelEnabled()) {
+          // The bridge is a WebSocket and the model tunnel carries HTTP bodies
+          // only, so this deployment has no bridge to start. The agent service
+          // answers `bridge` paths over the tunnel with 404; report the same
+          // state here without a request that cannot work.
+          throw new BridgeUnavailableError(sessionUrl, 404);
+        }
         const response = await fetch(sessionUrl, {
           method: "POST",
           headers: {

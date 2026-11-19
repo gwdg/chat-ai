@@ -248,7 +248,8 @@ inside `db/`. UI strings and i18n keys say topic.
 `VITE_DEFAULT_SETTINGS`, `VITE_TITLE_GENERATION_MODEL`, `VITE_MEMORY_GENERATION_MODEL`,
 `VITE_PROPOSAL_GENERATION_MODEL`, `VITE_ANNOUNCEMENT`, `VITE_USE_OPENAI_SDK`,
 `VITE_E2EE_KEY_URL`, `VITE_OPENCODE_SERVER_URL`, `VITE_OPENCODE_SERVER_USERNAME`,
-`VITE_OPENCODE_SERVER_PASSWORD`, `VITE_FAKE_AUTH_HEADERS`, `VITE_MODULE_*`. Consequences: **a new
+`VITE_OPENCODE_SERVER_PASSWORD`, `VITE_AGENT_SERVICE_MODE`, `VITE_AGENT_SERVICE_MODEL`,
+`VITE_FAKE_AUTH_HEADERS`, `VITE_MODULE_*`. Consequences: **a new
 config key requires editing `front/vite.config.js` too**, and a config change requires a dev-server
 restart. Read values via `import.meta.env.VITE_*`; they arrive as strings, hence the
 `=== "true"` comparisons.
@@ -1341,6 +1342,21 @@ gateway in front of `/agents/*` that authenticates and forwards `inference-id` (
 header) before one user's agent can be separated from another's. The service keeps its rows
 across restarts, so an agent id survives one; if its database is reset or the row is deleted, the
 saved `serverUrl` points at a missing id and the agent must be recreated (the edit window does that).
+
+**A deployment may forward only the model.** `"agentServiceMode": "tunnel"` in `front.json`
+(`VITE_AGENT_SERVICE_MODE`, mapped in `vite.config.js`, tunnelled model id in `agentServiceModel` /
+`VITE_AGENT_SERVICE_MODEL`, default `saia-agent`) is the case where the gateway has no `/agents`
+route and SAIA forwards nothing but `POST …/chat/completions` for `saia-agent`. `apis/agentTunnel.js`
+then sends every `/agents` call as a completion with the request in a `chat_ai_http` body field and
+unwraps the boxed answer back into a real `Response`, so `agentService.js` and `opencodeAgents.js`
+keep their status/conflict handling unchanged. It cannot be a header or a query string: the engine
+rebuilds that request from `content-type` and the body, so everything else is dropped on the hop.
+`opencodeAgents.js#rawRequest` uses the tunnel only for a service-managed agent (a direct server
+keeps its own URL), `subscribeOpencodeEvents` passes `tunnelStream: true` and gets the target's SSE
+bytes back from base64 deltas, and `useAgentBridge` reports the bridge unavailable without a request
+because a chat completion cannot carry the WebSocket. The service end is `agent-service`'s
+`tunnel.py` (§ its AGENTS.md). An `/agents` call through the tunnel is bounded by the engine's 600 s
+read timeout, so a stream is cut at that window.
 `agents/agentStore.js` persists the agent metadata in localStorage.
 Every agent carries `createdAt`, `updatedAt` and an optional `pinned` flag. `load()` backfills the
 timestamps of agents created before they existed and persists them once. `updateAgent` bumps

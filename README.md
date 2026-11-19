@@ -142,6 +142,8 @@ The `front` service uses the following configurable attributes in `front.json`:
 - `apiKey`: (Optional) Bearer token sent to `backendPath`, `modelsPath` and `userDataPath`. Leave it out when the OIDC proxy authenticates the user, as in the default setup. It exists for endpoints that the browser may call directly, such as a SAIA engine (see [Calling a SAIA Engine Directly](#calling-a-saia-engine-directly-local-testing)). Vite compiles it into the bundle, so treat it as public
 - `fakeAuthHeaders`: (Optional) Object of extra headers sent with direct API calls (`backendPath`, `modelsPath`, `userDataPath`, chat, files, speech). It exists for a direct SAIA engine whose Chat AI compatibility routes under `/assumes_behind_oidc` expect the `oidc_claim_*` headers that Apache/`auth_openidc` normally adds. Setting it makes the browser impersonate that identity, so only use it against a local or test engine whose protected routes are not otherwise reachable; never set it in a deployment. The values are compiled into the bundle
 - `opencodeServerUrl` / `opencodeServerUsername` / `opencodeServerPassword`: (Optional) Defaults for a direct OpenCode server connection. A direct connection is only offered when Chat AI itself is opened from `localhost`/`127.0.0.1`; everywhere else agents run through the SAIA agent service, which lives in its own repository, at `/agents` on the app's own origin, and a direct agent cannot be created (an existing one is migrated when saved). These defaults are then used only for that local access and for the container's own credentials. The agent service needs no URL in `front.json`: the SAIA gateway routes `/agents/*` to it. A dev server has no gateway, so it forwards `/agents` only when `AGENT_SERVICE_DEV_PROXY` names a service, for example `AGENT_SERVICE_DEV_PROXY=http://127.0.0.1:8090 npm run dev`; there is no default port
+- `agentServiceMode`: (Optional) How the browser reaches the SAIA agent service. Leave it out to call `/agents` on the app's own origin, which needs a gateway that routes that path; `"tunnel"` carries every `/agents` call inside a `saia-agent` chat completion instead, for a deployment whose gateway forwards only model traffic (see [Reaching the Agent Service When Only the Model Is Exposed](#reaching-the-agent-service-when-only-the-model-is-exposed))
+- `agentServiceModel`: (Optional) Model id that carries a tunnelled call. Default: `saia-agent`
 - `default`: Default settings for new conversations, including default `model` with `model.id` and `model.name`, as well as `top_p` and `temperature`.
 - `titleGenerationModel`: Model ID for title generation
 - `memoryGenerationModel`: Model ID for memory generation and updates
@@ -241,6 +243,57 @@ The `minimal` deployment is a separate front config, not a separate app, so it c
 ```
 
 `deployment: "minimal"` turns off every module and every feature except the Meta chat; the rest of the file is what `front-local-conf.json` does for the full UI. `CONFIG_LOCATION=../secrets/front-minimal.json npm run dev` then serves it on `:8083` without `back`. The model id must exist in the stack's `/public/v1/models`; without GWDG federation that is `bridge/local-echo-1` / `bridge/local-slow-1`. `secrets/front-minimal.json.sample` remains the portable variant that expects `back` on `:8081`.
+
+## Reaching the Agent Service When Only the Model Is Exposed
+
+A SAIA deployment normally routes `/agents/*` to the agent service. Some gateways
+forward only model traffic: they accept `POST …/chat/completions` for the
+`saia-agent` model and have no path rule for the service's own routes. Add
+
+```json
+{ "agentServiceMode": "tunnel" }
+```
+
+to `front.json` for that case (`agentServiceModel` overrides the model id, default
+`saia-agent`). Every `/agents` call is then sent as an ordinary completion that
+carries the real request in one body field:
+
+```json
+{
+  "model": "saia-agent",
+  "messages": [],
+  "chat_ai_http": { "method": "GET", "path": "/agents", "body": null }
+}
+```
+
+The target cannot travel in a header or a query string: the engine rebuilds the
+upstream request from `content-type` and the body, so everything else is dropped
+on that hop. The agent service re-enters its own ASGI app with the carried
+request, runs it as the caller the completion was already resolved to (so the
+usual `inference-id` identity setup applies unchanged), and answers with the
+real status and body boxed under `chat_ai_http`. A streaming target
+(`/agents/<id>/opencode/api/event`) sends its bytes as base64 deltas, which the
+front end decodes back into the same SSE the OpenCode client always parsed. Both
+levels have to say `stream: true`: inside `chat_ai_http` so the service answers
+with SSE, and at the top level so the engine relays those bytes instead of
+collecting them and trying to parse the body as one JSON object.
+
+Two limits remain:
+
+- **The agent bridge is a WebSocket.** A `bridge` path answers `404` through the
+  tunnel, which the UI already reports as “Agent bridge not available”. An agent
+  page in this mode has no workspace access from the agent process.
+- **A stream ends with the engine's read timeout** (600 s), because the
+  completion it rides on does too. An idle OpenCode event stream reconnects for
+  the next window; a prompt that runs longer than that window is cut off.
+
+Only `/agents` is reachable this way; a carried `/v1` request is refused so a
+completion cannot call itself. Without the mode the browser keeps calling
+`/agents` on the app's own origin.
+
+`front-local-conf.json` sets the mode, because the local test stack has no
+`/agents` route either: with `AGENT_SERVICE_DEV_PROXY` unset, the Agents sidebar
+reaches the service through the engine's model endpoint instead of a dev proxy.
 
 ## Serving a Static Build (Apache / Nginx)
 
