@@ -55,6 +55,7 @@ rejected.
     "model": "deepseek-v4.1-flash-1017",
     "bridgeWritable": true,
     "bridgeMcp": false,
+    "bridgeInjectExternal": false,
     "initialMessage": {
       "title": "Welcome",
       "text": "This workspace was prepared from the example package. Start with the Getting started chat."
@@ -103,6 +104,7 @@ rejected.
 | `agent.model` | no | Model id to select when available. |
 | `agent.bridgeWritable` | no | Whether the workspace bridge allows writes. Default `false`. |
 | `agent.bridgeMcp` | no | Whether the workspace bridge exposes local MCP tools. Default `false`. |
+| `agent.bridgeInjectExternal` | no | Whether the MCP servers OpenCode can reach itself are registered in OpenCode instead of only through the bridge. Default `false`. |
 | `agent.initialMessage` | no | String or `{title?, text}` shown in the new agent session. It is also stored as a durable OpenCode instruction entry; it does not send a prompt. |
 | `chats` | no | Up to 50 chats, each with up to 2000 messages. |
 | `chats[].folderName` | no | Topic name; created if it does not exist. |

@@ -2,7 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 
-import { callMcpServerTool, listMcpServerTools } from "../agent/mcp";
+import {
+  callMcpServerTool,
+  listMcpServerTools,
+  normalizeMcpUrl,
+} from "../agent/mcp";
 import type { Vfs } from "../agent/vfs";
 import { AGENT_SERVICE_PATH } from "../apis/agentService";
 import { agentTunnelEnabled, tunnelRequest } from "../apis/agentTunnel";
@@ -51,6 +55,12 @@ type BridgeInput = {
   workspaceId?: string | null;
   writable: boolean;
   mcp: boolean;
+  /**
+   * MCP servers OpenCode already connected itself (`bridgeInjectExternal`). They are still in
+   * the browser, but relaying them too would offer the same server twice, so the relay skips
+   * them and serves only the ones that could not be injected.
+   */
+  excludedMcpUrls?: string[];
   mounts: WorkspaceMountRow[];
   providers: Map<string, FileProvider>;
   rootProvider: BrowserProvider | null;
@@ -174,11 +184,12 @@ const bytesToBase64 = (bytes: Uint8Array) => {
 };
 
 const readMcpServers = (settings: any) =>
+  // Any configured server with an address can be relayed; the configured `kind` is not a
+  // routing decision here. A SAIA-gateway entry has only a server id and is answered by the
+  // gateway itself, so it simply has no URL and drops out.
   (Array.isArray(settings?.mcp_servers) ? settings.mcp_servers : []).filter(
     (server: any) =>
-      server?.kind === "local" &&
-      typeof server.url === "string" &&
-      server.url.trim(),
+      typeof server?.url === "string" && !!server.url.trim(),
   );
 
 export function useAgentBridge({
@@ -186,6 +197,7 @@ export function useAgentBridge({
   workspaceId,
   writable,
   mcp,
+  excludedMcpUrls,
   mounts,
   providers,
   rootProvider,
@@ -210,6 +222,20 @@ export function useAgentBridge({
   rootRef.current = rootProvider;
 
   const mcpServers = useMemo(() => readMcpServers(userSettings), [userSettings]);
+  // A ref, not an effect dependency: injection finishes after the bridge is online, and
+  // restarting the bridge (and re-registering its MCP server) just to shrink the relay list
+  // would interrupt a running turn. Later tool calls read the current list.
+  const excludedMcpUrlsRef = useRef(new Set<string>());
+  excludedMcpUrlsRef.current = new Set(
+    (excludedMcpUrls || [])
+      .map((url) => normalizeMcpUrl(url))
+      .filter(Boolean),
+  );
+  const relayMcpServers = () =>
+    mcpServers.filter(
+      (server: any) =>
+        !excludedMcpUrlsRef.current.has(normalizeMcpUrl(server?.url)),
+    );
 
   useEffect(() => {
     if (!agent?.id || !workspaceId) {
@@ -460,13 +486,13 @@ export function useAgentBridge({
           }
         } else if (name === "mcp_list_servers") {
           if (!mcp) throw new Error("Local MCP access is disabled for this agent.");
-          result = mcpServers.map((server: any) => ({
+          result = relayMcpServers().map((server: any) => ({
             id: server.id,
             name: server.name || server.id,
           }));
         } else if (name === "mcp_list_tools") {
           if (!mcp) throw new Error("Local MCP access is disabled for this agent.");
-          const server = mcpServers.find(
+          const server = relayMcpServers().find(
             (item: any) =>
               item.id === args.server || item.name === args.server,
           );
@@ -478,7 +504,7 @@ export function useAgentBridge({
           });
         } else if (name === "mcp_call") {
           if (!mcp) throw new Error("Local MCP access is disabled for this agent.");
-          const server = mcpServers.find(
+          const server = relayMcpServers().find(
             (item: any) =>
               item.id === args.server || item.name === args.server,
           );

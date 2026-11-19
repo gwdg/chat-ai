@@ -150,6 +150,10 @@ export function parseWorkspaceManifest(raw) {
           typeof parsed.agent.bridgeMcp === "boolean"
             ? parsed.agent.bridgeMcp
             : undefined,
+        bridgeInjectExternal:
+          typeof parsed.agent.bridgeInjectExternal === "boolean"
+            ? parsed.agent.bridgeInjectExternal
+            : undefined,
         ...(initialMessage ? { initialMessage } : {}),
       }
     : undefined;

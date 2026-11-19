@@ -517,6 +517,7 @@ export default {
       title: "Einem Agenten Zugriff auf Arbeitsbereichsdateien geben",
       step1: "Öffnen Sie einen Agenten. Das Fenster links ist sein Dateibrowser.",
       step2: "Öffnen Sie die Arbeitsbereich-Schaltfläche neben dem Eingabefeld und schalten Sie den Arbeitsbereich-Zugriff ein, um den Reverse-Proxy für diesen Agenten bereitzustellen. Verbinden Sie einen Arbeitsbereich, wählen Sie, welchen die Brücke nutzt, erlauben Sie Schreibzugriff, wenn der Agent Dateien ändern darf, und lassen Sie diesen Tab geöffnet, während der Agent arbeitet.",
+      step3: "Dasselbe Fenster enthält die MCP-Optionen. „MCP-Werkzeuge“ erlaubt dem Agenten, Ihre konfigurierten MCP-Server über diesen Tab aufzurufen; „Externe MCP-Werkzeuge einbinden“ registriert zusätzlich die Server, die OpenCode selbst erreicht, sodass diese ohne den Tab weiterlaufen, während die übrigen an der Brücke bleiben.",
     },
     catalog: {
       open: "Tutorials durchsuchen",
@@ -2011,11 +2012,20 @@ export default {
       writable: "Schreiben erlauben",
       writable_hint:
         "Erlaubt dem Agenten, Dateien im verknüpften Arbeitsbereich zu erstellen, zu ändern und zu löschen. Ohne diese Option bleibt der Arbeitsbereich schreibgeschützt.",
-      mcp: "Lokale MCP-Werkzeuge",
+      mcp: "MCP-Werkzeuge",
       mcp_hint:
-        "Erlaubt dem Agenten, die MCP-Server dieser Browsersitzung aufzurufen. Deren Ergebnisse und Daten verlassen die App über diese Server.",
-      keep_open: "Lassen Sie diesen Tab geöffnet. Arbeitsbereichs- und MCP-Werkzeuge sind nur verfügbar, solange der Browser verbunden ist.",
-      tab_warning: "Die Agenten-Brücke benötigt diesen Tab. Arbeitsbereichs- und MCP-Werkzeuge sind möglicherweise nicht verfügbar, bis Sie zurückkehren.",
+        "Erlaubt dem Agenten, die konfigurierten MCP-Server über diese Browsersitzung aufzurufen. Deren Ergebnisse und Daten verlassen die App über diese Server.",
+      inject: "Externe MCP-Werkzeuge einbinden",
+      inject_hint:
+        "OpenCode verbindet sich selbst mit den erreichbaren MCP-Servern, die kein Passwort benötigen; deren Werkzeuge funktionieren dann ohne diesen Tab. Die übrigen bleiben an der lokalen MCP-Weiterleitung.",
+      inject_running: "MCP-Server werden zu OpenCode hinzugefügt …",
+      inject_summary: "Direkt in OpenCode: {{direct}} · über die Brücke: {{bridge}}",
+      inject_fallback: "Über die Brücke: {{servers}}",
+      inject_none: "Es ist kein MCP-Server ohne Passwort konfiguriert.",
+      inject_error:
+        "Die MCP-Server konnten nicht zu OpenCode hinzugefügt werden: {{message}}",
+      keep_open: "Lassen Sie diesen Tab geöffnet. Arbeitsbereichsdateien und die an der Brücke verbliebenen MCP-Server sind nur verfügbar, solange der Browser verbunden ist.",
+      tab_warning: "Die Agenten-Brücke benötigt diesen Tab. Arbeitsbereichsdateien und die an der Brücke verbliebenen MCP-Server sind möglicherweise nicht verfügbar, bis Sie zurückkehren.",
       start_failed: "Die Arbeitsbereich-Brücke konnte nicht gestartet werden: {{message}}",
     },
     spawn: "Agent starten",
@@ -2150,7 +2160,7 @@ export default {
       opencode_mcp: "OpenCode-MCP-Server",
       no_mcp: "In OpenCode sind keine MCP-Server konfiguriert.",
       chatai_mcp: "Chat-AI-MCP-Server",
-      no_chatai_mcp: "In Chat AI sind keine lokalen MCP-Server konfiguriert.",
+      no_chatai_mcp: "In Chat AI ist kein MCP-Server mit Adresse konfiguriert.",
       add_to_opencode: "Zu OpenCode hinzufügen",
       added: "Zu OpenCode hinzugefügt",
       mcp_transfer_hint:

@@ -132,6 +132,7 @@ export async function applyWorkspaceManifest({
         bridgeWorkspaceId: workspaceId,
         bridgeWritable: manifestAgent.bridgeWritable === true,
         bridgeMcp: manifestAgent.bridgeMcp === true,
+        bridgeInjectExternal: manifestAgent.bridgeInjectExternal === true,
         ...(manifestAgent.initialMessage
           ? {
               initialMessage: manifestAgent.initialMessage,

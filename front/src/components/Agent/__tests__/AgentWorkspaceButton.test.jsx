@@ -75,10 +75,75 @@ describe("AgentWorkspaceButton", () => {
       bridgeWritable: true,
     });
 
-    fireEvent.click(screen.getByLabelText("Local MCP tools"));
+    fireEvent.click(screen.getByLabelText("MCP tools"));
     expect(mocks.updateAgent).toHaveBeenCalledWith("agent-1", {
       bridgeMcp: true,
     });
+  });
+
+  it("offers the MCP injection option and reports the split", async () => {
+    mocks.links = [{ workspaceId: "ws-1" }];
+    await openPanel(
+      { bridgeInjectExternal: false },
+      {
+        mcpInjection: {
+          status: "ready",
+          injected: [{ url: "http://search.test/mcp" }],
+          fallback: [
+            { name: "GWDG search", error: "ECONNREFUSED" },
+          ],
+          error: "",
+        },
+      },
+    );
+
+    fireEvent.click(screen.getByLabelText("Inject external MCP tools"));
+    expect(mocks.updateAgent).toHaveBeenCalledWith("agent-1", {
+      bridgeInjectExternal: true,
+    });
+  });
+
+  it("shows how many servers OpenCode took and which stay on the bridge", async () => {
+    mocks.links = [{ workspaceId: "ws-1" }];
+    await openPanel(
+      { bridgeInjectExternal: true },
+      {
+        mcpInjection: {
+          status: "ready",
+          injected: [{ url: "http://search.test/mcp" }],
+          fallback: [
+            { name: "GWDG search", error: "ECONNREFUSED" },
+          ],
+          error: "",
+        },
+      },
+    );
+
+    expect(
+      screen.getByText("Direct in OpenCode: 1 · via bridge: 1"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Via bridge: GWDG search")).toBeInTheDocument();
+  });
+
+  it("reports why the injection could not run", async () => {
+    mocks.links = [{ workspaceId: "ws-1" }];
+    await openPanel(
+      { bridgeInjectExternal: true },
+      {
+        mcpInjection: {
+          status: "error",
+          injected: [],
+          fallback: [],
+          error: "agent server unavailable",
+        },
+      },
+    );
+
+    expect(
+      screen.getByText(
+        /Could not add the MCP servers to OpenCode: agent server unavailable/,
+      ),
+    ).toBeInTheDocument();
   });
 
   it("explains what the write and MCP options allow", async () => {
@@ -92,8 +157,8 @@ describe("AgentWorkspaceButton", () => {
       screen.getByText(/create, change and delete files/),
     ).toBeInTheDocument();
 
-    fireEvent.mouseEnter(screen.getByText("Local MCP tools"));
-    expect(screen.getByText(/MCP servers of this browser/)).toBeInTheDocument();
+    fireEvent.mouseEnter(screen.getByText("MCP tools"));
+    expect(screen.getByText(/configured MCP servers through this browser/)).toBeInTheDocument();
   });
 
   it("hides the access options while access is off", async () => {
@@ -101,7 +166,7 @@ describe("AgentWorkspaceButton", () => {
     await openPanel({ bridgeEnabled: false });
 
     expect(screen.queryByLabelText("Allow writes")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Local MCP tools")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("MCP tools")).not.toBeInTheDocument();
   });
 
   it("cannot switch access on while no workspace is attached", async () => {
@@ -122,7 +187,7 @@ describe("AgentWorkspaceButton", () => {
     await openPanel({ bridgeEnabled: true, bridgeWorkspaceId: "ws-2" });
 
     expect(screen.getByLabelText("Allow writes")).toBeDisabled();
-    expect(screen.getByLabelText("Local MCP tools")).toBeDisabled();
+    expect(screen.getByLabelText("MCP tools")).toBeDisabled();
   });
 
   it("switches access off when the last workspace is detached", async () => {

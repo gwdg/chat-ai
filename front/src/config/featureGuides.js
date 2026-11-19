@@ -284,6 +284,8 @@ export const featureGuides = {
       "agent files",
       "reverse proxy",
       "allow writes",
+      "mcp tools",
+      "inject mcp",
     ],
     steps: [
       {
@@ -293,6 +295,10 @@ export const featureGuides = {
       {
         target: '[data-guide="agent-workspaces"]',
         textKey: "feature_guide.agent_workspace_access.step2",
+      },
+      {
+        target: '[data-guide="agent-workspaces"]',
+        textKey: "feature_guide.agent_workspace_access.step3",
       },
     ],
   },

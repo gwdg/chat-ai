@@ -20,6 +20,7 @@ vi.mock("../../apis/opencodeAgents", () => ({
   removeOpencodeMcpServer: vi.fn(async () => {}),
 }));
 vi.mock("../../agent/mcp", () => ({
+  normalizeMcpUrl: (url: unknown) => String(url ?? "").trim(),
   // The browser's own MCP client: the hook only relays its answer (or its error) to the
   // sidecar, so the test asserts the message the model would read.
   listMcpServerTools: vi.fn(async () => {
@@ -355,6 +356,74 @@ describe("useAgentBridge", () => {
       ok: true,
       result: [],
     });
+  });
+
+  it("does not relay a server OpenCode already connected itself", async () => {
+    // Injection and relay must not offer the same server twice: the native entry is the
+    // better one (real tools), so the relay carries only the servers that could not be
+    // injected. The exclusion is read at call time, so finishing an injection does not have
+    // to restart the running bridge.
+    mocks.settings = {
+      mcp_servers: [
+        {
+          id: "direct",
+          name: "Direct",
+          kind: "local",
+          url: "http://direct.test/mcp",
+        },
+        {
+          id: "relay",
+          name: "Relay",
+          kind: "local",
+          url: "http://relay.test/mcp",
+        },
+      ],
+    };
+    mocks.tunnel = true;
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, status: 200 })));
+    const parked = new Promise(() => {});
+    let polls = 0;
+    mocks.tunnelRequest.mockImplementation((call: any) => {
+      if (call.method === "POST" && call.path.endsWith("/bridge/sessions")) {
+        return Promise.resolve(jsonResponse(200, tunnelSession));
+      }
+      if (call.method === "POST") return Promise.resolve(jsonResponse(204, null));
+      polls += 1;
+      if (polls === 1) return Promise.resolve(jsonResponse(200, { type: "ready" }));
+      if (polls === 2) {
+        return Promise.resolve(
+          jsonResponse(200, {
+            type: "tool_call",
+            requestId: "call-excluded",
+            name: "mcp_list_servers",
+            arguments: {},
+          }),
+        );
+      }
+      return parked;
+    });
+
+    renderHook(() =>
+      useAgentBridge({
+        ...props,
+        mcp: true,
+        agent: serviceAgent,
+        excludedMcpUrls: ["http://direct.test/mcp"],
+      }),
+    );
+
+    await waitFor(() => {
+      const reply = mocks.tunnelRequest.mock.calls.find(
+        ([call]: any[]) => call.path === tunnelSession.replyUrl,
+      );
+      expect(reply?.[0].body).toMatchObject({
+        type: "tool_result",
+        requestId: "call-excluded",
+        ok: true,
+        result: [{ id: "relay", name: "Relay" }],
+      });
+    });
+    mocks.settings = { mcp_servers: [] };
   });
 
   it("relays a failed local MCP call as the model would read it", async () => {

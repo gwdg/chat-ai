@@ -91,16 +91,14 @@ export default function AgentToolsModal({ isOpen, onClose, agent }) {
     [mcpServers],
   );
 
-  const localMcpServers = useMemo(
+  const urlMcpServers = useMemo(
     () =>
       (Array.isArray(userSettings?.mcp_servers)
         ? userSettings.mcp_servers
         : []
       ).filter(
         (server) =>
-          server?.kind === "local" &&
-          typeof server.url === "string" &&
-          server.url.trim(),
+          typeof server?.url === "string" && !!server.url.trim(),
       ),
     [userSettings],
   );
@@ -746,12 +744,12 @@ export default function AgentToolsModal({ isOpen, onClose, agent }) {
                   <TriangleAlert className="mt-0.5 h-3 w-3 shrink-0 text-warning" />
                   <span>{t("agents.tools.mcp_transfer_hint")}</span>
                 </p>
-                {localMcpServers.length === 0 ? (
+                {urlMcpServers.length === 0 ? (
                   <p className="text-xs text-base-content/60">
                     {t("agents.tools.no_chatai_mcp")}
                   </p>
                 ) : (
-                  localMcpServers.map((server) => {
+                  urlMcpServers.map((server) => {
                     const name = server.name || server.id;
                     const added = addedMcpNames.has(name);
                     return (

@@ -216,6 +216,27 @@ data still leaves the browser only as the answer to an explicit read:
   agent page loaded against a pre-upgrade service still shows "no MCP resources"
   until the service is restarted (`make start`) and the bridge reconnected.
 
+### 4.4 Servers OpenCode reaches itself
+
+The bridge is the only route for a server that needs a header or that only the
+browser can reach. A server the OpenCode host can dial itself is better served
+natively, because its tools then survive a closed tab:
+
+- **Option.** "Inject external MCP tools" in the agent's workspace popover
+  (`bridgeInjectExternal`, stored per agent like the write and MCP switches).
+  `useAgentMcpInjection` registers every configured server that has an HTTP URL
+  and no stored headers through `PUT /api/experimental/mcp/<chatai-ext-…>` and
+  `POST …/connect`, and polls `GET /api/mcp` for the result.
+- **Kind is not a routing decision.** An entry with an address is injectable
+  whether it is stored as `local` or as a gateway entry; a gateway entry that
+  carries only a server id is answered by the gateway and never reaches OpenCode.
+- **Success is decided by OpenCode.** `connected` means it is injected and the
+  bridge relay drops it (`excludedMcpUrls`); `failed`, or still `pending` after
+  the poll, removes the entry again and reports it as bridge-served.
+- **Nothing is persisted.** `/experimental/mcp` is runtime-only, so the entries
+  vanish with the OpenCode process and are reconciled on the next page load.
+  A `localhost` URL means the OpenCode host, not the user's machine.
+
 ## 5. Not implemented
 
 ### 5.1 Route `/agents/*` at the gateway

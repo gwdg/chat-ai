@@ -38,6 +38,7 @@ export default function AgentWorkspaceButton({
   bridgeError = "",
   bridgeFailure = "",
   bridgeUnavailable = false,
+  mcpInjection = null,
 }) {
   const { t } = useTranslation();
   const workspaces = useWorkspaceList();
@@ -49,6 +50,14 @@ export default function AgentWorkspaceButton({
   const enabled = isAgentBridgeEnabled(agent);
   const accessOn = enabled && attachedWorkspaces.length > 0;
   const bridgeWorkspace = resolveBridgeWorkspace(agent, attachedWorkspaces);
+
+  // `bridgeInjectExternal` splits the configured MCP servers: the ones OpenCode can reach
+  // itself become native servers, the rest stay on the relay. The hook reports both lists.
+  const injectEnabled = agent?.bridgeInjectExternal === true;
+  const injectStatus = mcpInjection?.status || "off";
+  const injectInjected = mcpInjection?.injected || [];
+  const injectFallback = mcpInjection?.fallback || [];
+  const injectError = mcpInjection?.error || "";
 
   // A status only says something about a bridge that is meant to run, so nothing is reported
   // while access is off — except the failure that made the page switch access off.
@@ -257,6 +266,73 @@ export default function AgentWorkspaceButton({
                     </span>
                   </Tooltip>
                 </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    className="checkbox checkbox-xs"
+                    disabled={!accessOn}
+                    checked={injectEnabled}
+                    onChange={(event) =>
+                      updateAgent(agent.id, {
+                        bridgeInjectExternal: event.target.checked,
+                      })
+                    }
+                    aria-label={t("agents.bridge.inject")}
+                  />
+                  <Tooltip
+                    text={t("agents.bridge.inject_hint")}
+                    className="min-w-0"
+                  >
+                    {t("agents.bridge.inject")}
+                  </Tooltip>
+                </label>
+                {injectEnabled && accessOn && (
+                  <div className="pl-5 text-[10px] leading-snug">
+                    {injectStatus === "running" ? (
+                      <span className="inline-flex items-center gap-1 text-base-content/60">
+                        <span className="loading loading-spinner loading-xs" />
+                        {t("agents.bridge.inject_running")}
+                      </span>
+                    ) : injectStatus === "error" ? (
+                      <span className="break-words text-error">
+                        {t("agents.bridge.inject_error", {
+                          message: injectError,
+                        })}
+                      </span>
+                    ) : injectStatus === "ready" ? (
+                      <>
+                        <span className="text-base-content/60">
+                          {t("agents.bridge.inject_summary", {
+                            direct: injectInjected.length,
+                            bridge: injectFallback.length,
+                          })}
+                        </span>
+                        {injectFallback.length > 0 && (
+                          <span
+                            className="mt-0.5 block truncate text-base-content/50"
+                            title={injectFallback
+                              .map(
+                                (server) =>
+                                  `${server.name}: ${server.error}`,
+                              )
+                              .join("\n")}
+                          >
+                            {t("agents.bridge.inject_fallback", {
+                              servers: injectFallback
+                                .map((server) => server.name)
+                                .join(", "),
+                            })}
+                          </span>
+                        )}
+                        {!injectInjected.length && !injectFallback.length && (
+                          <span className="block text-base-content/50">
+                            {t("agents.bridge.inject_none")}
+                          </span>
+                        )}
+                      </>
+                    ) : null}
+                  </div>
+                )}
               </div>
             </div>
           )}

@@ -1540,14 +1540,14 @@ workspace popover (`components/Agent/AgentWorkspaceButton.jsx`, through
 `agents/agentBridgeAccess.js`); the left file panel is only the file browser and shows no bridge
 section. The popover starts with a live status row: green "Agent bridge working" while the socket is
 online, red while it is offline or failed, and a muted "off" while access is switched off. The bridge
-settings stay together under it — hint, write and MCP toggles, keep-open warning — and the attached
-workspaces with the "Use for the bridge" choice are the last section, because they are what the
-options apply to. Without the switch no bridge starts and the agent gets no tool, and the bridge only
-ever exposes an **attached** workspace: with none attached the switch and the write/MCP options are
-disabled, a remembered `bridgeWorkspaceId` does not count on its own, and detaching the last
-workspace switches access off. Turning it on exposes `bridgeWorkspaceId` while that workspace is
-still attached, otherwise the first attached one. A bridge start failure is reported as a toast
-because no panel prints it any more, and `AgentPage` then switches access off
+settings stay together under it — hint, write, MCP and injection toggles, keep-open warning — and
+the attached workspaces with the "Use for the bridge" choice are the last section, because they
+are what the options apply to. Without the switch no bridge starts and the agent gets no tool, and
+the bridge only ever exposes an **attached** workspace: with none attached the switch and the
+write/MCP options are disabled, a remembered `bridgeWorkspaceId` does not count on its own, and
+detaching the last workspace switches access off. Turning it on exposes `bridgeWorkspaceId` while
+that workspace is still attached, otherwise the first attached one. A bridge start failure is
+reported as a toast because no panel prints it any more, and `AgentPage` then switches access off
 (`disableAgentBridgeAfterFailure`) so an enabled switch never sits in front of a dead bridge; a
 dropped socket does not do that, because `useAgentBridge` retries it after 3 s. Existing agents keep
 access on only because the reader falls back to `!!bridgeWorkspaceId`. The same entry stores
@@ -1568,6 +1568,23 @@ shows a toast on return, and registers `beforeunload`. In production, the initia
 able to spawn the sidecar and open the outbound WebSocket; the bridge host must be reachable from the
 agent host (through `AGENT_SERVICE_BRIDGE_AGENT_URL` for the agent service, `bridgePublicUrl` in
 `back.json` for `back`).
+
+The popover's `bridgeInjectExternal` option hands every configured MCP server that has an HTTP URL
+and no stored headers to OpenCode itself (`PUT /api/experimental/mcp/<chatai-ext-…>` +
+`/connect`), so those tools work without the tab. The configured `kind` does not decide the route:
+an entry with an address is dialable by OpenCode, while a SAIA-gateway entry carries only a server
+id and keeps its server-side path. `useAgentMcpInjection` reconciles the entries; it is agent-scoped
+and depends on the connection fields and the candidate list, never on `sessionId`, and the option
+is stored per agent (`bridgeInjectExternal`) like the write/MCP flags, so it survives a session
+switch. Names are derived from the URL alone (`agents/agentMcpInjection.js`), so renaming a server
+does not leave the old entry behind. A server OpenCode cannot reach (or one still `pending` after
+the poll) is removed again and reported as fallback, which leaves it on the bridge relay. Successful
+entries reach `useAgentBridge` as `excludedMcpUrls`; the relay reads that list at tool-call time, so
+finishing an injection neither restarts a running bridge nor offers the same server twice. Switching
+the option (or bridge access) off removes only the `chatai-ext-*` entries and hands those servers
+back to the relay; leaving the page does not, because a natively injected server needs no tab.
+OpenCode's `/experimental/mcp` API is runtime-only, so nothing survives an OpenCode restart and the
+page reconciles again on its next mount.
 
 `back`'s own bridge is authenticated and bounded. `POST /bridge/sessions` requires the `x-bridge-key`
 header to equal `BRIDGE_SHARED_SECRET`, and the route answers 503 when that variable is unset rather

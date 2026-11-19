@@ -62,4 +62,31 @@ describe("parseWorkspaceManifest", () => {
       ),
     ).toThrow(/six-digit hex/);
   });
+
+  it("carries the bridge options of the agent", () => {
+    // The bridge options decide what the agent may touch, so a manifest may set them the
+    // same way the popover does. A value that is not a boolean is dropped instead of
+    // guessed, so the popover keeps its own default.
+    const result = parseWorkspaceManifest(
+      JSON.stringify({
+        ...valid,
+        agent: {
+          ...valid.agent,
+          bridgeMcp: true,
+          bridgeInjectExternal: true,
+        },
+      }),
+    );
+    expect(result.agent.bridgeWritable).toBe(true);
+    expect(result.agent.bridgeMcp).toBe(true);
+    expect(result.agent.bridgeInjectExternal).toBe(true);
+
+    const withoutFlag = parseWorkspaceManifest(
+      JSON.stringify({
+        ...valid,
+        agent: { ...valid.agent, bridgeInjectExternal: "yes" },
+      }),
+    );
+    expect(withoutFlag.agent.bridgeInjectExternal).toBeUndefined();
+  });
 });

@@ -8,6 +8,8 @@ const mocks = vi.hoisted(() => ({
   links: [],
   bridge: { status: "off", error: "", unavailable: false },
   bridgeCalls: [],
+  injection: { status: "off", injected: [], fallback: [], error: "" },
+  injectionCalls: [],
 }));
 
 vi.mock("react-router", () => ({
@@ -56,6 +58,12 @@ vi.mock("../../hooks/useAgentBridge", () => ({
     return mocks.bridge;
   },
 }));
+vi.mock("../../hooks/useAgentMcpInjection", () => ({
+  useAgentMcpInjection: (input) => {
+    mocks.injectionCalls.push(input);
+    return mocks.injection;
+  },
+}));
 vi.mock("../../db/workspaceDb", () => ({
   useWorkspaceList: () => mocks.workspaces,
   useAgentWorkspaceLinksState: () => mocks.links,
@@ -88,6 +96,8 @@ beforeEach(() => {
   mocks.links = [];
   mocks.bridge = { status: "off", error: "", unavailable: false };
   mocks.bridgeCalls = [];
+  mocks.injection = { status: "off", injected: [], fallback: [], error: "" };
+  mocks.injectionCalls = [];
 });
 
 describe("AgentPage bridge settings", () => {
@@ -123,6 +133,34 @@ describe("AgentPage bridge settings", () => {
       writable: true,
       mcp: true,
     });
+  });
+
+  it("injects only while the option is on and keeps those servers off the relay", () => {
+    mocks.links = [{ workspaceId: "ws-1", agentId: "agent-1" }];
+    mocks.agent = { ...agent, bridgeInjectExternal: true };
+    mocks.injection = {
+      status: "ready",
+      injected: [{ url: "http://search.test/mcp" }],
+      fallback: [],
+      error: "",
+    };
+
+    render(<AgentPage />);
+
+    expect(mocks.injectionCalls.at(-1)).toMatchObject({ enabled: true });
+    expect(mocks.bridgeCalls.at(-1).excludedMcpUrls).toEqual([
+      "http://search.test/mcp",
+    ]);
+  });
+
+  it("does not inject while the option is off", () => {
+    mocks.links = [{ workspaceId: "ws-1", agentId: "agent-1" }];
+    mocks.agent = { ...agent, bridgeInjectExternal: false };
+
+    render(<AgentPage />);
+
+    expect(mocks.injectionCalls.at(-1)).toMatchObject({ enabled: false });
+    expect(mocks.bridgeCalls.at(-1).excludedMcpUrls).toEqual([]);
   });
 
   it("restores the same settings when switching back to a session", () => {

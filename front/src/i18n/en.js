@@ -504,6 +504,7 @@ export default {
       title: "Give an agent access to workspace files",
       step1: "Open an agent. The left panel is its file browser.",
       step2: "Open the workspace button next to the prompt box and turn Agent workspace access on to provide the reverse proxy for this agent. Attach a workspace, choose which one the bridge uses, allow writes if the agent may change files, and keep this tab open while the agent works.",
+      step3: "The same panel holds the MCP options. MCP tools lets the agent call your configured MCP servers through this tab; Inject external MCP tools also registers the servers OpenCode reaches itself, so those keep working without the tab while the rest stay on the bridge.",
     },
     catalog: {
       open: "Browse tutorials",
@@ -1983,11 +1984,19 @@ export default {
       writable: "Allow writes",
       writable_hint:
         "Lets the agent create, change and delete files in the attached workspace. Without it the workspace stays read-only.",
-      mcp: "Local MCP tools",
+      mcp: "MCP tools",
       mcp_hint:
-        "Lets the agent call the MCP servers of this browser session. Their results and data leave the app through those servers.",
-      keep_open: "Keep this tab open. Workspace and MCP tools are available only while the browser is connected.",
-      tab_warning: "The agent bridge needs this tab to stay connected. Workspace and MCP tools may stop until you return.",
+        "Lets the agent call the configured MCP servers through this browser session. Their results and data leave the app through those servers.",
+      inject: "Inject external MCP tools",
+      inject_hint:
+        "OpenCode connects to the MCP servers it can reach that need no password, so their tools work without this tab. The others stay on the local MCP relay.",
+      inject_running: "Adding MCP servers to OpenCode…",
+      inject_summary: "Direct in OpenCode: {{direct}} · via bridge: {{bridge}}",
+      inject_fallback: "Via bridge: {{servers}}",
+      inject_none: "No MCP server without a password is configured.",
+      inject_error: "Could not add the MCP servers to OpenCode: {{message}}",
+      keep_open: "Keep this tab open. Workspace files and the MCP servers kept on the bridge are available only while the browser is connected.",
+      tab_warning: "The agent bridge needs this tab to stay connected. Workspace files and the MCP servers kept on the bridge may stop until you return.",
       start_failed: "Could not start the workspace bridge: {{message}}",
     },
     spawn: "Spawn agent",
@@ -2120,7 +2129,7 @@ export default {
       opencode_mcp: "OpenCode MCP servers",
       no_mcp: "No MCP servers configured in OpenCode.",
       chatai_mcp: "Chat AI MCP servers",
-      no_chatai_mcp: "No local MCP servers configured in Chat AI.",
+      no_chatai_mcp: "No MCP server with an address is configured in Chat AI.",
       add_to_opencode: "Add to OpenCode",
       added: "Added to OpenCode",
       mcp_transfer_hint:

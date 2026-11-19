@@ -24,6 +24,7 @@ import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
 import { useUpdateUserData } from "../hooks/useUpdateUserData";
 import { useOpencodeFilePreview } from "../hooks/useOpencodeFilePreview";
 import { useAgentBridge } from "../hooks/useAgentBridge";
+import { useAgentMcpInjection } from "../hooks/useAgentMcpInjection";
 import {
   useAgentWorkspaceLinksState,
   useWorkspaceList,
@@ -116,11 +117,22 @@ export default function AgentPage() {
   }, [agent, agentLinksState]);
   // The bridge runs from this page; its switch, status and options live in the composer's
   // workspace popover (components/Agent/AgentWorkspaceButton.jsx).
+  // Servers OpenCode can reach itself are registered there instead of being relayed through
+  // the browser, so the relay below only carries the rest.
+  const mcpInjection = useAgentMcpInjection({
+    agent,
+    enabled: bridgeEnabled && agent?.bridgeInjectExternal === true,
+  });
+  const injectedMcpUrls = useMemo(
+    () => mcpInjection.injected.map((server) => server.url),
+    [mcpInjection.injected],
+  );
   const bridge = useAgentBridge({
     agent,
     workspaceId,
     writable: agent?.bridgeWritable === true,
     mcp: agent?.bridgeMcp === true,
+    excludedMcpUrls: injectedMcpUrls,
     mounts,
     providers,
     rootProvider,
@@ -184,6 +196,7 @@ export default function AgentPage() {
                 bridgeError={bridge.error}
                 bridgeFailure={bridgeFailure}
                 bridgeUnavailable={bridge.unavailable}
+                mcpInjection={mcpInjection}
               />
             ) : (
               <div className="flex flex-1 items-center justify-center text-sm text-base-content/60">
