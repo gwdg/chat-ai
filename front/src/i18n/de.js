@@ -1913,6 +1913,7 @@ export default {
     no_workspace_sessions: "Diesem Arbeitsbereich sind noch keine Sitzungen zugeordnet.",
     unassigned_sessions: "Nicht zugeordnete Sitzungen",
     no_unassigned_sessions: "Jede Sitzung ist einem Arbeitsbereich zugeordnet.",
+    sessions_in_workspace: "Sitzungen in {{workspace}}",
     detach_session: "Aus dem Arbeitsbereich entfernen",
     attach_to_workspace: "Einem Arbeitsbereich zuordnen",
     offline_cached:

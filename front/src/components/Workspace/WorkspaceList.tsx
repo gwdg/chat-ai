@@ -68,6 +68,7 @@ import {
   readAgentSessionDrag,
 } from "../Sidebar/sessionDrop";
 import { useDelayedSingleClick } from "../../hooks/useDelayedSingleClick";
+import { workspaceAgentCollapseId } from "../Sidebar/sessionGroupCollapse";
 import { getDefaultConversation } from "../../utils/conversationUtils";
 
 // Workspace rows and the agent rows inside them default to expanded, so only the
@@ -75,10 +76,6 @@ import { getDefaultConversation } from "../../utils/conversationUtils";
 // topics and the subpanel headers, which already use synthetic ids there.
 export const workspaceRowCollapseId = (workspaceId: string) =>
   `__workspace_row__:${workspaceId}`;
-export const workspaceAgentCollapseId = (
-  workspaceId: string,
-  agentId: string,
-) => `__workspace_agent__:${workspaceId}:${agentId}`;
 
 export default function WorkspaceList({
   onNavigate,

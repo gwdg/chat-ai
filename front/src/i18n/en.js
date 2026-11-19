@@ -1887,6 +1887,7 @@ export default {
     no_workspace_sessions: "No sessions attached to this workspace yet.",
     unassigned_sessions: "Unassigned sessions",
     no_unassigned_sessions: "Every session is attached to a workspace.",
+    sessions_in_workspace: "Sessions in {{workspace}}",
     detach_session: "Remove from workspace",
     attach_to_workspace: "Attach to workspace",
     offline_cached:

@@ -71,6 +71,10 @@ import {
 import { topicIconById } from "./topicIcons";
 import { pinnedStateId } from "./pinnedState";
 import {
+  unassignedAgentCollapseId,
+  workspaceAgentCollapseId,
+} from "./sessionGroupCollapse";
+import {
   clearAgentSessionDrag,
   dropAgentSessionOnWorkspace,
   getActiveAgentSessionDrag,
@@ -218,6 +222,11 @@ export default function AgentList({
   // keyed apart from the same agent in the Agents section.
   const expandId = (agentId: string) =>
     variant === "pinned" ? pinnedStateId(agentId) : agentId;
+
+  // The pinned copy is a second instance of this list, so its folds are keyed
+  // apart from the same group in the Agents section.
+  const collapseId = (id: string) =>
+    variant === "pinned" ? pinnedStateId(id) : id;
 
   // Make sure an agent attached to a workspace shows its active session there, even when the
   // workspace was attached before sessions were tracked per workspace.
@@ -642,6 +651,10 @@ export default function AgentList({
                 sessionLinks,
                 agent.id,
               );
+              const unassignedKey = collapseId(
+                unassignedAgentCollapseId(agent.id),
+              );
+              const unassignedOpen = !collapsedTopicIds.includes(unassignedKey);
               if (agentWorkspaces.length === 0) {
                 return (
                   <AgentSessionList
@@ -666,6 +679,10 @@ export default function AgentList({
                       workspace.id,
                       agent.id,
                     );
+                    const groupKey = collapseId(
+                      workspaceAgentCollapseId(workspace.id, agent.id),
+                    );
+                    const sessionsOpen = !collapsedTopicIds.includes(groupKey);
                     const WorkspaceIcon = topicIconById(workspace.icon).Icon;
                     return (
                       <div
@@ -696,6 +713,32 @@ export default function AgentList({
                         }`}
                       >
                         <div className="flex items-center gap-1 rounded-md px-1 py-0.5 text-[10px] text-base-content/55">
+                          <button
+                            type="button"
+                            disabled={sessionIds.size === 0}
+                            onClick={() => dispatch(toggleTopic(groupKey))}
+                            className={`flex h-4 w-4 shrink-0 items-center justify-center rounded text-base-content/40 ${
+                              sessionIds.size > 0
+                                ? "hover:bg-base-300 hover:text-base-content"
+                                : "cursor-default opacity-30"
+                            }`}
+                            title={t("agents.sessions_in_workspace", {
+                              workspace: workspace.name,
+                            })}
+                            aria-label={t("agents.sessions_in_workspace", {
+                              workspace: workspace.name,
+                            })}
+                            aria-expanded={
+                              sessionIds.size > 0 ? sessionsOpen : false
+                            }
+                          >
+                            <ChevronDown
+                              size={11}
+                              className={`transition-transform ${
+                                sessionsOpen ? "" : "-rotate-90"
+                              }`}
+                            />
+                          </button>
                           <WorkspaceIcon size={11} className="shrink-0" />
                           <button
                             type="button"
@@ -731,36 +774,60 @@ export default function AgentList({
                             )}
                           </button>
                         </div>
-                        <AgentSessionList
-                          agent={agent}
-                          tree={filterSessionTree(sessionTree, sessionIds)}
-                          dragSourceWorkspaceId={workspace.id}
-                          activeSessionId={activeSessionIdFor(openAgent, agent)}
-                                summaries={sessionSummariesFor(agent)}
-                          workspaces={agentWorkspaces}
-                          sessionWorkspaceIds={assignedWorkspaces}
-                          onToggleWorkspace={toggleWorkspace}
-                          onSelect={(session) =>
-                            switchSession(agent, session, workspace.id)
-                          }
-                          onDetach={(session) =>
-                            void detachSessionFromWorkspace(
-                              workspace.id,
+                        {sessionsOpen && (
+                          <AgentSessionList
+                            agent={agent}
+                            tree={filterSessionTree(sessionTree, sessionIds)}
+                            dragSourceWorkspaceId={workspace.id}
+                            activeSessionId={activeSessionIdFor(
+                              openAgent,
                               agent,
-                              session,
-                            )
-                          }
-                          showHeader={false}
-                          showCreate={false}
-                          emptyKey="agents.no_workspace_sessions"
-                          className="ml-2"
-                        />
+                            )}
+                            summaries={sessionSummariesFor(agent)}
+                            workspaces={agentWorkspaces}
+                            sessionWorkspaceIds={assignedWorkspaces}
+                            onToggleWorkspace={toggleWorkspace}
+                            onSelect={(session) =>
+                              switchSession(agent, session, workspace.id)
+                            }
+                            onDetach={(session) =>
+                              void detachSessionFromWorkspace(
+                                workspace.id,
+                                agent,
+                                session,
+                              )
+                            }
+                            showHeader={false}
+                            showCreate={false}
+                            emptyKey="agents.no_workspace_sessions"
+                            className="ml-2"
+                          />
+                        )}
                       </div>
                     );
                   })}
                   {unassigned.size > 0 && (
                     <div>
                       <div className="flex items-center gap-1 px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-base-content/45">
+                        <button
+                          type="button"
+                          onClick={() => dispatch(toggleTopic(unassignedKey))}
+                          className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-base-content/40 hover:bg-base-300 hover:text-base-content"
+                          title={t("agents.sessions_in_workspace", {
+                            workspace: t("agents.unassigned_sessions"),
+                          })}
+                          aria-label={t("agents.sessions_in_workspace", {
+                            workspace: t("agents.unassigned_sessions"),
+                          })}
+                          aria-expanded={unassignedOpen}
+                        >
+                          <ChevronDown
+                            size={11}
+                            className={`transition-transform ${
+                              unassignedOpen ? "" : "-rotate-90"
+                            }`}
+                          />
+                        </button>
                         <span className="min-w-0 flex-1 truncate">
                           {t("agents.unassigned_sessions")}
                         </span>
@@ -772,21 +839,26 @@ export default function AgentList({
                           groupName={t("agents.unassigned_sessions")}
                         />
                       </div>
-                      <AgentSessionList
-                        agent={agent}
-                        tree={filterSessionTree(sessionTree, unassigned)}
-                        dragSourceWorkspaceId={null}
-                        activeSessionId={activeSessionIdFor(openAgent, agent)}
-                            summaries={sessionSummariesFor(agent)}
-                        workspaces={agentWorkspaces}
-                        sessionWorkspaceIds={assignedWorkspaces}
-                        onToggleWorkspace={toggleWorkspace}
-                        onSelect={(session) => switchSession(agent, session)}
-                        showHeader={false}
-                        showCreate={false}
-                        emptyKey="agents.no_unassigned_sessions"
-                        className="ml-2"
-                      />
+                      {unassignedOpen && (
+                        <AgentSessionList
+                          agent={agent}
+                          tree={filterSessionTree(sessionTree, unassigned)}
+                          dragSourceWorkspaceId={null}
+                          activeSessionId={activeSessionIdFor(
+                            openAgent,
+                            agent,
+                          )}
+                          summaries={sessionSummariesFor(agent)}
+                          workspaces={agentWorkspaces}
+                          sessionWorkspaceIds={assignedWorkspaces}
+                          onToggleWorkspace={toggleWorkspace}
+                          onSelect={(session) => switchSession(agent, session)}
+                          showHeader={false}
+                          showCreate={false}
+                          emptyKey="agents.no_unassigned_sessions"
+                          className="ml-2"
+                        />
+                      )}
                     </div>
                   )}
                 </div>

@@ -18,6 +18,7 @@ import {
 } from "../../../db/workspaceDb";
 import { buildSessionTree } from "../../../agents/agentSessions";
 import { pinnedStateId } from "../pinnedState";
+import { workspaceAgentCollapseId } from "../sessionGroupCollapse";
 import {
   AGENT_SESSION_DRAG_MIME,
   AGENT_SESSION_SOURCE_WORKSPACE_MIME,
@@ -384,6 +385,56 @@ describe("AgentList", () => {
       "session-1",
       "session-2",
     ]);
+  });
+
+  it("folds the sessions of a project and remembers the fold", async () => {
+    const store = makeStore();
+    const workspaceId = await createWorkspace("Research");
+    mocks.sessionTree = buildSessionTree([
+      { id: "session-1", title: "Active session", time: { updated: 20 } },
+    ]);
+
+    renderAgentList(store);
+    addAgentThroughModal();
+    await act(async () => {
+      await attachWorkspaceAgent(workspaceId, "agent-1");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Sessions" }));
+    const group = screen.getByText("Research").closest("[data-session-group]");
+    // The active session is seeded into the attached workspace asynchronously.
+    expect(
+      await within(group).findByText("Active session"),
+    ).toBeInTheDocument();
+
+    const toggle = within(group).getByRole("button", {
+      name: "Sessions in Research",
+    });
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.click(toggle);
+
+    await waitFor(() =>
+      expect(
+        within(group).queryByText("Active session"),
+      ).not.toBeInTheDocument(),
+    );
+    // The project header stays, so the group can be unfolded again, and the
+    // fold is persisted in the list the sidebar already uses for collapsed
+    // sections.
+    expect(
+      within(group).getByRole("button", { name: "Sessions in Research" }),
+    ).toHaveAttribute("aria-expanded", "false");
+    expect(store.getState().interface_settings.collapsed_topics).toContain(
+      workspaceAgentCollapseId(workspaceId, "agent-1"),
+    );
+
+    fireEvent.click(
+      within(group).getByRole("button", { name: "Sessions in Research" }),
+    );
+    expect(
+      await within(group).findByText("Active session"),
+    ).toBeInTheDocument();
   });
 
   it("drags a session with the workspace it is listed in", async () => {

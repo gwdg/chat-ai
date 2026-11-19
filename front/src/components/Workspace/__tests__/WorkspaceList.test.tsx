@@ -68,9 +68,9 @@ vi.mock("../../../hooks/useToast", () => ({
 }));
 
 import WorkspaceList, {
-  workspaceAgentCollapseId,
   workspaceRowCollapseId,
 } from "../WorkspaceList";
+import { workspaceAgentCollapseId } from "../../Sidebar/sessionGroupCollapse";
 import {
   CHAT_DRAG_MIME,
   CHAT_SOURCE_WORKSPACE_MIME,
