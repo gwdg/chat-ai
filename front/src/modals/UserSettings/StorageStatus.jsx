@@ -12,6 +12,7 @@ export default function StorageStatus() {
   const { t } = useTranslation();
   const [status, setStatus] = useState(null);
   const [requesting, setRequesting] = useState(false);
+  const [result, setResult] = useState(null);
 
   const refresh = useCallback(async () => {
     setStatus(await getStorageStatus());
@@ -23,12 +24,30 @@ export default function StorageStatus() {
 
   const request = async () => {
     setRequesting(true);
+    setResult(null);
     try {
-      await requestPersistentStorage();
+      const outcome = await requestPersistentStorage();
+      setResult(outcome);
       await refresh();
     } finally {
       setRequesting(false);
     }
+  };
+
+  const resultMessage = () => {
+    if (!result) return null;
+    if (result.reason === "granted") {
+      return t("user_settings.data.storage_request_granted");
+    }
+    if (result.reason === "unsupported") {
+      return t("user_settings.data.storage_request_unsupported");
+    }
+    if (result.reason === "error") {
+      return t("user_settings.data.storage_request_failed", {
+        error: String(result.error?.message || result.error),
+      });
+    }
+    return t("user_settings.data.storage_request_denied");
   };
 
   return (
@@ -71,6 +90,11 @@ export default function StorageStatus() {
                 ? t("user_settings.data.storage_requesting")
                 : t("user_settings.data.storage_request")}
             </button>
+          ) : null}
+          {result ? (
+            <p role="status" className={result.ok ? "text-success" : "text-warning"}>
+              {resultMessage()}
+            </p>
           ) : null}
         </div>
       )}

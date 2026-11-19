@@ -49,7 +49,12 @@ describe("StorageStatus", () => {
     vi.mocked(getStorageStatus)
       .mockResolvedValueOnce({ supported: true, persisted: false })
       .mockResolvedValueOnce({ supported: true, persisted: true });
-    vi.mocked(requestPersistentStorage).mockResolvedValue(true);
+    vi.mocked(requestPersistentStorage).mockResolvedValue({
+      ok: true,
+      reason: "granted",
+      supported: true,
+      persisted: true,
+    });
 
     render(<StorageStatus />);
 

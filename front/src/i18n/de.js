@@ -1559,6 +1559,13 @@ export default {
       storage_usage: "{{used}} von {{quota}} belegt.",
       storage_request: "Dauerhaften Speicher anfordern",
       storage_requesting: "Wird angefordert…",
+      storage_request_granted:
+        "Dauerhafter Speicher wurde gewährt. Der Browser sollte Ihre Chats bei knappem Speicher behalten.",
+      storage_request_denied:
+        "Der Browser hat dauerhaften Speicher nicht aktiviert. Chrome gewährt dies nur installierten Apps oder regelmäßig genutzten Seiten; Firefox fragt möglicherweise nach einer Berechtigung. Details stehen in der Browserkonsole.",
+      storage_request_unsupported:
+        "Dieser Browser unterstützt das Anfordern dauerhaften Speichers nicht.",
+      storage_request_failed: "Anfordern von dauerhaftem Speicher fehlgeschlagen: {{error}}",
     },
     clear_data_button: "Alle lokalen Daten löschen",
     import_data_button: "Daten importieren",

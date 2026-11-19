@@ -1534,6 +1534,13 @@ export default {
       storage_usage: "Using {{used}} of {{quota}}.",
       storage_request: "Request persistent storage",
       storage_requesting: "Requesting…",
+      storage_request_granted:
+        "Persistent storage was granted. The browser should keep your chats when storage is low.",
+      storage_request_denied:
+        "The browser did not make storage persistent. Chrome grants this only to installed apps or sites you use regularly; Firefox may ask for permission. See the browser console for details.",
+      storage_request_unsupported:
+        "This browser does not support requesting persistent storage.",
+      storage_request_failed: "Persistent storage request failed: {{error}}",
     },
     clear_data_button: "Delete All Local Data",
     import_data_button: "Import Data",
