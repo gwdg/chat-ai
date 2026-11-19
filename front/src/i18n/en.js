@@ -1364,7 +1364,6 @@ export default {
       suggestions: {
         label: "Suggest follow-up prompts",
         description: "Show suggested ways to continue after each response.",
-        help_label: "Learn about follow-up prompts",
         title_once: {
           label: "Set title only on first prompt",
           description:
@@ -1384,7 +1383,6 @@ export default {
         },
       },
       messages: {
-        section_label: "Messages",
         timestamps: {
           label: "Show message timestamps",
           description:

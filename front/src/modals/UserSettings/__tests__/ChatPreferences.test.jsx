@@ -62,24 +62,41 @@ describe("User settings tabs", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows the suggestion and summary switches without their section headers", () => {
-    renderTab("chat");
+  it("flattens the chat tab: no section headers, separators or help button", () => {
+    const store = renderTab("chat");
+    const panel = screen.getByRole("region", { name: "Chat preferences" });
 
+    for (const name of ["Suggestions", "Conversation summaries", "Messages"]) {
+      expect(screen.queryByRole("heading", { name })).not.toBeInTheDocument();
+    }
+    expect(panel.querySelectorAll(".border-t")).toHaveLength(0);
     expect(
-      screen.queryByRole("heading", { name: "Suggestions" }),
+      screen.queryByRole("button", { name: "Learn about follow-up prompts" }),
     ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("heading", { name: "Conversation summaries" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("switch", { name: "Suggest follow-up prompts" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("switch", { name: "Show summaries on hover" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Learn about follow-up prompts" }),
-    ).toBeInTheDocument();
+
+    const suggestions = screen.getByRole("switch", {
+      name: "Suggest follow-up prompts",
+    });
+    const summaries = screen.getByRole("switch", {
+      name: "Show summaries on hover",
+    });
+    const timestamps = screen.getByRole("switch", {
+      name: "Show message timestamps",
+    });
+    expect(summaries).toBeInTheDocument();
+    expect(timestamps).toBeInTheDocument();
+
+    expect(store.getState().user_settings.suggest_user_prompts).toBe(false);
+    expect(store.getState().user_settings.conversation_summaries).toBe(true);
+    expect(store.getState().user_settings.show_timestamps).toBe(false);
+
+    fireEvent.click(suggestions);
+    fireEvent.click(summaries);
+    fireEvent.click(timestamps);
+
+    expect(store.getState().user_settings.suggest_user_prompts).toBe(true);
+    expect(store.getState().user_settings.conversation_summaries).toBe(false);
+    expect(store.getState().user_settings.show_timestamps).toBe(true);
   });
 
   it("offers Usage and Advanced in the tab list", () => {

@@ -191,26 +191,16 @@ export default function UserSettingsModal({
               {t("common.loading")}
             </p>
           )}
-          <div className="border-t border-base-300 pt-5" data-guide="submission-preference">
+          <div data-guide="submission-preference">
             <SubmissionPreference />
           </div>
-          <div className="border-t border-base-300 pt-5">
-            <ConversationSummaryPreference />
-          </div>
-          <div className="border-t border-base-300 pt-5">
-            <MessageDisplayPreference />
-          </div>
-          <div className="border-t border-base-300 pt-5" data-guide="document-conversion-preference">
+          <ConversationSummaryPreference />
+          <MessageDisplayPreference />
+          <div data-guide="document-conversion-preference">
             <DocumentConversionPreference />
           </div>
-          {choicesModule && (
-            <div className="border-t border-base-300 pt-5">
-              <SuggestionPreference />
-            </div>
-          )}
-          <div className="border-t border-base-300 pt-5">
-            <TimeoutSetter />
-          </div>
+          {choicesModule && <SuggestionPreference />}
+          <TimeoutSetter />
         </div>
       );
     }

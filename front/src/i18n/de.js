@@ -1388,7 +1388,6 @@ export default {
         label: "Folgevorschläge anzeigen",
         description:
           "Zeigt nach jeder Antwort passende Vorschläge zum Fortsetzen des Chats.",
-        help_label: "Mehr über Folgevorschläge erfahren",
         title_once: {
           label: "Titel nur bei der ersten Anfrage festlegen",
           description:
@@ -1408,7 +1407,6 @@ export default {
         },
       },
       messages: {
-        section_label: "Nachrichten",
         timestamps: {
           label: "Zeitstempel für Nachrichten anzeigen",
           description:

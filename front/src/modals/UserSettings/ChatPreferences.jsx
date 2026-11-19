@@ -161,44 +161,27 @@ export function MemoryPreference() {
 export function SuggestionPreference() {
   const dispatch = useDispatch();
   const { t } = useTranslation();
-  const { openModal } = useModal();
   const suggestUserPrompts = useSelector(selectSuggestUserPrompts);
   const setTitleOnce = useSelector(selectSetTitleOnce);
 
   return (
     <section className="flex flex-col gap-2">
-      {/* No section title: this one paid for it with the Help entry point. */}
-      <div className="flex items-center justify-end px-2">
-        <button
-          type="button"
-          onClick={() => openModal("helpChoiceProposer")}
-          aria-label={t(
-            "user_settings.chat_preferences.suggestions.help_label",
-          )}
-          title={t("user_settings.chat_preferences.suggestions.help_label")}
-          className="btn btn-ghost btn-xs btn-square text-accent"
-        >
-          <HelpCircle className="h-4 w-4" aria-hidden="true" />
-        </button>
-      </div>
-      <div className="flex flex-col gap-3 px-2">
-        <ProfilePreferenceSwitch
-          label={t("user_settings.chat_preferences.suggestions.label")}
-          description={t(
-            "user_settings.chat_preferences.suggestions.description",
-          )}
-          checked={suggestUserPrompts}
-          onChange={(checked) => dispatch(setSuggestUserPrompts(checked))}
-        />
-        <ProfilePreferenceSwitch
-          label={t("user_settings.chat_preferences.suggestions.title_once.label")}
-          description={t(
-            "user_settings.chat_preferences.suggestions.title_once.description",
-          )}
-          checked={setTitleOnce}
-          onChange={(checked) => dispatch(setSetTitleOnce(checked))}
-        />
-      </div>
+      <ProfilePreferenceSwitch
+        label={t("user_settings.chat_preferences.suggestions.label")}
+        description={t(
+          "user_settings.chat_preferences.suggestions.description",
+        )}
+        checked={suggestUserPrompts}
+        onChange={(checked) => dispatch(setSuggestUserPrompts(checked))}
+      />
+      <ProfilePreferenceSwitch
+        label={t("user_settings.chat_preferences.suggestions.title_once.label")}
+        description={t(
+          "user_settings.chat_preferences.suggestions.title_once.description",
+        )}
+        checked={setTitleOnce}
+        onChange={(checked) => dispatch(setSetTitleOnce(checked))}
+      />
     </section>
   );
 }
@@ -268,9 +251,6 @@ export function MessageDisplayPreference() {
 
   return (
     <section className="flex flex-col gap-2">
-      <h3 className="px-2 text-sm font-medium text-base-content">
-        {t("user_settings.chat_preferences.messages.section_label")}
-      </h3>
       <div data-guide="message-timestamps-preference">
         <ProfilePreferenceSwitch
           label={t("user_settings.chat_preferences.messages.timestamps.label")}
