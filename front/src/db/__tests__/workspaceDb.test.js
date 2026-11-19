@@ -75,6 +75,22 @@ describe("workspace database", () => {
     );
   });
 
+  it("stores the chosen icon and colour, defaulting a plain workspace", async () => {
+    const fancyId = await createWorkspace("Fancy", {
+      icon: "star",
+      color: "rose",
+    });
+    expect(await getWorkspace(fancyId)).toMatchObject({
+      icon: "star",
+      color: "rose",
+    });
+
+    const plainId = await createWorkspace("Plain");
+    const plain = await getWorkspace(plainId);
+    expect(plain?.icon).toBe("rocket");
+    expect(plain?.color).toBeUndefined();
+  });
+
   it("pins workspaces and exposes their timestamps", async () => {
     const workspaceId = await createWorkspace("Pinned workspace");
     const created = await getWorkspace(workspaceId);

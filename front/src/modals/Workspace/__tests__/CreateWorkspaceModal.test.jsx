@@ -6,6 +6,7 @@ const api = vi.hoisted(() => ({
   onClose: vi.fn(),
   agents: [],
   createWorkspace: vi.fn(),
+  addSource: vi.fn(),
   addLocalSource: vi.fn(),
   addWorkspaceMount: vi.fn(),
   pickDirectory: vi.fn(),
@@ -20,6 +21,7 @@ vi.mock("react-router", () => ({
 
 vi.mock("../../../db/workspaceDb", () => ({
   createWorkspace: api.createWorkspace,
+  addSource: api.addSource,
   addWorkspaceMount: api.addWorkspaceMount,
 }));
 
@@ -79,6 +81,8 @@ describe("CreateWorkspaceModal", () => {
     api.agents = [{ id: "agent-1", name: "Coder", local: true, sessionId: "session-1" }];
     api.createWorkspace.mockReset();
     api.createWorkspace.mockResolvedValue("ws-new");
+    api.addSource.mockReset();
+    api.addSource.mockResolvedValue("source-mcp");
     api.addLocalSource.mockReset();
     api.addLocalSource.mockResolvedValue("source-local");
     api.addWorkspaceMount.mockReset();
@@ -110,9 +114,9 @@ describe("CreateWorkspaceModal", () => {
     expect(nameInput()).toBeInTheDocument();
     expect(screen.getByText("Sources")).toBeInTheDocument();
     expect(screen.getByText("Workspace")).toBeInTheDocument();
-    expect(screen.getByText("Browser storage")).toBeInTheDocument();
-    expect(screen.getByText("Arcana filesystem")).toBeInTheDocument();
-    expect(screen.getAllByText("Included")).toHaveLength(2);
+    expect(screen.getAllByText("Browser storage")).toHaveLength(2);
+    expect(screen.getAllByText("Arcana filesystem")).toHaveLength(2);
+    expect(screen.getAllByText("Included")).toHaveLength(4);
     expect(
       screen.getByText(/Nothing added yet/),
     ).toBeInTheDocument();
@@ -139,7 +143,10 @@ describe("CreateWorkspaceModal", () => {
     submit();
 
     await waitFor(() => expect(api.navigate).toHaveBeenCalledWith("/workspace/ws-new"));
-    expect(api.createWorkspace).toHaveBeenCalledWith("Research");
+    expect(api.createWorkspace).toHaveBeenCalledWith("Research", {
+      icon: "rocket",
+      color: "rose",
+    });
     expect(api.addLocalSource).toHaveBeenCalledWith({
       workspaceId: "ws-new",
       handle,
@@ -238,5 +245,69 @@ describe("CreateWorkspaceModal", () => {
     expect(screen.getByTestId("create-workspace-create")).toBeDisabled();
     typeName("Research");
     expect(screen.getByTestId("create-workspace-create")).toBeEnabled();
+  });
+
+  it("creates the workspace with the chosen icon and colour", async () => {
+    renderModal();
+
+    fireEvent.click(screen.getByTestId("create-workspace-icon"));
+    fireEvent.click(screen.getByTestId("create-workspace-icon-code"));
+    fireEvent.click(screen.getByTestId("create-workspace-color-violet"));
+    typeName("Research");
+    submit();
+
+    await waitFor(() =>
+      expect(api.createWorkspace).toHaveBeenCalledWith("Research", {
+        icon: "code",
+        color: "violet",
+      }),
+    );
+  });
+
+  it("shows the storage cards with included drives and the device folder count", async () => {
+    renderModal();
+
+    expect(screen.getAllByText("Browser storage")).toHaveLength(2);
+    expect(screen.getAllByText("Arcana filesystem")).toHaveLength(2);
+    expect(screen.getByText("Your Device")).toBeInTheDocument();
+    expect(screen.getByText("0 folders")).toBeInTheDocument();
+
+    pickFolder("my-project");
+
+    await screen.findByTestId("create-workspace-tree-row");
+    expect(screen.getByText("1 folder")).toBeInTheDocument();
+  });
+
+  it("adds an MCP row and applies it when the workspace is created", async () => {
+    renderModal();
+
+    fireEvent.click(screen.getByTestId("create-workspace-source-mcp"));
+    fireEvent.change(screen.getByTestId("create-workspace-mcp-endpoint"), {
+      target: { value: "http://localhost:9000/mcp" },
+    });
+    fireEvent.click(screen.getByTestId("create-workspace-mcp-add"));
+
+    expect(screen.getByTestId("create-workspace-tree-row")).toHaveTextContent(
+      "localhost:9000",
+    );
+    typeName("Research");
+    submit();
+
+    await waitFor(() =>
+      expect(api.navigate).toHaveBeenCalledWith("/workspace/ws-new"),
+    );
+    expect(api.addSource).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workspaceId: "ws-new",
+        kind: "mcp",
+        label: "localhost:9000",
+        config: {
+          endpoint: "http://localhost:9000/mcp",
+          transport: "streamable-http",
+          toolAllowlist: [],
+        },
+        status: "offline",
+      }),
+    );
   });
 });

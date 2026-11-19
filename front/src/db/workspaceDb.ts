@@ -133,7 +133,10 @@ export async function listCloneTargets() {
     );
 }
 
-export async function createWorkspace(name: string): Promise<string> {
+export async function createWorkspace(
+  name: string,
+  options: { icon?: string; color?: string } = {},
+): Promise<string> {
   const trimmed = name.trim();
   if (!trimmed) throw new Error("Workspace name is required");
   const existing = await db.workspaces.toArray();
@@ -145,10 +148,19 @@ export async function createWorkspace(name: string): Promise<string> {
     throw new Error("A workspace with this name already exists");
   }
   const id = newId();
+  const icon =
+    typeof options.icon === "string" && options.icon.trim()
+      ? options.icon
+      : "rocket";
+  const color =
+    typeof options.color === "string" && options.color.trim()
+      ? options.color
+      : undefined;
   const workspace: WorkspaceRow = {
     id,
     name: trimmed,
-    icon: "rocket",
+    icon,
+    ...(color ? { color } : {}),
     createdAt: now(),
     lastModified: now(),
   };
