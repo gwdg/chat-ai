@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router";
@@ -70,6 +70,12 @@ import {
 } from "../../agents/workspaceAgentSessions";
 import { topicIconById } from "./topicIcons";
 import { pinnedStateId } from "./pinnedState";
+import {
+  clearAgentSessionDrag,
+  dropAgentSessionOnWorkspace,
+  getActiveAgentSessionDrag,
+  readAgentSessionDrag,
+} from "./sessionDrop";
 
 const canRemoveLocally = (reason: unknown) => {
   const message = String(reason instanceof Error ? reason.message : reason);
@@ -142,6 +148,74 @@ export default function AgentList({
   const expandedAgentIds = useSelector(selectExpandedAgents) ?? [];
   const collapsed = collapsedTopicIds.includes("__agents__");
   const activeId = openAgent.agentId;
+
+  // A workspace group under an expanded agent lights up while one of that agent's
+  // sessions is dragged over it; dropping there moves the session between workspaces.
+  const [dragOverSessionGroup, setDragOverSessionGroup] = useState<{
+    agentId: string;
+    workspaceId: string;
+  } | null>(null);
+
+  const isDragOverSessionGroup = (agentId: string, workspaceId: string) =>
+    dragOverSessionGroup?.agentId === agentId &&
+    dragOverSessionGroup?.workspaceId === workspaceId;
+
+  const handleSessionGroupDragOver = (
+    event: DragEvent<HTMLDivElement>,
+    agentId: string,
+    workspaceId: string,
+  ) => {
+    // The groups under an agent list only that agent's sessions, so another
+    // agent's session is not accepted here; the top-level workspace row takes it.
+    if (getActiveAgentSessionDrag()?.agentId !== agentId) return;
+    // Without preventDefault the browser never fires the drop event.
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+    setDragOverSessionGroup((current) =>
+      current?.agentId === agentId && current?.workspaceId === workspaceId
+        ? current
+        : { agentId, workspaceId },
+    );
+  };
+
+  const handleSessionGroupDragLeave = (
+    event: DragEvent<HTMLDivElement>,
+    agentId: string,
+    workspaceId: string,
+  ) => {
+    // dragleave also fires when the pointer moves onto a child of the group.
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+    setDragOverSessionGroup((current) =>
+      current?.agentId === agentId && current?.workspaceId === workspaceId
+        ? null
+        : current,
+    );
+  };
+
+  const handleSessionGroupDrop = (
+    event: DragEvent<HTMLDivElement>,
+    agentId: string,
+    workspaceId: string,
+  ) => {
+    const drag = readAgentSessionDrag(event.dataTransfer);
+    if (!drag || drag.agentId !== agentId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setDragOverSessionGroup(null);
+    clearAgentSessionDrag();
+    // A session dragged out of another workspace is detached from it first, so the
+    // drop moves the link instead of attaching the same session to both.
+    void dropAgentSessionOnWorkspace({
+      agentId: drag.agentId,
+      sessionId: drag.sessionId,
+      targetWorkspaceId: workspaceId,
+      sourceWorkspaceId: drag.workspaceId,
+    }).catch((reason) => {
+      console.error("Failed to move session via drag & drop", reason);
+      notifyError(t("workspace.attach_session_error"));
+    });
+  };
 
   // The pinned copy is a second instance of this list, so its session folds are
   // keyed apart from the same agent in the Agents section.
@@ -609,7 +683,33 @@ export default function AgentList({
                     );
                     const WorkspaceIcon = topicIconById(workspace.icon).Icon;
                     return (
-                      <div key={workspace.id}>
+                      <div
+                        key={workspace.id}
+                        data-session-group={workspace.id}
+                        data-guide="agent-session-group"
+                        onDragOver={(event) =>
+                          handleSessionGroupDragOver(
+                            event,
+                            agent.id,
+                            workspace.id,
+                          )
+                        }
+                        onDragLeave={(event) =>
+                          handleSessionGroupDragLeave(
+                            event,
+                            agent.id,
+                            workspace.id,
+                          )
+                        }
+                        onDrop={(event) =>
+                          handleSessionGroupDrop(event, agent.id, workspace.id)
+                        }
+                        className={`rounded-lg transition ${
+                          isDragOverSessionGroup(agent.id, workspace.id)
+                            ? "bg-accent/5 ring-2 ring-accent/60"
+                            : ""
+                        }`}
+                      >
                         <div className="flex items-center gap-1 rounded-md px-1 py-0.5 text-[10px] text-base-content/55">
                           <WorkspaceIcon size={11} className="shrink-0" />
                           <button

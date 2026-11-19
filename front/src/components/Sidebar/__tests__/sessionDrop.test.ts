@@ -15,7 +15,9 @@ vi.mock("../../../db/workspaceDb", () => ({
 import {
   AGENT_SESSION_DRAG_MIME,
   AGENT_SESSION_SOURCE_WORKSPACE_MIME,
+  clearAgentSessionDrag,
   dropAgentSessionOnWorkspace,
+  getActiveAgentSessionDrag,
   isAgentSessionDrag,
   readAgentSessionDrag,
   setAgentSessionDragData,
@@ -43,6 +45,7 @@ beforeEach(() => {
   mocks.attachAgent.mockClear();
   mocks.attachSession.mockClear();
   mocks.detachSession.mockClear();
+  clearAgentSessionDrag();
 });
 
 describe("agent session drag data", () => {
@@ -93,6 +96,30 @@ describe("agent session drag data", () => {
         makeDataTransfer({ [AGENT_SESSION_DRAG_MIME]: JSON.stringify({}) }),
       ),
     ).toBeNull();
+  });
+
+  // A drop target cannot read `getData()` during dragover, so the dragged payload is
+  // also kept in module state while the drag is in flight.
+  it("keeps the payload in memory between dragstart and dragend", () => {
+    expect(getActiveAgentSessionDrag()).toBeNull();
+
+    setAgentSessionDragData(
+      makeDataTransfer(),
+      "agent-1",
+      "session-1",
+      "ws-1",
+    );
+    expect(getActiveAgentSessionDrag()).toEqual({
+      agentId: "agent-1",
+      sessionId: "session-1",
+      workspaceId: "ws-1",
+    });
+
+    setAgentSessionDragData(makeDataTransfer(), "agent-1", "session-1");
+    expect(getActiveAgentSessionDrag()?.workspaceId).toBeNull();
+
+    clearAgentSessionDrag();
+    expect(getActiveAgentSessionDrag()).toBeNull();
   });
 });
 

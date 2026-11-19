@@ -23,7 +23,10 @@ import { useModal } from "../../modals/ModalContext";
 import { useToast } from "../../hooks/useToast";
 import Tooltip from "../Others/Tooltip";
 import ShortcutTooltip from "../Sidebar/ShortcutTooltip";
-import { setAgentSessionDragData } from "../Sidebar/sessionDrop";
+import {
+  clearAgentSessionDrag,
+  setAgentSessionDragData,
+} from "../Sidebar/sessionDrop";
 
 // A session that belongs to no workspace must still read `has` safely.
 const NO_WORKSPACES = new Set();
@@ -69,6 +72,7 @@ const SessionRow = ({
           dragSourceWorkspaceId,
         );
       }}
+      onDragEnd={() => clearAgentSessionDrag()}
       className={`group flex items-center rounded-md pr-1 transition ${
         active
           ? "bg-base-200 text-base-content"

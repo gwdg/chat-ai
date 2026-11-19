@@ -250,6 +250,29 @@ export const featureGuides = {
       },
     ],
   },
+  session_workspaces: {
+    titleKey: "feature_guide.session_workspaces.title",
+    prompt:
+      "Move an agent session between workspaces by dragging its row onto another workspace group under the same expanded agent. The session is detached from the source workspace and attached to the target, which is the same move the session row's “…” menu offers.",
+    keywords: [
+      "move session",
+      "drag session",
+      "drag and drop session",
+      "session workspace",
+      "attach session",
+      "detach session",
+    ],
+    steps: [
+      {
+        target: '[data-guide="agents-list"]',
+        textKey: "feature_guide.session_workspaces.step1",
+      },
+      {
+        target: '[data-guide="agent-session-group"]',
+        textKey: "feature_guide.session_workspaces.step2",
+      },
+    ],
+  },
   agent_workspace_access: {
     titleKey: "feature_guide.agent_workspace_access.title",
     prompt:
@@ -1634,7 +1657,7 @@ export const FEATURE_CATEGORIES = {
     "summarize_conversation",
     "close_chat",
   ],
-  workspace: ["workspace_overview", "manage_chat_data", "pin_workspace", "pin_agent", "workspace_clone", "workspace_upload", "workspace_multiselect", "arcana_filesystem", "attach_from_workspace", "remote_agents", "agent_recovery", "close_group_sessions", "agent_workspace_access"],
+  workspace: ["workspace_overview", "manage_chat_data", "pin_workspace", "pin_agent", "workspace_clone", "workspace_upload", "workspace_multiselect", "arcana_filesystem", "attach_from_workspace", "remote_agents", "agent_recovery", "close_group_sessions", "session_workspaces", "agent_workspace_access"],
   personas: ["chat_with_persona"],
   settings: [
     "settings_overview",

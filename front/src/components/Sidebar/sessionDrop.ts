@@ -22,6 +22,19 @@ export type AgentSessionDrag = {
 const encodePayload = (agentId: string, sessionId: string) =>
   JSON.stringify({ agentId, sessionId });
 
+// While a drag is in flight over a drop target the browser hides `getData()`, so a
+// target cannot read the payload's agent until the drop itself. The sidebar's own
+// drags record their payload here when they start, which lets a target decide while
+// the pointer is still moving whether it accepts this drag at all.
+let activeDrag: AgentSessionDrag | null = null;
+
+export const getActiveAgentSessionDrag = (): AgentSessionDrag | null =>
+  activeDrag;
+
+export function clearAgentSessionDrag() {
+  activeDrag = null;
+}
+
 export function setAgentSessionDragData(
   dataTransfer: DataTransfer | null,
   agentId: string,
@@ -29,6 +42,7 @@ export function setAgentSessionDragData(
   workspaceId: string | null = null,
 ) {
   if (!dataTransfer || !agentId || !sessionId) return;
+  activeDrag = { agentId, sessionId, workspaceId };
   // text/plain keeps the session id readable for generic handlers; the private
   // types decide who lights up as a drop target.
   dataTransfer.setData("text/plain", sessionId);

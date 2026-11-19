@@ -493,6 +493,13 @@ export default {
         "Expand an agent to see its sessions grouped by workspace and under “Unassigned sessions”.",
       step2: "The trash icon in the group header closes every session of that group. Running turns are interrupted first, and you must confirm the action in a dialog before any session is removed.",
     },
+    session_workspaces: {
+      title: "Move a session between workspaces",
+      step1:
+        "Expand an agent to see its sessions grouped by the workspaces the agent is attached to.",
+      step2:
+        "Drag a session row onto another workspace group to move it there. The session is detached from its old workspace and attached to the new one, and both groups update right away.",
+    },
     agent_workspace_access: {
       title: "Give an agent access to workspace files",
       step1: "Open an agent. The left panel is its file browser.",

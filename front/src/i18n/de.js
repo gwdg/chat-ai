@@ -506,6 +506,13 @@ export default {
         "Klappen Sie einen Agenten auf, um seine Sitzungen nach Arbeitsbereich gruppiert und unter „Nicht zugeordnete Sitzungen“ zu sehen.",
       step2: "Das Papierkorb-Symbol in der Gruppenüberschrift schließt alle Sitzungen dieser Gruppe. Laufende Antworten werden zuerst unterbrochen, und Sie müssen die Aktion in einem Dialog bestätigen, bevor eine Sitzung entfernt wird.",
     },
+    session_workspaces: {
+      title: "Eine Sitzung zwischen Arbeitsbereichen verschieben",
+      step1:
+        "Klappen Sie einen Agenten auf, um seine Sitzungen nach den Arbeitsbereichen gruppiert zu sehen, denen er zugeordnet ist.",
+      step2:
+        "Ziehen Sie eine Sitzungszeile auf eine andere Arbeitsbereichsgruppe, um sie dorthin zu verschieben. Die Sitzung wird aus dem alten Arbeitsbereich entfernt und dem neuen hinzugefügt; beide Gruppen aktualisieren sich sofort.",
+    },
     agent_workspace_access: {
       title: "Einem Agenten Zugriff auf Arbeitsbereichsdateien geben",
       step1: "Öffnen Sie einen Agenten. Das Fenster links ist sein Dateibrowser.",

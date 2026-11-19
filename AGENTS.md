@@ -1054,7 +1054,14 @@ row came out of a workspace), so only the sidebar's own session drags light up a
 sessions"), and a drop on a workspace row calls `dropAgentSessionOnWorkspace`: it detaches the
 source workspace first when the target differs, then links the agent as well when the target does
 not list it yet, because a session link alone would never be shown. Thus a session can be dragged
-to any workspace row, not only the workspaces offered by its menu. Creating a session from a
+to any workspace row, not only the workspaces offered by its menu. The workspace groups listed under
+an expanded agent (`AgentList`, `data-guide="agent-session-group"`) are drop targets as well, so a
+session can be moved between workspaces where it is actually visible; they accept only that agent's
+own sessions, while a top-level workspace row also takes another agent's. `getData()` returns an
+empty string while a drag is over a target, so `setAgentSessionDragData` also records the in-flight
+payload in module state (`getActiveAgentSessionDrag` / `clearAgentSessionDrag`, cleared on
+`dragend` and on a successful drop); that record is what decides whether a group highlights, never
+the unreadable `DataTransfer` payload. Creating a session from a
 workspace attaches it there, opening one from an attached workspace attaches it, and `AppDB`
 version 13 adds the table. Double-clicking a workspace name or a topic row toggles that row's
 collapse state like its chevron. Their single click opens a page whose own sidebar replaces this

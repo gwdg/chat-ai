@@ -13,6 +13,7 @@ import {
 import { db } from "../../../db";
 import {
   attachWorkspaceAgent,
+  attachWorkspaceAgentSession,
   createWorkspace,
 } from "../../../db/workspaceDb";
 import { buildSessionTree } from "../../../agents/agentSessions";
@@ -20,6 +21,7 @@ import { pinnedStateId } from "../pinnedState";
 import {
   AGENT_SESSION_DRAG_MIME,
   AGENT_SESSION_SOURCE_WORKSPACE_MIME,
+  clearAgentSessionDrag,
 } from "../sessionDrop";
 import interfaceSettingsReducer from "../../../Redux/reducers/interfaceSettingsSlice";
 
@@ -71,6 +73,8 @@ beforeEach(async () => {
   mocks.deleteServiceAgent.mockResolvedValue(null);
   mocks.sessionTree = { roots: [], all: [], children: new Map() };
   localStorage.clear();
+  // The drag payload lives in module state until a dragend or drop clears it.
+  clearAgentSessionDrag();
   removeAgent("agent-1");
   removeAgent("agent-2");
   await db.workspace_agent_sessions.clear();
@@ -437,6 +441,98 @@ describe("AgentList", () => {
     // An unassigned session has no source workspace to detach from.
     const looseTransfer = drag("Loose session");
     expect(looseTransfer.getData(AGENT_SESSION_SOURCE_WORKSPACE_MIME)).toBe("");
+  });
+
+  it("moves a session to another workspace group by drag & drop", async () => {
+    const research = await createWorkspace("Research");
+    const teaching = await createWorkspace("Teaching");
+    mocks.sessionTree = buildSessionTree([
+      { id: "session-1", title: "Active session", time: { updated: 20 } },
+      { id: "session-2", title: "Moved session", time: { updated: 10 } },
+    ]);
+
+    renderAgentList();
+    addAgentThroughModal();
+    await act(async () => {
+      await attachWorkspaceAgent(research, "agent-1");
+      await attachWorkspaceAgent(teaching, "agent-1");
+      // The active session is seeded into every attached workspace; this one only
+      // starts out in the first workspace, so the drop has something to move.
+      await attachWorkspaceAgentSession(research, "agent-1", "session-2");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Sessions" }));
+    await screen.findByText("Moved session");
+
+    const makeTransfer = () => {
+      const data = new Map();
+      return {
+        get types() {
+          return [...data.keys()];
+        },
+        getData: (type) => data.get(type) ?? "",
+        setData: (type, value) => data.set(type, value),
+        effectAllowed: "none",
+        dropEffect: "none",
+      };
+    };
+
+    // The whole group (header and rows) is the drop target.
+    const groupFor = (name) =>
+      screen.getByText(name).closest("[data-session-group]");
+    const teachingGroup = groupFor("Teaching");
+    const dataTransfer = makeTransfer();
+
+    fireEvent.dragStart(
+      screen.getByText("Moved session").closest("[draggable]"),
+      { dataTransfer },
+    );
+    fireEvent.dragOver(teachingGroup, { dataTransfer });
+    expect(teachingGroup.className).toContain("ring-2");
+
+    fireEvent.drop(teachingGroup, { dataTransfer });
+
+    await waitFor(async () => {
+      const links = await db.workspace_agent_sessions.toArray();
+      expect(
+        links
+          .filter((link) => link.sessionId === "session-2")
+          .map((link) => link.workspaceId),
+      ).toEqual([teaching]);
+    });
+    expect(teachingGroup.className).not.toContain("ring-2");
+  });
+
+  it("does not highlight a workspace group for a drag this sidebar did not start", async () => {
+    const workspaceId = await createWorkspace("Research");
+    mocks.sessionTree = buildSessionTree([
+      { id: "session-1", title: "Active session", time: { updated: 20 } },
+    ]);
+
+    renderAgentList();
+    addAgentThroughModal();
+    await act(async () => {
+      await attachWorkspaceAgent(workspaceId, "agent-1");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Sessions" }));
+    await screen.findByText("Research");
+
+    const group = screen.getByText("Research").closest("[data-session-group]");
+    // A payload in the DataTransfer alone is not trusted: `getData()` is empty while
+    // a real drag is over a target, so the target reads the store's active drag.
+    fireEvent.dragOver(group, {
+      dataTransfer: {
+        types: [AGENT_SESSION_DRAG_MIME],
+        getData: () =>
+          JSON.stringify({ agentId: "agent-1", sessionId: "session-9" }),
+        setData: () => {},
+        effectAllowed: "none",
+        dropEffect: "none",
+      },
+    });
+
+    expect(group.className).not.toContain("ring-2");
   });
 
   it("marks the section with an icon beside the collapse control", () => {
