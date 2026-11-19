@@ -584,18 +584,21 @@ it globally, while the panel inside a workspace chat (`ChatAgentSidebar`) passes
 chat's workspace ids, so `getWhatsNew` only reports the workspace's chats, agents and the sessions
 attached to them (subagents of an attached session are kept; an active session outside the scope is
 not named). That panel shows only the report: connected agents and their sessions are listed in the
-sidebar, not repeated below the report. The same panel carries two more tabs besides the report —
+sidebar, not repeated below the report. The same panel carries three more tabs besides the report —
 **Workspace** (`files_tab`, a read-only `WorkspaceFilesPanel` tree of the workspace root, chat
 folders labelled by chat title) and **Sessions** (`sessions_tab`, a `WorkspaceSessionsPanel` list of
 the workspace's chats whose rows look like the sidebar's workspace chat rows and navigate to
-`/chat/<id>`) — through `MetaChangesPanel.tabs` (`{id,label,content}[]`, default none, so the Meta
+`/chat/<id>`) and **Agents** (`agents_tab`, one `WorkspaceAgentPanel` per workspace the chat is
+attached to, headed by the workspace name only when there are several, `framed={false}` so the tab's
+own label is the only heading) — through `MetaChangesPanel.tabs` (`{id,label,content}[]`, default none, so the Meta
 chat's global panel has no strip). "Check now" sits in its own row under the strip and only on the
 report tab. The panel follows the left sidebar's conventions: it defaults to 240 px (the sidebar's
 `15rem`, clamp 200–1024 after a drag; a dragged width is saved in `chatai.meta.changes-width-v2`
 and reopened at that width), starts collapsed below 1280 px to the same 64 px rail as the
 sidebar, and an explicit collapse/expand (localStorage `chatai.meta.changes-collapsed`) overrides
-the viewport on every later load. Its tab strip is compact (11 px, `whitespace-nowrap`) so three
-tabs and the chevron fit in 240 px. A scoped report shows a topic only when one of those chats
+the viewport on every later load. Its tab strip is compact (11 px, `whitespace-nowrap`) and wraps:
+four tabs no longer fit one 240 px row, and a hidden scroll would have put **Agents** out of reach.
+A scoped report shows a topic only when one of those chats
 is in it and omits memories,
 which belong to the account rather than to a workspace; agent files stay agent-level because they
 have no session link. Scoped results are stored under
@@ -835,7 +838,10 @@ are local sources too), **Chats** (counted from `useConversationList`) and **Arc
 count subtitle and, when the provider reports one, the old usage line ("3.2 MB of 5 GB used") and
 progress bar — aggregated across local providers for Your Device, the browser-storage quota ("shared
 with this app") for Chats, the Arcana provider's for Arcanas — plus the "Add folder from this device"
-row. It owns no browsing state; it takes `activeTarget` / `onOpenTarget` with a `SourceTarget` of
+row. A card whose sources include one with `status` `error` or `needs-permission` carries a red
+circled exclamation (`AlertCircle`, `data-guide="workspace-source-broken"`) whose tooltip names the
+source and repeats its stored `error`, because a failed provider cannot be browsed even though the
+card still draws. It owns no browsing state; it takes `activeTarget` / `onOpenTarget` with a `SourceTarget` of
 `{drive:"device",sourceId?}` / `{drive:"chats",conversationId?}` / `{drive:"arcanas"}`.
 
 Browsing lives inside that same Sources card, next to the rail

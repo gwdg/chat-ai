@@ -230,6 +230,7 @@ export default {
     changes_title: "Was ist neu",
     files_tab: "Arbeitsbereich",
     sessions_tab: "Sitzungen",
+    agents_tab: "Agenten",
     sessions_empty: "Noch keine Chats in diesem Arbeitsbereich.",
     collapse_changes: "Was ist neu einklappen",
     expand_changes: "Was ist neu ausklappen",
@@ -2324,6 +2325,7 @@ export default {
     sources: "Quellen",
     source_browser: {
       title: "Quellen",
+      source_broken: "„{{name}}“ funktioniert gerade nicht.",
       device: "Dieses Gerät",
       chats: "Chats",
       arcanas: "Arcanas",

@@ -56,7 +56,7 @@ const readCollapsed = () => {
 const scopedKey = (base, scopeKey) => (scopeKey ? `${base}:${scopeKey}` : base);
 
 const tabClass = (active) =>
-  `whitespace-nowrap rounded-md px-1.5 py-1 text-[11px] font-semibold ${
+  `shrink-0 whitespace-nowrap rounded-md px-1 py-1 text-[11px] font-semibold ${
     active
       ? "bg-base-200 text-base-content"
       : "text-base-content/55 hover:text-base-content"
@@ -245,7 +245,7 @@ export default function MetaChangesPanel({
           <div
             role="tablist"
             data-guide="meta-tab-strip"
-            className="flex min-w-0 flex-1 items-center gap-0.5"
+            className="flex min-w-0 flex-1 flex-wrap items-center gap-0.5"
           >
             <button
               type="button"

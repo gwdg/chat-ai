@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   sessionLinks: [],
   chatLinks: [],
   workspaceChatLinks: [],
+  workspaceList: [],
   fetchSessions: vi.fn(),
 }));
 
@@ -23,6 +24,7 @@ vi.mock("react-router", () => ({
 }));
 vi.mock("../../../db/workspaceDb", () => ({
   useChatWorkspaces: () => mocks.chatLinks,
+  useWorkspaceList: () => mocks.workspaceList,
   useWorkspaceAgentLinks: () => mocks.agentLinks,
   useWorkspaceAgentSessionLinks: () => mocks.sessionLinks,
   useWorkspaceChatLinks: () => mocks.workspaceChatLinks,
@@ -58,6 +60,11 @@ vi.mock("../../Meta/MetaChangesPanel", () => ({
     return null;
   },
 }));
+vi.mock("../WorkspaceAgentPanel", () => ({
+  default: ({ workspaceId }) => (
+    <div data-testid={`agent-panel-${workspaceId}`} />
+  ),
+}));
 
 import ChatAgentSidebar from "../ChatAgentSidebar";
 
@@ -76,6 +83,7 @@ beforeEach(() => {
     { workspaceId: "ws-9", agentId: "agent-1", sessionId: "session-9" },
   ];
   mocks.chatLinks = [{ conversationId: "chat-1", workspaceId: "ws-1" }];
+  mocks.workspaceList = [{ id: "ws-1", name: "Research" }];
   mocks.workspaceChatLinks = [
     { workspaceId: "ws-1", conversationId: "chat-1" },
     { workspaceId: "ws-1", conversationId: "chat-2" },
@@ -89,6 +97,39 @@ beforeEach(() => {
 });
 
 describe("ChatAgentSidebar what's new scope", () => {
+  it("adds an Agents tab that picks the agent of the chat's workspaces", () => {
+    render(<ChatAgentSidebar conversationId="chat-1" />);
+
+    const tabs = lastPanel().tabs;
+    expect(tabs.map((tab) => tab.id)).toEqual([
+      "workspace",
+      "sessions",
+      "agents",
+    ]);
+    const agentsTab = tabs.find((tab) => tab.id === "agents");
+    expect(agentsTab.label).toBe("Agents");
+    expect(render(agentsTab.content).getByTestId("agent-panel-ws-1")).toBeInTheDocument();
+  });
+
+  it("names every workspace when the chat is attached to several", () => {
+    mocks.chatLinks = [
+      { conversationId: "chat-1", workspaceId: "ws-1" },
+      { conversationId: "chat-1", workspaceId: "ws-2" },
+    ];
+    mocks.workspaceList = [
+      { id: "ws-1", name: "Research" },
+      { id: "ws-2", name: "Notes" },
+    ];
+    render(<ChatAgentSidebar conversationId="chat-1" />);
+
+    const tab = lastPanel().tabs.find((item) => item.id === "agents");
+    const view = render(tab.content);
+    expect(view.getByText("Research")).toBeInTheDocument();
+    expect(view.getByText("Notes")).toBeInTheDocument();
+    expect(view.getByTestId("agent-panel-ws-1")).toBeInTheDocument();
+    expect(view.getByTestId("agent-panel-ws-2")).toBeInTheDocument();
+  });
+
   it("reports only the chat's workspaces, agents and attached sessions", () => {
     render(<ChatAgentSidebar conversationId="chat-1" />);
 
@@ -104,8 +145,16 @@ describe("ChatAgentSidebar what's new scope", () => {
     render(<ChatAgentSidebar conversationId="chat-1" />);
 
     const tabs = lastPanel().tabs ?? [];
-    expect(tabs.map((tab) => tab.id)).toEqual(["workspace", "sessions"]);
-    expect(tabs.map((tab) => tab.label)).toEqual(["Workspace", "Sessions"]);
+    expect(tabs.map((tab) => tab.id)).toEqual([
+      "workspace",
+      "sessions",
+      "agents",
+    ]);
+    expect(tabs.map((tab) => tab.label)).toEqual([
+      "Workspace",
+      "Sessions",
+      "Agents",
+    ]);
     expect(tabs.every((tab) => tab.content)).toBe(true);
   });
 

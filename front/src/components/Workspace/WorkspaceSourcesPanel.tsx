@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import {
+  AlertCircle,
   Boxes,
   ChevronRight,
   HardDrive,
@@ -28,6 +29,7 @@ function DriveCard({
   quota,
   usageLabel,
   usageTitle,
+  broken,
   active,
   onClick,
 }: {
@@ -38,6 +40,7 @@ function DriveCard({
   quota?: QuotaInfo | null;
   usageLabel: string;
   usageTitle?: string;
+  broken?: string;
   active: boolean;
   onClick: () => void;
 }) {
@@ -62,6 +65,17 @@ function DriveCard({
           <span className="min-w-0 flex-1 truncate text-xs font-semibold text-base-content">
             {title}
           </span>
+          {broken && (
+            <span
+              role="img"
+              aria-label={broken}
+              title={broken}
+              data-guide="workspace-source-broken"
+              className="shrink-0"
+            >
+              <AlertCircle size={14} className="text-error" />
+            </span>
+          )}
           <ChevronRight size={14} className="shrink-0 text-base-content/35" />
         </div>
         <div className="mt-0.5 truncate text-[10px] text-base-content/50">
@@ -114,6 +128,20 @@ export default function WorkspaceSourcesPanel({
         })
       : undefined;
 
+  // A source that failed to connect (or lost its permission) cannot be browsed
+  // right now, so its drive card carries a red exclamation with the reason.
+  const brokenReason = (rows: WorkspaceSourceRow[]) => {
+    const bad = rows.find(
+      (row) => row.status === "error" || row.status === "needs-permission",
+    );
+    if (!bad) return undefined;
+    const base = t("workspace.source_browser.source_broken", {
+      name: bad.label,
+    });
+    return bad.error ? `${base} ${bad.error}` : base;
+  };
+  const chatSources = sources.filter((source) => source.kind === "chat");
+
   return (
     <section
       data-guide="workspace-sources"
@@ -145,6 +173,7 @@ export default function WorkspaceSourcesPanel({
           })}
           quota={deviceQuota}
           usageLabel={usageLabel(deviceQuota)}
+          broken={brokenReason(localSources)}
           active={activeDrive === "device"}
           onClick={() => onOpenTarget({ drive: "device" })}
         />
@@ -158,6 +187,7 @@ export default function WorkspaceSourcesPanel({
           quota={chatsQuota}
           usageLabel={usageLabel(chatsQuota)}
           usageTitle={usageTitle(chatsQuota)}
+          broken={brokenReason(chatSources)}
           active={activeDrive === "chats"}
           onClick={() => onOpenTarget({ drive: "chats" })}
         />
@@ -170,6 +200,7 @@ export default function WorkspaceSourcesPanel({
           })}
           quota={arcanasQuota}
           usageLabel={usageLabel(arcanasQuota)}
+          broken={brokenReason(arcanaSources)}
           active={activeDrive === "arcanas"}
           onClick={() => onOpenTarget({ drive: "arcanas" })}
         />
@@ -182,6 +213,7 @@ export default function WorkspaceSourcesPanel({
               count: mcpSources.length,
             })}
             usageLabel=""
+            broken={brokenReason(mcpSources)}
             active={activeDrive === "mcp"}
             onClick={() => onOpenTarget({ drive: "mcp" })}
           />

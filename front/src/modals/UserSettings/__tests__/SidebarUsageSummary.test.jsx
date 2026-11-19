@@ -60,6 +60,17 @@ describe("SidebarUsageSummary", () => {
     expect(screen.getByText("Organization")).toBeInTheDocument();
   });
 
+  it("points the chevron the way the sidebar sections do", () => {
+    const { container } = render(<SidebarUsageSummary data={flatData} />);
+    const chevron = () => container.querySelector("svg");
+
+    // Closed: right, like a folded sidebar section. Open: down, at the list it shows.
+    expect(chevron()).toHaveClass("-rotate-90");
+    fireEvent.click(screen.getByRole("button", { name: "Usage" }));
+    expect(chevron()).not.toHaveClass("-rotate-90");
+    expect(chevron()).not.toHaveClass("rotate-180");
+  });
+
   it("stays out of the sidebar when the account reports no figures at all", () => {
     const { container } = render(<SidebarUsageSummary data={{}} />);
 

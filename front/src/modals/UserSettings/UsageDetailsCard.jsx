@@ -215,7 +215,7 @@ export default function UsageDetailsCard({
               className="shrink-0 rounded p-0.5 hover:bg-base-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
             >
               <ChevronDown
-                className={`h-3.5 w-3.5 text-base-content/50 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                className={`h-3.5 w-3.5 text-base-content/50 transition-transform ${isOpen ? "" : "-rotate-90"}`}
                 aria-hidden="true"
               />
             </button>
@@ -233,7 +233,7 @@ export default function UsageDetailsCard({
           </span>
           {canExpand && (
             <ChevronDown
-              className={`h-3.5 w-3.5 shrink-0 text-base-content/50 transition-transform ${isOpen ? "rotate-180" : ""}`}
+              className={`h-3.5 w-3.5 shrink-0 text-base-content/50 transition-transform ${isOpen ? "" : "-rotate-90"}`}
               aria-hidden="true"
             />
           )}

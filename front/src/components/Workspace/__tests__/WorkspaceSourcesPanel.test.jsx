@@ -221,6 +221,51 @@ describe("WorkspaceSourcesPanel", () => {
     await act(async () => {});
   });
 
+  it("marks a broken source with a red circled exclamation", () => {
+    mocks.sources = [
+      localSource,
+      browserSource,
+      {
+        ...arcanaSource,
+        status: "error",
+        error: "Arcana Tools is unreachable",
+      },
+    ];
+    renderPanel();
+
+    const badge = within(
+      drive("workspace-source-arcanas"),
+    ).getByRole("img", { name: /arcana filesystem is not working/i });
+    expect(badge).toHaveAttribute(
+      "title",
+      "Arcana filesystem is not working right now. Arcana Tools is unreachable",
+    );
+    expect(badge).toHaveAttribute(
+      "data-guide",
+      "workspace-source-broken",
+    );
+    expect(
+      within(drive("workspace-source-device")).queryByRole("img"),
+    ).toBeNull();
+    expect(
+      within(drive("workspace-source-chats")).queryByRole("img"),
+    ).toBeNull();
+  });
+
+  it("treats a source that lost its permission as broken too", () => {
+    mocks.sources = [
+      { ...localSource, status: "needs-permission", error: "Permission denied" },
+      browserSource,
+      arcanaSource,
+    ];
+    renderPanel();
+
+    const badge = within(drive("workspace-source-device")).getByRole("img", {
+      name: /project is not working/i,
+    });
+    expect(badge.getAttribute("title")).toContain("Permission denied");
+  });
+
   it("marks Your Device active when one of its sources is open", async () => {
     renderPanel({ activeTarget: { drive: "device", sourceId: "local-1" } });
 

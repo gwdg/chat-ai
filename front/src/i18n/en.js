@@ -227,6 +227,7 @@ export default {
     changes_title: "What's new",
     files_tab: "Workspace",
     sessions_tab: "Sessions",
+    agents_tab: "Agents",
     sessions_empty: "No chats in this workspace yet.",
     collapse_changes: "Collapse What's new",
     expand_changes: "Expand What's new",
@@ -2294,6 +2295,7 @@ export default {
     sources: "Sources",
     source_browser: {
       title: "Sources",
+      source_broken: "{{name}} is not working right now.",
       device: "Your Device",
       chats: "Chats",
       arcanas: "Arcanas",

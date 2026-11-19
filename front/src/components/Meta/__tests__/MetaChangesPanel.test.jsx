@@ -140,6 +140,10 @@ describe("MetaChangesPanel", () => {
       "data-guide",
       "meta-tab-strip",
     );
+    // Four tabs do not fit one row in the default panel, so the strip wraps
+    // instead of hiding the last one behind a scroll.
+    expect(screen.getByRole("tablist")).toHaveClass("flex-wrap");
+    expect(screen.getByRole("tablist")).not.toHaveClass("overflow-x-auto");
     expect(screen.getByRole("tab", { name: "What's new" })).toHaveAttribute(
       "aria-selected",
       "true",
