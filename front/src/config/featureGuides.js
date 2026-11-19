@@ -231,7 +231,7 @@ export const featureGuides = {
   close_group_sessions: {
     titleKey: "feature_guide.close_group_sessions.title",
     prompt:
-      "Close every session of an agent inside one sidebar group, such as a workspace or “Not in a workspace”. Running turns are interrupted first, and the action always asks for confirmation in a dialog.",
+      "Close every session of an agent inside one sidebar group, such as a workspace or “Unassigned sessions”. Running turns are interrupted first, and the action always asks for confirmation in a dialog.",
     keywords: [
       "close all sessions",
       "close group sessions",
@@ -709,6 +709,35 @@ export const featureGuides = {
       {
         target: '[data-guide="collapse-all-topics"]',
         textKey: "feature_guide.manage_topics.step4",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
+  attach_chat_to_workspace: {
+    titleKey: "feature_guide.attach_chat_to_workspace.title",
+    prompt:
+      "Attach a chat to a workspace by dragging it from the sidebar onto a workspace row. The workspace then shows the chat and can use its files. Drag the chat out of the workspace onto a topic to detach it again.",
+    keywords: [
+      "attach chat",
+      "detach chat",
+      "workspace chat",
+      "drag chat",
+      "move chat to workspace",
+    ],
+    steps: [
+      {
+        target: '[data-guide="workspace-row"]',
+        textKey: "feature_guide.attach_chat_to_workspace.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="workspace-chat-row"]',
+        textKey: "feature_guide.attach_chat_to_workspace.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="topic-list"]',
+        textKey: "feature_guide.attach_chat_to_workspace.step3",
         completeOnTargetClick: true,
       },
     ],
@@ -1593,6 +1622,7 @@ export const FEATURE_CATEGORIES = {
   chats: [
     "search_chats",
     "manage_topics",
+    "attach_chat_to_workspace",
     "sort_group_chats",
     "sort_organize",
     "pin_chat",

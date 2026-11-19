@@ -685,6 +685,15 @@ export default {
       step4:
         "Nutzen Sie die Schaltfläche neben „Thema erstellen“, um alle Themen auf einmal ein- oder auszuklappen.",
     },
+    attach_chat_to_workspace: {
+      title: "Chat mit einem Arbeitsbereich verknüpfen",
+      step1:
+        "Ziehen Sie einen Chat aus der Seitenleiste auf eine Zeile eines Arbeitsbereichs, um ihn zu verknüpfen.",
+      step2:
+        "Der verknüpfte Chat erscheint unter dem Arbeitsbereich. Seine Dateien sind dort ebenfalls verfügbar.",
+      step3:
+        "Ziehen Sie den Chat aus dem Arbeitsbereich auf ein Thema, um die Verknüpfung wieder zu lösen.",
+    },
     sort_organize: {
       title: "Smart Sort",
       step1: "Klicken Sie in der Kopfzeile der Seitenleiste auf „Smart Sort“.",
@@ -2254,6 +2263,8 @@ export default {
     attached_items: "Verknüpfte Chats, Agenten und Sitzungen",
     no_attached_chats: "Noch keine Chats verknüpft.",
     attach_chat: "Chat verknüpfen",
+    attach_chat_error:
+      "Der Chat konnte nicht mit dem Arbeitsbereich verknüpft werden",
     new_chat: "Neuer Chat in diesem Arbeitsbereich",
     detach_chat: "Chat trennen",
     attach_chat_hint: "Verknüpfen Sie einen Chat mit diesem Arbeitsbereich.",

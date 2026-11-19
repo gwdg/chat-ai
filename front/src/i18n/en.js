@@ -667,6 +667,15 @@ export default {
       step4:
         "Use the button next to Create topic to collapse or expand all topics at once.",
     },
+    attach_chat_to_workspace: {
+      title: "Attach a chat to a workspace",
+      step1:
+        "Drag a chat from the sidebar onto a workspace row to attach it.",
+      step2:
+        "The attached chat appears under the workspace. Its files are available there too.",
+      step3:
+        "Drag the chat out of the workspace onto a topic to detach it again.",
+    },
     sort_organize: {
       title: "Smart Sort",
       step1: "Click Smart Sort in the sidebar header.",
@@ -2224,6 +2233,7 @@ export default {
     attached_items: "Attached chats, agents and sessions",
     no_attached_chats: "No chats attached yet.",
     attach_chat: "Attach chat",
+    attach_chat_error: "Could not attach the chat to the workspace",
     new_chat: "New chat in this workspace",
     detach_chat: "Detach chat",
     attach_chat_hint: "Attach any chat to this workspace.",

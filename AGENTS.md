@@ -209,6 +209,14 @@ IndexedDB. Writes go through `updateConversation(id, data)` in `db/index.ts`, wh
 
 So: thread the `lastModified` you read through to the write, and handle `-1`.
 
+Topic moves are the one write that runs outside that save bookkeeping:
+`assignConversationToFolder` bumps `lastModified` and dispatches `chatai:conversation-moved`
+(`utils/conversationEvents.js`); `useSyncConversation` adopts the returned value and the new
+`folderId` into its `lastModified` ref and `localState`. Content saves never carry `folderId`
+(the chat page does not own the topic), and neither the inactive-chat force write in
+`utils/sendMessage.jsx` nor the conflict dialog's overwrite writes it back. Otherwise the open
+chat's next autosave returns `-1`, and its Overwrite silently reverts the move.
+
 Data is normalised across `conversations → messages → content_items`, with `files_meta` /
 `files_data` holding attachment bytes keyed by `fileId`; `hydrateConversation()` joins them back
 into the nested shape the UI uses. Raw table access (`db.messages`, `db.content_items`, …) appears
@@ -1001,7 +1009,14 @@ workspace in the sidebar and in the workspace's Chats panel, and toggled from th
 left of the Local tools icon in the prompt box. The `+` on a workspace row in the sidebar and the
 `+` in the workspace page's Chats panel both start a new chat that is linked right away; an
 existing chat is linked with the link control in the workspace page's Chats panel, not from the
-sidebar row. `workspace_agents` is the matching many-to-many link
+sidebar row. Dragging is the third way to link one: `Sidebar/chatDrop.ts` writes the chat id under
+the private MIME `application/x-chatai-chat` (plus `application/x-chatai-chat-workspace` when the row
+came out of a workspace), so only the sidebar's own chat drags light up a target. Dropping a chat on
+a workspace row calls `attachWorkspaceChat`; a row dragged out of another workspace is detached from
+it first, so the drop moves the link instead of adding a second one. Dropping a workspace chat row
+on a topic detaches it even when the topic does not change, and that drop reads the source workspace
+from React state (`draggingWorkspaceId`), which the workspace list reports through `onChatDragStart`
+in addition to the DataTransfer. `workspace_agents` is the matching many-to-many link
 between workspaces and localStorage-backed agent entries; the workspace page's Agents panel attaches
 or detaches them, and links whose agent no longer exists are removed when that page loads.
 Files still come in through one paperclip: when the chat has at least one workspace it opens a small

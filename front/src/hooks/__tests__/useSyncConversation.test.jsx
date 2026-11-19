@@ -1,6 +1,8 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useSyncConversation } from "../useSyncConversation";
+import { CONVERSATION_MOVED_EVENT } from "../../utils/conversationEvents";
 
 const dbMocks = vi.hoisted(() => ({
   getConversation: vi.fn(),
@@ -11,6 +13,11 @@ const dbMocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../../db", () => dbMocks);
+
+const modalMocks = vi.hoisted(() => ({
+  openModal: vi.fn(),
+  closeModal: vi.fn(),
+}));
 
 vi.mock("react-router-dom", () => ({
   useNavigate: () => vi.fn(),
@@ -29,7 +36,7 @@ vi.mock("react-redux", () => ({
 }));
 
 vi.mock("../../modals/ModalContext", () => ({
-  useModal: () => ({ openModal: vi.fn() }),
+  useModal: () => modalMocks,
 }));
 
 vi.mock("../useImportConversation", () => ({
@@ -126,5 +133,55 @@ describe("useSyncConversation hydration", () => {
     const setLocalState = renderSync(conversation);
 
     await waitFor(() => expect(setLocalState).toHaveBeenCalledWith(conversation));
+  });
+});
+
+describe("useSyncConversation topic moves", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    modalMocks.openModal.mockClear();
+  });
+
+  function renderStatefulSync(conversation) {
+    dbMocks.getConversation.mockResolvedValue(conversation);
+    const seen = { state: null };
+    renderHook(() => {
+      const [localState, setLocalState] = useState(null);
+      seen.state = localState;
+      useSyncConversation({ localState, setLocalState, conversationId });
+      return localState;
+    });
+    return seen;
+  }
+
+  it("adopts a move made elsewhere instead of reporting a conflict", async () => {
+    dbMocks.updateConversation.mockResolvedValue(5000);
+    const conversation = makeConversation([
+      { role: "user", content: [{ type: "text", text: "keep me" }] },
+    ]);
+    const seen = renderStatefulSync(conversation);
+
+    await waitFor(() => expect(seen.state?.id).toBe(conversationId));
+    dbMocks.updateConversation.mockClear();
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent(CONVERSATION_MOVED_EVENT, {
+          detail: { conversationId, folderId: "topic-b", lastModified: 4242 },
+        }),
+      );
+    });
+
+    await waitFor(() => expect(seen.state?.folderId).toBe("topic-b"));
+    await waitFor(
+      () => expect(dbMocks.updateConversation).toHaveBeenCalled(),
+      { timeout: 4000 },
+    );
+
+    const payloads = dbMocks.updateConversation.mock.calls.map((call) => call[1]);
+    expect(payloads.some((payload) => payload.lastModified === 4242)).toBe(true);
+    // The chat page owns the message list, never the topic it was moved to.
+    expect(payloads.every((payload) => !("folderId" in payload))).toBe(true);
+    expect(modalMocks.openModal).not.toHaveBeenCalled();
   });
 });

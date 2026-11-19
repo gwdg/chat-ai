@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, DragEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router";
@@ -58,6 +58,11 @@ import { activeSessionIdFor, useOpenAgent } from "../../hooks/useOpenAgent";
 import { topicIconById } from "../Sidebar/topicIcons";
 import { pinnedStateId } from "../Sidebar/pinnedState";
 import { groupRowTint, groupRule, topicColor, withAlpha } from "../Sidebar/topicColors";
+import {
+  isChatDrag,
+  readChatDrag,
+  setChatDragData,
+} from "../Sidebar/chatDrop";
 import { getDefaultConversation } from "../../utils/conversationUtils";
 
 // Workspace rows and the agent rows inside them default to expanded, so only the
@@ -73,10 +78,25 @@ export const workspaceAgentCollapseId = (
 export default function WorkspaceList({
   onNavigate,
   variant = "all",
+  draggingConversationId = null,
+  onChatDragStart,
+  onChatDragEnd,
+  onChatDrop,
 }: {
   onNavigate?: () => void;
   /** "pinned" renders only pinned workspaces, without the section band. */
   variant?: "all" | "pinned";
+  /** The chat row currently being dragged, wherever it came from. */
+  draggingConversationId?: string | null;
+  /** Called when a chat row inside a workspace starts being dragged out. */
+  onChatDragStart?: (conversationId: string, workspaceId: string) => void;
+  onChatDragEnd?: () => void;
+  /** Called when a dragged chat is dropped on a workspace row. */
+  onChatDrop?: (payload: {
+    conversationId: string;
+    targetWorkspaceId: string;
+    sourceWorkspaceId: string | null;
+  }) => void | Promise<void>;
 } = {}) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
@@ -127,6 +147,10 @@ export default function WorkspaceList({
   const [sessionRefresh, setSessionRefresh] = useState(0);
   const [creatingSession, setCreatingSession] = useState<string | null>(null);
   const [creatingChat, setCreatingChat] = useState<string | null>(null);
+  // Workspace row highlighted while a chat is dragged over it.
+  const [dragOverWorkspaceId, setDragOverWorkspaceId] = useState<string | null>(
+    null,
+  );
   const loadedSessionAgents = useRef<Set<string>>(new Set());
   const collapsedTopicIds = useSelector(selectCollapsedTopics) ?? [];
   const isDark = useSelector(selectDarkMode);
@@ -240,6 +264,49 @@ export default function WorkspaceList({
     }
   };
 
+  // Dragging a chat onto a workspace row attaches it; a row dragged out of
+  // another workspace moves with it. Only the sidebar's private chat MIME is
+  // accepted, so file or text drags keep their own meaning.
+  const handleWorkspaceDragOver = (
+    event: DragEvent<HTMLDivElement>,
+    workspaceId: string,
+  ) => {
+    if (!isChatDrag(event.dataTransfer)) return;
+    // Without preventDefault the browser never fires the drop event.
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setDragOverWorkspaceId((current) =>
+      current === workspaceId ? current : workspaceId,
+    );
+  };
+
+  const handleWorkspaceDragLeave = (
+    event: DragEvent<HTMLDivElement>,
+    workspaceId: string,
+  ) => {
+    // dragleave also fires when the pointer moves onto a child of the row.
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+    setDragOverWorkspaceId((current) =>
+      current === workspaceId ? null : current,
+    );
+  };
+
+  const handleWorkspaceDrop = (
+    event: DragEvent<HTMLDivElement>,
+    workspaceId: string,
+  ) => {
+    if (!isChatDrag(event.dataTransfer)) return;
+    event.preventDefault();
+    setDragOverWorkspaceId(null);
+    const drag = readChatDrag(event.dataTransfer);
+    if (!drag) return;
+    void onChatDrop?.({
+      conversationId: drag.conversationId,
+      targetWorkspaceId: workspaceId,
+      sourceWorkspaceId: drag.workspaceId,
+    });
+  };
+
   const remove = (workspace: { id: string; name: string }) => {
     confirmAction(
       {
@@ -314,8 +381,19 @@ export default function WorkspaceList({
         return (
           <div key={workspace.id}>
             <div
+              data-guide="workspace-row"
+              onDragEnter={(event) => handleWorkspaceDragOver(event, workspace.id)}
+              onDragOver={(event) => handleWorkspaceDragOver(event, workspace.id)}
+              onDragLeave={(event) =>
+                handleWorkspaceDragLeave(event, workspace.id)
+              }
+              onDrop={(event) => handleWorkspaceDrop(event, workspace.id)}
               className={`group flex items-center rounded-xl transition bg-[var(--group-tint)] hover:bg-[var(--group-tint-hover)] ${
                 active ? "text-accent" : "text-base-content"
+              } ${
+                dragOverWorkspaceId === workspace.id
+                  ? "ring-2 ring-accent/60 ring-offset-0"
+                  : ""
               }`}
               style={
                 {
@@ -468,13 +546,25 @@ export default function WorkspaceList({
               >
                 {chats.map((chat) => {
                   const chatActive = location.pathname === `/chat/${chat.id}`;
+                  const chatDragging = draggingConversationId === chat.id;
                   return (
                     <div
                       key={chat.id}
+                      data-guide="workspace-chat-row"
+                      draggable
+                      onDragStart={(event) => {
+                        setChatDragData(event.dataTransfer, chat.id, workspace.id);
+                        onChatDragStart?.(chat.id, workspace.id);
+                      }}
+                      onDragEnd={() => onChatDragEnd?.()}
                       className={`group/chat relative flex items-center gap-1 rounded-xl border border-transparent px-2 py-1 ${
                         chatActive
                           ? "bg-base-200 text-base-content shadow-sm"
                           : "text-base-content hover:bg-base-200 transition-all duration-100"
+                      } ${
+                        chatDragging
+                          ? "border-accent/60 bg-accent/10 dark:bg-accent/20"
+                          : ""
                       }`}
                     >
                       <button

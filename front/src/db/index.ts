@@ -5,6 +5,7 @@ import {v4 as uuidv4} from 'uuid';
 import { deleteAllWorkspaces, deleteWorkspace } from '../agent/workspace'
 import i18n from '../i18n'
 import { isArcanasEnabled } from '../utils/modules'
+import { notifyConversationMoved } from '../utils/conversationEvents'
 import { defaultCapabilities } from '../workspace/capabilities'
 import { SHARED_BROWSER_STORAGE_ID, workspaceBrowserStorageId } from '../workspace/browserStorage'
 import { chatStorageSourceId } from '../workspace/chatStorage'
@@ -1281,10 +1282,15 @@ export async function deleteFolder(folderId: string) {
 }
 
 export async function assignConversationToFolder(conversationId: string, folderId: string | null) {
+  const lastModified = Date.now();
   await db.conversations.update(conversationId, {
     folderId: folderId ?? null,
-    lastModified: Date.now(),
+    lastModified,
   });
+  // The move bumps lastModified outside the chat page's own save bookkeeping.
+  // Tell the open conversation, or its next autosave reports a false conflict.
+  notifyConversationMoved({ conversationId, folderId, lastModified });
+  return lastModified;
 }
 
 export async function ensureFolder(name: string, id?: string | null): Promise<string | null> {

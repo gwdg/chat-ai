@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ComponentProps } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, useLocation } from "react-router";
 import { configureStore } from "@reduxjs/toolkit";
@@ -70,6 +71,10 @@ import WorkspaceList, {
   workspaceAgentCollapseId,
   workspaceRowCollapseId,
 } from "../WorkspaceList";
+import {
+  CHAT_DRAG_MIME,
+  CHAT_SOURCE_WORKSPACE_MIME,
+} from "../../Sidebar/chatDrop";
 import { pinnedStateId } from "../../Sidebar/pinnedState";
 import interfaceSettingsReducer from "../../../Redux/reducers/interfaceSettingsSlice";
 
@@ -82,11 +87,12 @@ const renderList = (
   store: ReturnType<typeof makeStore>,
   initialEntries: string[] = ["/"],
   variant: "all" | "pinned" = "all",
+  props: Partial<ComponentProps<typeof WorkspaceList>> = {},
 ) =>
   render(
     <Provider store={store}>
       <MemoryRouter initialEntries={initialEntries}>
-        <WorkspaceList variant={variant} />
+        <WorkspaceList variant={variant} {...props} />
       </MemoryRouter>
     </Provider>,
   );
@@ -507,6 +513,134 @@ describe("WorkspaceList group colours", () => {
       "rgba(124, 58, 237, 0.16)",
     );
     expect(row.className).toContain("text-accent");
+  });
+});
+
+describe("WorkspaceList chat drag & drop", () => {
+  // jsdom has no working DataTransfer, so the rows get a small stand-in with
+  // the three members the drag helpers use.
+  const makeDataTransfer = (entries: Record<string, string> = {}) => {
+    const data = new Map(Object.entries(entries));
+    return {
+      get types() {
+        return [...data.keys()];
+      },
+      getData: (type: string) => data.get(type) ?? "",
+      setData: (type: string, value: string) => {
+        data.set(type, value);
+      },
+      effectAllowed: "none",
+      dropEffect: "none",
+    } as unknown as DataTransfer;
+  };
+  const workspaceRow = async () =>
+    (await screen.findByText("Teaching")).closest(
+      '[data-guide="workspace-row"]',
+    ) as HTMLElement;
+
+  beforeEach(() => {
+    mocks.conversations.mockReturnValue([
+      { id: "chat-1", title: "Workspace chat" },
+    ]);
+    mocks.chatLinks.mockReturnValue([
+      { workspaceId: "ws-1", conversationId: "chat-1" },
+    ]);
+  });
+
+  it("attaches a chat dropped on a workspace row", async () => {
+    const onChatDrop = vi.fn();
+    renderList(makeStore(), ["/"], "all", { onChatDrop });
+
+    const row = await workspaceRow();
+    const dataTransfer = makeDataTransfer({ [CHAT_DRAG_MIME]: "chat-9" });
+
+    fireEvent.dragOver(row, { dataTransfer });
+    fireEvent.drop(row, { dataTransfer });
+
+    expect(onChatDrop).toHaveBeenCalledWith({
+      conversationId: "chat-9",
+      targetWorkspaceId: "ws-1",
+      sourceWorkspaceId: null,
+    });
+  });
+
+  it("passes the source workspace of a chat dragged out of another workspace", async () => {
+    const onChatDrop = vi.fn();
+    renderList(makeStore(), ["/"], "all", { onChatDrop });
+
+    const row = await workspaceRow();
+    const dataTransfer = makeDataTransfer({
+      [CHAT_DRAG_MIME]: "chat-9",
+      [CHAT_SOURCE_WORKSPACE_MIME]: "ws-2",
+    });
+
+    fireEvent.drop(row, { dataTransfer });
+
+    expect(onChatDrop).toHaveBeenCalledWith({
+      conversationId: "chat-9",
+      targetWorkspaceId: "ws-1",
+      sourceWorkspaceId: "ws-2",
+    });
+  });
+
+  it("marks the row under a dragged chat and clears the mark on drop", async () => {
+    const onChatDrop = vi.fn();
+    renderList(makeStore(), ["/"], "all", { onChatDrop });
+
+    const row = await workspaceRow();
+    const dataTransfer = makeDataTransfer({ [CHAT_DRAG_MIME]: "chat-9" });
+
+    fireEvent.dragOver(row, { dataTransfer });
+    expect(row.className).toContain("ring-2");
+
+    fireEvent.drop(row, { dataTransfer });
+    expect(row.className).not.toContain("ring-2");
+  });
+
+  it("ignores drags that are not chats", async () => {
+    const onChatDrop = vi.fn();
+    renderList(makeStore(), ["/"], "all", { onChatDrop });
+
+    const row = await workspaceRow();
+    const dataTransfer = makeDataTransfer({ Files: "" });
+
+    fireEvent.dragOver(row, { dataTransfer });
+    fireEvent.drop(row, { dataTransfer });
+
+    expect(onChatDrop).not.toHaveBeenCalled();
+    expect(row.className).not.toContain("ring-2");
+  });
+
+  it("starts a drag from a workspace chat row with its workspace id", async () => {
+    const onChatDragStart = vi.fn();
+    const onChatDragEnd = vi.fn();
+    renderList(makeStore(), ["/"], "all", {
+      onChatDragStart,
+      onChatDragEnd,
+    });
+
+    const chat = await screen.findByRole("button", { name: "Workspace chat" });
+    const row = chat.parentElement as HTMLElement;
+    expect(row).toHaveAttribute("draggable", "true");
+
+    const dataTransfer = makeDataTransfer();
+    fireEvent.dragStart(row, { dataTransfer });
+
+    expect(onChatDragStart).toHaveBeenCalledWith("chat-1", "ws-1");
+    expect(dataTransfer.getData(CHAT_DRAG_MIME)).toBe("chat-1");
+    expect(dataTransfer.getData(CHAT_SOURCE_WORKSPACE_MIME)).toBe("ws-1");
+    expect(dataTransfer.effectAllowed).toBe("move");
+
+    fireEvent.dragEnd(row);
+    expect(onChatDragEnd).toHaveBeenCalled();
+  });
+
+  it("marks the workspace chat row that is being dragged", async () => {
+    renderList(makeStore(), ["/"], "all", { draggingConversationId: "chat-1" });
+
+    const chat = await screen.findByRole("button", { name: "Workspace chat" });
+    const row = chat.parentElement as HTMLElement;
+    expect(row.className).toContain("border-accent/60");
   });
 });
 

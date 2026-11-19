@@ -27,7 +27,6 @@ import {
   SortAscending,
 } from "@carbon/icons-react";
 import {
-  assignConversationToFolder,
   setConversationPinned,
   setFolderPinned,
   useConversationList,
@@ -70,6 +69,11 @@ import TopicList, {
   dateBucketCollapseId,
 } from "./TopicList";
 import TopicCreateBubble from "./TopicCreateBubble";
+import {
+  dropConversationOnTopic,
+  dropConversationOnWorkspace,
+  setChatDragData,
+} from "./chatDrop";
 import PinnedSection from "./PinnedSection";
 import { showAdvancedSidebarSections } from "./sidebarVisibility";
 import SidebarUserCard from "./SidebarUserCard";
@@ -225,6 +229,11 @@ export default function SidebarContent({
   const [draggingConversationId, setDraggingConversationId] = useState<
     string | null
   >(null);
+  // Set while a chat row is dragged out of a workspace row, so the drop can
+  // detach it from that workspace.
+  const [draggingWorkspaceId, setDraggingWorkspaceId] = useState<string | null>(
+    null,
+  );
   const [dragOverTopicId, setDragOverTopicId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -339,9 +348,20 @@ export default function SidebarContent({
 
   const handleConversationDragStart = useCallback(
     (event: DragEvent<HTMLDivElement>, conversationId: string) => {
-      event.dataTransfer?.setData("text/plain", conversationId);
-      event.dataTransfer.effectAllowed = "move";
+      setChatDragData(event.dataTransfer, conversationId);
       setDraggingConversationId(conversationId);
+      setDraggingWorkspaceId(null);
+      setDragOverTopicId(null);
+    },
+    [],
+  );
+
+  // A chat row inside a workspace row: the same drag, but it also remembers the
+  // workspace it came from so dropping it elsewhere detaches it.
+  const handleWorkspaceChatDragStart = useCallback(
+    (conversationId: string, workspaceId: string) => {
+      setDraggingConversationId(conversationId);
+      setDraggingWorkspaceId(workspaceId);
       setDragOverTopicId(null);
     },
     [],
@@ -349,6 +369,7 @@ export default function SidebarContent({
 
   const handleConversationDragEnd = useCallback(() => {
     setDraggingConversationId(null);
+    setDraggingWorkspaceId(null);
     setDragOverTopicId(null);
   }, []);
 
@@ -361,29 +382,67 @@ export default function SidebarContent({
       );
       if (!conversation) {
         setDraggingConversationId(null);
+        setDraggingWorkspaceId(null);
         setDragOverTopicId(null);
         return;
       }
 
       // The Unsorted row is virtual, so dropping on it clears the topic.
       const nextFolderId = targetId === UNSORTED_TOPIC_ID ? null : targetId;
-      if ((conversation.folderId ?? null) === nextFolderId) {
-        setDraggingConversationId(null);
-        setDragOverTopicId(null);
-        return;
-      }
 
       try {
-        await assignConversationToFolder(draggingConversationId, nextFolderId);
+        await dropConversationOnTopic({
+          conversationId: draggingConversationId,
+          currentFolderId: conversation.folderId ?? null,
+          targetFolderId: nextFolderId,
+          sourceWorkspaceId: draggingWorkspaceId,
+        });
       } catch (error) {
         console.error("Failed to move conversation via drag & drop", error);
         notifyError(t("folders.error_generic"));
       } finally {
         setDraggingConversationId(null);
+        setDraggingWorkspaceId(null);
         setDragOverTopicId(null);
       }
     },
-    [orderedConversations, draggingConversationId, notifyError, t],
+    [
+      orderedConversations,
+      draggingConversationId,
+      draggingWorkspaceId,
+      notifyError,
+      t,
+    ],
+  );
+
+  // Dropping a chat on a workspace row attaches it. A chat dragged out of
+  // another workspace moves instead of being attached to both.
+  const handleWorkspaceDrop = useCallback(
+    async ({
+      conversationId,
+      targetWorkspaceId,
+      sourceWorkspaceId,
+    }: {
+      conversationId: string;
+      targetWorkspaceId: string;
+      sourceWorkspaceId: string | null;
+    }) => {
+      try {
+        await dropConversationOnWorkspace({
+          conversationId,
+          targetWorkspaceId,
+          sourceWorkspaceId,
+        });
+      } catch (error) {
+        console.error("Failed to attach conversation via drag & drop", error);
+        notifyError(t("workspace.attach_chat_error"));
+      } finally {
+        setDraggingConversationId(null);
+        setDraggingWorkspaceId(null);
+        setDragOverTopicId(null);
+      }
+    },
+    [notifyError, t],
   );
 
   function onClose() {
@@ -827,7 +886,13 @@ export default function SidebarContent({
             >
               <TopicList {...topicListProps} variant="pinned" />
               {isFeatureEnabled("workspaces") && (
-                <WorkspaceList variant="pinned" />
+                <WorkspaceList
+                  variant="pinned"
+                  draggingConversationId={draggingConversationId}
+                  onChatDragStart={handleWorkspaceChatDragStart}
+                  onChatDragEnd={handleConversationDragEnd}
+                  onChatDrop={handleWorkspaceDrop}
+                />
               )}
               {showAgents && <AgentList variant="pinned" />}
             </PinnedSection>
@@ -1091,7 +1156,12 @@ export default function SidebarContent({
               {isFeatureEnabled("workspaces") && (
                 <>
                   <div className="mx-2 my-1.5 border-t border-base-300" />
-                  <WorkspaceList />
+                  <WorkspaceList
+                    draggingConversationId={draggingConversationId}
+                    onChatDragStart={handleWorkspaceChatDragStart}
+                    onChatDragEnd={handleConversationDragEnd}
+                    onChatDrop={handleWorkspaceDrop}
+                  />
                 </>
               )}
               {showMcpServers && isFeatureEnabled("mcp_servers") && (

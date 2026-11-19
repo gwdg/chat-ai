@@ -279,6 +279,23 @@ describe("conversation persistence", () => {
     expect((await getConversationMeta("chat-1")).folderId).toBe(folderId);
   });
 
+  it("announces a topic move with the new lastModified", async () => {
+    await createConversation({ id: "chat-1", title: "Chat", settings, messages: [] });
+    const folderId = await createFolder("Move target");
+    const before = (await getConversationMeta("chat-1")).lastModified;
+    const moves = [];
+    const listener = (event) => moves.push(event.detail);
+    window.addEventListener("chatai:conversation-moved", listener);
+    try {
+      const lastModified = await assignConversationToFolder("chat-1", folderId);
+      expect(lastModified).toBeGreaterThanOrEqual(before);
+      expect((await getConversationMeta("chat-1")).lastModified).toBe(lastModified);
+      expect(moves).toEqual([{ conversationId: "chat-1", folderId, lastModified }]);
+    } finally {
+      window.removeEventListener("chatai:conversation-moved", listener);
+    }
+  });
+
   it("stores and loads file bytes", async () => {
     await createConversation({ id: "chat-1", title: "Files", settings, messages: [] });
     const bytes = new Uint8Array([137, 80, 78, 71]);
