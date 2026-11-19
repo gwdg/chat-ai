@@ -652,6 +652,10 @@ export const featureGuides = {
         completeOnTargetClick: true,
       },
       {
+        target: '[data-guide="mcp-scan"]',
+        textKey: "feature_guide.mcp_server.scan",
+      },
+      {
         target: '[data-guide="mcp-input"]',
         textKey: "feature_guide.mcp_server.step2",
         check: mcpConfigured,

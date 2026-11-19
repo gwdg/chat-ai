@@ -1212,6 +1212,16 @@ server on or off; enabling it reveals the selector, which lists every configured
 badges it local or GWDG and never shows URL/id/auth fields. `remoteMcpEnabled` also treats selected
 remote ids as a value.
 
+The add dialog starts with a local scan (`agent/mcpScan.ts`, button
+`data-guide="mcp-scan"`). It probes `GET http://localhost:<port>/mcp` on every port above 5000,
+64 at a time, and adds each port that answers like an MCP endpoint as it is found. Only a
+readable response counts (`agent/mcpScan.ts#isMcpEndpointResponse`): a 404, a 5xx or an HTML page
+is not a hit, so the app's own dev server and other HTTP services on the machine are skipped.
+This runs in the browser, so it only finds servers on the user's own machine, and a server whose
+CORS or mixed-content policy blocks the probe is not found — the request is cross-origin even on
+`localhost`. A full scan of 5001‑65535 takes about ten seconds; a test can inject
+`scanLocalMcpServers({ probe })` instead of touching the network.
+
 
 ### 4.26 Sidebar agents connect to a local opencode server
 

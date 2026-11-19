@@ -668,6 +668,7 @@ export default {
     mcp_server: {
       title: "Einen MCP-Server verbinden",
       step1: "Fügen Sie einen MCP-Server im Bereich MCP-Server der Seitenleiste hinzu.",
+      scan: "Oder lassen Sie die App nach lokalen Servern suchen: „Suchen“ prüft auf diesem Rechner alle Ports über 5000 auf einen /mcp-Endpunkt und fügt die Funde hinzu.",
       step2: "Geben Sie die Server-URL oder Gateway-ID ein und testen Sie die Verbindung.",
       step3: "Öffnen Sie die GWDG-Tools, aktivieren Sie MCP-Server und wählen Sie den konfigurierten Server aus.",
     },
@@ -1892,6 +1893,17 @@ export default {
     none_configured: "Fügen Sie zuerst einen Server im Bereich MCP-Server hinzu.",
     group_local: "Lokale MCP-Tools aktivieren",
     group_remote: "GWDG-MCP-Tools aktivieren",
+    scan_title: "Nach lokalen MCP-Servern suchen",
+    scan_hint:
+      "Prüft auf diesem Gerät alle Ports über 5000 auf einen /mcp-Endpunkt und fügt jeden gefundenen Server hinzu. Funktioniert nur, wenn diese App im Browser auf demselben Rechner geöffnet ist.",
+    scan_action: "Suchen",
+    scan_cancel: "Stopp",
+    scan_progress:
+      "{{scanned}} von {{total}} Ports geprüft · {{found}} gefunden",
+    scan_server_name: "Lokaler MCP-Server (Port {{port}})",
+    scan_done: "{{servers}} lokale MCP-Server hinzugefügt.",
+    scan_empty: "Kein lokaler MCP-Server auf Ports über 5000 gefunden.",
+    scan_failed: "Suche fehlgeschlagen: {{error}}",
   },
   agents: {
     section_title: "Agenten",

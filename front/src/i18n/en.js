@@ -650,6 +650,7 @@ export default {
     mcp_server: {
       title: "Connect an MCP server",
       step1: "Add an MCP server in the sidebar's MCP Servers section.",
+      scan: "Or let the app search for local servers: Scan probes every port above 5000 on this machine for a /mcp endpoint and adds what it finds.",
       step2: "Enter the server URL or gateway id and test the connection.",
       step3: "Open GWDG Tools, enable MCP Servers, and select the configured server.",
     },
@@ -1866,6 +1867,17 @@ export default {
     none_configured: "Add a server in the MCP Servers section first.",
     group_local: "Enable local MCP tools",
     group_remote: "Enable GWDG MCP tools",
+    scan_title: "Scan for local MCP servers",
+    scan_hint:
+      "Checks every port above 5000 on this device for a /mcp endpoint and adds every server it finds. Only works when this app is opened in a browser on the same machine.",
+    scan_action: "Scan",
+    scan_cancel: "Stop",
+    scan_progress:
+      "{{scanned}} of {{total}} ports checked · {{found}} found",
+    scan_server_name: "Local MCP server (port {{port}})",
+    scan_done: "Added {{servers}} local MCP server(s).",
+    scan_empty: "No local MCP server found on ports above 5000.",
+    scan_failed: "Scan failed: {{error}}",
   },
   agents: {
     section_title: "Agents",
