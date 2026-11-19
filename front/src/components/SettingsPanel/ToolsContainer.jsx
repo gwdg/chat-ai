@@ -418,7 +418,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
                 className="border-b border-base-300/70 last:border-b-0"
               >
                 {detail ? (
-                  <div className="flex w-full items-center gap-3 px-3 py-2.5 text-sm">
+                  <div className="flex w-full items-center gap-3 py-2.5 pl-3 pr-2 text-sm">
                     <button
                       type="button"
                       onClick={() => setDetailKey(key)}
@@ -448,7 +448,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
                         row that has no page. */}
                     <span
                       data-testid="tool-row-trail"
-                      className="flex shrink-0 items-center gap-1.5"
+                      className="flex shrink-0 items-center gap-0.5"
                     >
                       {toolSwitch({ active, onToggle, disabled, label })}
                       <button
@@ -456,9 +456,9 @@ export default function ToolsContainer({ localState, setLocalState }) {
                         onClick={() => setDetailKey(key)}
                         tabIndex={-1}
                         aria-hidden="true"
-                        className="flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded text-base-content/50 hover:text-base-content"
+                        className="flex h-3.5 w-3.5 shrink-0 cursor-pointer items-center justify-center rounded text-base-content/50 hover:text-base-content"
                       >
-                        <ChevronRight className="h-4 w-4" />
+                        <ChevronRight className="h-3.5 w-3.5" />
                       </button>
                     </span>
                   </div>
@@ -472,7 +472,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
                     data-guide={`tool-${key}`}
                     title={title}
                     className={[
-                      "flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm",
+                      "flex w-full items-center gap-3 py-2.5 pl-3 pr-2 text-left text-sm",
                       disabled
                         ? "cursor-not-allowed opacity-50"
                         : "cursor-pointer hover:bg-base-200",
@@ -495,7 +495,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
                     )}
                     <span
                       data-testid="tool-row-trail"
-                      className="flex shrink-0 items-center gap-1.5"
+                      className="flex shrink-0 items-center gap-0.5"
                     >
                       <input
                         type="checkbox"
@@ -506,7 +506,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
                         disabled={disabled}
                         className="toggle toggle-sm toggle-success pointer-events-none shrink-0"
                       />
-                      <span aria-hidden="true" className="h-4 w-4 shrink-0" />
+                      <span aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
                     </span>
                   </button>
                 )}

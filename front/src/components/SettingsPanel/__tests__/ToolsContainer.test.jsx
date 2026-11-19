@@ -342,11 +342,17 @@ describe("ToolsContainer list layout", () => {
     render(<ToolsContainer localState={stateWith({})} setLocalState={vi.fn()} />);
 
     const rows = [...document.querySelectorAll('[data-guide="tools-grid"] > li')];
+    const widthOf = (el) =>
+      (el.className.match(/(?:^|\s)(w-[\d.]+)(?:\s|$)/) ?? [])[1];
+    const chevronBox =
+      rows.at(-2).firstElementChild.lastElementChild.lastElementChild;
+    const chevronWidth = widthOf(chevronBox);
+    expect(chevronWidth).toBeTruthy();
     for (const row of rows) {
       const trail = row.firstElementChild.lastElementChild;
       expect(trail.dataset.testid).toBe("tool-row-trail");
-      // A row without a page keeps an empty box the chevron's size.
-      expect(trail.lastElementChild.className).toContain("w-4");
+      // A row without a page keeps an empty box exactly the chevron's size.
+      expect(widthOf(trail.lastElementChild)).toBe(chevronWidth);
     }
   });
 
