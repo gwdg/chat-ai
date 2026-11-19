@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, useLocation } from "react-router";
@@ -75,6 +75,10 @@ import {
   CHAT_DRAG_MIME,
   CHAT_SOURCE_WORKSPACE_MIME,
 } from "../../Sidebar/chatDrop";
+import {
+  AGENT_SESSION_DRAG_MIME,
+  AGENT_SESSION_SOURCE_WORKSPACE_MIME,
+} from "../../Sidebar/sessionDrop";
 import { pinnedStateId } from "../../Sidebar/pinnedState";
 import interfaceSettingsReducer from "../../../Redux/reducers/interfaceSettingsSlice";
 
@@ -678,5 +682,151 @@ describe("WorkspaceList row controls", () => {
     expect(toggle).toHaveAttribute("aria-expanded", "true");
     // The name button still comes first and owns the navigation click.
     expect(row.querySelector("button")).not.toBe(toggle);
+  });
+});
+
+describe("WorkspaceList agent session drag & drop", () => {
+  // jsdom has no working DataTransfer; the handlers only read these members.
+  const makeDataTransfer = (entries: Record<string, string> = {}) => {
+    const data = new Map(Object.entries(entries));
+    return {
+      get types() {
+        return [...data.keys()];
+      },
+      getData: (type: string) => data.get(type) ?? "",
+      setData: (type: string, value: string) => {
+        data.set(type, value);
+      },
+      effectAllowed: "none",
+      dropEffect: "none",
+    } as unknown as DataTransfer;
+  };
+  const workspaceRow = async () =>
+    (await screen.findByText("Teaching")).closest(
+      '[data-guide="workspace-row"]',
+    ) as HTMLElement;
+  const sessionPayload = JSON.stringify({
+    agentId: "agent-1",
+    sessionId: "session-2",
+  });
+
+  it("attaches an agent session dropped on a workspace row", async () => {
+    const onSessionDrop = vi.fn();
+    renderList(makeStore(), ["/"], "all", { onSessionDrop });
+
+    const row = await workspaceRow();
+    const dataTransfer = makeDataTransfer({
+      [AGENT_SESSION_DRAG_MIME]: sessionPayload,
+    });
+
+    fireEvent.dragOver(row, { dataTransfer });
+    expect(row.className).toContain("ring-2");
+
+    fireEvent.drop(row, { dataTransfer });
+
+    expect(onSessionDrop).toHaveBeenCalledWith({
+      agentId: "agent-1",
+      sessionId: "session-2",
+      targetWorkspaceId: "ws-1",
+      sourceWorkspaceId: null,
+    });
+    expect(row.className).not.toContain("ring-2");
+  });
+
+  it("passes the workspace a session was dragged out of", async () => {
+    const onSessionDrop = vi.fn();
+    renderList(makeStore(), ["/"], "all", { onSessionDrop });
+
+    const row = await workspaceRow();
+    const dataTransfer = makeDataTransfer({
+      [AGENT_SESSION_DRAG_MIME]: sessionPayload,
+      [AGENT_SESSION_SOURCE_WORKSPACE_MIME]: "ws-2",
+    });
+
+    fireEvent.drop(row, { dataTransfer });
+
+    expect(onSessionDrop).toHaveBeenCalledWith({
+      agentId: "agent-1",
+      sessionId: "session-2",
+      targetWorkspaceId: "ws-1",
+      sourceWorkspaceId: "ws-2",
+    });
+  });
+
+  it("drags a session row with the workspace it is shown in", async () => {
+    renderList(makeStore());
+
+    const session = await screen.findByText("Design session");
+    const row = session.closest("[draggable]") as HTMLElement;
+    expect(row).toHaveAttribute("draggable", "true");
+
+    const dataTransfer = makeDataTransfer();
+    fireEvent.dragStart(row, { dataTransfer });
+
+    expect(JSON.parse(dataTransfer.getData(AGENT_SESSION_DRAG_MIME))).toEqual({
+      agentId: "agent-1",
+      sessionId: "session-1",
+    });
+    expect(dataTransfer.getData(AGENT_SESSION_SOURCE_WORKSPACE_MIME)).toBe(
+      "ws-1",
+    );
+  });
+});
+
+describe("WorkspaceList double click", () => {
+  const renderWithLocation = (store: ReturnType<typeof makeStore>) =>
+    render(
+      <Provider store={store}>
+        <MemoryRouter initialEntries={["/"]}>
+          <WorkspaceList />
+          <LocationProbe />
+        </MemoryRouter>
+      </Provider>,
+    );
+
+  it("folds a workspace from a double click instead of opening it", async () => {
+    const store = makeStore();
+    renderWithLocation(store);
+
+    const name = await screen.findByText("Teaching");
+    vi.useFakeTimers();
+    try {
+      const button = name.closest("button") as HTMLElement;
+      fireEvent.click(button, { detail: 1 });
+      fireEvent.click(button, { detail: 2 });
+      fireEvent.doubleClick(button);
+      act(() => vi.advanceTimersByTime(400));
+
+      expect(store.getState().interface_settings.collapsed_topics).toContain(
+        workspaceRowCollapseId("ws-1"),
+      );
+      expect(screen.getByTestId("location")).toHaveTextContent("/");
+      expect(
+        screen.getByRole("button", {
+          name: "Attached chats, agents and sessions",
+        }),
+      ).toHaveAttribute("aria-expanded", "false");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("opens a workspace after a single click once no second click follows", async () => {
+    const store = makeStore();
+    renderWithLocation(store);
+
+    const name = await screen.findByText("Teaching");
+    vi.useFakeTimers();
+    try {
+      fireEvent.click(name.closest("button") as HTMLElement, { detail: 1 });
+      expect(screen.getByTestId("location")).toHaveTextContent("/");
+
+      act(() => vi.advanceTimersByTime(400));
+      expect(screen.getByTestId("location")).toHaveTextContent(
+        "/workspace/ws-1",
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

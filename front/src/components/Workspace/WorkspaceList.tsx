@@ -63,6 +63,11 @@ import {
   readChatDrag,
   setChatDragData,
 } from "../Sidebar/chatDrop";
+import {
+  isAgentSessionDrag,
+  readAgentSessionDrag,
+} from "../Sidebar/sessionDrop";
+import { useDelayedSingleClick } from "../../hooks/useDelayedSingleClick";
 import { getDefaultConversation } from "../../utils/conversationUtils";
 
 // Workspace rows and the agent rows inside them default to expanded, so only the
@@ -82,6 +87,7 @@ export default function WorkspaceList({
   onChatDragStart,
   onChatDragEnd,
   onChatDrop,
+  onSessionDrop,
 }: {
   onNavigate?: () => void;
   /** "pinned" renders only pinned workspaces, without the section band. */
@@ -94,6 +100,13 @@ export default function WorkspaceList({
   /** Called when a dragged chat is dropped on a workspace row. */
   onChatDrop?: (payload: {
     conversationId: string;
+    targetWorkspaceId: string;
+    sourceWorkspaceId: string | null;
+  }) => void | Promise<void>;
+  /** Called when a dragged agent session is dropped on a workspace row. */
+  onSessionDrop?: (payload: {
+    agentId: string;
+    sessionId: string;
     targetWorkspaceId: string;
     sourceWorkspaceId: string | null;
   }) => void | Promise<void>;
@@ -152,9 +165,24 @@ export default function WorkspaceList({
     null,
   );
   const loadedSessionAgents = useRef<Set<string>>(new Set());
+  // A fetch may finish after the list re-rendered (attaching the agent changes
+  // `agentsByWorkspace`), but only an unmount makes its result meaningless.
+  // Cancelling on every dependency change left the agent marked as loaded with
+  // no tree, so a session dropped onto a workspace never appeared.
+  const sessionsMounted = useRef(true);
+  useEffect(
+    () => () => {
+      sessionsMounted.current = false;
+    },
+    [],
+  );
   const collapsedTopicIds = useSelector(selectCollapsedTopics) ?? [];
   const isDark = useSelector(selectDarkMode);
   const userSettings = useSelector(selectUserSettings);
+  // Opening a workspace mounts another sidebar and destroys this row, so wait
+  // out a possible second click before navigating.
+  const { schedule: scheduleOpenWorkspace, cancel: cancelOpenWorkspace } =
+    useDelayedSingleClick();
 
   // The pinned copy is a second instance of this list, so its folds are keyed
   // apart from the workspace rows in the Workspace section.
@@ -199,12 +227,11 @@ export default function WorkspaceList({
       }
     }
     if (!targets.length) return undefined;
-    let cancelled = false;
     void Promise.all(
       targets.map(async (agent) => {
         try {
           const tree = await fetchAgentSessions(agent);
-          if (cancelled) return;
+          if (!sessionsMounted.current) return;
           setSessionTrees((current) => ({ ...current, [agent.id]: tree }));
         } catch {
           // Keep the agent row usable; a later expand retries the listing.
@@ -212,9 +239,6 @@ export default function WorkspaceList({
         }
       }),
     );
-    return () => {
-      cancelled = true;
-    };
   }, [agentsByWorkspace, expandedWorkspaceIds, sessionRefresh]);
 
   useEffect(() => {
@@ -264,14 +288,18 @@ export default function WorkspaceList({
     }
   };
 
-  // Dragging a chat onto a workspace row attaches it; a row dragged out of
-  // another workspace moves with it. Only the sidebar's private chat MIME is
-  // accepted, so file or text drags keep their own meaning.
+  // Dragging a chat or an agent session onto a workspace row attaches it; a
+  // link dragged out of another workspace moves with it. Only the sidebar's
+  // private MIME types are accepted, so file or text drags keep their own
+  // meaning.
+  const acceptsWorkspaceDrag = (dataTransfer: DataTransfer | null) =>
+    isChatDrag(dataTransfer) || isAgentSessionDrag(dataTransfer);
+
   const handleWorkspaceDragOver = (
     event: DragEvent<HTMLDivElement>,
     workspaceId: string,
   ) => {
-    if (!isChatDrag(event.dataTransfer)) return;
+    if (!acceptsWorkspaceDrag(event.dataTransfer)) return;
     // Without preventDefault the browser never fires the drop event.
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
@@ -295,16 +323,39 @@ export default function WorkspaceList({
     event: DragEvent<HTMLDivElement>,
     workspaceId: string,
   ) => {
-    if (!isChatDrag(event.dataTransfer)) return;
+    if (!acceptsWorkspaceDrag(event.dataTransfer)) return;
     event.preventDefault();
     setDragOverWorkspaceId(null);
-    const drag = readChatDrag(event.dataTransfer);
+
+    if (isChatDrag(event.dataTransfer)) {
+      const drag = readChatDrag(event.dataTransfer);
+      if (!drag) return;
+      void onChatDrop?.({
+        conversationId: drag.conversationId,
+        targetWorkspaceId: workspaceId,
+        sourceWorkspaceId: drag.workspaceId,
+      });
+      return;
+    }
+
+    const drag = readAgentSessionDrag(event.dataTransfer);
     if (!drag) return;
-    void onChatDrop?.({
-      conversationId: drag.conversationId,
+    void onSessionDrop?.({
+      agentId: drag.agentId,
+      sessionId: drag.sessionId,
       targetWorkspaceId: workspaceId,
       sourceWorkspaceId: drag.workspaceId,
     });
+  };
+
+  // A double click on the workspace's name area folds or unfolds its attached
+  // items, like the trailing chevron. The action buttons keep their own clicks.
+  const toggleWorkspaceCollapse = (
+    workspaceId: string,
+    expandable: boolean,
+  ) => {
+    if (!expandable) return;
+    dispatch(toggleTopic(collapseId(workspaceRowCollapseId(workspaceId))));
   };
 
   const remove = (workspace: { id: string; name: string }) => {
@@ -410,9 +461,20 @@ export default function WorkspaceList({
             >
               <button
                 type="button"
-                onClick={() => {
-                  navigate(`/workspace/${workspace.id}`);
-                  onNavigate?.();
+                onClick={(event) => {
+                  // The second click of a double click folds the row instead.
+                  if (event.detail > 1) {
+                    cancelOpenWorkspace();
+                    return;
+                  }
+                  scheduleOpenWorkspace(() => {
+                    navigate(`/workspace/${workspace.id}`);
+                    onNavigate?.();
+                  });
+                }}
+                onDoubleClick={() => {
+                  cancelOpenWorkspace();
+                  toggleWorkspaceCollapse(workspace.id, expandable);
                 }}
                 className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left"
               >
@@ -712,6 +774,7 @@ export default function WorkspaceList({
                         <AgentSessionList
                           agent={agent}
                           tree={scoped}
+                          dragSourceWorkspaceId={workspace.id}
                           activeSessionId={activeSessionIdFor(
                             openAgent,
                             agent,

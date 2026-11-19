@@ -1032,9 +1032,21 @@ sessions; the sidebar agent list groups an agent's sessions by workspace and kee
 belong to no workspace under "Unassigned sessions". A session row's "…" menu lists the agent's
 workspaces with a tick on the ones the session is attached to and moves it between them
 (`attachSessionToWorkspace` / `detachSessionFromWorkspace`); only workspaces the agent itself is
-attached to are offered, because a session link alone would never be shown. Creating a session from
-a workspace attaches it there, opening one from an attached workspace attaches it, and `AppDB`
-version 13 adds the table.
+attached to are offered, because a session link alone would never be shown. Dragging is the second
+way to move one: `Sidebar/sessionDrop.ts` writes `{agentId, sessionId}` under the private MIME
+`application/x-chatai-agent-session` (plus `application/x-chatai-agent-session-workspace` when the
+row came out of a workspace), so only the sidebar's own session drags light up a workspace row.
+`AgentSessionList` sets that payload from the workspace it is rendered in (none for "Unassigned
+sessions"), and a drop on a workspace row calls `dropAgentSessionOnWorkspace`: it detaches the
+source workspace first when the target differs, then links the agent as well when the target does
+not list it yet, because a session link alone would never be shown. Thus a session can be dragged
+to any workspace row, not only the workspaces offered by its menu. Creating a session from a
+workspace attaches it there, opening one from an attached workspace attaches it, and `AppDB`
+version 13 adds the table. Double-clicking a workspace name or a topic row toggles that row's
+collapse state like its chevron. Their single click opens a page whose own sidebar replaces this
+one, so the click waits `DELAYED_SINGLE_CLICK_MS` (`hooks/useDelayedSingleClick.ts`) for a possible
+second click before navigating; a double click cancels the pending open and folds the row. Double
+clicks on the row's action buttons keep their own meaning.
 `workspace_agents.sessionsSeeded` records that the agent's active session was copied into the
 workspace once (`seedWorkspaceAgentSessions`), so existing data upgrades without duplicating
 sessions and a detached session is not re-added. Detaching an agent, deleting a workspace, removing
@@ -1186,7 +1198,7 @@ remote ids as a value.
 `GET /api/session/status` every 5 s for the status dot (green idle, yellow working, red connection
 error). Each agent row expands into its OpenCode sessions grouped by the workspaces the agent is
 attached to, with the sessions attached to each workspace and a final "Unassigned sessions" group
-for the rest that the session row's "…" menu can move into a workspace; the active `sessionId` is
+for the rest that the session row's "…" menu or a drag onto a workspace row can attach; the active `sessionId` is
 stored on the
 local agent entry, while the session list is read from `GET /api/session` by
 `agents/agentSessions.js`. Children are fetched with

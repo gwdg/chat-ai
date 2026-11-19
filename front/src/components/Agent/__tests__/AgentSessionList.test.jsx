@@ -9,6 +9,10 @@ vi.mock("../../../hooks/useToast", () => ({
 }));
 
 import AgentSessionList from "../AgentSessionList";
+import {
+  AGENT_SESSION_DRAG_MIME,
+  AGENT_SESSION_SOURCE_WORKSPACE_MIME,
+} from "../../Sidebar/sessionDrop";
 
 const session = { id: "session-1", title: "Refactor the parser" };
 
@@ -148,5 +152,71 @@ describe("AgentSessionList workspace view", () => {
     expect(
       screen.getByText("No sessions attached to this workspace yet."),
     ).toBeInTheDocument();
+  });
+});
+
+describe("AgentSessionList drag & drop", () => {
+  // jsdom has no working DataTransfer, so the rows get a small stand-in with
+  // the three members the drag helpers use.
+  const makeDataTransfer = (entries = {}) => {
+    const data = new Map(Object.entries(entries));
+    return {
+      get types() {
+        return [...data.keys()];
+      },
+      getData: (type) => data.get(type) ?? "",
+      setData: (type, value) => {
+        data.set(type, value);
+      },
+      effectAllowed: "none",
+      dropEffect: "none",
+    };
+  };
+
+  const renderList = (props = {}) =>
+    render(
+      <AgentSessionList
+        agent={{ id: "agent-1", sessionId: "session-1" }}
+        tree={treeOf([session])}
+        activeSessionId="session-1"
+        onSelect={vi.fn()}
+        {...props}
+      />,
+    );
+
+  it("carries the agent, session and source workspace on drag", () => {
+    renderList({ dragSourceWorkspaceId: "ws-1" });
+
+    const row = screen
+      .getByText("Refactor the parser")
+      .closest("[draggable]");
+    expect(row).toHaveAttribute("draggable", "true");
+
+    const dataTransfer = makeDataTransfer();
+    fireEvent.dragStart(row, { dataTransfer });
+
+    expect(JSON.parse(dataTransfer.getData(AGENT_SESSION_DRAG_MIME))).toEqual({
+      agentId: "agent-1",
+      sessionId: "session-1",
+    });
+    expect(dataTransfer.getData(AGENT_SESSION_SOURCE_WORKSPACE_MIME)).toBe(
+      "ws-1",
+    );
+    expect(dataTransfer.effectAllowed).toBe("move");
+  });
+
+  it("marks an unassigned session with no source workspace", () => {
+    renderList({ dragSourceWorkspaceId: null });
+
+    const row = screen
+      .getByText("Refactor the parser")
+      .closest("[draggable]");
+    const dataTransfer = makeDataTransfer();
+    fireEvent.dragStart(row, { dataTransfer });
+
+    expect(dataTransfer.getData(AGENT_SESSION_SOURCE_WORKSPACE_MIME)).toBe("");
+    expect(dataTransfer.getData(AGENT_SESSION_DRAG_MIME)).toContain(
+      '"sessionId":"session-1"',
+    );
   });
 });

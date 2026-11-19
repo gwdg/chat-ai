@@ -23,18 +23,21 @@ import { useModal } from "../../modals/ModalContext";
 import { useToast } from "../../hooks/useToast";
 import Tooltip from "../Others/Tooltip";
 import ShortcutTooltip from "../Sidebar/ShortcutTooltip";
+import { setAgentSessionDragData } from "../Sidebar/sessionDrop";
 
 // A session that belongs to no workspace must still read `has` safely.
 const NO_WORKSPACES = new Set();
 
 const SessionRow = ({
   session,
+  agent,
   depth,
   active,
   status,
   summary,
   workspaces = [],
   sessionWorkspaceIds,
+  dragSourceWorkspaceId = null,
   onSelect,
   onRename,
   onClose,
@@ -54,8 +57,18 @@ const SessionRow = ({
         : status === "ready"
           ? "bg-success"
           : "bg-base-content/20";
+  const draggable = Boolean(agent?.id && session?.id);
   const row = (
     <div
+      draggable={draggable}
+      onDragStart={(event) => {
+        setAgentSessionDragData(
+          event.dataTransfer,
+          agent.id,
+          session.id,
+          dragSourceWorkspaceId,
+        );
+      }}
       className={`group flex items-center rounded-md pr-1 transition ${
         active
           ? "bg-base-200 text-base-content"
@@ -194,6 +207,8 @@ export default function AgentSessionList({
   summaries = {},
   workspaces = [],
   sessionWorkspaceIds,
+  /** Workspace the rows are shown in, so a drop elsewhere can move the link. */
+  dragSourceWorkspaceId = null,
   onSelect,
   onCreate = undefined,
   onDetach = undefined,
@@ -219,12 +234,14 @@ export default function AgentSessionList({
     <div key={session.id}>
       <SessionRow
         session={session}
+        agent={agent}
         depth={depth}
         active={activeSessionId === session.id}
         status={statuses[session.id]}
         summary={summaries[session.id]?.summary}
         workspaces={workspaces}
         sessionWorkspaceIds={sessionWorkspaceIds}
+        dragSourceWorkspaceId={dragSourceWorkspaceId}
         onSelect={onSelect}
         onRename={renameSession}
         onClose={closeSession}

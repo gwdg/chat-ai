@@ -2265,6 +2265,8 @@ export default {
     attach_chat: "Chat verknüpfen",
     attach_chat_error:
       "Der Chat konnte nicht mit dem Arbeitsbereich verknüpft werden",
+    attach_session_error:
+      "Die Sitzung konnte nicht mit dem Arbeitsbereich verknüpft werden",
     new_chat: "Neuer Chat in diesem Arbeitsbereich",
     detach_chat: "Chat trennen",
     attach_chat_hint: "Verknüpfen Sie einen Chat mit diesem Arbeitsbereich.",

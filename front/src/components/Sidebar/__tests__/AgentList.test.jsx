@@ -17,6 +17,10 @@ import {
 } from "../../../db/workspaceDb";
 import { buildSessionTree } from "../../../agents/agentSessions";
 import { pinnedStateId } from "../pinnedState";
+import {
+  AGENT_SESSION_DRAG_MIME,
+  AGENT_SESSION_SOURCE_WORKSPACE_MIME,
+} from "../sessionDrop";
 import interfaceSettingsReducer from "../../../Redux/reducers/interfaceSettingsSlice";
 
 const mocks = vi.hoisted(() => ({
@@ -376,6 +380,58 @@ describe("AgentList", () => {
       "session-1",
       "session-2",
     ]);
+  });
+
+  it("drags a session with the workspace it is listed in", async () => {
+    const workspaceId = await createWorkspace("Research");
+    mocks.sessionTree = buildSessionTree([
+      { id: "session-1", title: "Active session", time: { updated: 20 } },
+      { id: "session-2", title: "Loose session", time: { updated: 10 } },
+    ]);
+
+    renderAgentList();
+    addAgentThroughModal();
+    await act(async () => {
+      await attachWorkspaceAgent(workspaceId, "agent-1");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Sessions" }));
+    // Wait for the attached workspace to appear as a group before reading the
+    // source workspace off a row.
+    await screen.findByText("Research");
+
+    const dataTransferFor = () => {
+      const data = new Map();
+      return {
+        get types() {
+          return [...data.keys()];
+        },
+        getData: (type) => data.get(type) ?? "",
+        setData: (type, value) => data.set(type, value),
+        effectAllowed: "none",
+        dropEffect: "none",
+      };
+    };
+
+    const grouped = (await screen.findByText("Active session")).closest(
+      "[draggable]",
+    );
+    const groupedTransfer = dataTransferFor();
+    fireEvent.dragStart(grouped, { dataTransfer: groupedTransfer });
+    expect(JSON.parse(groupedTransfer.getData(AGENT_SESSION_DRAG_MIME))).toEqual(
+      { agentId: "agent-1", sessionId: "session-1" },
+    );
+    expect(groupedTransfer.getData(AGENT_SESSION_SOURCE_WORKSPACE_MIME)).toBe(
+      workspaceId,
+    );
+
+    // An unassigned session has no source workspace to detach from.
+    const loose = screen.getByText("Loose session").closest("[draggable]");
+    const looseTransfer = dataTransferFor();
+    fireEvent.dragStart(loose, { dataTransfer: looseTransfer });
+    expect(looseTransfer.getData(AGENT_SESSION_SOURCE_WORKSPACE_MIME)).toBe(
+      "",
+    );
   });
 
   it("marks the section with an icon beside the collapse control", () => {

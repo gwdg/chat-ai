@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import TopicList, { PINNED_COLLAPSE_ID, UNSORTED_TOPIC_ID } from "../TopicList";
 import {
@@ -275,5 +275,64 @@ describe("TopicList row controls", () => {
     expect(toggle).toHaveAttribute("aria-expanded", "true");
     // The emoji/icon slot and the label keep their leading positions.
     expect(row.firstElementChild).not.toBe(toggle);
+  });
+});
+
+describe("TopicList double click", () => {
+  const topic = { id: "t5", name: "Double topic", color: "violet" };
+  const props = {
+    ...baseProps,
+    topics: [topic],
+    conversationsByTopic: new Map([
+      ["t5", [{ id: "c5", title: "Topic chat", lastModified: 1 }]],
+    ]),
+  };
+
+  it("folds a topic from a double click on its label", () => {
+    vi.useFakeTimers();
+    try {
+      const onOpenTopic = vi.fn();
+      render(<TopicList {...props} onOpenTopic={onOpenTopic} />);
+
+      // A real user double-clicks the topic name, not the bare row element.
+      const label = screen.getByText("Double topic");
+      fireEvent.click(label, { detail: 1 });
+      fireEvent.click(label, { detail: 2 });
+      fireEvent.doubleClick(label);
+      act(() => vi.advanceTimersByTime(400));
+
+      expect(reduxMocks.dispatch).toHaveBeenCalledWith(toggleTopic("t5"));
+      expect(onOpenTopic).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("opens a topic after a single click once no second click follows", () => {
+    vi.useFakeTimers();
+    try {
+      const onOpenTopic = vi.fn();
+      render(<TopicList {...props} onOpenTopic={onOpenTopic} />);
+
+      const label = screen.getByText("Double topic");
+      fireEvent.click(label, { detail: 1 });
+
+      expect(onOpenTopic).not.toHaveBeenCalled();
+      act(() => vi.advanceTimersByTime(400));
+      expect(onOpenTopic).toHaveBeenCalledWith("t5");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("leaves the disclosure arrow in charge of its own clicks", () => {
+    render(<TopicList {...props} />);
+
+    const row = screen.getByText("Double topic").closest('[role="button"]');
+    const toggle = row.querySelector('button[aria-label="Collapse topic"]');
+
+    fireEvent.doubleClick(toggle);
+
+    expect(reduxMocks.dispatch).not.toHaveBeenCalled();
   });
 });

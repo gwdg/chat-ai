@@ -649,6 +649,7 @@ export default function AgentList({
                         <AgentSessionList
                           agent={agent}
                           tree={filterSessionTree(sessionTree, sessionIds)}
+                          dragSourceWorkspaceId={workspace.id}
                           activeSessionId={activeSessionIdFor(openAgent, agent)}
                           statuses={sessionStatuses[agent.id]}
                           summaries={sessionSummariesFor(agent)}
@@ -690,6 +691,7 @@ export default function AgentList({
                       <AgentSessionList
                         agent={agent}
                         tree={filterSessionTree(sessionTree, unassigned)}
+                        dragSourceWorkspaceId={null}
                         activeSessionId={activeSessionIdFor(openAgent, agent)}
                         statuses={sessionStatuses[agent.id]}
                         summaries={sessionSummariesFor(agent)}

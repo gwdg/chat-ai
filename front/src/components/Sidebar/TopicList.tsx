@@ -22,6 +22,7 @@ import { groupRowTint, groupRule, topicColor, withAlpha } from "./topicColors";
 import { isTopicIconId, topicIcon } from "./topicIcons";
 
 import { useModal } from "../../modals/ModalContext";
+import { useDelayedSingleClick } from "../../hooks/useDelayedSingleClick";
 import {
   collapseTopics,
   expandTopics,
@@ -129,6 +130,12 @@ export default function TopicList({
   const toggleTopicCollapse = useCallback((topicId: string) => {
     dispatch(toggleTopic(topicId));
   }, []);
+
+  // Clicking a topic opens its page, which mounts another sidebar and so
+  // destroys this row. Wait out a possible second click before navigating,
+  // otherwise a double click never reaches the row to fold it.
+  const { schedule: scheduleOpenTopic, cancel: cancelOpenTopic } =
+    useDelayedSingleClick();
 
   // The ids the collapse-all control acts on: pinned topics, regular topics and
   // the unsorted bucket once it holds chats. Sections, date buckets, workspaces
@@ -245,7 +252,22 @@ export default function TopicList({
           role="button"
           tabIndex={0}
           aria-current={isActiveTopic ? "page" : undefined}
-          onClick={() => onOpenTopic(id)}
+          onClick={(e) => {
+            // The second click of a double click folds the topic instead of
+            // opening it.
+            if (e.detail > 1) {
+              cancelOpenTopic();
+              return;
+            }
+            scheduleOpenTopic(() => onOpenTopic(id));
+          }}
+          onDoubleClick={(e) => {
+            // The label and the row react; the arrow, pin and options buttons
+            // own their own clicks.
+            if ((e.target as HTMLElement).closest("button")) return;
+            cancelOpenTopic();
+            toggleTopicCollapse(id);
+          }}
           onKeyDown={(e) => {
             // Let the collapse/options buttons handle their own keys.
             if (e.target !== e.currentTarget) return;

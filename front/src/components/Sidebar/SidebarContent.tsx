@@ -74,6 +74,7 @@ import {
   dropConversationOnWorkspace,
   setChatDragData,
 } from "./chatDrop";
+import { dropAgentSessionOnWorkspace } from "./sessionDrop";
 import PinnedSection from "./PinnedSection";
 import { showAdvancedSidebarSections } from "./sidebarVisibility";
 import SidebarUserCard from "./SidebarUserCard";
@@ -440,6 +441,36 @@ export default function SidebarContent({
         setDraggingConversationId(null);
         setDraggingWorkspaceId(null);
         setDragOverTopicId(null);
+      }
+    },
+    [notifyError, t],
+  );
+
+  // Dropping an agent session on a workspace row attaches the session there.
+  // A session dragged out of another workspace moves instead of being
+  // attached to both.
+  const handleWorkspaceSessionDrop = useCallback(
+    async ({
+      agentId,
+      sessionId,
+      targetWorkspaceId,
+      sourceWorkspaceId,
+    }: {
+      agentId: string;
+      sessionId: string;
+      targetWorkspaceId: string;
+      sourceWorkspaceId: string | null;
+    }) => {
+      try {
+        await dropAgentSessionOnWorkspace({
+          agentId,
+          sessionId,
+          targetWorkspaceId,
+          sourceWorkspaceId,
+        });
+      } catch (error) {
+        console.error("Failed to attach session via drag & drop", error);
+        notifyError(t("workspace.attach_session_error"));
       }
     },
     [notifyError, t],
@@ -892,6 +923,7 @@ export default function SidebarContent({
                   onChatDragStart={handleWorkspaceChatDragStart}
                   onChatDragEnd={handleConversationDragEnd}
                   onChatDrop={handleWorkspaceDrop}
+                  onSessionDrop={handleWorkspaceSessionDrop}
                 />
               )}
               {showAgents && <AgentList variant="pinned" />}
@@ -1161,6 +1193,7 @@ export default function SidebarContent({
                     onChatDragStart={handleWorkspaceChatDragStart}
                     onChatDragEnd={handleConversationDragEnd}
                     onChatDrop={handleWorkspaceDrop}
+                    onSessionDrop={handleWorkspaceSessionDrop}
                   />
                 </>
               )}

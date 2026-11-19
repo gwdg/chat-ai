@@ -2234,6 +2234,7 @@ export default {
     no_attached_chats: "No chats attached yet.",
     attach_chat: "Attach chat",
     attach_chat_error: "Could not attach the chat to the workspace",
+    attach_session_error: "Could not attach the session to the workspace",
     new_chat: "New chat in this workspace",
     detach_chat: "Detach chat",
     attach_chat_hint: "Attach any chat to this workspace.",
