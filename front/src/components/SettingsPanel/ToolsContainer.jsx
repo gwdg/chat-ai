@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import ArcanaContainer from "./ArcanaContainer";
 import McpServerPicker from "./McpServerPicker";
+import Tooltip from "../Others/Tooltip";
 import { agentGatewayTools, isAgentEnabled, modelSupportsTools } from "../../apis/agentEndpoints";
 import { remoteMcpEnabled } from "../../agent/mcp";
 import { isArcanasEnabled } from "../../utils/modules";
@@ -99,6 +100,17 @@ export default function ToolsContainer({ localState, setLocalState }) {
         label: t("settings.label_arcana_tools"),
       },
       {
+        key: "image_analysis",
+        Icon: ScanEye,
+        label: t("settings.label_image_analysis"),
+      },
+      {
+        key: "create_docx",
+        Icon: FileText,
+        label: t("settings.label_create_docx"),
+      },
+      // The two with a settings page sit last: they are the ones you open, not tick.
+      {
         key: "arcana",
         Icon: BookOpen,
         label: t("settings.label_arcana"),
@@ -109,16 +121,6 @@ export default function ToolsContainer({ localState, setLocalState }) {
         Icon: Server,
         label: t("mcp.section_title"),
         detail: true,
-      },
-      {
-        key: "image_analysis",
-        Icon: ScanEye,
-        label: t("settings.label_image_analysis"),
-      },
-      {
-        key: "create_docx",
-        Icon: FileText,
-        label: t("settings.label_create_docx"),
       },
     ],
     [t, arcanasEnabled]
@@ -267,6 +269,9 @@ export default function ToolsContainer({ localState, setLocalState }) {
       />
     </button>
   );
+
+  const warningTooltip = (key) =>
+    key === "web_search" ? t("alert.web_search_usage") : t("alert.mcp_usage");
 
   return (
     <div className="w-full space-y-3">
@@ -430,17 +435,19 @@ export default function ToolsContainer({ localState, setLocalState }) {
                         {label}
                       </span>
                       {(key === "web_search" || key === "mcp") && (
-                        <TriangleAlert
-                          className="h-3.5 w-3.5 shrink-0 text-warning"
-                          aria-hidden="true"
-                        />
+                        <Tooltip text={warningTooltip(key)}>
+                          <TriangleAlert
+                            className="h-3.5 w-3.5 shrink-0 text-warning"
+                            aria-hidden="true"
+                          />
+                        </Tooltip>
                       )}
                     </button>
+                    {toolSwitch({ active, onToggle, disabled, label })}
                     <ChevronRight
                       className="h-4 w-4 shrink-0 text-base-content/50"
                       aria-hidden="true"
                     />
-                    {toolSwitch({ active, onToggle, disabled, label })}
                   </div>
                 ) : (
                   <button
@@ -466,10 +473,12 @@ export default function ToolsContainer({ localState, setLocalState }) {
                       {label}
                     </span>
                     {(key === "web_search" || key === "mcp") && (
-                      <TriangleAlert
-                        className="h-3.5 w-3.5 shrink-0 text-warning"
-                        aria-hidden="true"
-                      />
+                      <Tooltip text={warningTooltip(key)}>
+                        <TriangleAlert
+                          className="h-3.5 w-3.5 shrink-0 text-warning"
+                          aria-hidden="true"
+                        />
+                      </Tooltip>
                     )}
                     <input
                       type="checkbox"

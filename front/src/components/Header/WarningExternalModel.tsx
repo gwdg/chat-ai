@@ -164,7 +164,7 @@ export default function WarningExternalModel({
   const panel = (
     <div
       className={`${
-        portalPanel ? "fixed z-[999999]" : "absolute right-0 bottom-full mb-2 z-20"
+        portalPanel ? "fixed z-[45]" : "absolute right-0 bottom-full mb-2 z-20"
       } p-4 bg-base-100
  border border-base-300
          rounded-lg shadow-xl w-56 max-w-[calc(100vw-2rem)]`}

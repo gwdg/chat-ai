@@ -325,6 +325,33 @@ describe("ToolsContainer bulk actions", () => {
 });
 
 describe("ToolsContainer list layout", () => {
+  it("puts the two tools with pages last and the chevron after the switch", () => {
+    render(<ToolsContainer localState={stateWith({})} setLocalState={vi.fn()} />);
+
+    const rows = [...document.querySelectorAll('[data-guide="tools-grid"] > li')];
+    expect(rows.at(-2).textContent).toContain("Arcana");
+    expect(rows.at(-1).textContent).toContain("MCP Servers");
+
+    const children = [...rows.at(-2).firstElementChild.children];
+    expect(children.at(-1).getAttribute("class")).toContain(
+      "lucide-chevron-right",
+    );
+    expect(children.at(-2).getAttribute("role")).toBe("switch");
+  });
+
+  it("explains a row's warning on hover", () => {
+    render(<ToolsContainer localState={stateWith({})} setLocalState={vi.fn()} />);
+
+    const row = screen.getByRole("button", { name: "Web Search" });
+    fireEvent.mouseEnter(row.querySelector("span.cursor-pointer"));
+
+    expect(
+      screen.getByText(
+        "PRIVACY WARNING: Your chat history may be sent to a search engine (e.g., Google)",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("lists each tool as a row whose switch shows whether it is on", () => {
     render(
       <ToolsContainer
