@@ -189,6 +189,31 @@ export const remoteMcpEnabled = (settings: any) => {
 export const withoutHeaders = (servers: unknown) =>
   Array.isArray(servers) ? servers.map(({ headers, ...rest }) => rest) : servers;
 
+export type McpStatusValue = "ready" | "error";
+
+/** Last status per normalized server URL, from a test or a real connection in this tab. */
+const serverStatuses = new Map<string, McpStatusValue>();
+
+/** The last known status of a server, so a light can start green instead of untested. */
+export function getMcpServerStatus(url: string): McpStatusValue | undefined {
+  return serverStatuses.get(normalizeMcpUrl(url));
+}
+
+/**
+ * Records a server status and announces it, so the sidebar light follows every test (settings,
+ * dialog, sidebar, Meta chat) and every connection the agent opens.
+ */
+export function reportMcpServerStatus(url: string, status: McpStatusValue) {
+  const key = normalizeMcpUrl(url);
+  if (!key) return;
+  const previous = serverStatuses.get(key);
+  serverStatuses.set(key, status);
+  if (previous === status || typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent("chatai:mcp-status", { detail: { url: key, status } }),
+  );
+}
+
 export class McpUnavailableError extends Error {
   constructor(readonly url: string, cause: unknown) {
     super(`MCP server ${url} is not reachable: ${cause instanceof Error ? cause.message : String(cause)}`);
@@ -221,7 +246,10 @@ type Connection = { client: any; tools: any[]; prefix: string; name: string };
 // (prefetchMcpServers) and kept across turns; one that fails is dropped and opened again
 // on the next use, so only then does a turn wait for the connection.
 const connections = new Map<string, Promise<Connection>>();
-const keyOf = (server: McpServer) => JSON.stringify([server.url, server.headers ?? {}]);
+// The normalized URL is the identity: the settings keep what the user typed, so the same
+// server could otherwise be opened twice and one entry would never be dropped.
+const keyOf = (server: McpServer) =>
+  JSON.stringify([normalizeMcpUrl(server.url), server.headers ?? {}]);
 
 function drop(key: string, connection?: Promise<Connection>) {
   const current = connections.get(key);
@@ -230,13 +258,36 @@ function drop(key: string, connection?: Promise<Connection>) {
   current.then(({ client }) => client.close()).catch(() => {});
 }
 
+/**
+ * The browser reports a refused connection, a rejected CORS preflight and a mixed-content
+ * block all as a bare `TypeError: Failed to fetch` (Firefox: `NetworkError`; Safari: `Load
+ * failed`), and an SDK may re-wrap it. Naming the address and the three causes is the only
+ * way the user (or a model reading a tool result) can tell them apart.
+ */
+const FETCH_FAILURE = /Failed to fetch|NetworkError|Load failed|Network request failed/i;
+
+function asReachableError(url: string, error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  if (!(error instanceof TypeError) && !FETCH_FAILURE.test(message)) return error;
+  return new Error(
+    `Could not reach the MCP server at ${url}: the browser must be able to call it. ` +
+      "Check that it is running, that it answers this page's origin with CORS headers, " +
+      "and that an https page is not calling a plain http host other than localhost.",
+  );
+}
+
 async function open(server: McpServer): Promise<Connection> {
+  // Normalize before parsing: `new URL("localhost:9000/mcp")` reads `localhost:` as the
+  // scheme and every request then fails with `Failed to fetch`, while the settings test —
+  // which does normalize — reports the same server as working.
+  const url = normalizeMcpUrl(server.url);
+  if (!url) throw new Error(i18n.t("settings.mcp_test_invalid_url"));
   const [{ Client }, { StreamableHTTPClientTransport }] = await Promise.all([
     import("@modelcontextprotocol/sdk/client/index.js"),
     import("@modelcontextprotocol/sdk/client/streamableHttp.js"),
   ]);
   const client = new Client({ name: "chat-ai", version: "1.0.0" });
-  const transport = new StreamableHTTPClientTransport(new URL(server.url), {
+  const transport = new StreamableHTTPClientTransport(new URL(url), {
     requestInit: server.headers ? { headers: server.headers } : undefined,
   });
   try {
@@ -248,11 +299,13 @@ async function open(server: McpServer): Promise<Connection> {
       tools.push(...page.tools);
       cursor = page.nextCursor;
     } while (cursor);
-    const name = client.getServerVersion()?.name || new URL(server.url).host;
+    const name = client.getServerVersion()?.name || new URL(url).host;
+    reportMcpServerStatus(url, "ready");
     return { client, tools, prefix: toName(name), name };
   } catch (error) {
+    reportMcpServerStatus(url, "error");
     client.close().catch(() => {});
-    throw error;
+    throw asReachableError(url, error);
   }
 }
 
@@ -271,6 +324,68 @@ export async function testMcpServer(server: McpServer): Promise<McpTestResult> {
   } finally {
     client.close().catch(() => {});
   }
+}
+
+export interface McpServerDetails {
+  name: string;
+  title?: string;
+  version?: string;
+  description?: string;
+  websiteUrl?: string;
+  protocolVersion?: string;
+  instructions?: string;
+  capabilities: Array<{ name: string; detail?: string }>;
+  tools: Array<{ name: string; title?: string; description?: string }>;
+}
+
+const TRUE_FLAGS = (value: unknown) =>
+  value && typeof value === "object"
+    ? Object.entries(value as Record<string, unknown>)
+        .filter(([, enabled]) => enabled === true)
+        .map(([flag]) => flag)
+    : [];
+
+/**
+ * What a server reports about itself after the MCP initialize handshake: its implementation
+ * name/title/version, the negotiated protocol version, capabilities, instructions and tools.
+ * Uses the shared connection, so a server the chat already uses is not contacted twice.
+ */
+export async function describeMcpServer(server: McpServer): Promise<McpServerDetails> {
+  const { client, tools, name } = await connect(server);
+  const version = client.getServerVersion?.() as
+    | {
+        name?: string;
+        title?: string;
+        version?: string;
+        description?: string;
+        websiteUrl?: string;
+      }
+    | undefined;
+  const capabilities = (client.getServerCapabilities?.() ?? {}) as Record<
+    string,
+    unknown
+  >;
+  const protocolVersion = (
+    client.transport as { protocolVersion?: string } | undefined
+  )?.protocolVersion;
+  return {
+    name: version?.name || name,
+    title: version?.title,
+    version: version?.version,
+    description: version?.description,
+    websiteUrl: version?.websiteUrl,
+    protocolVersion,
+    instructions: client.getInstructions?.(),
+    capabilities: Object.entries(capabilities).map(([capability, value]) => {
+      const flags = TRUE_FLAGS(value);
+      return { name: capability, detail: flags.length ? flags.join(", ") : undefined };
+    }),
+    tools: tools.map((tool: any) => ({
+      name: tool.name,
+      title: tool.title,
+      description: tool.description,
+    })),
+  };
 }
 
 function connect(server: McpServer): Promise<Connection> {

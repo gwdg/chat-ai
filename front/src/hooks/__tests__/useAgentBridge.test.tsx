@@ -19,6 +19,16 @@ vi.mock("../../apis/opencodeAgents", () => ({
   connectOpencodeMcpServer: vi.fn(async () => {}),
   removeOpencodeMcpServer: vi.fn(async () => {}),
 }));
+vi.mock("../../agent/mcp", () => ({
+  // The browser's own MCP client: the hook only relays its answer (or its error) to the
+  // sidecar, so the test asserts the message the model would read.
+  listMcpServerTools: vi.fn(async () => {
+    throw new Error(
+      "Could not reach the MCP server at http://crm.test/mcp: the browser must be able to call it.",
+    );
+  }),
+  callMcpServerTool: vi.fn(async () => ""),
+}));
 vi.mock("../../apis/agentTunnel", () => ({
   // The tunnel is a deployment setting; the hook must pick the HTTP browser leg
   // from it instead of opening a WebSocket the page could not reach.
@@ -278,6 +288,56 @@ describe("useAgentBridge", () => {
     });
   });
 
+  it("relays a failed local MCP call as the model would read it", async () => {
+    // `Failed to fetch` on its own says nothing; the hook must forward the message that
+    // names the server and the cause instead of swallowing or rewording it.
+    mocks.settings = {
+      mcp_servers: [
+        { id: "crm", name: "crm-mcp", kind: "local", url: "http://crm.test/mcp" },
+      ],
+    };
+    mocks.tunnel = true;
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, status: 200 })));
+    const parked = new Promise(() => {});
+    let polls = 0;
+    mocks.tunnelRequest.mockImplementation((call: any) => {
+      if (call.method === "POST" && call.path.endsWith("/bridge/sessions")) {
+        return Promise.resolve(jsonResponse(200, tunnelSession));
+      }
+      if (call.method === "POST") return Promise.resolve(jsonResponse(204, null));
+      polls += 1;
+      if (polls === 1) return Promise.resolve(jsonResponse(200, { type: "ready" }));
+      if (polls === 2) {
+        return Promise.resolve(
+          jsonResponse(200, {
+            type: "tool_call",
+            requestId: "call-mcp",
+            name: "mcp_list_tools",
+            arguments: { server: "crm-mcp" },
+          }),
+        );
+      }
+      return parked;
+    });
+
+    renderHook(() =>
+      useAgentBridge({ ...props, mcp: true, agent: serviceAgent }),
+    );
+
+    await waitFor(() => {
+      const reply = mocks.tunnelRequest.mock.calls.find(
+        ([call]: any[]) => call.path === tunnelSession.replyUrl,
+      );
+      expect(reply?.[0].body).toMatchObject({
+        type: "tool_result",
+        requestId: "call-mcp",
+        ok: false,
+        error: expect.stringContaining("http://crm.test/mcp"),
+      });
+    });
+    mocks.settings = { mcp_servers: [] };
+  });
+
   it("deletes a tunneled session with the token in the query", async () => {
     // A completion carries no `authorization` header, so the delete names the
     // session token itself; the service accepts it there.
@@ -369,6 +429,35 @@ describe("useAgentBridge", () => {
     // Nothing runnable in the response means the HTTP fallback, not an empty command.
     expect(wantsSidecar(local, serviceAgent, [])).toBe(false);
     expect(wantsSidecar(local, serviceAgent, undefined)).toBe(false);
+  });
+
+  it("adds the mcp scope only while the toggle is on", async () => {
+    vi.mocked(addOpencodeMcpServer).mockClear();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          ...sessionResponse,
+          sidecarCommand: ["node", "/srv/agent-service/bridge-sidecar.mjs"],
+        }),
+      })),
+    );
+    vi.stubGlobal("WebSocket", FakeWebSocket);
+
+    // The sidecar builds its tool list from these scopes, so a session registered
+    // without `mcp` can never offer mcp_list_servers, whatever the UI shows later.
+    renderHook(() =>
+      useAgentBridge({ ...props, agent: serviceAgent, mcp: true, writable: true }),
+    );
+
+    await waitFor(() => expect(addOpencodeMcpServer).toHaveBeenCalled());
+    expect(vi.mocked(addOpencodeMcpServer).mock.calls[0][2]).toMatchObject({
+      environment: {
+        CHAT_AI_BRIDGE_SCOPES: "workspace,write,mcp",
+      },
+    });
   });
 
   it("registers a service agent's sidecar as a local MCP entry", async () => {

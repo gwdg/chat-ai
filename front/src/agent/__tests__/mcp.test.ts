@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   activeMcpServers,
   connectMcpServers,
+  getMcpServerStatus,
   hasLocalMcpServerValue,
   hasMcpServerValue,
   hasRemoteMcpServerValue,
@@ -9,14 +10,23 @@ import {
   normalizeMcpUrl,
   remoteMcpEnabled,
   resolveMcpServers,
+  testMcpServer,
 } from "../mcp";
 
-const sdk = vi.hoisted(() => ({ names: new Map<string, string>() }));
+const sdk = vi.hoisted(() => ({
+  names: new Map<string, string>(),
+  failing: new Set<string>(),
+  fetchFailures: new Set<string>(),
+}));
 
 vi.mock("@modelcontextprotocol/sdk/client/index.js", () => ({
   Client: class {
     name = "";
     async connect(transport: { url: string }) {
+      if (sdk.failing.has(transport.url)) throw new Error("unreachable");
+      // What the browser throws for a refused connection, a rejected CORS preflight
+      // and a mixed-content block alike.
+      if (sdk.fetchFailures.has(transport.url)) throw new TypeError("Failed to fetch");
       this.name = sdk.names.get(transport.url) ?? "server";
     }
     getServerVersion() {
@@ -211,5 +221,60 @@ describe("MCP server name changes", () => {
 
     expect(onNameMismatch).not.toHaveBeenCalled();
     expect(tools).toHaveLength(2);
+  });
+});
+
+describe("MCP connections use the URL the settings test uses", () => {
+  it("adds the scheme a stored url left out", async () => {
+    sdk.names.set("http://localhost:9000/mcp", "Bare Url Server");
+
+    // The settings keep what the user typed; `new URL("localhost:9000/mcp")` would read
+    // `localhost:` as the scheme, so the bridge failed where the test button succeeded.
+    const result = await testMcpServer({ url: "localhost:9000/mcp", enabled: true });
+
+    expect(result.name).toBe("Bare Url Server");
+    expect(getMcpServerStatus("http://localhost:9000/mcp")).toBe("ready");
+  });
+
+  it("names the address and the causes when the browser blocks the request", async () => {
+    sdk.fetchFailures.add("http://blocked.test/mcp");
+
+    // A tool result reaches the model and the chat, so the bare browser wording is not
+    // enough to act on: the url, CORS and mixed content all have to be in the message.
+    await expect(
+      testMcpServer({ url: "http://blocked.test/mcp", enabled: true }),
+    ).rejects.toThrow(
+      /Could not reach the MCP server at http:\/\/blocked\.test\/mcp.*CORS/,
+    );
+    expect(getMcpServerStatus("http://blocked.test/mcp")).toBe("error");
+  });
+});
+
+describe("MCP server status", () => {
+  it("records a working server and announces it, so a light can turn green", async () => {
+    const events: Array<{ url?: string; status?: string }> = [];
+    const onStatus = (event: Event) =>
+      events.push((event as CustomEvent).detail);
+    window.addEventListener("chatai:mcp-status", onStatus);
+
+    await testMcpServer({ url: "http://status-ok.test/mcp", enabled: true });
+
+    window.removeEventListener("chatai:mcp-status", onStatus);
+    expect(getMcpServerStatus("http://status-ok.test/mcp")).toBe("ready");
+    expect(events).toContainEqual({
+      url: "http://status-ok.test/mcp",
+      status: "ready",
+    });
+  });
+
+  it("records a server that cannot be reached as an error", async () => {
+    sdk.failing.add("http://status-bad.test/mcp");
+
+    await expect(
+      testMcpServer({ url: "http://status-bad.test/mcp", enabled: true }),
+    ).rejects.toThrow("unreachable");
+
+    expect(getMcpServerStatus("http://status-bad.test/mcp")).toBe("error");
+    expect(getMcpServerStatus("http://status-unknown.test/mcp")).toBeUndefined();
   });
 });

@@ -1204,10 +1204,19 @@ The schema is documented in `docs/workspace-manifests.md`.
 `user_settings.mcp_servers` holds the global definitions (`{id, name, kind: "local" | "remote",
 url?, serverId?, headers?}`), managed by the sidebar's `McpServerList` and `McpServerModal`
 (including the connection test). Local servers show a status light: amber until tested, red on a
-failed test, green when reachable; clicking the light runs `testMcpServer`. Per-chat settings store only the selected ids in
+failed test, green when reachable; clicking the light runs `testMcpServer`. That status is not only
+local state: `agent/mcp.ts#reportMcpServerStatus` records it per normalized URL and announces it as
+`chatai:mcp-status`, and `McpServerList` seeds from it, so a server tested in the settings panel or
+dialog, or connected by a chat turn, is green there instead of amber. Per-chat settings store only the selected ids in
 `mcp_local_server_ids` / `mcp_remote_server_ids`; `agent/mcp.ts#resolveMcpServers` expands them for
 the agent, gateway request and prefetch, and still merges legacy full entries from
-`settings.mcp_servers`. GWDG Tools has one MCP Servers tool that switches every configured
+`settings.mcp_servers`. **A stored URL is normalized in one place: `agent/mcp.ts#open`, and
+`keyOf` uses the same normalized URL as identity.** The settings keep what the user typed, and
+`new URL("localhost:9000/mcp")` parses `localhost:` as the scheme — the settings test normalizes
+and says "connected", while every other caller then fails with a bare `TypeError: Failed to fetch`.
+A browser fetch also reports a refused connection, a rejected CORS preflight and a mixed-content
+block the same way, so `open` replaces that message with one naming the URL and the three causes;
+the bridge forwards it as the tool result, which is the only way a user can tell them apart. GWDG Tools has one MCP Servers tool that switches every configured
 server on or off; enabling it reveals the selector, which lists every configured server and
 badges it local or GWDG and never shows URL/id/auth fields. `remoteMcpEnabled` also treats selected
 remote ids as a value.
