@@ -491,6 +491,14 @@ band, above the search panel and the list.
 It is in `interfaceSettingsSlice`'s `initialState` and `getDefaultState()`; an old persisted state
 without the key falls back to `"topic"` in the selector, so no migration is needed.
 
+Every page mounts its own sidebar (`ChatPage`, `TopicMasterPage`, `WorkspacePage`, `MetaChatPage`,
+`AgentPage`), so opening a topic or workspace row unmounts this instance. The list offset therefore
+cannot live in the component: `Sidebar/sidebarScroll.ts` keeps it in module state, the scroll
+handler records it and a `useLayoutEffect` restores it before paint, retrying while Dexie still
+returns an empty list. The restore accepts a 64 px tolerance because the same list renders a few
+pixels shorter on the next page; without it a 4 px difference kept the list at the top. Never read
+the offset from sessionStorage or persist it — a reload should start at the top.
+
 A colored group (topic or workspace) tints its name row with a light wash of the group color, and the
 chats, agents and sessions below it are bracketed left and right in the same color. The alphas live
 in `groupRowTint` / `groupRule` (`Sidebar/topicColors.ts`) and differ by theme and by whether the

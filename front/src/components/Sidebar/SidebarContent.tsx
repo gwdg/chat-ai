@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { DragEvent } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
@@ -75,6 +82,7 @@ import {
   setChatDragData,
 } from "./chatDrop";
 import { dropAgentSessionOnWorkspace } from "./sessionDrop";
+import { rememberSidebarScroll, restoreSidebarScroll } from "./sidebarScroll";
 import PinnedSection from "./PinnedSection";
 import { showAdvancedSidebarSections } from "./sidebarVisibility";
 import SidebarUserCard from "./SidebarUserCard";
@@ -272,12 +280,22 @@ export default function SidebarContent({
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const [chatsHeaderElevated, setChatsHeaderElevated] = useState(false);
   const syncChatsHeaderShadow = useCallback(() => {
-    setChatsHeaderElevated((scrollContainerRef.current?.scrollTop ?? 0) > 0);
+    const container = scrollContainerRef.current;
+    // Opening a topic or workspace row replaces this page, and with it this
+    // component, so the offset is kept outside it (see ./sidebarScroll).
+    rememberSidebarScroll(container);
+    setChatsHeaderElevated((container?.scrollTop ?? 0) > 0);
   }, []);
 
-  useEffect(() => {
+  // The list is new after such a navigation. Restore the offset before paint,
+  // and keep retrying while the first render still shows an empty list.
+  const scrollRestorePending = useRef(true);
+  useLayoutEffect(() => {
+    if (!scrollRestorePending.current) return;
+    if (!restoreSidebarScroll(scrollContainerRef.current)) return;
+    scrollRestorePending.current = false;
     syncChatsHeaderShadow();
-  }, [syncChatsHeaderShadow]);
+  });
 
   const visibleConversations = useMemo(() => {
     if (!hasSearch) return orderedConversations;
@@ -907,6 +925,7 @@ export default function SidebarContent({
         <div
           ref={scrollContainerRef}
           onScroll={syncChatsHeaderShadow}
+          data-guide="sidebar-list"
           className="flex-1 overflow-y-auto overflow-x-hidden"
           style={{ WebkitOverflowScrolling: "touch" }}
         >

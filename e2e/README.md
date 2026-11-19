@@ -22,6 +22,7 @@ Each user scenario is its own readable file in `tests/`, so it can be run alone:
 | `tutorial-search-chats.spec.ts` | complete the gated two-step "Search chats" tutorial |
 | `tutorial-meta-chat-catalogs.spec.ts` | four-step catalog tutorial with two messages |
 | `workspace-create.spec.ts` | create a workspace and open its file browser |
+| `sidebar-scroll.spec.ts` | keep the sidebar list position when a topic or workspace page opens |
 | `chat-file-upload.spec.ts` | attach a text file and send it with a prompt |
 | `chat-html-rendering.spec.ts` | render a fenced HTML block in a sandboxed iframe |
 | `chat-latex-rendering.spec.ts` | inline KaTeX math and a fenced LaTeX block |
