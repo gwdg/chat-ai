@@ -81,23 +81,14 @@ describe("AgentWorkspaceButton", () => {
     });
   });
 
-  it("offers the MCP injection option and reports the split", async () => {
-    mocks.links = [{ workspaceId: "ws-1" }];
-    await openPanel(
-      { bridgeInjectExternal: false },
-      {
-        mcpInjection: {
-          status: "ready",
-          injected: [{ url: "http://search.test/mcp" }],
-          fallback: [
-            { name: "GWDG search", error: "ECONNREFUSED" },
-          ],
-          error: "",
-        },
-      },
-    );
+  it("offers the MCP injection without a workspace or bridge access", async () => {
+    // OpenCode dials these servers itself, so this option must not wait for a bridge.
+    mocks.links = [];
+    await openPanel({ bridgeEnabled: false, bridgeInjectExternal: false });
 
-    fireEvent.click(screen.getByLabelText("Inject external MCP tools"));
+    const inject = screen.getByLabelText("Inject external MCP tools");
+    expect(inject).toBeEnabled();
+    fireEvent.click(inject);
     expect(mocks.updateAgent).toHaveBeenCalledWith("agent-1", {
       bridgeInjectExternal: true,
     });
@@ -125,10 +116,12 @@ describe("AgentWorkspaceButton", () => {
     expect(screen.getByText("Via bridge: GWDG search")).toBeInTheDocument();
   });
 
-  it("reports why the injection could not run", async () => {
-    mocks.links = [{ workspaceId: "ws-1" }];
+  it("reports why the injection could not run without any workspace attached", async () => {
+    // The reported state is part of the option itself, so it must be visible while the bridge
+    // section only offers to attach a workspace.
+    mocks.links = [];
     await openPanel(
-      { bridgeInjectExternal: true },
+      { bridgeEnabled: false, bridgeInjectExternal: true },
       {
         mcpInjection: {
           status: "error",
@@ -161,12 +154,16 @@ describe("AgentWorkspaceButton", () => {
     expect(screen.getByText(/configured MCP servers through this browser/)).toBeInTheDocument();
   });
 
-  it("hides the access options while access is off", async () => {
+  it("keeps the bridge options disabled while access is off", async () => {
     mocks.links = [{ workspaceId: "ws-1" }];
     await openPanel({ bridgeEnabled: false });
 
     expect(screen.queryByLabelText("Allow writes")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("MCP tools")).not.toBeInTheDocument();
+    // The relay needs the bridge, so that row stays disabled; injection does not.
+    expect(screen.getByLabelText("MCP tools")).toBeDisabled();
+    expect(
+      screen.getByLabelText("Inject external MCP tools"),
+    ).toBeEnabled();
   });
 
   it("cannot switch access on while no workspace is attached", async () => {

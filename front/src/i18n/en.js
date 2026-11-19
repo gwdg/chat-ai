@@ -1986,10 +1986,11 @@ export default {
         "Lets the agent create, change and delete files in the attached workspace. Without it the workspace stays read-only.",
       mcp: "MCP tools",
       mcp_hint:
-        "Lets the agent call the configured MCP servers through this browser session. Their results and data leave the app through those servers.",
+        "Lets the agent call the configured MCP servers through this browser session; this needs agent workspace access. Their results and data leave the app through those servers.",
+      mcp_servers: "MCP servers",
       inject: "Inject external MCP tools",
       inject_hint:
-        "OpenCode connects to the MCP servers it can reach that need no password, so their tools work without this tab. The others stay on the local MCP relay.",
+        "OpenCode connects to the MCP servers it can reach that need no password, so their tools work without this tab and without workspace access. The others stay on the local MCP relay.",
       inject_running: "Adding MCP servers to OpenCode…",
       inject_summary: "Direct in OpenCode: {{direct}} · via bridge: {{bridge}}",
       inject_fallback: "Via bridge: {{servers}}",

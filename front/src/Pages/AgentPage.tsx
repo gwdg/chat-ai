@@ -118,10 +118,12 @@ export default function AgentPage() {
   // The bridge runs from this page; its switch, status and options live in the composer's
   // workspace popover (components/Agent/AgentWorkspaceButton.jsx).
   // Servers OpenCode can reach itself are registered there instead of being relayed through
-  // the browser, so the relay below only carries the rest.
+  // the browser, so the relay below only carries the rest. Injection needs neither the bridge
+  // nor a workspace: OpenCode dials those servers itself, and skipping them here is what keeps
+  // a bridge from offering the same server twice once it is started.
   const mcpInjection = useAgentMcpInjection({
     agent,
-    enabled: bridgeEnabled && agent?.bridgeInjectExternal === true,
+    enabled: agent?.bridgeInjectExternal === true,
   });
   const injectedMcpUrls = useMemo(
     () => mcpInjection.injected.map((server) => server.url),

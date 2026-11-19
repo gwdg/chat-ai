@@ -235,7 +235,6 @@ export default function AgentWorkspaceButton({
                       })
                     }
                   />
-                  {/* Both options change what the agent may touch, so each label says so. */}
                   <Tooltip
                     text={t("agents.bridge.writable_hint")}
                     className="min-w-0"
@@ -243,99 +242,109 @@ export default function AgentWorkspaceButton({
                     {t("agents.bridge.writable")}
                   </Tooltip>
                 </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    className="checkbox checkbox-xs"
-                    disabled={!accessOn}
-                    checked={agent?.bridgeMcp === true}
-                    onChange={(event) =>
-                      updateAgent(agent.id, { bridgeMcp: event.target.checked })
-                    }
-                  />
-                  <Tooltip
-                    text={t("agents.bridge.mcp_hint")}
-                    className="min-w-0"
-                  >
-                    <span className="inline-flex items-center gap-1">
-                      {t("agents.bridge.mcp")}
-                      <TriangleAlert
-                        size={11}
-                        className="shrink-0 text-warning"
-                      />
-                    </span>
-                  </Tooltip>
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    className="checkbox checkbox-xs"
-                    disabled={!accessOn}
-                    checked={injectEnabled}
-                    onChange={(event) =>
-                      updateAgent(agent.id, {
-                        bridgeInjectExternal: event.target.checked,
-                      })
-                    }
-                    aria-label={t("agents.bridge.inject")}
-                  />
-                  <Tooltip
-                    text={t("agents.bridge.inject_hint")}
-                    className="min-w-0"
-                  >
-                    {t("agents.bridge.inject")}
-                  </Tooltip>
-                </label>
-                {injectEnabled && accessOn && (
-                  <div className="pl-5 text-[10px] leading-snug">
-                    {injectStatus === "running" ? (
-                      <span className="inline-flex items-center gap-1 text-base-content/60">
-                        <span className="loading loading-spinner loading-xs" />
-                        {t("agents.bridge.inject_running")}
-                      </span>
-                    ) : injectStatus === "error" ? (
-                      <span className="break-words text-error">
-                        {t("agents.bridge.inject_error", {
-                          message: injectError,
-                        })}
-                      </span>
-                    ) : injectStatus === "ready" ? (
-                      <>
-                        <span className="text-base-content/60">
-                          {t("agents.bridge.inject_summary", {
-                            direct: injectInjected.length,
-                            bridge: injectFallback.length,
-                          })}
-                        </span>
-                        {injectFallback.length > 0 && (
-                          <span
-                            className="mt-0.5 block truncate text-base-content/50"
-                            title={injectFallback
-                              .map(
-                                (server) =>
-                                  `${server.name}: ${server.error}`,
-                              )
-                              .join("\n")}
-                          >
-                            {t("agents.bridge.inject_fallback", {
-                              servers: injectFallback
-                                .map((server) => server.name)
-                                .join(", "),
-                            })}
-                          </span>
-                        )}
-                        {!injectInjected.length && !injectFallback.length && (
-                          <span className="block text-base-content/50">
-                            {t("agents.bridge.inject_none")}
-                          </span>
-                        )}
-                      </>
-                    ) : null}
-                  </div>
-                )}
               </div>
             </div>
           )}
+
+          {/* The MCP servers have two routes: relaying needs the bridge (and the tab), while an
+              injected server is dialled by OpenCode itself, so that row stays available with no
+              workspace attached and with workspace access switched off. */}
+          <div className="mt-2 border-t border-base-300 pt-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-base-content/50">
+              {t("agents.bridge.mcp_servers")}
+            </p>
+            <div className="mt-1.5 flex flex-col gap-1 text-[11px]">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-xs"
+                  disabled={!accessOn}
+                  checked={agent?.bridgeMcp === true}
+                  onChange={(event) =>
+                    updateAgent(agent.id, { bridgeMcp: event.target.checked })
+                  }
+                />
+                <Tooltip
+                  text={t("agents.bridge.mcp_hint")}
+                  className="min-w-0"
+                >
+                  <span className="inline-flex items-center gap-1">
+                    {t("agents.bridge.mcp")}
+                    <TriangleAlert
+                      size={11}
+                      className="shrink-0 text-warning"
+                    />
+                  </span>
+                </Tooltip>
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-xs"
+                  checked={injectEnabled}
+                  onChange={(event) =>
+                    updateAgent(agent.id, {
+                      bridgeInjectExternal: event.target.checked,
+                    })
+                  }
+                  aria-label={t("agents.bridge.inject")}
+                />
+                <Tooltip
+                  text={t("agents.bridge.inject_hint")}
+                  className="min-w-0"
+                >
+                  {t("agents.bridge.inject")}
+                </Tooltip>
+              </label>
+              {injectEnabled && (
+                <div className="pl-5 text-[10px] leading-snug">
+                  {injectStatus === "running" ? (
+                    <span className="inline-flex items-center gap-1 text-base-content/60">
+                      <span className="loading loading-spinner loading-xs" />
+                      {t("agents.bridge.inject_running")}
+                    </span>
+                  ) : injectStatus === "error" ? (
+                    <span className="break-words text-error">
+                      {t("agents.bridge.inject_error", {
+                        message: injectError,
+                      })}
+                    </span>
+                  ) : injectStatus === "ready" ? (
+                    <>
+                      <span className="text-base-content/60">
+                        {t("agents.bridge.inject_summary", {
+                          direct: injectInjected.length,
+                          bridge: injectFallback.length,
+                        })}
+                      </span>
+                      {injectFallback.length > 0 && (
+                        <span
+                          className="mt-0.5 block truncate text-base-content/50"
+                          title={injectFallback
+                            .map(
+                              (server) =>
+                                `${server.name}: ${server.error}`,
+                            )
+                            .join("\n")}
+                        >
+                          {t("agents.bridge.inject_fallback", {
+                            servers: injectFallback
+                              .map((server) => server.name)
+                              .join(", "),
+                          })}
+                        </span>
+                      )}
+                      {!injectInjected.length && !injectFallback.length && (
+                        <span className="block text-base-content/50">
+                          {t("agents.bridge.inject_none")}
+                        </span>
+                      )}
+                    </>
+                  ) : null}
+                </div>
+              )}
+            </div>
+          </div>
 
           {attached.size > 0 && accessOn && (
             <p className="mt-2 text-[10px] leading-snug text-warning">

@@ -224,6 +224,9 @@ natively, because its tools then survive a closed tab:
 
 - **Option.** "Inject external MCP tools" in the agent's workspace popover
   (`bridgeInjectExternal`, stored per agent like the write and MCP switches).
+  It needs neither bridge access nor an attached workspace: the servers are
+  registered in the agent's own OpenCode, so the option stays usable while the
+  bridge is off, and the relay narrows itself once a bridge starts.
   `useAgentMcpInjection` registers every configured server that has an HTTP URL
   and no stored headers through `PUT /api/experimental/mcp/<chatai-ext-…>` and
   `POST …/connect`, and polls `GET /api/mcp` for the result.

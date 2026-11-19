@@ -135,9 +135,11 @@ describe("AgentPage bridge settings", () => {
     });
   });
 
-  it("injects only while the option is on and keeps those servers off the relay", () => {
-    mocks.links = [{ workspaceId: "ws-1", agentId: "agent-1" }];
-    mocks.agent = { ...agent, bridgeInjectExternal: true };
+  it("injects with the option on, even without a workspace or bridge access", () => {
+    // OpenCode dials those servers itself, so a missing bridge must not hold the option back;
+    // the relay list is still narrowed in case the bridge is switched on later.
+    mocks.links = [];
+    mocks.agent = { ...agent, bridgeEnabled: false, bridgeInjectExternal: true };
     mocks.injection = {
       status: "ready",
       injected: [{ url: "http://search.test/mcp" }],
@@ -148,9 +150,19 @@ describe("AgentPage bridge settings", () => {
     render(<AgentPage />);
 
     expect(mocks.injectionCalls.at(-1)).toMatchObject({ enabled: true });
+    expect(mocks.bridgeCalls.at(-1).workspaceId).toBeNull();
     expect(mocks.bridgeCalls.at(-1).excludedMcpUrls).toEqual([
       "http://search.test/mcp",
     ]);
+  });
+
+  it("injects only while the option is on", () => {
+    mocks.links = [{ workspaceId: "ws-1", agentId: "agent-1" }];
+    mocks.agent = { ...agent, bridgeInjectExternal: true };
+
+    render(<AgentPage />);
+
+    expect(mocks.injectionCalls.at(-1)).toMatchObject({ enabled: true });
   });
 
   it("does not inject while the option is off", () => {

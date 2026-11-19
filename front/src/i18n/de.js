@@ -2014,10 +2014,11 @@ export default {
         "Erlaubt dem Agenten, Dateien im verknüpften Arbeitsbereich zu erstellen, zu ändern und zu löschen. Ohne diese Option bleibt der Arbeitsbereich schreibgeschützt.",
       mcp: "MCP-Werkzeuge",
       mcp_hint:
-        "Erlaubt dem Agenten, die konfigurierten MCP-Server über diese Browsersitzung aufzurufen. Deren Ergebnisse und Daten verlassen die App über diese Server.",
+        "Erlaubt dem Agenten, die konfigurierten MCP-Server über diese Browsersitzung aufzurufen; dafür muss der Arbeitsbereich-Zugriff eingeschaltet sein. Deren Ergebnisse und Daten verlassen die App über diese Server.",
+      mcp_servers: "MCP-Server",
       inject: "Externe MCP-Werkzeuge einbinden",
       inject_hint:
-        "OpenCode verbindet sich selbst mit den erreichbaren MCP-Servern, die kein Passwort benötigen; deren Werkzeuge funktionieren dann ohne diesen Tab. Die übrigen bleiben an der lokalen MCP-Weiterleitung.",
+        "OpenCode verbindet sich selbst mit den erreichbaren MCP-Servern, die kein Passwort benötigen; deren Werkzeuge funktionieren dann ohne diesen Tab und ohne Arbeitsbereich-Zugriff. Die übrigen bleiben an der lokalen MCP-Weiterleitung.",
       inject_running: "MCP-Server werden zu OpenCode hinzugefügt …",
       inject_summary: "Direkt in OpenCode: {{direct}} · über die Brücke: {{bridge}}",
       inject_fallback: "Über die Brücke: {{servers}}",
