@@ -32,6 +32,34 @@ const openSessionMenu = () => {
 };
 
 describe("AgentSessionList workspace view", () => {
+  it("shows no robot icon beside a top-level session", () => {
+    const child = { id: "session-2", title: "Child session" };
+    render(
+      <AgentSessionList
+        agent={{ id: "agent-1", sessionId: "session-1" }}
+        tree={{
+          roots: [session],
+          all: [session, child],
+          children: new Map([[session.id, [child]]]),
+        }}
+        activeSessionId="session-1"
+        onSelect={vi.fn()}
+      />,
+    );
+
+    // Status dot and label only.
+    expect(
+      screen
+        .getByText(session.title)
+        .closest("button")
+        .querySelectorAll("svg"),
+    ).toHaveLength(0);
+    // A subagent keeps the branch marker that shows the nesting.
+    expect(
+      screen.getByText(child.title).closest("button").querySelectorAll("svg"),
+    ).toHaveLength(1);
+  });
+
   it("offers removing a session from the workspace", () => {
     const onDetach = vi.fn();
     render(

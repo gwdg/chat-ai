@@ -6,7 +6,6 @@ import {
 } from "@headlessui/react";
 import {
   Add,
-  Bot,
   Checkmark,
   Edit,
   OverflowMenuVertical,
@@ -49,7 +48,9 @@ const SessionRow = ({
   subLabel,
 }) => {
   const { t } = useTranslation();
-  const Icon = depth > 0 ? GitBranch : Bot;
+  // Subagent sessions keep the branch marker; a top-level session needs no icon
+  // next to its status dot and label.
+  const Icon = depth > 0 ? GitBranch : null;
   const assignedWorkspaceIds =
     sessionWorkspaceIds?.get?.(session.id) ?? NO_WORKSPACES;
   const statusClass =
@@ -94,7 +95,9 @@ const SessionRow = ({
           title={t(`agents.status_${status || "checking"}`)}
           aria-label={t(`agents.status_${status || "checking"}`)}
         />
-        <Icon size={11} className="shrink-0 text-base-content/45" />
+        {Icon && (
+          <Icon size={11} className="shrink-0 text-base-content/45" />
+        )}
         <span className="min-w-0 flex-1 truncate">{sessionLabel(session)}</span>
         {depth > 0 && (
           <span className="shrink-0 rounded bg-base-300 px-1 text-[9px] text-base-content/60">
