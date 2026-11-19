@@ -71,8 +71,8 @@ import {
 import { topicIconById } from "./topicIcons";
 import { pinnedStateId } from "./pinnedState";
 import {
+  agentProjectCollapseId,
   unassignedAgentCollapseId,
-  workspaceAgentCollapseId,
 } from "./sessionGroupCollapse";
 import {
   clearAgentSessionDrag,
@@ -680,7 +680,7 @@ export default function AgentList({
                       agent.id,
                     );
                     const groupKey = collapseId(
-                      workspaceAgentCollapseId(workspace.id, agent.id),
+                      agentProjectCollapseId(workspace.id, agent.id),
                     );
                     const sessionsOpen = !collapsedTopicIds.includes(groupKey);
                     const WorkspaceIcon = topicIconById(workspace.icon).Icon;

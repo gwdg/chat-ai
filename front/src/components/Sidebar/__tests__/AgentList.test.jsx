@@ -18,7 +18,11 @@ import {
 } from "../../../db/workspaceDb";
 import { buildSessionTree } from "../../../agents/agentSessions";
 import { pinnedStateId } from "../pinnedState";
-import { workspaceAgentCollapseId } from "../sessionGroupCollapse";
+import {
+  agentProjectCollapseId,
+  workspaceAgentCollapseId,
+} from "../sessionGroupCollapse";
+import { toggleTopic } from "../../../Redux/reducers/interfaceSettingsSlice";
 import {
   AGENT_SESSION_DRAG_MIME,
   AGENT_SESSION_SOURCE_WORKSPACE_MIME,
@@ -426,7 +430,7 @@ describe("AgentList", () => {
       within(group).getByRole("button", { name: "Sessions in Research" }),
     ).toHaveAttribute("aria-expanded", "false");
     expect(store.getState().interface_settings.collapsed_topics).toContain(
-      workspaceAgentCollapseId(workspaceId, "agent-1"),
+      agentProjectCollapseId(workspaceId, "agent-1"),
     );
 
     fireEvent.click(
@@ -435,6 +439,35 @@ describe("AgentList", () => {
     expect(
       await within(group).findByText("Active session"),
     ).toBeInTheDocument();
+  });
+
+  it("keeps the Workspace section's fold out of the agent's project group", async () => {
+    const store = makeStore();
+    const workspaceId = await createWorkspace("Research");
+    mocks.sessionTree = buildSessionTree([
+      { id: "session-1", title: "Active session", time: { updated: 20 } },
+    ]);
+
+    // The Workspace section folded this project; the Agents section is a second
+    // view of the same sessions and stays open.
+    act(() =>
+      store.dispatch(
+        toggleTopic(workspaceAgentCollapseId(workspaceId, "agent-1")),
+      ),
+    );
+
+    renderAgentList(store);
+    addAgentThroughModal();
+    await act(async () => {
+      await attachWorkspaceAgent(workspaceId, "agent-1");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Sessions" }));
+    const group = screen.getByText("Research").closest("[data-session-group]");
+    expect(await within(group).findByText("Active session")).toBeInTheDocument();
+    expect(
+      within(group).getByRole("button", { name: "Sessions in Research" }),
+    ).toHaveAttribute("aria-expanded", "true");
   });
 
   it("drags a session with the workspace it is listed in", async () => {

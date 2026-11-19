@@ -1232,10 +1232,12 @@ attached to, with the sessions attached to each workspace and a final "Unassigne
 for the rest that the session row's "…" menu or a drag onto a workspace row can attach; the active `sessionId` is
 stored on the
 local agent entry, while the session list is read from `GET /api/session` by
-`agents/agentSessions.js`. Each group folds on its own leading chevron; the fold ids are
-`__workspace_agent__:<workspaceId>:<agentId>` and `__agent_unassigned__:<agentId>` in
-`collapsed_topics` (`Sidebar/sessionGroupCollapse.ts`), the same ids the Workspace section uses,
-keyed through `pinnedStateId` in the pinned copy. Children are fetched with
+`agents/agentSessions.js`. Each group folds on its own leading chevron; a project in the Agents
+section uses `__agent_project__:<workspaceId>:<agentId>` and the unassigned group
+`__agent_unassigned__:<agentId>` in `collapsed_topics` (`Sidebar/sessionGroupCollapse.ts`). Those
+are deliberately not the Workspace section's `__workspace_agent__` ids: the two views show the
+same sessions but fold independently. The pinned copy keys its ids through `pinnedStateId`.
+Children are fetched with
 `GET /api/session?parentID=<id>&limit=200`; current OpenCode (2.3) no longer serves
 `/api/session/:id/children` and answers it with 404, so that endpoint is only the fallback for
 older servers. Child sessions are the subagent
