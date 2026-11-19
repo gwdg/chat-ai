@@ -772,3 +772,65 @@ describe("AgentConversation command dropdown", () => {
     );
   });
 });
+
+describe("AgentConversation prompt history", () => {
+  const composer = () =>
+    screen.getByPlaceholderText("No messages yet. Ask the agent something.");
+
+  it("recalls a sent prompt with ArrowUp and returns to the draft with ArrowDown", async () => {
+    render(<AgentConversation agent={agent} />);
+    const input = composer();
+
+    fireEvent.change(input, { target: { value: "first prompt" } });
+    fireEvent.click(document.querySelector('[data-guide="send"]'));
+    await waitFor(() =>
+      expect(apiMocks.send).toHaveBeenCalledWith(
+        agent,
+        "session-1",
+        "first prompt",
+        [],
+      ),
+    );
+    await waitFor(() => expect(input).toHaveValue(""));
+
+    fireEvent.keyDown(input, { key: "ArrowUp" });
+    expect(input).toHaveValue("first prompt");
+
+    fireEvent.keyDown(input, { key: "ArrowDown" });
+    expect(input).toHaveValue("");
+  });
+
+  it("restores an unsent draft after walking through the history", async () => {
+    render(<AgentConversation agent={agent} />);
+    const input = composer();
+
+    fireEvent.change(input, { target: { value: "older prompt" } });
+    fireEvent.click(document.querySelector('[data-guide="send"]'));
+    await waitFor(() => expect(apiMocks.send).toHaveBeenCalled());
+    await waitFor(() => expect(input).toHaveValue(""));
+
+    fireEvent.change(input, { target: { value: "half written" } });
+    input.setSelectionRange(4, 4);
+    fireEvent.keyDown(input, { key: "ArrowUp" });
+    expect(input).toHaveValue("older prompt");
+
+    fireEvent.keyDown(input, { key: "ArrowDown" });
+    expect(input).toHaveValue("half written");
+  });
+
+  it("keeps the arrow keys inside a multiline prompt", async () => {
+    render(<AgentConversation agent={agent} />);
+    const input = composer();
+
+    fireEvent.change(input, { target: { value: "older prompt" } });
+    fireEvent.click(document.querySelector('[data-guide="send"]'));
+    await waitFor(() => expect(apiMocks.send).toHaveBeenCalled());
+    await waitFor(() => expect(input).toHaveValue(""));
+
+    fireEvent.change(input, { target: { value: "line one\nline two" } });
+    const end = input.value.length;
+    input.setSelectionRange(end, end);
+    fireEvent.keyDown(input, { key: "ArrowUp" });
+    expect(input).toHaveValue("line one\nline two");
+  });
+});

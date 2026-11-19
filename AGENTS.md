@@ -1344,7 +1344,12 @@ no longer has a terminal tab. Shell messages are persisted per agent/session in 
 (`agents/agentShellHistory.js`) and merged with the server timeline by creation time. The header X
 confirms, interrupts and deletes the OpenCode session, creates a replacement session, updates the
 agent entry, and clears the remembered shell history. Unsent composer text is persisted per
-agent/session in localStorage (`agents/agentDrafts.js`) and restored on return. The composer also
+agent/session in localStorage (`agents/agentDrafts.js`) and restored on return. Sent prompts are
+recalled with ArrowUp/ArrowDown, shell-style: the list is per agent + session
+(`agents/agentPromptHistory.js`, newest first, 50 entries, a consecutive duplicate collapsed), the
+first ArrowUp remembers the draft and the last ArrowDown returns to it, and neither arrow acts while
+the caret is inside a multiline draft (ArrowUp only on the first line, ArrowDown only on the last).
+Clearing the session and removing the agent delete the stored lists. The composer also
 accepts file attachments and sends them inline to the prompt API. The
 `AgentFormCard` renders OpenCode forms inline in the conversation; form cards are persisted per
 agent/session in localStorage (`agents/agentFormHistory.js`), so a card remains in the timeline

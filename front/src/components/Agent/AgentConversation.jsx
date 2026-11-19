@@ -23,6 +23,12 @@ import {
   saveAgentFormHistory,
 } from "../../agents/agentFormHistory";
 import {
+  clearAgentPromptHistory,
+  loadAgentPromptHistory,
+  nextHistoryIndex,
+  recordAgentPrompt,
+} from "../../agents/agentPromptHistory";
+import {
   clearAgentShellHistory,
   loadAgentShellHistory,
   mergeAgentMessages,
@@ -219,6 +225,12 @@ export default function AgentConversation({
   const pendingShellRef = useRef(null);
   const shellMessagesRef = useRef(new Map());
   const formHistoryRef = useRef([]);
+  // Shell-like recall in the composer: the prompts of this session (newest first), the
+  // position while browsing them (-1 = the draft) and the draft to come back to.
+  const promptHistoryRef = useRef([]);
+  const historyCursorRef = useRef(-1);
+  const historyDraftRef = useRef("");
+  const composerRef = useRef(null);
   const permissionPoliciesRef = useRef([]);
   const autoReplyingRef = useRef(new Set());
   const summaryMessagesRef = useRef(new Map());
@@ -255,6 +267,37 @@ export default function AgentConversation({
       }
     },
     [agent?.id, agent?.sessionId],
+  );
+
+  /**
+   * Shell-like recall: ArrowUp walks back through the prompts this session already sent,
+   * ArrowDown walks forward again and ends on the draft the user was typing. `-1` is that
+   * draft, so the first Up has to remember it or it would be lost.
+   */
+  const recallPrompt = useCallback(
+    (direction) => {
+      const history = promptHistoryRef.current;
+      const previous = historyCursorRef.current;
+      const next = nextHistoryIndex(history.length, previous, direction);
+      if (next === previous) return false;
+      if (previous === -1) historyDraftRef.current = input;
+      historyCursorRef.current = next;
+      updateInput(next === -1 ? historyDraftRef.current : history[next]);
+      // The textarea still holds the old value here: move the caret once React has
+      // written the recalled one, so typing continues at the end of the line.
+      const element = composerRef.current;
+      if (element) {
+        const place = () => {
+          try {
+            element.setSelectionRange(element.value.length, element.value.length);
+          } catch {}
+        };
+        if (typeof requestAnimationFrame === "function") requestAnimationFrame(place);
+        else setTimeout(place, 0);
+      }
+      return true;
+    },
+    [input, updateInput],
   );
   const chatAIModelKey = useMemo(
     () =>
@@ -876,6 +919,12 @@ export default function AgentConversation({
     );
     updatePendingShell(null);
     setInput(loadAgentDraft(currentAgent.id, currentAgent.sessionId));
+    promptHistoryRef.current = loadAgentPromptHistory(
+      currentAgent.id,
+      currentAgent.sessionId,
+    );
+    historyCursorRef.current = -1;
+    historyDraftRef.current = "";
     setError("");
     setSending(false);
     setStopping(false);
@@ -1238,6 +1287,10 @@ export default function AgentConversation({
       );
       clearAgentShellHistory(agent.id, previousSessionId);
       clearAgentFormHistory(agent.id, previousSessionId);
+      clearAgentPromptHistory(agent.id, previousSessionId);
+      promptHistoryRef.current = [];
+      historyCursorRef.current = -1;
+      historyDraftRef.current = "";
       shellMessagesRef.current = new Map();
       formHistoryRef.current = [];
       stopPolling();
@@ -1451,6 +1504,13 @@ export default function AgentConversation({
         return;
       }
       updateInput("");
+      promptHistoryRef.current = recordAgentPrompt(
+        agent.id,
+        agent.sessionId,
+        text,
+      );
+      historyCursorRef.current = -1;
+      historyDraftRef.current = "";
       if (shellMode) {
         const baseline = new Set(
           messages.filter((message) => message.type === "shell").map((message) => message.id),
@@ -1916,9 +1976,39 @@ export default function AgentConversation({
         ))}
         {error && <p className="mb-2 text-xs text-error">{error}</p>}
         <textarea
+          ref={composerRef}
           value={input}
-          onChange={(event) => updateInput(event.target.value)}
+          onChange={(event) => {
+            // Typing starts from the newest entry again, like a shell line does.
+            historyCursorRef.current = -1;
+            updateInput(event.target.value);
+          }}
           onKeyDown={(event) => {
+            const element = event.currentTarget;
+            if (
+              !event.shiftKey &&
+              !event.altKey &&
+              !event.ctrlKey &&
+              !event.metaKey &&
+              element.selectionStart === element.selectionEnd
+            ) {
+              // Only recall at the edge of the draft: a multiline prompt keeps the
+              // arrow keys inside its own text.
+              const before = input.slice(0, element.selectionStart);
+              const after = input.slice(element.selectionEnd);
+              if (event.key === "ArrowUp" && !before.includes("\n")) {
+                if (recallPrompt(-1)) {
+                  event.preventDefault();
+                  return;
+                }
+              }
+              if (event.key === "ArrowDown" && !after.includes("\n")) {
+                if (recallPrompt(1)) {
+                  event.preventDefault();
+                  return;
+                }
+              }
+            }
             if (
               sending &&
               ((event.key === "Escape") ||

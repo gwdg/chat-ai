@@ -4,6 +4,7 @@ import { opencodeDefaults } from "../apis/opencodeAgents";
 import { clearAgentDrafts } from "./agentDrafts";
 import { clearAgentFormHistory } from "./agentFormHistory";
 import { clearAgentPermissionPolicies } from "./agentPermissionPolicies";
+import { clearAgentPromptHistories } from "./agentPromptHistory";
 import { clearAgentShellHistory } from "./agentShellHistory";
 
 const STORAGE_KEY = "chatai.agents";
@@ -158,6 +159,7 @@ export const removeAgent = (id) => {
   clearAgentDrafts(id);
   clearAgentFormHistory(id);
   clearAgentPermissionPolicies(id);
+  clearAgentPromptHistories(id);
   clearAgentShellHistory(id);
   // Imported lazily: the DB module pulls in the workspace/agent layer. The workspace
   // links go with the agent here rather than waiting for a workspace page to prune
