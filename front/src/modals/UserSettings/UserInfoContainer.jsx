@@ -1,20 +1,10 @@
 import { Building2, LogOut, Mail } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useDispatch, useSelector } from "react-redux";
 
-import {
-  selectShowUsageInSidebar,
-  setShowUsageInSidebar,
-} from "../../Redux/reducers/interfaceSettingsSlice";
-import UserLimitsDisplay from "./UserLimitsDisplay";
-import OrgLimitsDisplay from "./OrgLimitsDisplay";
-import ProfilePreferenceSwitch from "./ProfilePreferenceSwitch";
 import { clearBrandOverride } from "../../config/brandIds";
 
 export default function UserInfoContainer({ userData }) {
-  const dispatch = useDispatch();
   const { t } = useTranslation();
-  const showUsageInSidebar = useSelector(selectShowUsageInSidebar);
   const firstName = userData?.firstname ?? "";
   const lastName = userData?.lastname ?? "";
   const fullName = `${firstName} ${lastName}`.trim();
@@ -83,31 +73,6 @@ export default function UserInfoContainer({ userData }) {
           </div>
         </dl>
       </section>
-
-      {userData?.limits && (
-        <section className="flex flex-col gap-3 border-t border-base-300 pt-5">
-          <div>
-            <h3 className="text-sm font-medium text-base-content">
-              {t("user_settings.usage.title")}
-            </h3>
-            <p className="mt-1 text-xs text-base-content/70">
-              {t("user_settings.usage.description")}
-            </p>
-          </div>
-          <UserLimitsDisplay limits={userData.limits} />
-          <OrgLimitsDisplay limits={userData.limits} />
-          <div className="border-t border-base-300 pt-1">
-            <ProfilePreferenceSwitch
-              label={t("user_settings.sidebar_usage.label")}
-              description={t("user_settings.sidebar_usage.description")}
-              checked={showUsageInSidebar}
-              onChange={(checked) =>
-                dispatch(setShowUsageInSidebar(checked))
-              }
-            />
-          </div>
-        </section>
-      )}
     </div>
   );
 }

@@ -746,8 +746,9 @@ export default {
     settings_overview: {
       title: "Change settings",
       step1: "Open your user settings from the profile or the sidebar.",
-      step2: "Choose the Chat tab. Memories and Data contain the other settings.",
-      step3: "Change a preference such as rendering or document conversion. Changes are saved automatically.",
+      step2: "Choose the Chat tab. Usage, Advanced, Memories and Data hold the other settings.",
+      step3: "Change a preference such as document conversion. Changes are saved automatically.",
+      step4: "Rendering engines and the reasoning indicator sit in the Advanced tab.",
     },
     memories: {
       title: "Manage memories",
@@ -759,7 +760,7 @@ export default {
       title: "Open chat preferences",
       step1: "Open your user settings.",
       step2:
-        "Choose the Chat tab to change the default model, send key, summaries, timestamps, rendering, and document conversion.",
+        "Choose the Chat tab to change the default model, send key, summaries, timestamps and document conversion; rendering is in the Advanced tab.",
     },
     e2ee: {
       title: "Encrypt a model end to end",
@@ -784,7 +785,7 @@ export default {
     rendering: {
       title: "Configure rendering",
       step1: "Open your user settings.",
-      step2: "Choose the Chat tab.",
+      step2: "Choose the Advanced tab.",
       step3:
         "Enable Typst or LaTeX rendering. HTML rendering and external references are configured here too.",
     },
@@ -1260,8 +1261,17 @@ export default {
       navigation_label: "Profile settings sections",
       profile: {
         label: "Profile",
-        title: "Profile and usage",
-        description: "Review your account details and usage information.",
+        title: "Profile",
+        description: "Review your account details.",
+      },
+      usage: {
+        label: "Usage",
+      },
+      advanced: {
+        label: "Advanced",
+        title: "Advanced settings",
+        description:
+          "Rendering engines, the reasoning indicator and the advanced sidebar sections.",
       },
       chat: {
         label: "Chat",
@@ -1294,6 +1304,7 @@ export default {
       title: "Usage",
       description:
         "Monitor your monthly usage and organization budget usage.",
+      empty: "No usage limits are recorded for this account.",
       monthly: "Monthly",
       total: "Total",
       personal: "Personal",

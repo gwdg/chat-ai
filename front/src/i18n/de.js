@@ -764,8 +764,9 @@ export default {
     settings_overview: {
       title: "Einstellungen ändern",
       step1: "Öffnen Sie Ihre Benutzereinstellungen über das Profil oder die Seitenleiste.",
-      step2: "Wählen Sie den Tab Chat. Erinnerungen und Daten enthalten die weiteren Einstellungen.",
-      step3: "Ändern Sie eine Einstellung wie Darstellung oder Dokumentkonvertierung. Änderungen werden automatisch gespeichert.",
+      step2: "Wählen Sie den Tab Chat. Nutzung, Erweitert, Erinnerungen und Daten enthalten die weiteren Einstellungen.",
+      step3: "Ändern Sie eine Einstellung wie Dokumentkonvertierung. Änderungen werden automatisch gespeichert.",
+      step4: "Darstellungsmodule und die Denkprozess-Anzeige finden Sie im Tab Erweitert.",
     },
     memories: {
       title: "Erinnerungen verwalten",
@@ -777,7 +778,7 @@ export default {
       title: "Chat-Einstellungen öffnen",
       step1: "Öffnen Sie Ihre Benutzereinstellungen.",
       step2:
-        "Wählen Sie den Tab Chat, um Standardmodell, Sendetaste, Zusammenfassungen, Zeitstempel, Darstellung und Dokumentkonvertierung zu ändern.",
+        "Wählen Sie den Tab Chat, um Standardmodell, Sendetaste, Zusammenfassungen, Zeitstempel und Dokumentkonvertierung zu ändern; die Darstellung liegt im Tab Erweitert.",
     },
     e2ee: {
       title: "Ein Modell Ende-zu-Ende verschlüsseln",
@@ -802,14 +803,14 @@ export default {
     rendering: {
       title: "Darstellung konfigurieren",
       step1: "Öffnen Sie Ihre Benutzereinstellungen.",
-      step2: "Wählen Sie den Tab Chat.",
+      step2: "Wählen Sie den Tab Erweitert.",
       step3:
         "Aktivieren Sie die Typst- oder LaTeX-Darstellung. Auch HTML-Darstellung und externe Verweise werden hier konfiguriert.",
     },
     reasoning_streaming: {
       title: "Denkprozess verfolgen",
       step1: "Öffnen Sie Ihre Benutzereinstellungen.",
-      step2: "Wählen Sie den Tab Chat.",
+      step2: "Wählen Sie den Tab Erweitert.",
       step3:
         "Die Option ist standardmäßig aktiviert. Lassen Sie sie an, um während des Denkens einen bewegten Punkt zu sehen. Klicken Sie auf die Kopfzeile, um den Denkprozess während des Streamings zu öffnen, oder schalten Sie die Option aus, wenn sich die Box automatisch öffnen soll.",
     },
@@ -1278,8 +1279,17 @@ export default {
       navigation_label: "Bereiche der Profileinstellungen",
       profile: {
         label: "Profil",
-        title: "Profil und Nutzung",
-        description: "Überblick über Ihre Kontodaten und Nutzung.",
+        title: "Profil",
+        description: "Überblick über Ihre Kontodaten.",
+      },
+      usage: {
+        label: "Nutzung",
+      },
+      advanced: {
+        label: "Erweitert",
+        title: "Erweiterte Einstellungen",
+        description:
+          "Darstellungsmodule, die Denkprozess-Anzeige und die erweiterten Bereiche der Seitenleiste.",
       },
       chat: {
         label: "Chat",
@@ -1314,6 +1324,7 @@ export default {
       title: "Nutzung",
       description:
         "Überblick über Ihre monatliche Nutzung und das Organisationsbudget.",
+      empty: "Für dieses Konto sind keine Nutzungsgrenzen hinterlegt.",
       monthly: "Monatlich",
       total: "Gesamt",
       personal: "Persönlich",

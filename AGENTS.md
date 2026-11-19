@@ -511,7 +511,7 @@ size; the admin asked for that on 2026-11-17, so keep them in step. The topic ro
 its "modified" metadata line when selected; the workspace row does not.
 Agents and MCP Servers are advanced sections: both, with their dividers and pinned agent rows, are
 rendered only while `user_settings.advanced_mode` is on (`selectAdvancedMode`, default off). The
-switch lives in one place only — the profile modal's Chat tab
+switch lives in one place only — the profile modal's Advanced tab
 (`modals/UserSettings/ChatPreferences.jsx`, `data-guide="profile-advanced-mode-preference"`). It was
 removed from the prompt box's chat settings panel at the admin's request (2026-11-17) so the prompt
 panel stays to model/temperature; with it off the sidebar is chats, topics and workspaces.
@@ -557,7 +557,11 @@ conversation and message ids. It cites messages as
 to the message, and highlights it briefly. `MarkdownLink` routes `/chat/...`, `/topic/...`, and
 `/settings/<tab>` internally; settings links dispatch `chatai:open-settings`, handled by
 `useSettingsDeepLink` in `ChatPage`/`MetaChatPage`, and `UserSettingsModal` opens the requested tab
-with a brief highlight. `get_user_settings` returns the module flags and global preferences.
+with a brief highlight. Its tabs are Profile, Usage (`UsageSettings.jsx` — the monthly and
+organization limits plus the sidebar switch), Chat, Advanced (`AdvancedModePreference` and
+`RenderingPreferences`, including the reasoning-streaming switch), Memories, Encryption and Data;
+every rendering setting lives in Advanced, never in Chat. `get_user_settings` returns the module
+flags and global preferences.
 
 Tutorials and use cases start through the `start_tutorial` / `start_use_case` tools, which dispatch
 `chatai:start-feature-guide` / `chatai:start-use-case`, or through inline links

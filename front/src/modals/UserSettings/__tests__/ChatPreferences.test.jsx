@@ -4,6 +4,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import { describe, expect, it, vi } from "vitest";
 
 import userSettingsReducer from "../../../Redux/reducers/userSettingsReducer";
+import interfaceSettingsReducer from "../../../Redux/reducers/interfaceSettingsSlice";
 import UserSettingsModal from "../UserSettingsModal";
 
 vi.mock("../../ModalContext", () => ({
@@ -18,33 +19,64 @@ vi.mock("../DefaultModelSelector", () => ({
 }));
 
 const makeStore = () =>
-  configureStore({ reducer: { user_settings: userSettingsReducer } });
+  configureStore({
+    reducer: {
+      user_settings: userSettingsReducer,
+      interface_settings: interfaceSettingsReducer,
+    },
+  });
 
-const renderChatTab = () => {
+const renderTab = (initialTab, userData = { username: "user" }) => {
   const store = makeStore();
   render(
     <Provider store={store}>
       <UserSettingsModal
         isOpen
         onClose={() => {}}
-        userData={{ username: "user" }}
+        userData={userData}
         modelsData={[]}
         localState={{ settings: {} }}
-        initialTab="chat"
+        initialTab={initialTab}
       />
     </Provider>,
   );
   return store;
 };
 
-describe("Chat preferences", () => {
-  it("renders Advanced mode and toggles the shared advanced_mode setting", () => {
-    const store = renderChatTab();
+describe("User settings tabs", () => {
+  it("keeps the chat tab to chat preferences, without advanced mode or rendering", () => {
+    renderTab("chat");
+
+    expect(screen.getByTestId("default-model-selector")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("switch", { name: "Advanced mode" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("switch", { name: "Render Typst blocks" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers Usage and Advanced in the tab list", () => {
+    renderTab("profile");
+
+    expect(screen.getByRole("button", { name: "Usage" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Advanced" }),
+    ).toBeInTheDocument();
+  });
+
+  it("renders Advanced mode and the rendering switches together in the advanced tab", () => {
+    const store = renderTab("advanced");
     const advancedSwitch = screen.getByRole("switch", {
       name: "Advanced mode",
     });
 
-    expect(screen.getByTestId("default-model-selector")).toBeInTheDocument();
+    expect(
+      screen.getByRole("switch", { name: "Render Typst blocks" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("switch", { name: "Render LaTeX blocks" }),
+    ).toBeInTheDocument();
     expect(
       screen.getByText(
         "Show Agents and MCP servers in the sidebar. When this is off, the sidebar shows only chats and workspaces.",
@@ -56,5 +88,26 @@ describe("Chat preferences", () => {
 
     expect(store.getState().user_settings.advanced_mode).toBe(true);
     expect(advancedSwitch).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("shows the usage tab with an honest empty state when the account has no limits", () => {
+    renderTab("usage", { username: "user" });
+
+    expect(
+      screen.getByText("No usage limits are recorded for this account."),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the sidebar switch beside the limits in the usage tab", () => {
+    renderTab("usage", {
+      username: "user",
+      limits: {
+        user: { monthly_usage: 12, monthly_limit: 100 },
+      },
+    });
+
+    expect(
+      screen.getByRole("switch", { name: "Show usage in sidebar" }),
+    ).toBeInTheDocument();
   });
 });

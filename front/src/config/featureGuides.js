@@ -998,13 +998,16 @@ export const featureGuides = {
         prepare: openUserSettings,
       },
       {
-        target: [
-          '[data-guide="rendering-preference"]',
-          '[data-guide="document-conversion-preference"]',
-        ],
+        target: '[data-guide="document-conversion-preference"]',
         textKey: "feature_guide.settings_overview.step3",
         completeOnTargetClick: true,
         prepare: () => selectSettingsTab("chat"),
+      },
+      {
+        target: '[data-guide="rendering-preference"]',
+        textKey: "feature_guide.settings_overview.step4",
+        completeOnTargetClick: true,
+        prepare: () => selectSettingsTab("advanced"),
       },
     ],
   },
@@ -1077,7 +1080,7 @@ export const featureGuides = {
   chat_preferences: {
     titleKey: "feature_guide.chat_preferences.title",
     prompt:
-      "Open user settings and choose the Chat tab to change chat preferences, rendering, document conversion, and more.",
+      "Open user settings and choose the Chat tab to change chat preferences and document conversion; rendering lives in the Advanced tab.",
     keywords: ["chat preferences", "preferences", "user settings"],
     steps: [
       {
@@ -1136,14 +1139,14 @@ export const featureGuides = {
         completeOnTargetClick: true,
       },
       {
-        target: '[data-guide="settings-tab-chat"]',
+        target: '[data-guide="settings-tab-advanced"]',
         prepare: openUserSettings,
         textKey: "feature_guide.rendering.step2",
         completeOnTargetClick: true,
       },
       {
         target: '[data-guide="rendering-preference"]',
-        prepare: () => selectSettingsTab("chat"),
+        prepare: () => selectSettingsTab("advanced"),
         textKey: "feature_guide.rendering.step3",
         completeOnTargetClick: true,
       },
@@ -1161,14 +1164,14 @@ export const featureGuides = {
         completeOnTargetClick: true,
       },
       {
-        target: '[data-guide="settings-tab-chat"]',
+        target: '[data-guide="settings-tab-advanced"]',
         prepare: openUserSettings,
         textKey: "feature_guide.reasoning_streaming.step2",
         completeOnTargetClick: true,
       },
       {
         target: '[data-guide="reasoning-streaming-preference"]',
-        prepare: () => selectSettingsTab("chat"),
+        prepare: () => selectSettingsTab("advanced"),
         textKey: "feature_guide.reasoning_streaming.step3",
         completeOnTargetClick: true,
       },

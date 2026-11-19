@@ -3,9 +3,11 @@ import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import {
   Brain,
+  ChartColumn,
   Database,
   Download,
   Lock,
+  Settings2,
   SlidersHorizontal,
   Trash2,
   UserRound,
@@ -32,6 +34,7 @@ import { useToast } from "../../hooks/useToast";
 import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
 import ImportChatButton from "../../components/Sidebar/Buttons/ImportChatButton";
 import StorageStatus from "./StorageStatus";
+import UsageSettings from "./UsageSettings";
 import EncryptionSettings from "./EncryptionSettings";
 import { isChoicesEnabled } from "../../utils/modules";
 import { isFeatureEnabled } from "../../config/deployment";
@@ -45,11 +48,25 @@ const PROFILE_TABS = [
     descriptionKey: "user_settings.tabs.profile.description",
   },
   {
+    id: "usage",
+    icon: ChartColumn,
+    labelKey: "user_settings.tabs.usage.label",
+    titleKey: "user_settings.usage.title",
+    descriptionKey: "user_settings.usage.description",
+  },
+  {
     id: "chat",
     icon: SlidersHorizontal,
     labelKey: "user_settings.tabs.chat.label",
     titleKey: "user_settings.tabs.chat.title",
     descriptionKey: "user_settings.tabs.chat.description",
+  },
+  {
+    id: "advanced",
+    icon: Settings2,
+    labelKey: "user_settings.tabs.advanced.label",
+    titleKey: "user_settings.tabs.advanced.title",
+    descriptionKey: "user_settings.tabs.advanced.description",
   },
   {
     id: "memories",
@@ -149,12 +166,24 @@ export default function UserSettingsModal({
       );
     }
 
+    if (activeTab === "usage") {
+      return <UsageSettings userData={userData} />;
+    }
+
+    if (activeTab === "advanced") {
+      return (
+        <div className="flex flex-col gap-5">
+          <AdvancedModePreference />
+          <div className="border-t border-base-300 pt-5" data-guide="rendering-preference">
+            <RenderingPreferences />
+          </div>
+        </div>
+      );
+    }
+
     if (activeTab === "chat") {
       return (
         <div className="flex flex-col gap-5">
-          <div className="border-b border-base-300 pb-5">
-            <AdvancedModePreference />
-          </div>
           {modelsData ? (
             <DefaultModelSelector modelsData={modelsData} />
           ) : (
@@ -170,9 +199,6 @@ export default function UserSettingsModal({
           </div>
           <div className="border-t border-base-300 pt-5">
             <MessageDisplayPreference />
-          </div>
-          <div className="border-t border-base-300 pt-5" data-guide="rendering-preference">
-            <RenderingPreferences />
           </div>
           <div className="border-t border-base-300 pt-5" data-guide="document-conversion-preference">
             <DocumentConversionPreference />
