@@ -2141,6 +2141,7 @@ export default {
     unpin_action: "Arbeitsbereich nicht mehr anheften",
     workspace_root: "Arbeitsbereich-Stamm",
     tab_preview: "Vorschau",
+    tab_agents: "Agenten",
     root_hint: "Dateien und Ordner in diesem Arbeitsbereich.",
     storage: "Speicher",
     available_storage: "Verfügbarer Speicher",

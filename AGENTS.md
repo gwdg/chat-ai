@@ -809,8 +809,9 @@ transfer journal never leave the device. A persisted
 sources carry no `deviceId`. The UI badges device-plane sources "This device only" and marks a
 source whose stored `deviceId` differs as unavailable.
 
-The workspace page is **header → one Sources card → one Workspace Root card**. The header card carries the
-workspace name, its dates and the delete button on the left, and next to them the Agent strip — the
+The workspace page is **header → one Sources card → one Workspace Root card**. The header card carries only the
+workspace name, its dates and the delete button — the agent choices live in the Workspace Root card's
+**Agents** tab (with **Workspace Root** and **Preview**); the
 attached-chat and attached-agent lists stay gone on purpose (the sidebar does both); `attachedChats` /
 `attachedAgents` remain only as inputs to `syncChatStorageSources`, `seedWorkspaceAgentSessions` and
 `syncAgentFilesSources`. The Agent card (`components/Workspace/WorkspaceAgentPanel.tsx`,
@@ -818,8 +819,9 @@ attached-chat and attached-agent lists stay gone on purpose (the sidebar does bo
 `agent/runAgent.ts` runtime: no shell, reads and writes workspace files), OpenCode server (an
 `external` agent with `serverUrl`) and Remote agent (a `service` agent with `serviceAgentId`) — and
 the current choice is derived from the workspace's `workspace_agents` links, never stored twice. Its
-`layout="row"` variant (the one the page uses) renders them as three equal cards in the header and
-stacks on phone width; `layout="column"` is the older vertical card. Choosing the in-browser agent
+panel stacks the three options in the tab; `framed={false}` drops the panel's own card and
+heading there, because the tab already names it. The workspace-overview feature guide reaches the tab by clicking
+`data-guide="workspace-tab-agents"` in its `prepare` step. Choosing the in-browser agent
 detaches every attached agent; the other two open an inline picker of that kind's agents plus an "Add
 new agent" row that opens the same `agentAdd` modal as the sidebar, preset through its `initialMode`
 prop (`"external"` / `"service"`; an agent being edited keeps its own mode, and on a deployment

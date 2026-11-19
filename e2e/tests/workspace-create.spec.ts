@@ -39,7 +39,7 @@ test.describe("workspace", () => {
       {
         user: "The user names it “Deterministic workspace” and confirms.",
         system:
-          "The workspace page opens with the agent choices beside the workspace name, a combined Sources card on the left, and the Workspace Root browser on the right.",
+          "The workspace page opens with the workspace name at the top, a combined Sources card on the left, and the Workspace Root card on the right with Workspace Root, Preview and Agents tabs.",
         shows:
           "the workspace page for Deterministic workspace with agent choices, a combined Sources card, and a Workspace Root file browser",
       },
@@ -56,6 +56,13 @@ test.describe("workspace", () => {
           page.getByText("Deterministic workspace", { exact: true }).first(),
         ).toBeVisible();
 
+        const rootPane = page.locator('[data-guide="workspace-root-pane"]');
+        const agentsTab = rootPane.getByRole("tab", { name: "Agents" });
+        await expect(agentsTab).toBeVisible();
+        await expect(
+          page.locator('header [data-guide="workspace-agent"]'),
+        ).toHaveCount(0);
+        await agentsTab.click();
         const agentStrip = page.locator('[data-guide="workspace-agent"]');
         await expect(agentStrip).toBeVisible();
         for (const guide of ["browser", "opencode", "remote"]) {
@@ -63,6 +70,7 @@ test.describe("workspace", () => {
             agentStrip.locator(`[data-guide="workspace-agent-${guide}"]`),
           ).toBeVisible();
         }
+        await rootPane.getByRole("tab", { name: "Workspace Root" }).click();
 
         const leftColumn = page.locator(
           '[data-guide="workspace-left-column"]',
@@ -85,7 +93,6 @@ test.describe("workspace", () => {
           sourcePane.getByText(/Pick a source on the left/),
         ).toBeVisible();
 
-        const rootPane = page.locator('[data-guide="workspace-root-pane"]');
         await expect(rootPane).toBeVisible();
         const cardRelations = await page.evaluate(() => {
           const sources = document.querySelector(

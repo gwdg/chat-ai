@@ -2111,6 +2111,7 @@ export default {
     unpin_action: "Unpin workspace",
     workspace_root: "Workspace Root",
     tab_preview: "Preview",
+    tab_agents: "Agents",
     root_hint: "Files and folders kept in this workspace.",
     storage: "Storage",
     available_storage: "Available storage",

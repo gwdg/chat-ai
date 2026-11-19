@@ -137,6 +137,11 @@ export function openChatWorkspaces() {
   }
 }
 
+export function openWorkspaceAgents() {
+  const tab = find('[data-guide="workspace-tab-agents"]');
+  if (tab && tab.getAttribute("aria-selected") !== "true") tab.click();
+}
+
 export function openAgentMenu() {
   if (!find('[data-guide="pin-agent-menu-item"]')) {
     click('[data-guide="agent-menu"]');

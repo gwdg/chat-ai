@@ -17,6 +17,7 @@ import {
   openTopicCreate,
   openTopicMenu,
   openWorkspaceMenu,
+  openWorkspaceAgents,
   openUserSettings,
   searchHasQuery,
   selectSettingsTab,
@@ -48,6 +49,7 @@ export const featureGuides = {
       {
         target: '[data-guide="workspace-agent"]',
         textKey: "feature_guide.workspace_overview.step4",
+        prepare: openWorkspaceAgents,
       },
     ],
   },

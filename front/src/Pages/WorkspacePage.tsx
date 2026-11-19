@@ -262,7 +262,9 @@ export default function WorkspacePage() {
     loading: boolean;
     onOpenPath?: (path: string) => void;
   } | null>(null);
-  const [rootTab, setRootTab] = useState<"root" | "preview">("root");
+  const [rootTab, setRootTab] = useState<"root" | "preview" | "agents">(
+    "root",
+  );
   const [quotas, setQuotas] = useState<Record<string, QuotaInfo | null>>({});
   const [transferring, setTransferring] = useState(false);
   const [draggingEntry, setDraggingEntry] = useState<{
@@ -1709,8 +1711,8 @@ export default function WorkspacePage() {
             </div>
           ) : (
             <>
-              <header className="mx-auto mb-2 flex w-full flex-col gap-2 rounded-xl border border-base-300 bg-base-100 px-3 py-2 shadow-sm md:max-w-[85vw] md:flex-row md:items-stretch xl:max-w-[1300px]">
-                <div className="flex min-w-0 shrink-0 items-start gap-3 md:w-64">
+              <header className="mx-auto mb-2 flex w-full items-start gap-3 rounded-xl border border-base-300 bg-base-100 px-3 py-2 shadow-sm md:max-w-[85vw] xl:max-w-[1300px]">
+                <div className="flex min-w-0 flex-1 items-start gap-3">
                   <Bot size={18} className="mt-0.5 shrink-0 text-accent" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-base-content">
@@ -1745,12 +1747,6 @@ export default function WorkspacePage() {
                   >
                     <TrashCan size={16} />
                   </button>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <WorkspaceAgentPanel
-                    workspaceId={workspace.id}
-                    layout="row"
-                  />
                 </div>
               </header>
 
@@ -1819,6 +1815,16 @@ export default function WorkspacePage() {
                       >
                         {t("workspace.tab_preview")}
                       </button>
+                      <button
+                        type="button"
+                        role="tab"
+                        data-guide="workspace-tab-agents"
+                        aria-selected={rootTab === "agents"}
+                        onClick={() => setRootTab("agents")}
+                        className={rootTabClass(rootTab === "agents")}
+                      >
+                        {t("workspace.tab_agents")}
+                      </button>
                     </div>
                     {rootTab === "root" && (
                       <span className="ml-auto min-w-0 truncate text-[10px] text-base-content/50">
@@ -1826,7 +1832,14 @@ export default function WorkspacePage() {
                       </span>
                     )}
                   </div>
-                  {rootTab === "preview" && preview ? (
+                  {rootTab === "agents" ? (
+                    <div className="min-h-0 flex-1 overflow-y-auto p-2">
+                      <WorkspaceAgentPanel
+                        workspaceId={workspace.id}
+                        framed={false}
+                      />
+                    </div>
+                  ) : rootTab === "preview" && preview ? (
                     <WorkspacePreviewTab
                       preview={preview}
                       onClose={closePreview}
