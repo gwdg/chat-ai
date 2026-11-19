@@ -71,10 +71,11 @@ export function ensureTool(toolKey) {
     }
     const tool = find(`[data-guide="tool-${toolKey}"]`);
     if (!tool) return false;
-    if (!tool.className.includes("border-success")) {
-      tool.click();
-    }
-    return true;
+    if (isToolActive(toolKey)) return true;
+    // A tool with a settings page swaps the row for that page's switch, which
+    // carries the same data-guide; the next tick finds it and flips it.
+    tool.click();
+    return false;
   });
 }
 
@@ -184,7 +185,12 @@ export function toolsAreEnabled() {
 
 export function isToolActive(toolKey) {
   const tool = find(`[data-guide="tool-${toolKey}"]`);
-  return !!tool && tool.className.includes("border-success");
+  if (!tool) return false;
+  const pressed = tool.getAttribute("aria-pressed");
+  if (pressed !== null) return pressed === "true";
+  const checked = tool.getAttribute("aria-checked");
+  if (checked !== null) return checked === "true";
+  return tool.className.includes("border-success");
 }
 
 export function arcanaIdEntered() {

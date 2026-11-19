@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import Tooltip from "../../components/Others/Tooltip";
 
 const NEAR_EXHAUSTED_PERCENT = 80;
@@ -118,7 +119,9 @@ export default function UsageDetailsCard({
   collapsedMetrics: collapsedOverride,
   collapsedColumns = false,
   expandedTable = false,
+  onOpenLabel = null,
 }) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
 
   const metrics = sections.flatMap((section) => section.metrics);
@@ -193,22 +196,49 @@ export default function UsageDetailsCard({
 
   return (
     <div className="w-full min-w-0 rounded-xl bg-base-200 px-3 py-2">
-      <button
-        type="button"
-        onClick={() => setIsOpen((open) => !open)}
-        aria-expanded={canExpand ? isOpen : undefined}
-        className="flex w-full items-center justify-between gap-2 text-left"
-      >
-        <span className="min-w-0 truncate text-[11px] font-medium text-base-content">
-          {label}
-        </span>
-        {canExpand && (
-          <ChevronDown
-            className={`h-3.5 w-3.5 shrink-0 text-base-content/50 transition-transform ${isOpen ? "rotate-180" : ""}`}
-            aria-hidden="true"
-          />
-        )}
-      </button>
+      {onOpenLabel ? (
+        <div className="flex w-full items-center gap-1">
+          <button
+            type="button"
+            onClick={onOpenLabel}
+            className="min-w-0 flex-1 truncate text-left text-[11px] font-medium text-base-content hover:underline focus-visible:underline focus-visible:outline-none"
+          >
+            {label}
+          </button>
+          {canExpand && (
+            <button
+              type="button"
+              onClick={() => setIsOpen((open) => !open)}
+              aria-expanded={isOpen}
+              aria-label={t("user_settings.usage.expand")}
+              title={t("user_settings.usage.expand")}
+              className="shrink-0 rounded p-0.5 hover:bg-base-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+            >
+              <ChevronDown
+                className={`h-3.5 w-3.5 text-base-content/50 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                aria-hidden="true"
+              />
+            </button>
+          )}
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setIsOpen((open) => !open)}
+          aria-expanded={canExpand ? isOpen : undefined}
+          className="flex w-full items-center justify-between gap-2 text-left"
+        >
+          <span className="min-w-0 truncate text-[11px] font-medium text-base-content">
+            {label}
+          </span>
+          {canExpand && (
+            <ChevronDown
+              className={`h-3.5 w-3.5 shrink-0 text-base-content/50 transition-transform ${isOpen ? "rotate-180" : ""}`}
+              aria-hidden="true"
+            />
+          )}
+        </button>
+      )}
 
       {isOpen ? (
         expandedTable ? (

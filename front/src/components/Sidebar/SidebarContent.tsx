@@ -1115,7 +1115,17 @@ export default function SidebarContent({
         <div className="bg-base-100 pb-4">
           <div className="flex flex-col gap-3 mx-3">
             {showUsageInSidebar && userData && (
-              <SidebarUsageSummary data={userData} />
+              <SidebarUsageSummary
+                data={userData}
+                onOpenUsage={() =>
+                  openModal("userSettings", {
+                    localState,
+                    userData,
+                    modelsData,
+                    initialTab: "usage",
+                  })
+                }
+              />
             )}
             <SidebarUserCard
               localState={localState}

@@ -1124,6 +1124,9 @@ export default {
     tools_title: "GWDG-Werkzeuge",
     tools_enable_all: "Alle aktivieren",
     tools_disable_all: "Alle deaktivieren",
+    tools_enable_to_configure:
+      "Schalte dieses Werkzeug ein, um es zu konfigurieren.",
+    tool_details: "Einstellungen für {{name}}",
     chat_settings: "Chat-Einstellungen",
     label_web_search: "Websuche",
     label_image_generation: "Bildgenerierung",
@@ -1328,6 +1331,7 @@ export default {
       empty: "Für dieses Konto sind keine Nutzungsgrenzen hinterlegt.",
       monthly: "Monatlich",
       total: "Gesamt",
+      expand: "Details anzeigen",
       personal: "Persönlich",
       organization: "Organisation",
       personal_monthly: "Persönlich monatlich",

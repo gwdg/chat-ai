@@ -270,7 +270,7 @@ function buildScope(scopeKey, scopeLabel, scopeData, t) {
   };
 }
 
-export default function SidebarUsageSummary({ data }) {
+export default function SidebarUsageSummary({ data, onOpenUsage = null }) {
   const { t } = useTranslation();
   const sections = [];
   const collapsedMetrics = [];
@@ -300,6 +300,7 @@ export default function SidebarUsageSummary({ data }) {
       collapsedMetrics={collapsedMetrics}
       collapsedColumns={!flat}
       expandedTable={!flat}
+      onOpenLabel={onOpenUsage}
     />
   );
 }

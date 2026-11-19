@@ -44,7 +44,7 @@ describe("ToolsContainer MCP selector", () => {
     render(<ToolsContainer localState={stateWith({})} setLocalState={vi.fn()} />);
 
     expect(
-      screen.getByRole("button", { name: /mcp servers/i }),
+      screen.getByRole("button", { name: "MCP Servers settings" }),
     ).toBeInTheDocument();
     expect(screen.queryByText("Files")).not.toBeInTheDocument();
     expect(
@@ -57,11 +57,12 @@ describe("ToolsContainer MCP selector", () => {
     const setLocalState = vi.fn((updater) => updater(localState));
     render(<ToolsContainer localState={localState} setLocalState={setLocalState} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /mcp servers/i }));
+    fireEvent.click(screen.getByRole("switch", { name: /mcp servers/i }));
 
     const next = setLocalState.mock.results[0].value;
     expect(next.settings.tools.mcp).toBe(true);
     expect(next.settings.tools.mcp_remote).toBe(true);
+    expect(document.querySelector('[data-guide="tools-grid"]')).toBeInTheDocument();
   });
 
   it("lists configured local and remote servers with their kind", () => {
@@ -73,12 +74,14 @@ describe("ToolsContainer MCP selector", () => {
       <ToolsContainer localState={stateWith({ mcp: true })} setLocalState={vi.fn()} />,
     );
 
+    fireEvent.click(
+      screen.getByRole("button", { name: "MCP Servers settings" }),
+    );
+
     expect(screen.getByText("Files")).toBeInTheDocument();
     expect(screen.getByText("Gateway")).toBeInTheDocument();
     expect(screen.getByText("GWDG")).toBeInTheDocument();
     expect(screen.getByText("Local")).toBeInTheDocument();
-    expect(screen.getByText("Gateway")).toBeInTheDocument();
-    expect(screen.getByText("GWDG")).toBeInTheDocument();
   });
 
   it("selects a local server for the chat", () => {
@@ -88,6 +91,10 @@ describe("ToolsContainer MCP selector", () => {
     const localState = stateWith({ mcp: true });
     const setLocalState = vi.fn((updater) => updater(localState));
     render(<ToolsContainer localState={localState} setLocalState={setLocalState} />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "MCP Servers settings" }),
+    );
 
     const picker = document.querySelector('[data-guide="mcp-server-picker"]');
     fireEvent.click(picker.querySelector('input[type="checkbox"]'));
@@ -105,6 +112,10 @@ describe("ToolsContainer MCP selector", () => {
     const setLocalState = vi.fn((updater) => updater(localState));
     render(<ToolsContainer localState={localState} setLocalState={setLocalState} />);
 
+    fireEvent.click(
+      screen.getByRole("button", { name: "MCP Servers settings" }),
+    );
+
     const picker = document.querySelector('[data-guide="mcp-server-picker"]');
     fireEvent.click(picker.querySelector('input[type="checkbox"]'));
 
@@ -121,8 +132,100 @@ describe("ToolsContainer MCP selector", () => {
       <ToolsContainer localState={stateWith({ mcp: true })} setLocalState={vi.fn()} />,
     );
 
+    const row = screen.getByRole("button", { name: "MCP Servers settings" });
+    expect(row.querySelector("svg.lucide-triangle-alert")).toBeTruthy();
+    fireEvent.click(row);
+
     const picker = document.querySelector('[data-guide="mcp-server-picker"]');
     expect(picker?.querySelector("svg.lucide-triangle-alert")).toBeTruthy();
+  });
+});
+
+describe("ToolsContainer detail pages", () => {
+  it("opens the Arcana page and returns to the list with Back", () => {
+    render(
+      <ToolsContainer
+        localState={stateWith({ arcana: true })}
+        setLocalState={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Arcana settings" }));
+
+    expect(screen.getByPlaceholderText("Arcana id")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /enable all/i }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+
+    expect(screen.queryByPlaceholderText("Arcana id")).not.toBeInTheDocument();
+    expect(
+      document.querySelector('[data-guide="tools-grid"]'),
+    ).toBeInTheDocument();
+  });
+
+  it("toggles Arcana from its switch without opening the page", () => {
+    const localState = stateWith({});
+    const setLocalState = vi.fn((updater) => updater(localState));
+    render(<ToolsContainer localState={localState} setLocalState={setLocalState} />);
+
+    fireEvent.click(screen.getByRole("switch", { name: "Arcana" }));
+
+    const next = setLocalState.mock.results[0].value;
+    expect(next.settings.tools.arcana).toBe(true);
+    expect(screen.queryByPlaceholderText("Arcana id")).not.toBeInTheDocument();
+    expect(
+      document.querySelector('[data-guide="tools-grid"]'),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps a row without settings as a plain toggle row", () => {
+    const localState = stateWith({});
+    const setLocalState = vi.fn((updater) => updater(localState));
+    render(<ToolsContainer localState={localState} setLocalState={setLocalState} />);
+
+    const row = screen.getByRole("button", { name: "Image Generation" });
+    fireEvent.click(row);
+
+    const next = setLocalState.mock.results[0].value;
+    expect(next.settings.tools.image_generation).toBe(true);
+    expect(
+      screen.queryByRole("button", { name: /image generation settings/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      row.parentElement?.querySelector("svg.lucide-chevron-right"),
+    ).toBeNull();
+  });
+
+  it("asks to enable Arcana before showing its settings", () => {
+    render(<ToolsContainer localState={stateWith({})} setLocalState={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Arcana settings" }));
+
+    expect(
+      screen.getByText("Turn this tool on to configure it."),
+    ).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("Arcana id")).not.toBeInTheDocument();
+  });
+
+  it("keeps the page honest while the master tools switch is off", () => {
+    const localState = {
+      settings: {
+        enable_tools: false,
+        model: { id: "test-model", name: "Test Model" },
+        tools: { arcana: true },
+      },
+    };
+    render(<ToolsContainer localState={localState} setLocalState={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Arcana settings" }));
+
+    expect(
+      screen.getByText("Turn this tool on to configure it."),
+    ).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("Arcana id")).not.toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "Arcana" })).toBeDisabled();
   });
 });
 
@@ -271,9 +374,10 @@ describe("ToolsContainer list layout", () => {
     );
     expect(rows.length).toBeGreaterThan(0);
     for (const row of rows) {
-      const button = row.querySelector("button");
-      expect(button).toBeDisabled();
-      expect(button?.querySelector('input[type="checkbox"]')).toBeDisabled();
+      const control =
+        row.querySelector('button[role="switch"]') ?? row.querySelector("button");
+      expect(control).toBeDisabled();
+      expect(control?.querySelector('input[type="checkbox"]')).toBeDisabled();
     }
 
     const on = screen.getByRole("button", { name: /image generation/i });

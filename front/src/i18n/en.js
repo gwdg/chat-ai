@@ -1107,6 +1107,8 @@ export default {
     tools_title: "GWDG Tools",
     tools_enable_all: "Enable all",
     tools_disable_all: "Disable all",
+    tools_enable_to_configure: "Turn this tool on to configure it.",
+    tool_details: "{{name}} settings",
     chat_settings: "Chat settings",
     label_web_search: "Web Search",
     label_image_generation: "Image Generation",
@@ -1306,6 +1308,7 @@ export default {
       description:
         "Monitor your monthly usage and organization budget usage.",
       empty: "No usage limits are recorded for this account.",
+      expand: "Show details",
       monthly: "Monthly",
       total: "Total",
       personal: "Personal",
