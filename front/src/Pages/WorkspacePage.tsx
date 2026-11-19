@@ -35,10 +35,8 @@ import AnnouncementBar from "../components/Header/AnnouncementBar";
 import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
 import Header from "../components/Header/Header";
 import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
-import MetaChangesPanel from "../components/Meta/MetaChangesPanel";
-import WorkspaceAgentPanel from "../components/Workspace/WorkspaceAgentPanel";
 import WorkspaceComposer from "../components/Workspace/WorkspaceComposer";
-import WorkspaceStorageTree from "../components/Workspace/WorkspaceStorageTree";
+import WorkspaceRightPanel from "../components/Workspace/WorkspaceRightPanel";
 import IconColorPicker from "../components/Sidebar/IconColorPicker";
 import { isTopicIconId, topicIconById } from "../components/Sidebar/topicIcons";
 import {
@@ -201,30 +199,6 @@ export default function WorkspacePage() {
       conversationIds: attachedChats.map((chat) => chat.id),
     };
   }, [attachedAgents, attachedChats, sessionLinks, workspaceId]);
-
-  const workspaceTabs = useMemo(
-    () => [
-      {
-        id: "files",
-        label: t("workspace.files_tab"),
-        content: (
-          <WorkspaceStorageTree
-            workspaceId={workspaceId}
-            className="min-h-0 min-w-0"
-            showTitle={false}
-          />
-        ),
-      },
-      {
-        id: "agents",
-        label: t("meta_chat.agents_tab"),
-        content: (
-          <WorkspaceAgentPanel workspaceId={workspaceId} framed={false} />
-        ),
-      },
-    ],
-    [t, workspaceId],
-  );
 
   const workspaceMissing = workspaceSettled && !workspace;
   const selectedIconId =
@@ -464,14 +438,12 @@ export default function WorkspacePage() {
                 </div>
               </div>
 
-              <MetaChangesPanel
+              <WorkspaceRightPanel
+                workspaceIds={[workspaceId]}
                 userSettings={userSettings}
                 scope={whatsNewScope}
                 scopeKey={workspaceId}
-                tabs={workspaceTabs}
-              >
-                {null}
-              </MetaChangesPanel>
+              />
             </div>
           ) : null}
         </main>
