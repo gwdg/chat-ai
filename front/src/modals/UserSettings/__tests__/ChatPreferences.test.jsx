@@ -13,6 +13,12 @@ vi.mock("../../ModalContext", () => ({
 vi.mock("../../../hooks/useToast", () => ({
   useToast: () => ({ notifySuccess: vi.fn(), notifyError: vi.fn() }),
 }));
+// Suggestions only render when the choices module is on; this test checks the
+// layout, so force it on and keep every other module accessor as it is.
+vi.mock("../../../utils/modules", async (importOriginal) => ({
+  ...(await importOriginal()),
+  isChoicesEnabled: () => true,
+}));
 // The model list is unrelated to the preferences under test.
 vi.mock("../DefaultModelSelector", () => ({
   default: () => <div data-testid="default-model-selector" />,
@@ -54,6 +60,26 @@ describe("User settings tabs", () => {
     expect(
       screen.queryByRole("switch", { name: "Render Typst blocks" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("shows the suggestion and summary switches without their section headers", () => {
+    renderTab("chat");
+
+    expect(
+      screen.queryByRole("heading", { name: "Suggestions" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Conversation summaries" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("switch", { name: "Suggest follow-up prompts" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("switch", { name: "Show summaries on hover" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Learn about follow-up prompts" }),
+    ).toBeInTheDocument();
   });
 
   it("offers Usage and Advanced in the tab list", () => {

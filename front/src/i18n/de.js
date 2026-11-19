@@ -1385,7 +1385,6 @@ export default {
         },
       },
       suggestions: {
-        section_label: "Vorschläge",
         label: "Folgevorschläge anzeigen",
         description:
           "Zeigt nach jeder Antwort passende Vorschläge zum Fortsetzen des Chats.",
@@ -1397,7 +1396,6 @@ export default {
         },
       },
       summaries: {
-        section_label: "Unterhaltungszusammenfassungen",
         label: "Zusammenfassungen beim Darüberfahren anzeigen",
         description:
           "Beim Verlassen eines Chats wird eine kurze Zusammenfassung erstellt und beim Darüberfahren mit der Maus in der Seitenleiste angezeigt.",

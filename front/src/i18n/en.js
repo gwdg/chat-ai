@@ -1362,7 +1362,6 @@ export default {
         },
       },
       suggestions: {
-        section_label: "Suggestions",
         label: "Suggest follow-up prompts",
         description: "Show suggested ways to continue after each response.",
         help_label: "Learn about follow-up prompts",
@@ -1373,7 +1372,6 @@ export default {
         },
       },
       summaries: {
-        section_label: "Conversation summaries",
         label: "Show summaries on hover",
         description:
           "Generate a short summary when you switch away from a chat, then show it when hovering over that chat in the sidebar.",

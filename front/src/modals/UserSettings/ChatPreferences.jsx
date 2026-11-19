@@ -166,11 +166,9 @@ export function SuggestionPreference() {
   const setTitleOnce = useSelector(selectSetTitleOnce);
 
   return (
-    <section>
-      <div className="flex items-center gap-1.5 px-2">
-        <h3 className="text-sm font-medium text-base-content">
-          {t("user_settings.chat_preferences.suggestions.section_label")}
-        </h3>
+    <section className="flex flex-col gap-2">
+      {/* No section title: this one paid for it with the Help entry point. */}
+      <div className="flex items-center justify-end px-2">
         <button
           type="button"
           onClick={() => openModal("helpChoiceProposer")}
@@ -251,9 +249,6 @@ export function ConversationSummaryPreference() {
 
   return (
     <section className="flex flex-col gap-2">
-      <h3 className="px-2 text-sm font-medium text-base-content">
-        {t("user_settings.chat_preferences.summaries.section_label")}
-      </h3>
       <ProfilePreferenceSwitch
         label={t("user_settings.chat_preferences.summaries.label")}
         description={t(
