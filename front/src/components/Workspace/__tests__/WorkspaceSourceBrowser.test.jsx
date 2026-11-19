@@ -200,7 +200,7 @@ describe("WorkspaceSourceBrowser", () => {
     expect(addButton()).toBeInTheDocument();
     expect(addButton()).toBeDisabled();
     expect(addButton()).toHaveTextContent("Add to Workspace");
-    expect(screen.getByText("Sources")).toBeInTheDocument();
+    expect(screen.getByText("Storage location")).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Back" }),
     ).not.toBeInTheDocument();
@@ -477,7 +477,6 @@ describe("WorkspaceSourceBrowser", () => {
 
     expect(await screen.findByText("files")).toBeInTheDocument();
     expect(mcpProvider.list).toHaveBeenCalledWith("/");
-    expect(document.querySelector('[title="Docs server"]')).toBeInTheDocument();
     expect(addButton()).toBeDisabled();
 
     fireEvent.click(screen.getByLabelText("files"));

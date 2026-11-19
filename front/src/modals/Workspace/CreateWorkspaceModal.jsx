@@ -2,12 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { Pencil } from "lucide-react";
+import { Checkmark } from "@carbon/icons-react";
 
 import BaseModal from "../BaseModal";
 import AddSourceModal from "./AddSourceModal";
 import CreateEntryModal from "./CreateEntryModal";
 import WorkspaceRootBrowser from "../../components/Workspace/WorkspaceRootBrowser";
-import WorkspaceAgentPanel from "../../components/Workspace/WorkspaceAgentPanel";
 import WorkspaceSourceBrowser from "../../components/Workspace/WorkspaceSourceBrowser";
 import WorkspaceSourcesPanel from "../../components/Workspace/WorkspaceSourcesPanel";
 import {
@@ -19,14 +19,16 @@ import {
   useWorkspaceSources,
 } from "../../db/workspaceDb";
 import { addSelectionToWorkspace } from "../../workspace/addSelectionToWorkspace";
+import { chatFolderLabel } from "../../workspace/chatFolderName";
 import { listWorkspaceRoot } from "../../workspace/listWorkspaceRoot";
 import { createWorkspaceRootProvider } from "../../workspace/workspaceRoot";
-import { joinPath, normalizePath } from "../../workspace/paths";
+import { joinPath } from "../../workspace/paths";
 import { uploadLocalFiles } from "../../workspace/upload";
 import {
   TOPIC_ICONS,
   topicIconById,
 } from "../../components/Sidebar/topicIcons";
+import { useConversationList } from "../../db";
 import {
   TOPIC_COLORS,
   topicColorById,
@@ -34,13 +36,6 @@ import {
 } from "../../components/Sidebar/topicColors";
 
 const DEFAULT_WORKSPACE_ICON = "rocket";
-
-const rootTabClass = (active) =>
-  `whitespace-nowrap rounded-md px-2 py-1 text-[11px] font-semibold ${
-    active
-      ? "bg-base-200 text-base-content"
-      : "text-base-content/55 hover:text-base-content"
-  } disabled:opacity-40 disabled:hover:text-base-content/55`;
 
 const errorMessage = (error) =>
   error instanceof Error ? error.message : String(error);
@@ -78,11 +73,11 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
   const [rootLoading, setRootLoading] = useState(false);
   const [rootError, setRootError] = useState("");
   const [uploading, setUploading] = useState(false);
-  const [rootTab, setRootTab] = useState("root");
   const [entryKind, setEntryKind] = useState(false);
 
   const sources = useWorkspaceSources(draftId ?? undefined);
   const mounts = useWorkspaceMounts(draftId ?? undefined);
+  const conversations = useConversationList() || [];
   const rootProvider = useMemo(
     () => (draftId ? createWorkspaceRootProvider(draftId) : null),
     [draftId],
@@ -155,7 +150,6 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
     setRootPath("/");
     setRootEntries([]);
     setRootError("");
-    setRootTab("root");
     setEntryKind(false);
   };
 
@@ -203,7 +197,6 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
 
   const chooseIcon = (id) => {
     setIcon(id);
-    setIconOpen(false);
     const draft = draftIdRef.current;
     if (draft) void updateWorkspace(draft, { icon: id });
     else pendingPatchRef.current.icon = id;
@@ -247,16 +240,39 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
     void loadRoot();
   }, [loadRoot]);
 
-  const breadcrumbs = useMemo(() => {
-    const parts = normalizePath(rootPath).split("/").filter(Boolean);
-    const items = [{ label: t("workspace.root"), path: "/" }];
-    let path = "/";
-    for (const part of parts) {
-      path = joinPath(path, part);
-      items.push({ label: part, path });
+  const entryBadge = (entry) => {
+    if (entry.local) return t("workspace.storage_badge_browser");
+    const exact = mounts.find((mount) => mount.path === entry.path);
+    const mount =
+      exact ??
+      mounts
+        .filter(
+          (candidate) =>
+            entry.path === candidate.path ||
+            entry.path.startsWith(
+              `${candidate.path.replace(/\/+$/, "")}/`,
+            ),
+        )
+        .sort((a, b) => b.path.length - a.path.length)[0];
+    if (!mount) return undefined;
+    const source = sources.find((item) => item.id === mount.sourceId);
+    switch (source?.kind) {
+      case "local":
+        return t("workspace.storage_badge_device");
+      case "arcana":
+      case "arcana-filesystem":
+        return t("workspace.storage_badge_arcana");
+      case "mcp":
+        return t("workspace.storage_badge_mcp");
+      case "agent":
+        return t("workspace.storage_badge_agent");
+      case "chat":
+      case "browser":
+        return t("workspace.storage_badge_browser");
+      default:
+        return undefined;
     }
-    return items;
-  }, [rootPath, t]);
+  };
 
   const addSelection = async (selection) => {
     const id = draftIdRef.current;
@@ -351,28 +367,86 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
             </span>
           </button>
           {iconOpen && (
-            <div className="absolute left-0 top-[calc(100%+0.5rem)] z-20 grid max-h-56 w-72 grid-cols-8 gap-1 overflow-y-auto rounded-xl border border-base-300 bg-base-100 p-1 shadow-lg">
-              {TOPIC_ICONS.map((item) => {
-                const Icon = item.Icon;
-                const selected = icon === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    data-testid={`create-workspace-icon-${item.id}`}
-                    onClick={() => chooseIcon(item.id)}
-                    aria-pressed={selected}
-                    title={item.label}
-                    className={`flex h-8 w-8 items-center justify-center rounded-lg transition ${
-                      selected
-                        ? "bg-accent text-accent-content"
-                        : "bg-base-200 text-base-content/65 hover:bg-base-300"
-                    }`}
-                  >
-                    <Icon size={15} />
-                  </button>
-                );
-              })}
+            <div className="absolute left-0 top-[calc(100%+0.5rem)] z-20 flex w-80 flex-col gap-2 rounded-xl border border-base-300 bg-base-100 p-2 shadow-lg">
+              <div className="flex justify-center">
+                <div
+                  className="flex h-14 w-14 items-center justify-center rounded-2xl"
+                  style={{ backgroundColor: selectedColor.hex }}
+                >
+                  <SelectedIcon size={28} className="text-white" />
+                </div>
+              </div>
+
+              <div className="flex flex-wrap justify-center gap-1.5">
+                {TOPIC_COLORS.map((option) => {
+                  const selected = color === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      data-testid={`create-workspace-color-${option.id}`}
+                      onClick={() => chooseColor(option.id)}
+                      aria-label={option.label}
+                      aria-pressed={selected}
+                      title={option.label}
+                      className="relative h-7 w-7 shrink-0 rounded-full transition-transform"
+                      style={{
+                        backgroundColor: option.hex,
+                        transform: selected ? "scale(1.1)" : undefined,
+                      }}
+                    >
+                      {selected && (
+                        <Checkmark
+                          size={16}
+                          className="absolute inset-0 m-auto text-white"
+                        />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="h-px bg-base-300" />
+
+              <div className="grid max-h-44 grid-cols-7 gap-1 overflow-y-auto">
+                {TOPIC_ICONS.map((item) => {
+                  const Icon = item.Icon;
+                  const selected = icon === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      data-testid={`create-workspace-icon-${item.id}`}
+                      onClick={() => chooseIcon(item.id)}
+                      aria-pressed={selected}
+                      title={item.label}
+                      className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${
+                        selected
+                          ? ""
+                          : "text-base-content/70 hover:bg-base-200"
+                      }`}
+                      style={
+                        selected
+                          ? {
+                              backgroundColor: `${selectedColor.hex}22`,
+                              color: selectedColor.hex,
+                            }
+                          : undefined
+                      }
+                    >
+                      <Icon size={20} />
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIconOpen(false)}
+                className="btn btn-accent btn-sm self-end"
+              >
+                {t("folders.done")}
+              </button>
             </div>
           )}
         </div>
@@ -386,34 +460,9 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
             className="w-full max-w-[32rem] border-b border-transparent bg-transparent px-0 text-lg font-semibold text-base-content outline-none placeholder:text-base-content/40 focus:border-accent"
             autoFocus
           />
-          <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5">
-            <p className="min-w-0 text-[11px] text-base-content/60">
-              {t("workspace.subtitle")}
-            </p>
-            <div
-              role="group"
-              aria-label={t("folders.choose_color")}
-              className="flex shrink-0 items-center gap-1.5"
-            >
-              {TOPIC_COLORS.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  data-testid={`create-workspace-color-${option.id}`}
-                  onClick={() => chooseColor(option.id)}
-                  aria-label={option.label}
-                  aria-pressed={color === option.id}
-                  title={option.label}
-                  className={`h-4 w-4 rounded-full transition ${
-                    color === option.id
-                      ? "ring-2 ring-accent ring-offset-2 ring-offset-base-100"
-                      : "hover:scale-110"
-                  }`}
-                  style={{ backgroundColor: option.hex }}
-                />
-              ))}
-            </div>
-          </div>
+          <p className="mt-2 min-w-0 text-[11px] text-base-content/60">
+            {t("workspace.subtitle")}
+          </p>
         </div>
       </div>
 
@@ -452,73 +501,42 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
           data-testid="create-workspace-root"
           className="flex min-h-[60vh] min-w-0 flex-[2] flex-col overflow-hidden rounded-xl border border-base-300 bg-base-100 md:min-h-0"
         >
-          <div className="flex items-center gap-2 border-b border-base-300 px-2 py-1.5">
-            <div role="tablist" className="flex min-w-0 items-center gap-0.5">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={rootTab === "root"}
-                onClick={() => setRootTab("root")}
-                className={rootTabClass(rootTab === "root")}
-              >
-                {t("workspace.workspace_root")}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={rootTab === "preview"}
-                disabled
-                className={rootTabClass(rootTab === "preview")}
-              >
-                {t("workspace.tab_preview")}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={rootTab === "agents"}
-                onClick={() => setRootTab("agents")}
-                className={rootTabClass(rootTab === "agents")}
-              >
-                {t("workspace.tab_agents")}
-              </button>
-            </div>
-            {rootTab === "root" && (
-              <span className="ml-auto min-w-0 truncate text-[10px] text-base-content/50">
-                {rootPath}
-              </span>
-            )}
+          <div
+            data-testid="create-workspace-path"
+            className="truncate border-b border-base-300 px-3 py-1.5 text-[11px] text-base-content/55"
+            title={rootPath}
+          >
+            {rootPath}
           </div>
 
-          {rootTab === "agents" ? (
-            <div className="min-h-0 flex-1 overflow-y-auto p-2">
-              <WorkspaceAgentPanel workspaceId={draftId} framed={false} />
-            </div>
-          ) : (
-            <WorkspaceRootBrowser
-              path={rootPath}
-              rootPath="/"
-              breadcrumbs={breadcrumbs}
-              entries={rootEntries}
-              loading={rootLoading}
-              error={rootError}
-              onNavigate={setRootPath}
-              onRetry={() => void loadRoot()}
-              onOpen={(entry) => {
-                if (entry.mount) {
-                  setTarget({ drive: "device", sourceId: entry.mount.sourceId });
-                  return;
-                }
-                if (entry.kind === "dir") setRootPath(entry.path);
-              }}
-              onUpload={triggerUpload}
-              uploading={uploading}
-              onNewFolder={() => setEntryKind("dir")}
-              onNewFile={() => setEntryKind("file")}
-              onAddFolder={() => openAdd(null)}
-              onRefresh={() => void loadRoot()}
-              emptyHint={t("workspace.root_empty_hint")}
-            />
-          )}
+          <WorkspaceRootBrowser
+            path={rootPath}
+            rootPath="/"
+            breadcrumbs={[]}
+            entries={rootEntries}
+            loading={rootLoading}
+            error={rootError}
+            onNavigate={setRootPath}
+            onRetry={() => void loadRoot()}
+            onOpen={(entry) => {
+              if (entry.mount) {
+                setTarget({ drive: "device", sourceId: entry.mount.sourceId });
+                return;
+              }
+              if (entry.kind === "dir") setRootPath(entry.path);
+            }}
+            onUpload={triggerUpload}
+            uploading={uploading}
+            onNewFolder={() => setEntryKind("dir")}
+            onNewFile={() => setEntryKind("file")}
+            onAddFolder={() => openAdd(null)}
+            onRefresh={() => void loadRoot()}
+            entryBadge={entryBadge}
+            displayName={(entry) =>
+              chatFolderLabel(entry.path, { sources, conversations })
+            }
+            emptyHint={t("workspace.root_empty_hint")}
+          />
         </section>
       </div>
 

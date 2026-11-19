@@ -69,11 +69,19 @@ vi.mock("../../../components/Workspace/WorkspaceSourceBrowser", () => ({
 }));
 
 vi.mock("../../../components/Workspace/WorkspaceRootBrowser", () => ({
-  default: ({ entries = [] }) => (
+  default: ({ entries = [], entryBadge }) => (
     <div data-testid="root-browser">
-      {entries.map((entry) => (
-        <span key={entry.path}>{entry.name}</span>
-      ))}
+      {entries.map((entry) => {
+        const badge = entryBadge?.(entry);
+        return (
+          <span key={entry.path}>
+            {entry.name}
+            {typeof badge === "string" && badge ? (
+              <span data-testid={`root-badge-${entry.name}`}>{badge}</span>
+            ) : null}
+          </span>
+        );
+      })}
     </div>
   ),
 }));
@@ -129,6 +137,77 @@ describe("CreateWorkspaceModal", () => {
     expect(screen.getByTestId("sources-panel")).toBeInTheDocument();
     expect(screen.getByTestId("source-browser")).toBeInTheDocument();
     expect(screen.getByTestId("root-browser")).toBeInTheDocument();
+  });
+
+  it("replaces the tab strip with the current root path", async () => {
+    renderModal();
+    await waitForDraft();
+
+    expect(screen.queryByRole("tab")).toBeNull();
+    expect(screen.getByTestId("create-workspace-path")).toHaveTextContent("/");
+  });
+
+  it("keeps colour dots inside the icon popover and writes the choice", async () => {
+    renderModal();
+    await waitForDraft();
+
+    expect(screen.queryByTestId("create-workspace-color-violet")).toBeNull();
+
+    fireEvent.click(screen.getByTestId("create-workspace-icon"));
+
+    expect(
+      screen.getByTestId("create-workspace-color-violet"),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("create-workspace-color-violet"));
+
+    await waitFor(() =>
+      expect(api.updateWorkspace).toHaveBeenCalledWith("ws-draft", {
+        color: "violet",
+      }),
+    );
+  });
+
+  it("labels tree entries with their storage origin", async () => {
+    api.useWorkspaceMounts.mockReturnValue([
+      { id: "mount-1", sourceId: "src-device", path: "/data" },
+    ]);
+    api.useWorkspaceSources.mockReturnValue([
+      {
+        id: "src-device",
+        kind: "local",
+        label: "Laptop",
+        config: {},
+        capabilities: {},
+        status: "connected",
+      },
+    ]);
+    api.listWorkspaceRoot.mockResolvedValue([
+      {
+        sourceId: "ws-root",
+        path: "/data",
+        name: "data",
+        kind: "dir",
+        local: false,
+        mount: { id: "mount-1", sourceId: "src-device", path: "/data" },
+      },
+      {
+        sourceId: "ws-root",
+        path: "/notes.txt",
+        name: "notes.txt",
+        kind: "file",
+        local: true,
+      },
+    ]);
+
+    renderModal();
+    await waitForDraft();
+
+    expect(await screen.findByTestId("root-badge-data")).toHaveTextContent(
+      "device",
+    );
+    expect(
+      await screen.findByTestId("root-badge-notes.txt"),
+    ).toHaveTextContent("browser");
   });
 
   it("writes icon and colour choices through to the draft", async () => {

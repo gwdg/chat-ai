@@ -156,9 +156,9 @@ describe("WorkspaceSourcesPanel", () => {
   it("renders the three drives with subtitles and opens the add-source modal", async () => {
     renderPanel();
 
-    expect(screen.getByText("Sources")).toBeInTheDocument();
+    expect(screen.getByText("Storage location")).toBeInTheDocument();
     expect(screen.getByText("Your Device")).toBeInTheDocument();
-    expect(screen.getByText("Chats")).toBeInTheDocument();
+    expect(screen.getByText("Browser")).toBeInTheDocument();
     expect(screen.getByText("Arcanas")).toBeInTheDocument();
     expect(within(drive("workspace-source-device")).getByText("1 folder")).toBeInTheDocument();
     expect(within(drive("workspace-source-chats")).getByText("1 chat")).toBeInTheDocument();

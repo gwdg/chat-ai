@@ -18,7 +18,7 @@ import type {
   WorkspaceFileEntry,
   WorkspaceSourceRow,
 } from "../../db/dbTypes";
-import { normalizePath, parentPath } from "../../workspace/paths";
+import { parentPath } from "../../workspace/paths";
 import type {
   FileProvider,
   QuotaInfo,
@@ -666,17 +666,6 @@ export default function WorkspaceSourceBrowser({
           ? t("workspace.source_browser.mcp")
           : t("workspace.source_browser.arcanas")
     : "";
-  const breadcrumb = view
-    ? [
-        (view.drive === "device" || view.drive === "mcp") &&
-        view.level === "source"
-          ? view.label
-          : "",
-        ...normalizePath(path).split("/").filter(Boolean),
-      ]
-        .filter(Boolean)
-        .join(" / ") || "/"
-    : "/";
   const pending = adding || busy;
   const usageLabel = (quota: QuotaInfo | null, shared = false) =>
     quota
@@ -713,14 +702,6 @@ export default function WorkspaceSourceBrowser({
           <div className="truncate text-[11px] font-semibold leading-tight text-base-content">
             {view ? driveName : t("workspace.source_browser.title")}
           </div>
-          {view && (
-            <div
-              className="truncate text-[10px] leading-tight text-base-content/50"
-              title={breadcrumb}
-            >
-              {breadcrumb}
-            </div>
-          )}
         </div>
         {view && visibleItems.length > 0 && (
           <input
