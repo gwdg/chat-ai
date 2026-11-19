@@ -211,6 +211,7 @@ export default function WorkspacePage() {
           <WorkspaceStorageTree
             workspaceId={workspaceId}
             className="min-h-0 min-w-0"
+            showTitle={false}
           />
         ),
       },

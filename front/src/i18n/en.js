@@ -454,7 +454,7 @@ export default {
     },
     workspace_upload: {
       title: "Upload files into a workspace",
-      step1: "Open a workspace, pick the Files tab on the right and choose Upload file; the browser asks for a file from this computer.",
+      step1: "Open a workspace, pick the Files tab on the right and choose Add file; the browser asks for a file from this computer.",
       step2: "The uploaded file appears in the folder you are viewing.",
     },
     workspace_multiselect: {
@@ -2134,6 +2134,7 @@ export default {
     new_folder: "New folder",
     new_file: "New file",
     upload_file: "Upload file",
+    add_file: "Add file",
     upload_success: "Uploaded {{count}} file(s)",
     upload_not_supported: "This source does not support uploads.",
     create_in: "Create in {{path}}",

@@ -106,7 +106,7 @@ export const featureGuides = {
   workspace_upload: {
     titleKey: "feature_guide.workspace_upload.title",
     prompt:
-      "Upload a file from your computer into a workspace. Open a workspace and use Upload file in the file browser; it writes into the folder you are viewing.",
+      "Upload a file from your computer into a workspace. Open a workspace and use Add file in the file browser; it writes into the folder you are viewing.",
     keywords: ["upload file", "workspace upload", "add file to workspace", "local file"],
     steps: [
       {

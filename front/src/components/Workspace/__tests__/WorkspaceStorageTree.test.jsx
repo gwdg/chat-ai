@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import WorkspaceStorageTree from "../WorkspaceStorageTree";
@@ -156,6 +162,36 @@ describe("WorkspaceStorageTree", () => {
     const calls = h.listWorkspaceRoot.mock.calls.length;
     fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
     expect(h.listWorkspaceRoot.mock.calls.length).toBe(calls + 1);
+  });
+
+  it("drops the pane title when the sidebar asks for it", async () => {
+    h.listWorkspaceRoot.mockResolvedValue([]);
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" showTitle={false} />);
+    await waitFor(() => expect(h.listWorkspaceRoot).toHaveBeenCalled());
+
+    expect(screen.queryByText("Workspace files")).toBeNull();
+    expect(screen.getByRole("button", { name: "Refresh" })).toBeInTheDocument();
+  });
+
+  it("marks /chats and every row under it as browser storage", async () => {
+    h.listWorkspaceRoot.mockImplementation(async ({ path }) => {
+      if (path === "/") return [entry("/chats", "dir", { local: false })];
+      if (path === "/chats") {
+        return [entry("/chats/conv-1", "dir", { local: false })];
+      }
+      return [];
+    });
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" />);
+
+    const chatsRow = await screen.findByText("chats");
+    expect(within(rowFor("chats")).getByText("browser")).toBeInTheDocument();
+
+    fireEvent.click(chatsRow);
+
+    expect(await screen.findByText("conv-1")).toBeInTheDocument();
+    expect(within(rowFor("conv-1")).getByText("browser")).toBeInTheDocument();
   });
 
   it("offers the trash button only on non-mount local rows", async () => {

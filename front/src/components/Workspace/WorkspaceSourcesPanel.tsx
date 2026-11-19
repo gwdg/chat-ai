@@ -147,7 +147,7 @@ export default function WorkspaceSourcesPanel({
       data-guide="workspace-sources"
       className={`min-w-0 rounded-xl border border-base-300 bg-base-100 p-1.5 ${className}`}
     >
-      <div className="flex items-center justify-between px-1 py-0.5">
+      <div className="flex h-6 items-center justify-between px-1">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
           {t("workspace.source_browser.title")}
         </span>

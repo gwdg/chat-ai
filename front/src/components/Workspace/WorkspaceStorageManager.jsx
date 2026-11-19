@@ -43,7 +43,7 @@ export default function WorkspaceStorageManager({ workspaceId }) {
         data-testid="create-workspace-sources"
         className="flex min-h-[60vh] min-w-0 flex-[3] flex-col overflow-hidden rounded-xl border border-base-300 bg-base-100 md:min-h-0 md:flex-row"
       >
-        <aside className="w-full shrink-0 p-1.5 md:w-64 md:overflow-y-auto md:border-r md:border-base-300 md:[&>section]:rounded-none md:[&>section]:border-0 md:[&>section]:bg-transparent">
+        <aside className="w-full shrink-0 px-1.5 md:w-64 md:overflow-y-auto md:border-r md:border-base-300 md:[&>section]:rounded-none md:[&>section]:border-0 md:[&>section]:bg-transparent">
           <WorkspaceSourcesPanel
             sources={sources}
             activeTarget={target}

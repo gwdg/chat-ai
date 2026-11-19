@@ -7,7 +7,6 @@ import {
   DocumentAdd,
   Folder,
   FolderAdd,
-  Home,
   Renew,
   TrashCan,
   Upload,
@@ -186,7 +185,11 @@ function StorageRow({ node, depth, api, reloadParent }) {
   );
 }
 
-export default function WorkspaceStorageTree({ workspaceId, className = "" }) {
+export default function WorkspaceStorageTree({
+  workspaceId,
+  className = "",
+  showTitle = true,
+}) {
   const { t } = useTranslation();
   const { openModal, confirmAction } = useModal();
   const sources = useWorkspaceSources(workspaceId ?? undefined);
@@ -336,8 +339,14 @@ export default function WorkspaceStorageTree({ workspaceId, className = "" }) {
         return badgeForSource(sourceForMount(node.context.mount));
       }
       if (node.entry.local) return t("workspace.storage_badge_browser");
-      // A virtual folder such as /chats belongs to no storage of its own; only
-      // rows that are actually mounted carry a pill.
+      // Chats are stored in the browser too, so /chats and everything below it
+      // is browser storage even though the folder itself is synthetic.
+      const path = node.displayPath ?? node.entry.path;
+      if (path === "/chats" || path.startsWith("/chats/")) {
+        return t("workspace.storage_badge_browser");
+      }
+      // Other virtual folders (the parents of a nested mount) carry the pill
+      // of whatever is mounted under them.
       const mount = mountForPath(node.entry.path);
       return mount ? badgeForSource(sourceForMount(mount)) : undefined;
     },
@@ -512,23 +521,16 @@ export default function WorkspaceStorageTree({ workspaceId, className = "" }) {
       <div
         data-testid="workspace-storage-tree"
         data-guide="workspace-storage-tree"
-        className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+        className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-1.5"
       >
-        <div className="flex items-center px-2 pb-0.5 pt-1">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
-            {t("workspace.files_title")}
-          </span>
-        </div>
-        <div className="flex flex-wrap items-center gap-1 border-b border-base-300 px-2 py-1">
-          <button
-            type="button"
-            className="btn btn-ghost btn-xs btn-square"
-            onClick={() => void loadRoot()}
-            title={t("workspace.refresh")}
-            aria-label={t("workspace.refresh")}
-          >
-            <Renew size={14} />
-          </button>
+        {showTitle && (
+          <div className="flex h-6 items-center justify-between px-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
+              {t("workspace.files_title")}
+            </span>
+          </div>
+        )}
+        <div className="mt-1 flex flex-wrap items-center gap-1 border-b border-base-300 px-2 py-1">
           <button
             type="button"
             data-guide="workspace-upload"
@@ -537,7 +539,7 @@ export default function WorkspaceStorageTree({ workspaceId, className = "" }) {
             disabled={uploading}
           >
             <Upload size={14} />
-            {t("workspace.upload_file")}
+            {t("workspace.add_file")}
           </button>
           <button
             type="button"
@@ -557,12 +559,12 @@ export default function WorkspaceStorageTree({ workspaceId, className = "" }) {
           </button>
           <button
             type="button"
-            className="btn btn-ghost btn-xs btn-square"
-            onClick={() => setTarget(rootTarget())}
-            title={t("workspace.root")}
-            aria-label={t("workspace.root")}
+            className="btn btn-ghost btn-xs btn-square ml-auto"
+            onClick={() => void loadRoot()}
+            title={t("workspace.refresh")}
+            aria-label={t("workspace.refresh")}
           >
-            <Home size={14} />
+            <Renew size={14} />
           </button>
         </div>
         {actionError && (
