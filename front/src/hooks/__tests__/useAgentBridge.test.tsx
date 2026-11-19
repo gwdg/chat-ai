@@ -36,7 +36,10 @@ vi.mock("../../apis/agentTunnel", () => ({
   tunnelRequest: (...args: unknown[]) => mocks.tunnelRequest(...args),
 }));
 
-import { addOpencodeMcpServer } from "../../apis/opencodeAgents";
+import {
+  addOpencodeMcpServer,
+  removeOpencodeMcpServer,
+} from "../../apis/opencodeAgents";
 import {
   bridgeBaseFor,
   bridgeUsesTunnel,
@@ -55,7 +58,7 @@ const props = {
   rootProvider: null,
 };
 
-/** Stable identity: the hook restarts whenever `agent` changes. */
+/** Stable identity: the bridge restarts only when its connection fields change. */
 const serviceAgent = { id: "local-1", serviceAgentId: "svc-1" };
 
 const sessionResponse = {
@@ -232,6 +235,72 @@ describe("useAgentBridge", () => {
     expect(FakeWebSocket.instances).toHaveLength(0);
     expect(fetchMock).not.toHaveBeenCalled();
     expect(result.current.unavailable).toBe(false);
+  });
+
+  it("keeps the running bridge when only the agent's session changes", async () => {
+    // The bridge is registered in the agent's own OpenCode and exposes its workspace, so it
+    // belongs to the agent, not to one session: switching sessions must not tear it down and
+    // start a second one (which is what lost the user's write/MCP settings until it returned).
+    const fetchMock = vi.fn(async (_url: string, init?: { method?: string }) =>
+      init?.method === "POST"
+        ? { ok: true, status: 200, json: async () => sessionResponse }
+        : { ok: true, status: 200, json: async () => ({}) },
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("WebSocket", FakeWebSocket);
+    vi.mocked(addOpencodeMcpServer).mockClear();
+    vi.mocked(removeOpencodeMcpServer).mockClear();
+
+    const { rerender } = renderHook(
+      ({ agent }) => useAgentBridge({ ...props, agent }),
+      { initialProps: { agent: serviceAgent } },
+    );
+    await waitFor(() => expect(addOpencodeMcpServer).toHaveBeenCalledTimes(1));
+
+    rerender({ agent: { ...serviceAgent, sessionId: "session-2" } });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const creates = fetchMock.mock.calls.filter(
+      ([url, init]) => init?.method === "POST" && String(url).endsWith("/bridge/sessions"),
+    );
+    expect(creates).toHaveLength(1);
+    expect(addOpencodeMcpServer).toHaveBeenCalledTimes(1);
+    expect(removeOpencodeMcpServer).not.toHaveBeenCalled();
+    expect(FakeWebSocket.instances).toHaveLength(1);
+  });
+
+  it("restarts when the workspace or the settings change", async () => {
+    // The counterpart: the session switch above is only free because a real change still
+    // reconnects, with the new options in the session request.
+    const fetchMock = vi.fn(async (_url: string, init?: { method?: string }) =>
+      init?.method === "POST"
+        ? { ok: true, status: 200, json: async () => sessionResponse }
+        : { ok: true, status: 200, json: async () => ({}) },
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("WebSocket", FakeWebSocket);
+
+    const { rerender } = renderHook(
+      ({ mcp }) => useAgentBridge({ ...props, agent: serviceAgent, mcp }),
+      { initialProps: { mcp: false } },
+    );
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.filter(([url, init]) =>
+          init?.method === "POST" && String(url).endsWith("/bridge/sessions"),
+        ),
+      ).toHaveLength(1),
+    );
+
+    rerender({ mcp: true });
+
+    await waitFor(() => {
+      const bodies = fetchMock.mock.calls
+        .filter(([url, init]) => init?.method === "POST" && String(url).endsWith("/bridge/sessions"))
+        .map(([, init]) => JSON.parse(String(init?.body ?? "{}")));
+      expect(bodies).toHaveLength(2);
+      expect(bodies[1]).toMatchObject({ agentId: "local-1", workspaceId: "ws-1", mcp: true });
+    });
   });
 
   it("answers a tool call through the tunnel's reply route", async () => {

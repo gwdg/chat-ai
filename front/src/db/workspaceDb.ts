@@ -930,17 +930,27 @@ export function useWorkspaceAgentLinks(): WorkspaceAgentRow[] {
   );
 }
 
-export function useAgentWorkspaceLinks(agentId?: string): WorkspaceAgentRow[] {
-  return (
-    useLiveQuery(
-      () =>
-        agentId
-          ? db.workspace_agents.where("agentId").equals(agentId).toArray()
-          : [],
-      [agentId],
-      [] as WorkspaceAgentRow[],
-    ) ?? []
+/**
+ * The workspaces this agent is linked to, or `undefined` while Dexie has not answered.
+ *
+ * `AgentPage` clears a stale `bridgeEnabled` flag when this returns an empty list, so it
+ * must wait for the answer: acting on the empty placeholder switched a running bridge off
+ * every time the page mounted.
+ */
+export function useAgentWorkspaceLinksState(
+  agentId?: string,
+): WorkspaceAgentRow[] | undefined {
+  return useLiveQuery(
+    () =>
+      agentId
+        ? db.workspace_agents.where("agentId").equals(agentId).toArray()
+        : [],
+    [agentId],
   );
+}
+
+export function useAgentWorkspaceLinks(agentId?: string): WorkspaceAgentRow[] {
+  return useAgentWorkspaceLinksState(agentId) ?? [];
 }
 
 /**

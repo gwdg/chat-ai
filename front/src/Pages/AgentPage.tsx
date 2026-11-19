@@ -25,7 +25,7 @@ import { useUpdateUserData } from "../hooks/useUpdateUserData";
 import { useOpencodeFilePreview } from "../hooks/useOpencodeFilePreview";
 import { useAgentBridge } from "../hooks/useAgentBridge";
 import {
-  useAgentWorkspaceLinks,
+  useAgentWorkspaceLinksState,
   useWorkspaceList,
   useWorkspaceMounts,
   useWorkspaceSources,
@@ -85,13 +85,15 @@ export default function AgentPage() {
       local: false,
     });
   }, [agent, focusedFilePath, openFile]);
+  // The workspace links stay `undefined` until Dexie answers: the effect below writes based
+  // on them, and the empty placeholder must never stand in for "this agent has none".
   const workspaces = useWorkspaceList();
-  const agentLinks = useAgentWorkspaceLinks(agent?.id);
+  const agentLinksState = useAgentWorkspaceLinksState(agent?.id);
   // Only attached workspaces can be exposed: the bridge must never fall back to another
   // workspace of the account, or the agent would read files the user never connected to it.
   const bridgeCandidates = useMemo(
-    () => attachedWorkspaces(workspaces, agentLinks),
-    [agentLinks, workspaces],
+    () => attachedWorkspaces(workspaces, agentLinksState ?? []),
+    [agentLinksState, workspaces],
   );
   const bridgeWorkspace = resolveBridgeWorkspace(agent, bridgeCandidates);
   const bridgeEnabled = isAgentBridgeEnabled(agent) && !!bridgeWorkspace;
@@ -105,10 +107,13 @@ export default function AgentPage() {
   );
   // An access flag without an attached workspace can only come from data written before the
   // bridge required one; clear it so a workspace attached later does not silently switch on.
+  // The links are the attachment truth and stay `undefined` while Dexie answers: acting on
+  // the empty placeholder is what switched an enabled bridge off on every page mount.
   useEffect(() => {
-    if (!agent || bridgeCandidates.length || !isAgentBridgeEnabled(agent)) return;
+    if (!agent || agentLinksState === undefined) return;
+    if (agentLinksState.length || !isAgentBridgeEnabled(agent)) return;
     updateAgent(agent.id, { bridgeEnabled: false });
-  }, [agent, bridgeCandidates]);
+  }, [agent, agentLinksState]);
   // The bridge runs from this page; its switch, status and options live in the composer's
   // workspace popover (components/Agent/AgentWorkspaceButton.jsx).
   const bridge = useAgentBridge({

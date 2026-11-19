@@ -1551,8 +1551,18 @@ because no panel prints it any more, and `AgentPage` then switches access off
 (`disableAgentBridgeAfterFailure`) so an enabled switch never sits in front of a dead bridge; a
 dropped socket does not do that, because `useAgentBridge` retries it after 3 s. Existing agents keep
 access on only because the reader falls back to `!!bridgeWorkspaceId`. The same entry stores
-`bridgeWorkspaceId`, `bridgeWritable`, and `bridgeMcp` in localStorage; `bridgeWorkspaceId` is per
-agent, not per session. While a
+`bridgeWorkspaceId`, `bridgeWritable`, and `bridgeMcp` in localStorage; all four are per agent, not
+per session, because one workspace link and one MCP server in the agent's OpenCode serve every
+session of that agent. **They must survive a session switch.** Two things used to break that:
+`AgentPage` cleared `bridgeEnabled` whenever `bridgeCandidates` was empty, which is also true for
+the first frame before Dexie answers — so mounting the page switched a running bridge off
+permanently (read the links through `useAgentWorkspaceLinksState`, which is `undefined` until it
+knows, and only clear a flag on a known-empty list); and `useAgentBridge`'s
+effect depended on the whole `agent` object, so every `sessionId` change tore the bridge down and
+registered a new one, where a failed restart disabled access. Its deps are the connection fields
+(agent id, service id, server url/credentials, workspace, write, MCP, servers) — never `sessionId`.
+Switching back to a session therefore finds its settings stored on the agent and the same bridge
+still connected. While a
 bridge is active the page warns that the tab must stay open, sets a warning title when hidden,
 shows a toast on return, and registers `beforeunload`. In production, the initial invocation must be
 able to spawn the sidecar and open the outbound WebSocket; the bridge host must be reachable from the

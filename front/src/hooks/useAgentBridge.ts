@@ -654,7 +654,22 @@ export function useAgentBridge({
       }
       deleteSession();
     };
-  }, [agent, workspaceId, writable, mcp, mcpServers]);
+    // Deliberately not `[agent]`: switching the agent's OpenCode session only changes
+    // `sessionId` plus its summaries, and the bridge is agent-scoped (one MCP server in that
+    // agent's OpenCode, one workspace link), so a session switch must keep the running bridge
+    // instead of tearing it down and registering a second one. Only the fields that decide
+    // where and how it connects restart it.
+  }, [
+    agent?.id,
+    agent?.serviceAgentId,
+    agent?.serverUrl,
+    agent?.username,
+    agent?.password,
+    workspaceId,
+    writable,
+    mcp,
+    mcpServers,
+  ]);
 
   return { status, error, tabAway, unavailable };
 }
