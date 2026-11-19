@@ -9,6 +9,7 @@ import {
 import UserLimitsDisplay from "./UserLimitsDisplay";
 import OrgLimitsDisplay from "./OrgLimitsDisplay";
 import ProfilePreferenceSwitch from "./ProfilePreferenceSwitch";
+import { clearBrandOverride } from "../../config/brandIds";
 
 export default function UserInfoContainer({ userData }) {
   const dispatch = useDispatch();
@@ -20,6 +21,8 @@ export default function UserInfoContainer({ userData }) {
   const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
 
   const handleLogout = () => {
+    // The `?brand=` testing override must not follow another user into the tab.
+    clearBrandOverride();
     window.location.href =
       "https://keycloak.sso.gwdg.de/auth/realms/academiccloud/protocol/openid-connect/logout";
   };

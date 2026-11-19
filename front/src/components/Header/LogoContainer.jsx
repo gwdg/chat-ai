@@ -1,27 +1,35 @@
-import Logo from "../../assets/logos/chat_ai.svg";
-import LogoSmall from "../../assets/logos/chat_ai_small.ico"
 import { Link } from "react-router-dom";
+import BrandLogo from "../Others/BrandLogo";
+import { useBrand } from "../../config/BrandProvider";
 
 export default function LogoContainer({ isMobile = false }) {
-  return !isMobile ? (
-    <Link to={"https://chat-ai.academiccloud.de/"}>
+  const { brand } = useBrand();
+  const target = brand.homeUrl || "https://chat-ai.academiccloud.de/";
+  const external = /^https?:/i.test(target);
+
+  const headerVariant = brand.logo?.headerVariant ?? "full";
+  const content = !isMobile ? (
     <div className="flex items-center">
-      <img
-        className="h-8 w-auto object-contain"
-        src={Logo}
-        alt="Chat AI Logo"
+      <BrandLogo
+        variant={headerVariant}
+        className="h-8 w-auto max-w-[180px] object-contain"
+        alt={brand.logo?.alt || brand.name}
       />
     </div>
-    </Link>
   ) : (
-    <Link to={"https://chat-ai.academiccloud.de/"}>
     <div className="flex-shrink-0">
-      <img
+      <BrandLogo
         className="h-6 min-[400px]:h-7 min-[500px]:h-8 w-auto object-contain"
-        src={LogoSmall}
-        alt="Chat AI Logo"
+        alt={brand.logo?.alt || brand.name}
       />
     </div>
-    </Link>
+  );
+
+  return external ? (
+    <a href={target} target="_blank" rel="noreferrer">
+      {content}
+    </a>
+  ) : (
+    <Link to={target}>{content}</Link>
   );
 }

@@ -7,8 +7,17 @@ import {
 } from "../db";
 import { buildFeatureGuidePrompt, featureGuides } from "../config/featureGuides";
 import { buildUseCasePrompt, useCases } from "../config/useCases";
+import { isFeatureEnabled } from "../config/deployment";
 import { loadPersonaCatalog } from "./personaCatalog";
 import { getSpeechModule } from "./speechAudio";
+import {
+  isAgentEnabled,
+  isArcanasEnabled,
+  isAgentsEnabled,
+  isChoicesEnabled,
+  isFeedbackEnabled,
+  isToolsEnabled,
+} from "./modules";
 import { usableKey } from "../e2ee/registry";
 import {
   listMcpServerTools,
@@ -135,7 +144,7 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
     `- Render Chart.js: ${yesNo(userSettings.render_chartjs ?? false)}`,
     `- Keep reasoning collapsed while streaming: ${yesNo(userSettings.collapse_reasoning_while_streaming)}`,
     `- Document conversion: ${documentConversion}`,
-    `- Modules: tools ${import.meta.env.VITE_MODULE_TOOLS === "true" ? "enabled" : "disabled"}, feedback ${import.meta.env.VITE_MODULE_FEEDBACK === "true" ? "enabled" : "disabled"}, choices ${import.meta.env.VITE_MODULE_CHOICES === "true" ? "enabled" : "disabled"}, arcanas ${import.meta.env.VITE_MODULE_ARCANAS !== "false" ? "enabled" : "disabled"}, agents ${import.meta.env.VITE_MODULE_AGENTS !== "false" ? "enabled" : "disabled"}, speech ${getSpeechModule() ? "enabled" : "disabled"}`,
+    `- Modules: tools ${isToolsEnabled() ? "enabled" : "disabled"}, feedback ${isFeedbackEnabled() ? "enabled" : "disabled"}, choices ${isChoicesEnabled() ? "enabled" : "disabled"}, agent ${isAgentEnabled() ? "enabled" : "disabled"}, arcanas ${isArcanasEnabled() ? "enabled" : "disabled"}, agents ${isAgentsEnabled() ? "enabled" : "disabled"}, speech ${getSpeechModule() ? "enabled" : "disabled"}`,
     `- Dark mode: ${yesNo(interfaceSettings.dark_mode)}`,
     `- Show usage in sidebar: ${yesNo(interfaceSettings.show_usage_in_sidebar)}`,
     `- Chat sorting: ${interfaceSettings.conversation_sort ?? "created_desc"}`,
@@ -801,6 +810,22 @@ export const META_TOOL_DEFINITIONS = [
     ["id"],
   ),
 ];
+
+// Tours are a deployment feature: a profile with `tutorials: false` renders no
+// tour runtime, so offering the tools would make the Meta chat promise a
+// walkthrough that never appears.
+const TUTORIAL_TOOL_NAMES = new Set([
+  "list_tutorials",
+  "start_tutorial",
+  "start_use_case",
+]);
+
+export const getMetaToolDefinitions = (tutorials = isFeatureEnabled("tutorials")) =>
+  tutorials
+    ? META_TOOL_DEFINITIONS
+    : META_TOOL_DEFINITIONS.filter(
+        (definition) => !TUTORIAL_TOOL_NAMES.has(definition.function.name),
+      );
 
 export async function getAgentFileChanges({
   agents = [],

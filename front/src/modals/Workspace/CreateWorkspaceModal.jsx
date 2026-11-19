@@ -15,6 +15,7 @@ import { cloneIntoWorkspace } from "../../workspace/cloneIntoWorkspace";
 import { applyWorkspaceManifest } from "../../workspace/applyWorkspaceManifest";
 import { addLocalSource, pickDirectory } from "../../workspace/localWorkspace";
 import { formatBytes } from "../../utils/formatBytes";
+import { isFeatureEnabled } from "../../config/deployment";
 
 const CAPTION = "text-[10px] font-semibold uppercase tracking-wider text-base-content/45";
 const RAIL_ACTION =
@@ -395,19 +396,21 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
                   <span className="truncate">{t("workspace.kind_local")}</span>
                   <Add size={12} className="ml-auto shrink-0 text-base-content/40" />
                 </button>
-                <button
-                  type="button"
-                  data-testid="create-workspace-source-git"
-                  onClick={() => {
-                    setGitOpen(true);
-                    setRailError("");
-                  }}
-                  className={RAIL_ACTION}
-                >
-                  <GitRepo size={14} className="shrink-0 text-base-content/50" />
-                  <span className="truncate">{t("workspace.kind_git")}</span>
-                  <Add size={12} className="ml-auto shrink-0 text-base-content/40" />
-                </button>
+                {isFeatureEnabled("import_git") && (
+                  <button
+                    type="button"
+                    data-testid="create-workspace-source-git"
+                    onClick={() => {
+                      setGitOpen(true);
+                      setRailError("");
+                    }}
+                    className={RAIL_ACTION}
+                  >
+                    <GitRepo size={14} className="shrink-0 text-base-content/50" />
+                    <span className="truncate">{t("workspace.kind_git")}</span>
+                    <Add size={12} className="ml-auto shrink-0 text-base-content/40" />
+                  </button>
+                )}
                 {railError && <p className="text-[11px] text-error">{railError}</p>}
                 <p className="mt-1 text-[11px] leading-relaxed text-base-content/45">
                   {t("workspace.create_sources_hint")}

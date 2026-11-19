@@ -1,9 +1,10 @@
 import { AUTO_VOICE, normalizeSpeechVoice } from "../config/speechVoices";
+import { speechModuleValue } from "./modules";
 
 export const DEFAULT_TTS_SAMPLE_RATE = 16000;
 
 export function getSpeechModule() {
-  const raw = import.meta.env?.VITE_MODULE_SPEECH;
+  const raw = speechModuleValue();
   if (!raw || raw === "undefined" || raw === "false") return null;
   try {
     const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;

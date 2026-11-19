@@ -11,6 +11,7 @@ import ModelButton from "./ModelButton";
 import ToolsButton from "./ToolsButton";
 import AttachButton from "./AttachButton";
 import WorkspaceAttachButton from "./WorkspaceAttachButton";
+import { isFeatureEnabled } from "../../config/deployment";
 import AttachMediaButton from "./AttachMediaButton";
 import PromptTextArea from "./PromptTextArea";
 import ModelNoToolsWarning from "./ModelNoToolsWarning";
@@ -203,10 +204,12 @@ export default function Prompt({
           <div className="flex gap-4 items-center justify-center">
             {!metaChatSend && (
               <>
-                <WorkspaceAttachButton
-                  localState={localState}
-                  setLocalState={setLocalState}
-                />
+                {isFeatureEnabled("workspaces") && (
+                  <WorkspaceAttachButton
+                    localState={localState}
+                    setLocalState={setLocalState}
+                  />
+                )}
                 {/* Tools Button */}
                 <ToolsButton
                   localState={localState}

@@ -38,6 +38,9 @@ vi.mock("../../utils/metaTools", () => ({
   META_TOOL_DEFINITIONS: [
     { type: "function", function: { name: "list_memories" } },
   ],
+  getMetaToolDefinitions: () => [
+    { type: "function", function: { name: "list_memories" } },
+  ],
   createMetaToolRunner: vi.fn(),
 }));
 

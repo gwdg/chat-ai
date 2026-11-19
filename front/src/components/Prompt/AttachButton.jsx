@@ -14,6 +14,7 @@ import Tooltip from "../Others/Tooltip";
 import AttachFromWorkspacePanel from "../Workspace/AttachFromWorkspacePanel";
 import { useAttachments } from "../../hooks/useAttachments";
 import { useChatWorkspaces } from "../../db/workspaceDb";
+import { isFeatureEnabled } from "../../config/deployment";
 
 // The two choices live inside the panel, so their state resets when it unmounts.
 function AttachMenu({ workspaceIds, localState, setLocalState, openFilePicker }) {
@@ -78,7 +79,9 @@ export default function AttachButton({
 
     const links = useChatWorkspaces(localState?.id);
     const workspaceIds = [...new Set(links.map((link) => link.workspaceId))];
-    const hasWorkspace = workspaceIds.length > 0;
+    // A deployment without the workspaces feature never offers a workspace pick.
+    const hasWorkspace =
+        isFeatureEnabled("workspaces") && workspaceIds.length > 0;
 
     // Trigger file input click
     const openFilePicker = () => {

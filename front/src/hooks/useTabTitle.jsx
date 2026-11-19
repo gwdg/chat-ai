@@ -3,10 +3,13 @@ import { useEffect } from "react";
 import { useSelector } from "react-redux";
 import { useConversationList } from "../db";
 import { selectLastConversation } from "../Redux/reducers/lastConversationSlice";
+import { useBrand } from "../config/BrandProvider";
 
 export const useTabTitle = () => {
   const currentConversationId = useSelector(selectLastConversation);
   const conversations = useConversationList();
+  const { brand } = useBrand();
+  const appName = brand?.name || "Chat AI";
 
   useEffect(() => {
       const currentConversation = conversations?.find(
@@ -19,11 +22,11 @@ export const useTabTitle = () => {
         // chats created before it changed.
         const untitled =
           title === "Untitled Chat" || title === "Untitled Conversation";
-        document.title = untitled ? "Chat AI" : title + " - Chat AI";
+        document.title = untitled ? appName : title + " - " + appName;
       } else {
-        document.title = "Chat AI";
+        document.title = appName;
       }
-    }, [currentConversationId, conversations]
+    }, [currentConversationId, conversations, appName]
   );
 };
 

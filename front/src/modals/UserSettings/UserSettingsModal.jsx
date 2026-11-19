@@ -33,6 +33,8 @@ import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
 import ImportChatButton from "../../components/Sidebar/Buttons/ImportChatButton";
 import StorageStatus from "./StorageStatus";
 import EncryptionSettings from "./EncryptionSettings";
+import { isChoicesEnabled } from "../../utils/modules";
+import { isFeatureEnabled } from "../../config/deployment";
 
 const PROFILE_TABS = [
   {
@@ -95,15 +97,20 @@ export default function UserSettingsModal({
   const { openModal } = useModal();
   const { notifySuccess, notifyError } = useToast();
   const userSettings = useSelector(selectUserSettings);
-  const choicesModule = import.meta.env.VITE_MODULE_CHOICES === "true";
-  const [activeTab, setActiveTab] = useState(initialTab || "profile");
+  const choicesModule = isChoicesEnabled();
+  const availableTabs = PROFILE_TABS.filter(
+    (tab) => tab.id !== "encryption" || isFeatureEnabled("e2ee"),
+  );
+  const resolveTab = (tab) =>
+    availableTabs.some((entry) => entry.id === tab) ? tab : "profile";
+  const [activeTab, setActiveTab] = useState(() => resolveTab(initialTab));
   const [highlightActiveTab, setHighlightActiveTab] = useState(false);
   const activeTabConfig =
-    PROFILE_TABS.find((tab) => tab.id === activeTab) ?? PROFILE_TABS[0];
+    availableTabs.find((tab) => tab.id === activeTab) ?? availableTabs[0];
 
   useEffect(() => {
     if (!isOpen) return undefined;
-    setActiveTab(initialTab || "profile");
+    setActiveTab(resolveTab(initialTab));
     setHighlightActiveTab(Boolean(initialTab));
     if (!initialTab) return undefined;
     const timer = setTimeout(() => setHighlightActiveTab(false), 1800);
@@ -193,7 +200,7 @@ export default function UserSettingsModal({
       );
     }
 
-    if (activeTab === "encryption") {
+    if (activeTab === "encryption" && isFeatureEnabled("e2ee")) {
       return <EncryptionSettings modelsData={modelsData} />;
     }
 
@@ -247,7 +254,7 @@ export default function UserSettingsModal({
           aria-label={t("user_settings.tabs.navigation_label")}
           className="flex shrink-0 gap-1 overflow-x-auto border-b border-base-300 bg-base-200 p-2 md:w-56 md:flex-col md:overflow-y-auto md:border-r md:border-b-0 md:p-3"
         >
-          {PROFILE_TABS.map((tab) => {
+          {availableTabs.map((tab) => {
             const Icon = tab.icon;
             const selected = tab.id === activeTab;
             return (

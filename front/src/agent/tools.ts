@@ -70,6 +70,7 @@ const TOGGLES: Record<string, string[]> = {
     "read",
     "write",
     "edit",
+    "delete",
     "ls",
     "find",
     "convert_document",
@@ -97,7 +98,7 @@ const TOGGLES: Record<string, string[]> = {
     "add_arcana_member",
     "remove_arcana_member",
   ],
-  write_access: ["write", "edit"],
+  write_access: ["write", "edit", "delete"],
   create_docx: ["create_docx"],
   image_analysis: ["explain_image"],
   image_generation: ["generate_image"],
@@ -168,10 +169,27 @@ export function createTools(fs: Vfs, { vision, enabled = {}, hasLocalFolder = fa
     },
   };
 
+  const deleteTool = tool(
+    "delete",
+    "Delete a file or folder. A folder is removed with everything below it; this cannot be undone.",
+    Type.Object({
+      path: Type.String({ description: "Path to the file or folder to delete (relative or absolute)" }),
+    }),
+    async ({ path }) => {
+      const target = normalize(path);
+      if (target === "/") {
+        return text("Refusing to delete the storage root. Pass the path of a file or folder.");
+      }
+      await fs.remove(target);
+      return text(`Deleted ${target}`);
+    },
+  );
+
   const fileTools: AgentTool<any>[] = [
     readWithHints,
     write,
     createEditTool(CWD, { operations: { readFile, writeFile, access } }),
+    deleteTool,
     createLsTool(CWD, {
       operations: {
         exists,
