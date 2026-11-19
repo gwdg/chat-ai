@@ -7,7 +7,12 @@ import WebSocket from "ws";
 
 import { registerBridge } from "./bridge.mjs";
 
-const startBridge = async ({ secret, allowAnonymous = false, ttlMs } = {}) => {
+const startBridge = async ({
+  secret,
+  allowAnonymous = false,
+  ttlMs,
+  corsOrigins = "",
+} = {}) => {
   const app = express();
   app.use(express.json());
   const server = http.createServer(app);
@@ -20,6 +25,7 @@ const startBridge = async ({ secret, allowAnonymous = false, ttlMs } = {}) => {
     server,
     publicUrl: "",
     secret,
+    corsOrigins,
     allowAnonymous,
   });
 
@@ -240,6 +246,34 @@ test("bridge responses allow only same-host or configured origins", async () => 
     const sameHostPreflight = await preflightAllowOrigins(bridge.base, bridge.base);
     assert.equal(sameHostPreflight.status, 204);
     assert.deepEqual(sameHostPreflight.allowOrigins, [bridge.base]);
+  } finally {
+    await bridge.close();
+  }
+});
+
+test("a configured origin is allowed even though it is not the request host", async () => {
+  // The usual dev pair is front on :8080 and `back` on :8081. The port makes it a
+  // different origin, so `back.json`'s corsOrigins has to name it explicitly.
+  const appOrigin = "http://127.0.0.1:8080";
+  const bridge = await startBridge({
+    secret: "correct-secret",
+    corsOrigins: `https://chat.example, ${appOrigin}`,
+  });
+  try {
+    const response = await createSession(bridge.base, {
+      "x-bridge-key": "correct-secret",
+      Origin: appOrigin,
+    });
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("access-control-allow-origin"), appOrigin);
+
+    const preflight = await preflightAllowOrigins(bridge.base, appOrigin);
+    assert.equal(preflight.status, 204);
+    assert.deepEqual(preflight.allowOrigins, [appOrigin]);
+
+    // A configured list is still an allowlist.
+    const other = await preflightAllowOrigins(bridge.base, "http://127.0.0.1:8081");
+    assert.deepEqual(other.allowOrigins, []);
   } finally {
     await bridge.close();
   }

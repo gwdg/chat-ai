@@ -26,6 +26,7 @@ export const registerBridge = ({
   server,
   publicUrl,
   secret,
+  corsOrigins: configuredCorsOrigins = "",
   allowAnonymous,
 }) => {
   const sessionTtlMs = positiveInt(process.env.BRIDGE_SESSION_TTL_MS, SESSION_TTL_MS);
@@ -35,7 +36,7 @@ export const registerBridge = ({
 
   if (!sharedSecret && !anonymousAllowed) {
     console.warn(
-      "[bridge] BRIDGE_SHARED_SECRET is not set; bridge session creation is disabled (503).",
+      "[bridge] BRIDGE_SHARED_SECRET is not set; bridge session creation is disabled (503). Set it in the environment or as bridgeSharedSecret in back.json, and put the same value in front.json as bridgeKey.",
     );
   } else if (anonymousAllowed) {
     console.warn(
@@ -255,7 +256,7 @@ export const registerBridge = ({
     });
 
   const corsOrigins = new Set(
-    String(process.env.CORS_ORIGINS || "")
+    String(configuredCorsOrigins || process.env.CORS_ORIGINS || "")
       .split(",")
       .map((value) => value.trim().replace(/\/+$/, ""))
       .filter(Boolean),

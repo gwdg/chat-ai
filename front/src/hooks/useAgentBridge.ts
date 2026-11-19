@@ -33,6 +33,19 @@ class BridgeUnavailableError extends Error {
   }
 }
 
+/**
+ * The bridge route exists but refused this client: the two sides are not configured with
+ * the same secret, or the backend has none. The status tells them apart.
+ */
+class BridgeRejectedError extends Error {
+  readonly status: number;
+
+  constructor(status: number) {
+    super(`Bridge session failed (${status})`);
+    this.status = status;
+  }
+}
+
 type BridgeInput = {
   agent: any;
   workspaceId?: string | null;
@@ -101,17 +114,39 @@ const SIDECAR_COMMAND = (() => {
   }
 })();
 
+/** An argv list from JSON, or `null` when it names nothing runnable. */
+const commandList = (value: unknown): string[] | null => {
+  if (!Array.isArray(value) || !value.length) return null;
+  const parts = value.map((item) => String(item ?? "").trim());
+  return parts[0] ? parts : null;
+};
+
 /**
- * Whether the bridge talks MCP through the local stdio sidecar instead of the HTTP
- * fallback.
+ * The stdio sidecar command to register, or `null` for the HTTP fallback.
  *
- * The sidecar is a local affordance: its command is a path next to the browser's own
- * OpenCode, and it is spawned by that process. A service-managed agent runs its OpenCode
- * in the agent service, where this path does not exist, so it must use the service's
- * `mcpUrl` — the same `opencodeBridgeSidecarCommand` in `front.json` cannot serve both.
+ * A direct agent spawns the sidecar from the browser's own path, so its command
+ * comes from `opencodeBridgeSidecarCommand` in `front.json`. With a
+ * service-managed agent OpenCode runs inside the agent service, where that path
+ * does not exist: the service names a command only that host can know in the
+ * session response, and it wins for such an agent.
  */
-export const wantsSidecar = (command: string[] | null, agent: any) =>
-  !!command?.length && !agent?.serviceAgentId;
+export const sidecarCommandFor = (
+  command: string[] | null,
+  agent: any,
+  serviceCommand?: unknown,
+) =>
+  commandList(agent?.serviceAgentId ? serviceCommand : command);
+
+/**
+ * Whether the bridge talks MCP through a stdio sidecar instead of the HTTP
+ * `mcpUrl`. The caller must still require `agentWsUrl`/`agentToken`: a sidecar
+ * without a socket has nothing to connect to.
+ */
+export const wantsSidecar = (
+  command: string[] | null,
+  agent: any,
+  serviceCommand?: unknown,
+) => !!sidecarCommandFor(command, agent, serviceCommand);
 
 const stubVfs: Vfs = {
   readFile: async () => {
@@ -497,7 +532,7 @@ export function useAgentBridge({
           // answers this URL itself with 404, which means the deployment has no bridge.
           throw new BridgeUnavailableError(sessionUrl, response.status);
         }
-        if (!response.ok) throw new Error(`Bridge session failed (${response.status})`);
+        if (!response.ok) throw new BridgeRejectedError(response.status);
         session = await response.json();
         if (cancelled) {
           deleteSession();
@@ -510,7 +545,12 @@ export function useAgentBridge({
           throw new BridgeUnavailableError(sessionUrl, 404);
         }
         mcpName = `chatai-bridge-${String(session.id).slice(0, 8)}`;
-        if (wantsSidecar(SIDECAR_COMMAND, agent) && session.agentWsUrl && session.agentToken) {
+        const sidecarCommand = sidecarCommandFor(
+          SIDECAR_COMMAND,
+          agent,
+          session.sidecarCommand,
+        );
+        if (sidecarCommand && session.agentWsUrl && session.agentToken) {
           const scopes = [
             "workspace",
             writable ? "write" : "",
@@ -520,7 +560,7 @@ export function useAgentBridge({
             .join(",");
           await addOpencodeMcpServer(agent, mcpName, {
             type: "local",
-            command: SIDECAR_COMMAND,
+            command: sidecarCommand,
             codemode: false,
             environment: {
               CHAT_AI_BRIDGE_URL: session.agentWsUrl,
@@ -546,22 +586,35 @@ export function useAgentBridge({
       } catch (reason) {
         if (!cancelled) {
           const missing = reason instanceof BridgeUnavailableError;
+          const refused = reason instanceof BridgeRejectedError ? reason.status : 0;
           const message = reason instanceof Error ? reason.message : String(reason);
           const detail = missing
             ? tRef.current("agents.bridge.unavailable_detail", {
                 url: reason.url,
                 status: reason.status,
               })
-            : message;
+            : refused === 503
+              ? tRef.current("agents.bridge.disabled_by_server")
+              : refused === 401
+                ? tRef.current("agents.bridge.key_rejected")
+                : // A blocked CORS preflight or a stopped service reaches the page as an
+                  // opaque `TypeError`, so name the URL and the allowlist instead.
+                  reason instanceof TypeError
+                  ? tRef.current("agents.bridge.unreachable", {
+                      url: `${bridgeBase(agent)}/bridge/sessions`,
+                    })
+                  : message;
           setUnavailable(missing);
           setStatus("error");
           setError(detail);
           // The file panel used to print this; it has no bridge section any more, so report the
-          // failure where the user is instead of leaving the switch silently ineffective.
+          // failure where the user is instead of leaving the switch silently ineffective. The
+          // toast carries `detail`, not the bare status, because it is the copy the user reads
+          // first and the status alone never says what to fix.
           notifyRef.current(
             missing
               ? detail
-              : tRef.current("agents.bridge.start_failed", { message }),
+              : tRef.current("agents.bridge.start_failed", { message: detail }),
           );
         }
       }

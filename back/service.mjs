@@ -32,6 +32,11 @@ let remoteFilesArcana =
   process.env.SAIA_RAG_WEB_ARCANA ||
   "remote-files";
 let bridgePublicUrl = process.env.BRIDGE_PUBLIC_URL || "";
+// Bridge credentials may also live in back.json: a native checkout started with
+// `npm run start` has no environment file, and the bridge fails closed without
+// them. The env var still wins, so a deployment can override the file.
+let bridgeSharedSecret = process.env.BRIDGE_SHARED_SECRET || "";
+let bridgeCorsOrigins = process.env.CORS_ORIGINS || "";
 
 // Load configuration
 try {
@@ -69,6 +74,27 @@ try {
     config.bridgePublicUrl.trim()
   ) {
     bridgePublicUrl = config.bridgePublicUrl.trim();
+  }
+  if (
+    typeof config.bridgeSharedSecret === "string" &&
+    config.bridgeSharedSecret.trim() &&
+    !process.env.BRIDGE_SHARED_SECRET
+  ) {
+    bridgeSharedSecret = config.bridgeSharedSecret.trim();
+    console.log("Bridge shared secret: set");
+  }
+  // A list is accepted so a front end served from another origin (the usual
+  // `front` on :8080 → `back` on :8081 dev pair) can be named without shell quoting.
+  const configuredCorsOrigins = Array.isArray(config.corsOrigins)
+    ? config.corsOrigins.join(",")
+    : config.corsOrigins;
+  if (
+    typeof configuredCorsOrigins === "string" &&
+    configuredCorsOrigins.trim() &&
+    !process.env.CORS_ORIGINS
+  ) {
+    bridgeCorsOrigins = configuredCorsOrigins.trim();
+    console.log("Bridge CORS origins:", bridgeCorsOrigins);
   }
   if (testMode) {
     console.log("TEST MODE ENABLED: no upstream calls will be made.");
@@ -1486,6 +1512,7 @@ registerBridge({
   app,
   server,
   publicUrl: bridgePublicUrl,
-  secret: process.env.BRIDGE_SHARED_SECRET || "",
+  secret: bridgeSharedSecret,
+  corsOrigins: bridgeCorsOrigins,
   allowAnonymous: process.env.BRIDGE_ALLOW_ANON === "1",
 });

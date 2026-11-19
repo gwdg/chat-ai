@@ -26,9 +26,11 @@ vi.mock("../../apis/agentTunnel", () => ({
   tunnelRequest: (...args: unknown[]) => mocks.tunnelRequest(...args),
 }));
 
+import { addOpencodeMcpServer } from "../../apis/opencodeAgents";
 import {
   bridgeBaseFor,
   bridgeUsesTunnel,
+  sidecarCommandFor,
   useAgentBridge,
   wantsSidecar,
 } from "../useAgentBridge";
@@ -130,6 +132,56 @@ describe("useAgentBridge", () => {
     expect(fetchMock.mock.calls[0][0]).toBe(
       `${window.location.origin}/bridge/sessions`,
     );
+  });
+
+  it("names a missing bridge secret instead of a generic start failure", async () => {
+    // `back` fails closed: without BRIDGE_SHARED_SECRET it answers 503, and the
+    // browser cannot start a bridge at all. The popover must say why.
+    vi.stubGlobal("fetch", respond(503));
+
+    const { result } = renderHook(() => useAgentBridge(props));
+
+    await waitFor(() => expect(result.current.status).toBe("error"));
+
+    expect(result.current.unavailable).toBe(false);
+    expect(result.current.error).toContain("503");
+    expect(result.current.error).toContain("bridgeSharedSecret");
+    expect(mocks.notifyError).toHaveBeenCalledTimes(1);
+    expect(String(mocks.notifyError.mock.calls[0][0])).toContain(
+      "bridgeSharedSecret",
+    );
+  });
+
+  it("points an unreachable bridge at the origin allowlist", async () => {
+    // A blocked CORS preflight arrives as an opaque `TypeError`, so the status is
+    // unavailable and the message has to name the URL and what to check.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new TypeError("Failed to fetch");
+      }),
+    );
+
+    const { result } = renderHook(() => useAgentBridge(props));
+
+    await waitFor(() => expect(result.current.status).toBe("error"));
+
+    expect(result.current.unavailable).toBe(false);
+    expect(result.current.error).toContain("/bridge/sessions");
+    expect(result.current.error).toContain("corsOrigins");
+  });
+
+  it("names a rejected bridge key", async () => {
+    // The secret is set on both sides but they differ: `back` answers 401.
+    vi.stubGlobal("fetch", respond(401));
+
+    const { result } = renderHook(() => useAgentBridge(props));
+
+    await waitFor(() => expect(result.current.status).toBe("error"));
+
+    expect(result.current.unavailable).toBe(false);
+    expect(result.current.error).toContain("401");
+    expect(result.current.error).toContain("bridgeKey");
   });
 
   it("tunnels the session and the browser leg when only the model endpoint is reachable", async () => {
@@ -295,16 +347,59 @@ describe("useAgentBridge", () => {
     expect(result.current.error).toBe("");
   });
 
-  it("keeps the local sidecar away from service-managed agents", () => {
-    // The sidecar command is a path in the user's OpenCode install. A service agent runs
-    // OpenCode inside the agent service, which uses the HTTP fallback (mcpUrl) instead.
+  it("keeps a direct agent on the deployment's sidecar command", () => {
+    // A direct agent spawns the sidecar from the user's own OpenCode path.
     const command = ["/usr/bin/node", "/opt/chat-ai/bridge-sidecar.mjs"];
 
     expect(wantsSidecar(command, { id: "local-1" })).toBe(true);
-    expect(
-      wantsSidecar(command, { id: "local-1", serviceAgentId: "svc-1" }),
-    ).toBe(false);
     expect(wantsSidecar(null, { id: "local-1" })).toBe(false);
+    // A service command never reaches a direct agent's own server.
+    expect(wantsSidecar(null, { id: "local-1" }, ["node", "/srv/sidecar.mjs"])).toBe(false);
+  });
+
+  it("takes a service-managed agent's sidecar command from the service", () => {
+    // The browser's command is a path in the user's OpenCode install, which does not
+    // exist where a service agent runs OpenCode. Only the service knows a valid one.
+    const local = ["/usr/bin/node", "/opt/chat-ai/bridge-sidecar.mjs"];
+    const remote = ["node", "/srv/agent-service/bridge-sidecar.mjs"];
+
+    expect(wantsSidecar(local, serviceAgent)).toBe(false);
+    expect(wantsSidecar(local, serviceAgent, remote)).toBe(true);
+    expect(sidecarCommandFor(local, serviceAgent, remote)).toEqual(remote);
+    // Nothing runnable in the response means the HTTP fallback, not an empty command.
+    expect(wantsSidecar(local, serviceAgent, [])).toBe(false);
+    expect(wantsSidecar(local, serviceAgent, undefined)).toBe(false);
+  });
+
+  it("registers a service agent's sidecar as a local MCP entry", async () => {
+    vi.mocked(addOpencodeMcpServer).mockClear();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          ...sessionResponse,
+          sidecarCommand: ["node", "/srv/agent-service/bridge-sidecar.mjs"],
+        }),
+      })),
+    );
+    vi.stubGlobal("WebSocket", FakeWebSocket);
+
+    renderHook(() => useAgentBridge({ ...props, agent: serviceAgent }));
+
+    await waitFor(() => expect(addOpencodeMcpServer).toHaveBeenCalled());
+    expect(vi.mocked(addOpencodeMcpServer).mock.calls[0][1]).toMatch(
+      /^chatai-bridge-/,
+    );
+    expect(vi.mocked(addOpencodeMcpServer).mock.calls[0][2]).toMatchObject({
+      type: "local",
+      command: ["node", "/srv/agent-service/bridge-sidecar.mjs"],
+      environment: expect.objectContaining({
+        CHAT_AI_BRIDGE_URL: sessionResponse.agentWsUrl,
+        CHAT_AI_BRIDGE_TOKEN: "agent-token",
+      }),
+    });
   });
 
   it("routes the session call to back for a local agent and to the service for a SAIA agent", () => {

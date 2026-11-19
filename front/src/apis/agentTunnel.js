@@ -11,8 +11,9 @@
 // `opencodeAgents.js` keep their existing error and conflict handling.
 //
 // Turn it on with `"agentServiceMode": "tunnel"` in front.json. The agent bridge
-// is a WebSocket and cannot ride on a chat completion; the service answers its
-// `bridge` paths with 404, which the UI already reports as "no bridge here".
+// rides the same path: `useAgentBridge` sends the session request as a completion
+// and switches the browser leg to long-poll (`poll`/`reply`), because a completion
+// has no WebSocket to carry it.
 
 import { authHeaders } from "./authHeaders";
 

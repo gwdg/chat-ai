@@ -1971,6 +1971,12 @@ export default {
       off: "Agenten-Brücke aus",
       unavailable: "Agenten-Brücke nicht verfügbar",
       unavailable_detail: "Kein Brücken-Endpunkt unter {{url}} (HTTP {{status}}).",
+      disabled_by_server:
+        "Der Backend-Dienst lehnt Brücken-Sitzungen ab, weil kein Brücken-Geheimnis konfiguriert ist (HTTP 503). Setzen Sie bridgeSharedSecret in back.json (oder BRIDGE_SHARED_SECRET) und denselben Wert als bridgeKey in front.json und starten Sie beide Dienste neu.",
+      key_rejected:
+        "Der Backend-Dienst hat den Brücken-Schlüssel abgelehnt (HTTP 401). bridgeKey in front.json muss zu bridgeSharedSecret in back.json (oder BRIDGE_SHARED_SECRET) passen.",
+      unreachable:
+        "Der Browser konnte die Brücke unter {{url}} nicht erreichen. Prüfen Sie, ob der Dienst läuft und ob die App-Herkunft erlaubt ist: Ein Frontend auf einem anderen Port ist eine andere Herkunft; nennen Sie sie deshalb in corsOrigins in back.json (oder CORS_ORIGINS).",
       unavailable_hint:
         "Diese Installation bietet keine Agenten-Brücke. Sie wird vom Chat-AI-Dienst back (/bridge/*) oder vom SAIA-Agenten-Dienst (/agents/<id>/bridge) bereitgestellt.",
       offline_hint:

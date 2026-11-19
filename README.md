@@ -278,11 +278,15 @@ levels have to say `stream: true`: inside `chat_ai_http` so the service answers
 with SSE, and at the top level so the engine relays those bytes instead of
 collecting them and trying to parse the body as one JSON object.
 
-Two limits remain:
+The workspace bridge works in this mode: the browser leg becomes a long poll
+(`GET …/bridge/poll/<id>`, `POST …/bridge/reply/<id>`), and the agent side is a
+stdio MCP sidecar that the agent service names in the session response
+(`sidecarCommand`) and OpenCode spawns locally, so it dials the service directly
+and never needs the tunnel. [docs/agent-bridge-mcp.md](docs/agent-bridge-mcp.md)
+has the address rules and the failure a wrong agent address used to produce.
 
-- **The agent bridge is a WebSocket.** A `bridge` path answers `404` through the
-  tunnel, which the UI already reports as “Agent bridge not available”. An agent
-  page in this mode has no workspace access from the agent process.
+One limit remains:
+
 - **A stream ends with the engine's read timeout** (600 s), because the
   completion it rides on does too. An idle OpenCode event stream reconnects for
   the next window; a prompt that runs longer than that window is cut off.
@@ -466,12 +470,21 @@ port:
   public — it stops a client that reaches the backend directly from opening a session, while the
   OIDC gateway stays the real trust boundary. With the variable unset the route answers 503 instead
   of minting credentials; `BRIDGE_ALLOW_ANON=1` restores anonymous sessions for local testing only.
+- Both may come from the config files instead of the environment, which is what a native checkout
+  started with `npm run start` needs: `bridgeSharedSecret` in `back.json` and the same value as
+  `bridgeKey` in `front.json`. The environment variable wins when it is set, and `front.json` is a
+  build input, so changing `bridgeKey` needs a rebuild (or a dev-server restart). Leaving
+  `bridgeKey` empty sends no header at all, which `back` rejects with 401 as soon as it has a
+  secret.
 - Sessions expire after `BRIDGE_SESSION_TTL_MS` (default 15 minutes), are capped at
   `BRIDGE_MAX_SESSIONS` (32), and one client IP may create ten per minute.
 - Tokens travel in the WebSocket subprotocol (browser) and an `Authorization` header (sidecar), not
   in the URL, so they stay out of proxy and access logs.
 - Cross-origin requests are answered only for the origins listed in `CORS_ORIGINS`
-  (comma-separated) or the app's own host; requests without an `Origin` header still work.
+  (comma-separated) or the app's own host; requests without an `Origin` header still work. A dev
+  pair — front on `:8080`, `back` on `:8081` — is *cross-origin*, because the port is part of the
+  origin, so name the app origin in `corsOrigins` (a string or a JSON array) in `back.json` or the
+  browser refuses the session request.
 
 Agents managed by a SAIA agent service use `/agents/<id>/bridge` on the app origin instead, which is
 served by that service rather than by `back`.

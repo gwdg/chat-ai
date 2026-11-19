@@ -152,6 +152,12 @@ try {
     } else if (key == "opencodeBridgeSidecarCommand") {
       process.env["VITE_OPENCODE_BRIDGE_SIDECAR_COMMAND"] = JSON.stringify(value);
       console.log("opencode bridge sidecar:", JSON.stringify(value));
+    } else if (key == "bridgeKey") {
+      // Shared with `bridgeSharedSecret` in back.json. It ships inside the bundle,
+      // so it only stops a client that reaches the backend directly; the OIDC
+      // gateway stays the real boundary. Never log the value.
+      process.env["VITE_BRIDGE_KEY"] = String(value ?? "");
+      console.log("Bridge key:", value ? "set" : "not set");
     } else if (key == "agentServiceMode") {
       // "tunnel" reaches the agent service through the model endpoint, for a
       // deployment whose gateway forwards only `saia-agent` and has no `/agents`

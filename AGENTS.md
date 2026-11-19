@@ -257,7 +257,7 @@ inside `db/`. UI strings and i18n keys say topic.
 `VITE_PROPOSAL_GENERATION_MODEL`, `VITE_ANNOUNCEMENT`, `VITE_USE_OPENAI_SDK`,
 `VITE_E2EE_KEY_URL`, `VITE_OPENCODE_SERVER_URL`, `VITE_OPENCODE_SERVER_USERNAME`,
 `VITE_OPENCODE_SERVER_PASSWORD`, `VITE_AGENT_SERVICE_MODE`, `VITE_AGENT_SERVICE_MODEL`,
-`VITE_FAKE_AUTH_HEADERS`, `VITE_MODULE_*`. Consequences: **a new
+`VITE_BRIDGE_KEY`, `VITE_FAKE_AUTH_HEADERS`, `VITE_MODULE_*`. Consequences: **a new
 config key requires editing `front/vite.config.js` too**, and a config change requires a dev-server
 restart. Read values via `import.meta.env.VITE_*`; they arrive as strings, hence the
 `=== "true"` comparisons.
@@ -1463,19 +1463,25 @@ only the row and its conversation→session mappings go away.
 
 The agent workspace bridge lets OpenCode read the user's selected workspace and bridged local MCP
 servers without uploading files. The browser is the data plane: `hooks/useAgentBridge.ts` opens an
-outbound WebSocket to the bridge host. The agent side is a local stdio MCP sidecar
-(`back/bridge-sidecar.mjs`) started by OpenCode from `opencodeBridgeSidecarCommand`; it opens its own
-outbound WebSocket to the bridge host. The host pairs browser and sidecar by run id, so OpenCode
-never needs an inbound endpoint. If no sidecar command is configured, the hook falls back to the
-remote-MCP endpoint (`mcpUrl`).
+outbound WebSocket to the bridge host. The agent side is a stdio MCP sidecar started by OpenCode; it
+opens its own outbound WebSocket to the bridge host. The host pairs browser and sidecar by run id, so
+OpenCode never needs an inbound endpoint. If no sidecar command is available, the hook falls back to
+the remote-MCP endpoint (`mcpUrl`).
 
-The sidecar is a **direct-agent** transport only (`wantsSidecar()`): its command is a path next to
-the browser's own OpenCode, and a service-managed agent runs OpenCode in the agent service, where
-that path does not exist. Service agents therefore always use `mcpUrl` over HTTP, so one
-`opencodeBridgeSidecarCommand` in `front.json` cannot break a SAIA deployment. `mcpUrl` and
-`agentWsUrl` are absolute and built from the request base URL, so the address the agent process must
-reach is `AGENT_SERVICE_BRIDGE_AGENT_URL` when the gateway's public URL is not reachable from inside
-the agent service.
+The sidecar has two forms. A **direct** agent uses `back/bridge-sidecar.mjs` from
+`opencodeBridgeSidecarCommand` in `front.json`; a **service-managed** agent uses the agent service's
+own `bridge_sidecar.py`, whose command arrives as `sidecarCommand` in the session response because
+only the host that spawns OpenCode knows a path there (`sidecarCommandFor()` prefers it for a
+`serviceAgentId`). `wantsSidecar`/`sidecarCommandFor` is thus not "direct only" any more, and the
+same `front.json` command still cannot break a SAIA deployment. When no command is available the
+hook registers the remote MCP endpoint (`mcpUrl`) instead.
+
+`mcpUrl` and `agentWsUrl` are absolute. The service derives them for a backend it spawned —
+loopback plus its own `AGENT_SERVICE_PORT` for `process` and `network: host`, the docker gateway for
+a container on its own network — and keeps the request base URL for `kind: remote`. Set
+`AGENT_SERVICE_BRIDGE_AGENT_URL` (origin only, no `/agents` suffix) only for a remote backend or a
+gateway address the agent cannot resolve. `docs/agent-bridge-mcp.md` is the operations document for
+that split.
 
 Two hosts speak the same protocol. `back` serves it at `/bridge/*`. A service-managed agent
 (`serviceAgentId`, §4.26) uses the SAIA agent service instead, at `/agents/<id>/bridge/*` on the app
@@ -1484,8 +1490,9 @@ owns the user's OpenCode, which is what the pairing needs: **`saia-engine` canno
 uvicorn runs `cpu_count() + 1` workers, so the browser and agent sockets land in different processes
 and every call times out. Do not move the registry there without shared state.
 
-Routes (both hosts): `POST .../bridge/sessions` creates a session and returns browser/agent tokens
-and URLs, `WS .../bridge/ws` attaches the browser, `WS .../bridge/agent` attaches the sidecar,
+Routes (both hosts): `POST .../bridge/sessions` creates a session and returns browser/agent tokens,
+URLs and (agent service only) `sidecarCommand`, `WS .../bridge/ws` attaches the browser,
+`WS .../bridge/agent` attaches the sidecar,
 `POST .../bridge/mcp/:id` is the fallback MCP endpoint, and `DELETE .../bridge/sessions/:id` tears it
 down. The agent service additionally serves the browser leg over HTTP for a tunneled deployment
 (`GET .../bridge/poll/:id` and `POST .../bridge/reply/:id`, §4.26): the first poll answers
@@ -1496,10 +1503,11 @@ and answered over the browser leg (WebSocket, or poll+reply). If the browser
 is disconnected, the sidecar still lists tools but calls return an `isError` content result with
 `BRIDGE_OFFLINE` so the agent can continue with OpenCode's own tools. The agent service returns the
 browser leg as a path (the page origin completes it) and the agent leg plus `mcpUrl` as absolute
-URLs, since the agent process must reach them; they default to the request base URL and
-`AGENT_SERVICE_BRIDGE_AGENT_URL` overrides them. A tunneled create request has no real socket, so
-`tunnel.py` restores the outer request's scheme and host in the replayed scope; without that the
-agent leg would be `http://tunnel/…`, which no agent process can reach.
+URLs, since the agent process must reach them; the service derives both when it spawned the backend
+(see above) and keeps the request base URL for `kind: remote`, where
+`AGENT_SERVICE_BRIDGE_AGENT_URL` is the override. A tunneled create request has no real socket, so
+`tunnel.py` restores the outer request's scheme and host in the replayed scope; without that a remote
+backend's agent leg would be `http://tunnel/…`, which no agent process can reach.
 
 The bridge exposes `workspace_list`, `workspace_stat`, `workspace_read`, and, only when the agent's
 write toggle is on, `workspace_write`, `workspace_mkdir`, `workspace_remove`. Local MCP tools are
@@ -1535,14 +1543,24 @@ header to equal `BRIDGE_SHARED_SECRET`, and the route answers 503 when that vari
 than minting tokens for whoever can reach the port; `BRIDGE_ALLOW_ANON=1` restores the old anonymous
 behaviour and exists for local testing only. The browser's key comes from `VITE_BRIDGE_KEY` at build
 time, so it ships in the bundle: it keeps a client that reaches the backend directly from opening a
-session, and the OIDC gateway remains the real boundary. A session expires after
+session, and the OIDC gateway remains the real boundary. Both sides can be configured from the
+config files instead of the environment — `bridgeSharedSecret` in `back.json` (env wins) and
+`bridgeKey` in `front.json`, mapped by `vite.config.js` to `VITE_BRIDGE_KEY` — which is the only way
+a native `npm run start` checkout has a working bridge. The two must match: an empty `bridgeKey`
+sends no header, so a `back` with a secret answers 401, and a `back` without one answers 503. Both
+are reported in the agent's workspace popover and the toast by name (`agents.bridge.disabled_by_server`
+/ `agents.bridge.key_rejected`), not as a generic start failure, because the status alone never says
+what to fix. A session expires after
 `BRIDGE_SESSION_TTL_MS` (default 15 minutes) and is refreshed by tool calls and socket traffic, at
 most `BRIDGE_MAX_SESSIONS` (32) exist at once, and one client IP may create ten per minute. Neither
 WebSocket carries its token in the URL any more — the browser sends it as the `bridge-token.<token>`
 subprotocol, the sidecar as an `Authorization: Bearer` header — so proxy and access logs no longer
-record credentials. `cors()` answers only the origins in `CORS_ORIGINS` (comma-separated) or the
-request's own host, and still allows requests without an `Origin` header so server-to-server calls
-work.
+record credentials. `cors()` answers only the origins in `CORS_ORIGINS` (comma-separated, or
+`corsOrigins` as a string or array in `back.json`) or the request's own host, and still allows
+requests without an `Origin` header so server-to-server calls work. The port is part of the origin,
+so the usual dev pair (`front` on :8080, `back` on :8081) is cross-origin and must name
+`http://localhost:8080` (and/or the LAN origin) in `corsOrigins`, or the browser drops the session
+request.
 
 The first call is `POST <bridge base>/bridge/sessions`, where the base is `/agents/<serviceAgentId>`
 for a service-managed agent and `VITE_BACKEND_ENDPOINT` for a direct one. A 404 or 405 means that

@@ -1943,6 +1943,12 @@ export default {
       off: "Agent bridge off",
       unavailable: "Agent bridge not available",
       unavailable_detail: "No bridge endpoint at {{url}} (HTTP {{status}}).",
+      disabled_by_server:
+        "The back service refuses bridge sessions because it has no bridge secret (HTTP 503). Set bridgeSharedSecret in back.json (or BRIDGE_SHARED_SECRET) and the same value as bridgeKey in front.json, then restart both services.",
+      key_rejected:
+        "The back service rejected the bridge key (HTTP 401). bridgeKey in front.json must match bridgeSharedSecret in back.json (or BRIDGE_SHARED_SECRET).",
+      unreachable:
+        "The browser could not reach the bridge at {{url}}. Check that the service is running and that the app origin is allowed: a front end on another port is a different origin, so name it in corsOrigins in back.json (or CORS_ORIGINS).",
       unavailable_hint:
         "This deployment does not provide the agent bridge. It is served by the Chat AI back service (/bridge/*) or by the SAIA agent service (/agents/<id>/bridge).",
       offline_hint:
