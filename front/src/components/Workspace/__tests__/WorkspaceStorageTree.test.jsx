@@ -144,16 +144,18 @@ describe("WorkspaceStorageTree", () => {
     expect(provider.list).toHaveBeenCalledWith("/Photos");
   });
 
-  it("opens the add-source dialog for the workspace", async () => {
+  it("titles the pane and refreshes without a path or add-source button", async () => {
     h.listWorkspaceRoot.mockResolvedValue([]);
 
     render(<WorkspaceStorageTree workspaceId="ws-1" />);
 
-    fireEvent.click(screen.getByText("Add source"));
+    expect(await screen.findByText("Workspace files")).toBeInTheDocument();
+    expect(screen.queryByText("Add source")).toBeNull();
+    expect(screen.queryByTestId("create-workspace-path")).toBeNull();
 
-    expect(h.openModal).toHaveBeenCalledWith("workspaceAddSource", {
-      workspaceId: "ws-1",
-    });
+    const calls = h.listWorkspaceRoot.mock.calls.length;
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    expect(h.listWorkspaceRoot.mock.calls.length).toBe(calls + 1);
   });
 
   it("offers the trash button only on non-mount local rows", async () => {

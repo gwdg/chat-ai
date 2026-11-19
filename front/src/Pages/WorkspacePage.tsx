@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router";
 import { useSelector } from "react-redux";
@@ -18,6 +18,7 @@ import {
   useWorkspaceAgents,
   useWorkspaceAgentSessionLinks,
   useWorkspaceChats,
+  updateWorkspace,
 } from "../db/workspaceDb";
 import { useModal } from "../modals/ModalContext";
 import { useToast } from "../hooks/useToast";
@@ -38,8 +39,13 @@ import MetaChangesPanel from "../components/Meta/MetaChangesPanel";
 import WorkspaceAgentPanel from "../components/Workspace/WorkspaceAgentPanel";
 import WorkspaceComposer from "../components/Workspace/WorkspaceComposer";
 import WorkspaceStorageTree from "../components/Workspace/WorkspaceStorageTree";
+import IconColorPicker from "../components/Sidebar/IconColorPicker";
 import { isTopicIconId, topicIconById } from "../components/Sidebar/topicIcons";
-import { topicColor, withAlpha } from "../components/Sidebar/topicColors";
+import {
+  topicColor,
+  topicColorById,
+  withAlpha,
+} from "../components/Sidebar/topicColors";
 
 function sortByRecent(first: ConversationRow, second: ConversationRow) {
   const firstTime = first.lastModified ?? first.createdAt ?? 0;
@@ -104,6 +110,46 @@ export default function WorkspacePage() {
     const timeout = setTimeout(() => setWorkspaceSettled(true), 400);
     return () => clearTimeout(timeout);
   }, [loadedWorkspaceId]);
+
+  const [iconPickerOpen, setIconPickerOpen] = useState(false);
+  const [iconDraft, setIconDraft] = useState("");
+  const [colorDraft, setColorDraft] = useState("");
+  const iconPickerRef = useRef<HTMLDivElement | null>(null);
+  const iconPickerSnapshotRef = useRef<{
+    icon: string;
+    color: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!workspace) return;
+    setIconDraft(workspace.icon ?? topicIconById(workspace.icon).id);
+    setColorDraft(workspace.color ?? topicColor(workspace).id);
+  }, [workspace?.id, workspace?.icon, workspace?.color]);
+
+  useEffect(() => {
+    if (!iconPickerOpen) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (
+        iconPickerRef.current &&
+        !iconPickerRef.current.contains(event.target as Node)
+      ) {
+        setIconPickerOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIconPickerOpen(false);
+    };
+    const id = setTimeout(
+      () => document.addEventListener("mousedown", onPointerDown),
+      0,
+    );
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      clearTimeout(id);
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [iconPickerOpen]);
 
   const [draftState, setDraftState] = useState(() =>
     getDefaultConversation(userSettings, null),
@@ -180,9 +226,43 @@ export default function WorkspacePage() {
   );
 
   const workspaceMissing = workspaceSettled && !workspace;
+  const selectedIconId =
+    iconDraft || workspace?.icon || topicIconById(workspace?.icon).id;
+  const selectedColorId =
+    colorDraft || workspace?.color || (workspace ? topicColor(workspace).id : "");
+  const selectedColorHex = topicColorById(selectedColorId).hex;
   const workspaceEmoji =
-    workspace?.icon && !isTopicIconId(workspace.icon) ? workspace.icon : null;
-  const WorkspaceIcon = workspace ? topicIconById(workspace.icon).Icon : null;
+    selectedIconId && !isTopicIconId(selectedIconId) ? selectedIconId : null;
+  const WorkspaceIcon = topicIconById(selectedIconId).Icon;
+
+  const chooseIcon = (icon: string) => {
+    setIconDraft(icon);
+    if (workspace) void updateWorkspace(workspace.id, { icon });
+  };
+
+  const chooseColor = (color: string) => {
+    setColorDraft(color);
+    if (workspace) void updateWorkspace(workspace.id, { color });
+  };
+
+  const toggleIconPicker = () => {
+    if (!iconPickerOpen && workspace) {
+      iconPickerSnapshotRef.current = {
+        icon: selectedIconId,
+        color: selectedColorId,
+      };
+    }
+    setIconPickerOpen((open) => !open);
+  };
+
+  const cancelIconPicker = () => {
+    const snapshot = iconPickerSnapshotRef.current;
+    if (snapshot) {
+      if (snapshot.icon !== selectedIconId) chooseIcon(snapshot.icon);
+      if (snapshot.color !== selectedColorId) chooseColor(snapshot.color);
+    }
+    setIconPickerOpen(false);
+  };
 
   const deleteCurrentWorkspace = () => {
     if (!workspace) return;
@@ -248,24 +328,45 @@ export default function WorkspacePage() {
             <div className="flex min-h-0 min-w-0 flex-1 gap-2">
               <div className="flex min-h-0 min-w-0 flex-1 flex-col">
                 <header className="mx-auto flex w-full max-w-3xl items-center gap-3 px-4 py-3">
-                  <span
-                    className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl"
-                    style={{
-                      backgroundColor: withAlpha(
-                        topicColor(workspace).hex,
-                        0.16,
-                      ),
-                      color: topicColor(workspace).hex,
-                    }}
-                  >
-                    {workspaceEmoji ? (
-                      <span aria-hidden="true" className="text-2xl leading-none">
-                        {workspaceEmoji}
-                      </span>
-                    ) : WorkspaceIcon ? (
-                      <WorkspaceIcon size={24} />
-                    ) : null}
-                  </span>
+                  <div ref={iconPickerRef} className="relative shrink-0">
+                    <button
+                      type="button"
+                      data-testid="workspace-header-icon"
+                      onClick={toggleIconPicker}
+                      title={t("folders.choose_icon")}
+                      aria-label={t("folders.choose_icon")}
+                      aria-expanded={iconPickerOpen}
+                      className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl"
+                      style={{
+                        backgroundColor: withAlpha(selectedColorHex, 0.16),
+                        color: selectedColorHex,
+                      }}
+                    >
+                      {workspaceEmoji ? (
+                        <span
+                          aria-hidden="true"
+                          className="text-2xl leading-none"
+                        >
+                          {workspaceEmoji}
+                        </span>
+                      ) : (
+                        <WorkspaceIcon size={24} />
+                      )}
+                    </button>
+                    {iconPickerOpen && (
+                      <div className="absolute left-0 top-full z-30 mt-2 w-80 rounded-xl border border-base-300 bg-base-100 p-2 shadow-lg">
+                        <IconColorPicker
+                          icon={selectedIconId}
+                          color={selectedColorId}
+                          onIconChange={chooseIcon}
+                          onColorChange={chooseColor}
+                          onCancel={cancelIconPicker}
+                          onDone={() => setIconPickerOpen(false)}
+                          testIdPrefix="workspace-header"
+                        />
+                      </div>
+                    )}
+                  </div>
                   <div className="min-w-0 flex-1">
                     <h1 className="truncate text-base font-semibold">
                       {workspace.name}

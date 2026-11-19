@@ -109,6 +109,42 @@ describe("CreateWorkspaceModal", () => {
     );
   });
 
+  it("puts icon and colour back on Cancel and keeps the modal open", async () => {
+    renderModal();
+    await waitForDraft();
+
+    fireEvent.click(screen.getByTestId("create-workspace-icon"));
+    fireEvent.click(screen.getByTestId("create-workspace-icon-code"));
+    fireEvent.click(screen.getByTestId("create-workspace-color-violet"));
+    fireEvent.click(screen.getByTestId("create-workspace-cancel"));
+
+    expect(screen.queryByTestId("create-workspace-picker")).toBeNull();
+    await waitFor(() =>
+      expect(api.updateWorkspace).toHaveBeenCalledWith("ws-draft", {
+        icon: "rocket",
+      }),
+    );
+    expect(api.updateWorkspace).toHaveBeenCalledWith("ws-draft", {
+      color: "rose",
+    });
+    expect(api.onClose).not.toHaveBeenCalled();
+  });
+
+  it("asks for a name and turns the prompt red after an empty blur", async () => {
+    renderModal();
+    await waitForDraft();
+
+    const hint = screen.getByTestId("create-workspace-name-hint");
+    expect(hint).toHaveTextContent("Select a name for your workspace");
+    expect(hint.className).not.toContain("text-error");
+
+    fireEvent.blur(nameInput());
+    expect(hint.className).toContain("text-error");
+
+    typeName("Research");
+    expect(screen.getByTestId("create-workspace-name-hint")).toBeEmptyDOMElement();
+  });
+
   it("renames the draft, navigates and never deletes it", async () => {
     renderModal();
     await waitForDraft();

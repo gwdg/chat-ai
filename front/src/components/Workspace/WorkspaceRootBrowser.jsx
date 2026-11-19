@@ -149,8 +149,8 @@ export default function WorkspaceRootBrowser({
               type="button"
               onClick={onRefresh}
               className="btn btn-ghost btn-xs"
-              title={t("workspace.retry")}
-              aria-label={t("workspace.retry")}
+              title={t("workspace.refresh")}
+              aria-label={t("workspace.refresh")}
             >
               <Renew size={14} />
             </button>

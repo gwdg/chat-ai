@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Add,
   ChevronDown,
   ChevronRight,
   Document,
@@ -515,22 +514,18 @@ export default function WorkspaceStorageTree({ workspaceId, className = "" }) {
         data-guide="workspace-storage-tree"
         className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
       >
+        <div className="flex items-center px-2 pb-0.5 pt-1">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
+            {t("workspace.files_title")}
+          </span>
+        </div>
         <div className="flex flex-wrap items-center gap-1 border-b border-base-300 px-2 py-1">
-          <button
-            type="button"
-            data-guide="workspace-add-source"
-            className="btn btn-xs"
-            onClick={() => openModal("workspaceAddSource", { workspaceId })}
-          >
-            <Add size={14} />
-            {t("workspace.add_source")}
-          </button>
           <button
             type="button"
             className="btn btn-ghost btn-xs btn-square"
             onClick={() => void loadRoot()}
-            title={t("workspace.retry")}
-            aria-label={t("workspace.retry")}
+            title={t("workspace.refresh")}
+            aria-label={t("workspace.refresh")}
           >
             <Renew size={14} />
           </button>
@@ -569,13 +564,6 @@ export default function WorkspaceStorageTree({ workspaceId, className = "" }) {
           >
             <Home size={14} />
           </button>
-        </div>
-        <div
-          data-testid="create-workspace-path"
-          className="truncate border-b border-base-300 px-3 py-1 text-[11px] text-base-content/55"
-          title={target.path}
-        >
-          {target.path}
         </div>
         {actionError && (
           <div className="break-words px-3 py-1 text-[10px] text-error">
