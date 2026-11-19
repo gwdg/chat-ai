@@ -7,12 +7,7 @@ const api = vi.hoisted(() => ({
   createWorkspace: vi.fn(),
   updateWorkspace: vi.fn(),
   deleteWorkspace: vi.fn(),
-  useWorkspaceSources: vi.fn(),
-  useWorkspaceMounts: vi.fn(),
   useWorkspaceList: vi.fn(),
-  createWorkspaceRootProvider: vi.fn(),
-  listWorkspaceRoot: vi.fn(),
-  addSelectionToWorkspace: vi.fn(),
 }));
 
 vi.mock("react-router", () => ({
@@ -23,72 +18,12 @@ vi.mock("../../../db/workspaceDb", () => ({
   createWorkspace: (...args) => api.createWorkspace(...args),
   updateWorkspace: (...args) => api.updateWorkspace(...args),
   deleteWorkspace: (...args) => api.deleteWorkspace(...args),
-  useWorkspaceSources: (...args) => api.useWorkspaceSources(...args),
-  useWorkspaceMounts: (...args) => api.useWorkspaceMounts(...args),
   useWorkspaceList: (...args) => api.useWorkspaceList(...args),
 }));
 
-vi.mock("../../../workspace/workspaceRoot", () => ({
-  createWorkspaceRootProvider: (...args) =>
-    api.createWorkspaceRootProvider(...args),
-}));
-
-vi.mock("../../../workspace/listWorkspaceRoot", () => ({
-  listWorkspaceRoot: (...args) => api.listWorkspaceRoot(...args),
-}));
-
-vi.mock("../../../workspace/addSelectionToWorkspace", () => ({
-  addSelectionToWorkspace: (...args) =>
-    api.addSelectionToWorkspace(...args),
-}));
-
-vi.mock("../AddSourceModal", () => ({
-  default: ({ isOpen, initialKind }) =>
-    isOpen ? (
-      <div
-        data-testid="add-source-modal"
-        data-initial-kind={initialKind ?? "default"}
-      />
-    ) : null,
-}));
-
-vi.mock("../../../components/Workspace/WorkspaceSourcesPanel", () => ({
-  default: ({ sources }) => (
-    <div data-testid="sources-panel" data-count={sources.length} />
-  ),
-}));
-
-vi.mock("../../../components/Workspace/WorkspaceSourceBrowser", () => ({
-  default: ({ sources, target }) => (
-    <div
-      data-testid="source-browser"
-      data-count={sources.length}
-      data-target={target ? target.drive : "none"}
-    />
-  ),
-}));
-
-vi.mock("../../../components/Workspace/WorkspaceRootBrowser", () => ({
-  default: ({ entries = [], entryBadge }) => (
-    <div data-testid="root-browser">
-      {entries.map((entry) => {
-        const badge = entryBadge?.(entry);
-        return (
-          <span key={entry.path}>
-            {entry.name}
-            {typeof badge === "string" && badge ? (
-              <span data-testid={`root-badge-${entry.name}`}>{badge}</span>
-            ) : null}
-          </span>
-        );
-      })}
-    </div>
-  ),
-}));
-
-vi.mock("../../../components/Workspace/WorkspaceAgentPanel", () => ({
+vi.mock("../../../components/Workspace/WorkspaceStorageManager", () => ({
   default: ({ workspaceId }) => (
-    <div data-testid="agent-panel" data-workspace-id={workspaceId ?? ""} />
+    <div data-testid="storage-manager" data-workspace={workspaceId ?? ""} />
   ),
 }));
 
@@ -105,7 +40,12 @@ const typeName = (value) =>
   fireEvent.change(nameInput(), { target: { value } });
 
 const waitForDraft = async (id = "ws-draft") => {
-  await waitFor(() => expect(api.useWorkspaceSources).toHaveBeenCalledWith(id));
+  await waitFor(() =>
+    expect(screen.getByTestId("storage-manager")).toHaveAttribute(
+      "data-workspace",
+      id,
+    ),
+  );
 };
 
 beforeEach(() => {
@@ -113,38 +53,18 @@ beforeEach(() => {
   api.createWorkspace.mockResolvedValue("ws-draft");
   api.updateWorkspace.mockResolvedValue(undefined);
   api.deleteWorkspace.mockResolvedValue(undefined);
-  api.useWorkspaceSources.mockReturnValue(EMPTY);
-  api.useWorkspaceMounts.mockReturnValue(EMPTY);
   api.useWorkspaceList.mockReturnValue(EMPTY);
-  api.createWorkspaceRootProvider.mockReturnValue({ connect: vi.fn() });
-  api.listWorkspaceRoot.mockResolvedValue(EMPTY);
-  api.addSelectionToWorkspace.mockResolvedValue({
-    mounted: 0,
-    copied: 0,
-    failed: [],
-  });
 });
 
 describe("CreateWorkspaceModal", () => {
-  it("creates exactly one draft and renders the workspace panes", async () => {
+  it("creates exactly one draft and hands it to the storage manager", async () => {
     renderModal();
 
     await waitForDraft();
 
     expect(api.createWorkspace).toHaveBeenCalledTimes(1);
     expect(api.createWorkspace).toHaveBeenCalledWith("New workspace");
-    expect(screen.getByTestId("create-workspace-sources")).toBeInTheDocument();
-    expect(screen.getByTestId("sources-panel")).toBeInTheDocument();
-    expect(screen.getByTestId("source-browser")).toBeInTheDocument();
-    expect(screen.getByTestId("root-browser")).toBeInTheDocument();
-  });
-
-  it("replaces the tab strip with the current root path", async () => {
-    renderModal();
-    await waitForDraft();
-
-    expect(screen.queryByRole("tab")).toBeNull();
-    expect(screen.getByTestId("create-workspace-path")).toHaveTextContent("/");
+    expect(screen.getAllByTestId("storage-manager")).toHaveLength(1);
   });
 
   it("keeps colour dots inside the icon popover and writes the choice", async () => {
@@ -165,49 +85,6 @@ describe("CreateWorkspaceModal", () => {
         color: "violet",
       }),
     );
-  });
-
-  it("labels tree entries with their storage origin", async () => {
-    api.useWorkspaceMounts.mockReturnValue([
-      { id: "mount-1", sourceId: "src-device", path: "/data" },
-    ]);
-    api.useWorkspaceSources.mockReturnValue([
-      {
-        id: "src-device",
-        kind: "local",
-        label: "Laptop",
-        config: {},
-        capabilities: {},
-        status: "connected",
-      },
-    ]);
-    api.listWorkspaceRoot.mockResolvedValue([
-      {
-        sourceId: "ws-root",
-        path: "/data",
-        name: "data",
-        kind: "dir",
-        local: false,
-        mount: { id: "mount-1", sourceId: "src-device", path: "/data" },
-      },
-      {
-        sourceId: "ws-root",
-        path: "/notes.txt",
-        name: "notes.txt",
-        kind: "file",
-        local: true,
-      },
-    ]);
-
-    renderModal();
-    await waitForDraft();
-
-    expect(await screen.findByTestId("root-badge-data")).toHaveTextContent(
-      "device",
-    );
-    expect(
-      await screen.findByTestId("root-badge-notes.txt"),
-    ).toHaveTextContent("browser");
   });
 
   it("writes icon and colour choices through to the draft", async () => {
