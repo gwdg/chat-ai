@@ -443,16 +443,24 @@ export default function ToolsContainer({ localState, setLocalState }) {
                         </Tooltip>
                       )}
                     </button>
-                    {toolSwitch({ active, onToggle, disabled, label })}
-                    <button
-                      type="button"
-                      onClick={() => setDetailKey(key)}
-                      tabIndex={-1}
-                      aria-hidden="true"
-                      className="shrink-0 cursor-pointer rounded p-0.5 text-base-content/50 hover:text-base-content"
+                    {/* One trailing slot per row, so every switch sits at the
+                        same x: the chevron here, an empty box of its size on a
+                        row that has no page. */}
+                    <span
+                      data-testid="tool-row-trail"
+                      className="flex shrink-0 items-center gap-1.5"
                     >
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
+                      {toolSwitch({ active, onToggle, disabled, label })}
+                      <button
+                        type="button"
+                        onClick={() => setDetailKey(key)}
+                        tabIndex={-1}
+                        aria-hidden="true"
+                        className="flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded text-base-content/50 hover:text-base-content"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </span>
                   </div>
                 ) : (
                   <button
@@ -485,15 +493,21 @@ export default function ToolsContainer({ localState, setLocalState }) {
                         />
                       </Tooltip>
                     )}
-                    <input
-                      type="checkbox"
-                      aria-hidden="true"
-                      tabIndex={-1}
-                      readOnly
-                      checked={active}
-                      disabled={disabled}
-                      className="toggle toggle-sm toggle-success pointer-events-none shrink-0"
-                    />
+                    <span
+                      data-testid="tool-row-trail"
+                      className="flex shrink-0 items-center gap-1.5"
+                    >
+                      <input
+                        type="checkbox"
+                        aria-hidden="true"
+                        tabIndex={-1}
+                        readOnly
+                        checked={active}
+                        disabled={disabled}
+                        className="toggle toggle-sm toggle-success pointer-events-none shrink-0"
+                      />
+                      <span aria-hidden="true" className="h-4 w-4 shrink-0" />
+                    </span>
                   </button>
                 )}
               </li>

@@ -332,12 +332,22 @@ describe("ToolsContainer list layout", () => {
     expect(rows.at(-2).textContent).toContain("Arcana");
     expect(rows.at(-1).textContent).toContain("MCP Servers");
 
-    const children = [...rows.at(-2).firstElementChild.children];
-    expect(children.at(-1).tagName).toBe("BUTTON");
-    expect(
-      children.at(-1).querySelector("svg.lucide-chevron-right"),
-    ).toBeTruthy();
-    expect(children.at(-2).getAttribute("role")).toBe("switch");
+    const trail = rows.at(-2).firstElementChild.lastElementChild;
+    expect(trail.dataset.testid).toBe("tool-row-trail");
+    expect(trail.querySelector("svg.lucide-chevron-right")).toBeTruthy();
+    expect(trail.firstElementChild.getAttribute("role")).toBe("switch");
+  });
+
+  it("gives every row the same trailing slot, so the switches line up", () => {
+    render(<ToolsContainer localState={stateWith({})} setLocalState={vi.fn()} />);
+
+    const rows = [...document.querySelectorAll('[data-guide="tools-grid"] > li')];
+    for (const row of rows) {
+      const trail = row.firstElementChild.lastElementChild;
+      expect(trail.dataset.testid).toBe("tool-row-trail");
+      // A row without a page keeps an empty box the chevron's size.
+      expect(trail.lastElementChild.className).toContain("w-4");
+    }
   });
 
   it("explains a row's warning on hover", () => {
