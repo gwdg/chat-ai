@@ -5,7 +5,7 @@ import { useSelector } from "react-redux";
 import { callMcpServerTool, listMcpServerTools } from "../agent/mcp";
 import type { Vfs } from "../agent/vfs";
 import { AGENT_SERVICE_PATH } from "../apis/agentService";
-import { agentTunnelEnabled } from "../apis/agentTunnel";
+import { agentTunnelEnabled, tunnelRequest } from "../apis/agentTunnel";
 import {
   addOpencodeMcpServer,
   connectOpencodeMcpServer,
@@ -64,6 +64,16 @@ export const bridgeBaseFor = (agent: any, backend: string) =>
     : backend || (typeof window !== "undefined" ? window.location.origin : "");
 
 const bridgeBase = (agent: any) => bridgeBaseFor(agent, BACKEND);
+
+/**
+ * Whether this bridge has to travel through the model endpoint.
+ *
+ * Only the agent service is reachable that way (its routes start with `/agents`);
+ * a direct OpenCode agent keeps its own backend URL, so its bridge stays a plain
+ * request and a WebSocket.
+ */
+export const bridgeUsesTunnel = (agent: any) =>
+  agentTunnelEnabled() && !!agent?.serviceAgentId;
 
 /**
  * The service returns the browser leg as a path; a WebSocket needs an absolute
@@ -177,18 +187,66 @@ export function useAgentBridge({
     }
     let cancelled = false;
     let socket: WebSocket | null = null;
+    let pollController: AbortController | null = null;
     let retryTimer: number | null = null;
     let session: any = null;
     let sessionDeleted = false;
     let mcpName = "";
     let wasHidden = false;
     const originalTitle = document.title;
+    const tunneled = bridgeUsesTunnel(agent);
+
+    /**
+     * One bridge request: carried in a chat completion when only the model
+     * endpoint is reachable, otherwise a plain request to `/agents`.
+     */
+    const callBridge = (
+      path: string,
+      init: { method?: string; headers?: Record<string, string>; body?: unknown } = {},
+      signal?: AbortSignal,
+    ) =>
+      tunneled
+        ? tunnelRequest(
+            {
+              method: init.method || "GET",
+              path,
+              headers: init.headers || {},
+              body: init.body ?? null,
+            },
+            signal,
+          )
+        : fetch(path, {
+            method: init.method,
+            signal,
+            headers: {
+              ...(init.body !== undefined
+                ? { "Content-Type": "application/json" }
+                : {}),
+              ...(init.headers || {}),
+            },
+            ...(init.body !== undefined
+              ? { body: JSON.stringify(init.body) }
+              : {}),
+          });
+
+    /** How the browser answers a tool call; set by whichever leg started. */
+    let sendResult: (payload: unknown) => void = () => {};
 
     const deleteSession = () => {
       const created = session;
       if (sessionDeleted || !created?.id || !created?.token) return;
       sessionDeleted = true;
-      void fetch(`${bridgeBase(agent)}/bridge/sessions/${created.id}`, {
+      const path = `${bridgeBase(agent)}/bridge/sessions/${created.id}`;
+      if (tunneled) {
+        // A chat completion carries no `authorization` header, so the token
+        // travels in the query — the same place the socket legs put it.
+        void callBridge(
+          `${path}?token=${encodeURIComponent(created.token)}`,
+          { method: "DELETE" },
+        ).catch(() => {});
+        return;
+      }
+      void fetch(path, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${created.token}` },
       }).catch(() => {});
@@ -197,6 +255,7 @@ export function useAgentBridge({
     const connectSocket = (url: string, token: string) => {
       if (cancelled) return;
       socket = new WebSocket(url, ["bridge.v1", `bridge-token.${token}`]);
+      sendResult = (payload) => socket?.send(JSON.stringify(payload));
       socket.onopen = () => {
         if (cancelled) return;
         setStatus("online");
@@ -222,6 +281,70 @@ export function useAgentBridge({
       socket.onerror = () => {
         if (!cancelled) setStatus("offline");
       };
+    };
+
+    const pause = (ms: number) =>
+      new Promise<void>((resolve) => {
+        retryTimer = window.setTimeout(resolve, ms);
+      });
+
+    /**
+     * The browser leg over long-poll, for a deployment where the page has no
+     * WebSocket to `/agents` (the model tunnel). It carries the same
+     * `tool_call` messages as the socket and answers them through `replyUrl`,
+     * so `handleToolCall` is shared by both transports.
+     */
+    const pollBridge = async (pollUrl: string, replyUrl: string) => {
+      sendResult = (payload) => {
+        void callBridge(
+          replyUrl,
+          { method: "POST", body: payload },
+        ).catch(() => {});
+      };
+      while (!cancelled) {
+        const controller = new AbortController();
+        pollController = controller;
+        let message: any = null;
+        try {
+          const response = await callBridge(
+            pollUrl,
+            { method: "GET" },
+            controller.signal,
+          );
+          if (cancelled) return;
+          if (response.status === 404) {
+            // The service's registry is in memory, so a restart drops the
+            // session; polling the same id would 404 forever.
+            setUnavailable(true);
+            setStatus("error");
+            const detail = tRef.current("agents.bridge.unavailable_detail", {
+              url: pollUrl.split("?")[0],
+              status: response.status,
+            });
+            setError(detail);
+            notifyRef.current(detail);
+            return;
+          }
+          if (!response.ok) {
+            setStatus("offline");
+            await pause(3000);
+            continue;
+          }
+          message = await response.json().catch(() => null);
+        } catch {
+          // An abort is this effect's own cleanup, not a broken bridge.
+          if (cancelled) return;
+          setStatus("offline");
+          await pause(3000);
+          continue;
+        } finally {
+          pollController = null;
+        }
+        if (cancelled) return;
+        setStatus("online");
+        setError("");
+        if (message?.type === "tool_call") void handleToolCall(message);
+      }
     };
 
     const prepareProviders = async () => {
@@ -337,23 +460,19 @@ export function useAgentBridge({
         } else {
           throw new Error(`Unknown bridge tool: ${name}`);
         }
-        socket?.send(
-          JSON.stringify({
-            type: "tool_result",
-            requestId,
-            ok: true,
-            result,
-          }),
-        );
+        sendResult({
+          type: "tool_result",
+          requestId,
+          ok: true,
+          result,
+        });
       } catch (reason) {
-        socket?.send(
-          JSON.stringify({
-            type: "tool_result",
-            requestId,
-            ok: false,
-            error: reason instanceof Error ? reason.message : String(reason),
-          }),
-        );
+        sendResult({
+          type: "tool_result",
+          requestId,
+          ok: false,
+          error: reason instanceof Error ? reason.message : String(reason),
+        });
       }
     };
 
@@ -363,29 +482,19 @@ export function useAgentBridge({
       setUnavailable(false);
       try {
         const sessionUrl = `${bridgeBase(agent)}/bridge/sessions`;
-        if (agentTunnelEnabled()) {
-          // The bridge is a WebSocket and the model tunnel carries HTTP bodies
-          // only, so this deployment has no bridge to start. The agent service
-          // answers `bridge` paths over the tunnel with 404; report the same
-          // state here without a request that cannot work.
-          throw new BridgeUnavailableError(sessionUrl, 404);
-        }
-        const response = await fetch(sessionUrl, {
+        const response = await callBridge(sessionUrl, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(BRIDGE_KEY ? { "x-bridge-key": BRIDGE_KEY } : {}),
-          },
-          body: JSON.stringify({
+          headers: BRIDGE_KEY ? { "x-bridge-key": BRIDGE_KEY } : {},
+          body: {
             agentId: agent.id,
             workspaceId,
             writable,
             mcp,
-          }),
+          },
         });
         if (response.status === 404 || response.status === 405) {
-          // Only `back` serves `/bridge/*`. A direct engine endpoint answers this URL itself
-          // with 404, which means the deployment simply has no bridge to start.
+          // Only `back` and the agent service serve `/bridge/*`. A direct engine endpoint
+          // answers this URL itself with 404, which means the deployment has no bridge.
           throw new BridgeUnavailableError(sessionUrl, response.status);
         }
         if (!response.ok) throw new Error(`Bridge session failed (${response.status})`);
@@ -393,6 +502,12 @@ export function useAgentBridge({
         if (cancelled) {
           deleteSession();
           return;
+        }
+        if (tunneled && !session.pollUrl) {
+          // An older agent service has no HTTP browser leg; without it the tunnel
+          // has no way to reach this page at all.
+          deleteSession();
+          throw new BridgeUnavailableError(sessionUrl, 404);
         }
         mcpName = `chatai-bridge-${String(session.id).slice(0, 8)}`;
         if (wantsSidecar(SIDECAR_COMMAND, agent) && session.agentWsUrl && session.agentToken) {
@@ -421,7 +536,13 @@ export function useAgentBridge({
           });
         }
         await connectOpencodeMcpServer(agent, mcpName);
-        if (!cancelled) connectSocket(socketUrl(session.wsUrl), session.token);
+        if (!cancelled) {
+          if (tunneled) {
+            void pollBridge(session.pollUrl, session.replyUrl);
+          } else {
+            connectSocket(socketUrl(session.wsUrl), session.token);
+          }
+        }
       } catch (reason) {
         if (!cancelled) {
           const missing = reason instanceof BridgeUnavailableError;
@@ -473,6 +594,7 @@ export function useAgentBridge({
       document.removeEventListener("visibilitychange", onVisibility);
       document.title = originalTitle;
       if (retryTimer !== null) window.clearTimeout(retryTimer);
+      pollController?.abort();
       socket?.close();
       if (mcpName) {
         void removeOpencodeMcpServer(agent, mcpName).catch(() => {});

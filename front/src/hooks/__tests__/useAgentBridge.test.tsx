@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   notifyError: vi.fn(),
   settings: { mcp_servers: [] },
+  tunnel: false,
+  tunnelRequest: vi.fn(),
 }));
 
 vi.mock("../useToast", () => ({
@@ -17,8 +19,19 @@ vi.mock("../../apis/opencodeAgents", () => ({
   connectOpencodeMcpServer: vi.fn(async () => {}),
   removeOpencodeMcpServer: vi.fn(async () => {}),
 }));
+vi.mock("../../apis/agentTunnel", () => ({
+  // The tunnel is a deployment setting; the hook must pick the HTTP browser leg
+  // from it instead of opening a WebSocket the page could not reach.
+  agentTunnelEnabled: () => mocks.tunnel,
+  tunnelRequest: (...args: unknown[]) => mocks.tunnelRequest(...args),
+}));
 
-import { bridgeBaseFor, useAgentBridge, wantsSidecar } from "../useAgentBridge";
+import {
+  bridgeBaseFor,
+  bridgeUsesTunnel,
+  useAgentBridge,
+  wantsSidecar,
+} from "../useAgentBridge";
 
 const props = {
   agent: { id: "agent-1", name: "Example agent" },
@@ -30,6 +43,9 @@ const props = {
   rootProvider: null,
 };
 
+/** Stable identity: the hook restarts whenever `agent` changes. */
+const serviceAgent = { id: "local-1", serviceAgentId: "svc-1" };
+
 const sessionResponse = {
   id: "session-1",
   token: "browser-token",
@@ -40,6 +56,20 @@ const sessionResponse = {
   mcpUrl: "http://agent-service.test/agents/svc-1/bridge/mcp/session-1",
   expiresAt: Date.now() + 60_000,
 };
+
+const tunnelSession = {
+  ...sessionResponse,
+  pollUrl: "/agents/svc-1/bridge/poll/session-1?token=browser-token",
+  replyUrl: "/agents/svc-1/bridge/reply/session-1?token=browser-token",
+};
+
+/** The shape `tunnelRequest` returns: a real `Response` stand-in. */
+const jsonResponse = (status: number, body: unknown) => ({
+  ok: status < 400,
+  status,
+  json: async () => body,
+  text: async () => JSON.stringify(body),
+});
 
 class FakeWebSocket {
   static instances: FakeWebSocket[] = [];
@@ -75,6 +105,10 @@ const respondWithSession = () =>
 afterEach(() => {
   vi.unstubAllGlobals();
   mocks.notifyError.mockReset();
+  // `mockClear`, not `mockReset`: Testing Library's cleanup unmounts after this
+  // hook, and the deleted tunnel session still calls the last implementation.
+  mocks.tunnelRequest.mockClear();
+  mocks.tunnel = false;
   FakeWebSocket.instances = [];
 });
 
@@ -98,22 +132,147 @@ describe("useAgentBridge", () => {
     );
   });
 
-  it("reports the bridge as unavailable in tunnel mode without calling it", async () => {
-    // The tunnel carries HTTP bodies through a chat completion, so a WebSocket
-    // cannot ride on it: the deployment has no bridge at all.
-    vi.stubEnv("VITE_AGENT_SERVICE_MODE", "tunnel");
-    const fetchMock = respond(200);
+  it("tunnels the session and the browser leg when only the model endpoint is reachable", async () => {
+    // A tunneled deployment has no `/agents` route on the origin, so every bridge
+    // request rides a chat completion and the browser leg is long-polled.
+    mocks.tunnel = true;
+    const fetchMock = vi.fn(async () => ({ ok: true, status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("WebSocket", FakeWebSocket);
+    const visible = new Promise(() => {});
+    let polls = 0;
+    mocks.tunnelRequest.mockImplementation((call: any) => {
+      if (call.method === "POST" && call.path.endsWith("/bridge/sessions")) {
+        return Promise.resolve(jsonResponse(200, tunnelSession));
+      }
+      polls += 1;
+      if (polls === 1) return Promise.resolve(jsonResponse(200, { type: "ready" }));
+      // Park the loop: a real poll waits for the next tool call.
+      return visible;
+    });
 
     const { result } = renderHook(() =>
-      useAgentBridge({ ...props, agent: { id: "a", serviceAgentId: "svc-1" } }),
+      useAgentBridge({
+        ...props,
+        agent: serviceAgent,
+      }),
     );
 
-    await waitFor(() => expect(result.current.status).toBe("error"));
+    await waitFor(() => expect(result.current.status).toBe("online"));
 
-    expect(result.current.unavailable).toBe(true);
+    const [create] = mocks.tunnelRequest.mock.calls;
+    expect(create[0]).toMatchObject({
+      method: "POST",
+      path: "/agents/svc-1/bridge/sessions",
+      body: { agentId: "local-1", workspaceId: "ws-1" },
+    });
+    // The page never opens a socket and never calls the origin's `/agents`.
+    expect(FakeWebSocket.instances).toHaveLength(0);
     expect(fetchMock).not.toHaveBeenCalled();
-    vi.unstubAllEnvs();
+    expect(result.current.unavailable).toBe(false);
+  });
+
+  it("answers a tool call through the tunnel's reply route", async () => {
+    mocks.tunnel = true;
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, status: 200 })));
+    const parked = new Promise(() => {});
+    let polls = 0;
+    mocks.tunnelRequest.mockImplementation((call: any) => {
+      if (call.method === "POST" && call.path.endsWith("/bridge/sessions")) {
+        return Promise.resolve(jsonResponse(200, tunnelSession));
+      }
+      if (call.method === "POST") {
+        return Promise.resolve(jsonResponse(204, null));
+      }
+      polls += 1;
+      if (polls === 1) return Promise.resolve(jsonResponse(200, { type: "ready" }));
+      if (polls === 2) {
+        return Promise.resolve(
+          jsonResponse(200, {
+            type: "tool_call",
+            requestId: "call-1",
+            name: "mcp_list_servers",
+            arguments: {},
+          }),
+        );
+      }
+      return parked;
+    });
+
+    renderHook(() =>
+      useAgentBridge({
+        ...props,
+        mcp: true,
+        agent: serviceAgent,
+      }),
+    );
+
+    await waitFor(() =>
+      expect(
+        mocks.tunnelRequest.mock.calls.some(
+          ([call]: any[]) =>
+            call.method === "POST" && call.path === tunnelSession.replyUrl,
+        ),
+      ).toBe(true),
+    );
+    const reply = mocks.tunnelRequest.mock.calls.find(
+      ([call]: any[]) => call.path === tunnelSession.replyUrl,
+    );
+    expect(reply[0].body).toMatchObject({
+      type: "tool_result",
+      requestId: "call-1",
+      ok: true,
+      result: [],
+    });
+  });
+
+  it("deletes a tunneled session with the token in the query", async () => {
+    // A completion carries no `authorization` header, so the delete names the
+    // session token itself; the service accepts it there.
+    mocks.tunnel = true;
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, status: 200 })));
+    const parked = new Promise(() => {});
+    let polls = 0;
+    mocks.tunnelRequest.mockImplementation((call: any) => {
+      if (call.method === "POST" && call.path.endsWith("/bridge/sessions")) {
+        return Promise.resolve(jsonResponse(200, tunnelSession));
+      }
+      if (call.method === "DELETE") return Promise.resolve(jsonResponse(204, null));
+      polls += 1;
+      if (polls === 1) return Promise.resolve(jsonResponse(200, { type: "ready" }));
+      // A loop that answers immediately would spin without ever yielding.
+      return parked;
+    });
+
+    const { unmount } = renderHook(() =>
+      useAgentBridge({
+        ...props,
+        agent: serviceAgent,
+      }),
+    );
+
+    await waitFor(() =>
+      expect(mocks.tunnelRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ path: tunnelSession.pollUrl }),
+        expect.anything(),
+      ),
+    );
+
+    unmount();
+
+    await waitFor(() =>
+      expect(
+        mocks.tunnelRequest.mock.calls.some(
+          ([call]: any[]) => call.method === "DELETE",
+        ),
+      ).toBe(true),
+    );
+    const removed = mocks.tunnelRequest.mock.calls.find(
+      ([call]: any[]) => call.method === "DELETE",
+    );
+    expect(removed[0].path).toBe(
+      `/agents/svc-1/bridge/sessions/session-1?token=browser-token`,
+    );
   });
 
   it("forgets an unavailable deployment once nothing is exposed any more", async () => {
@@ -161,6 +320,14 @@ describe("useAgentBridge", () => {
       ),
     ).toBe("/agents/svc-1");
     expect(bridgeBaseFor({ id: "local-1" }, "")).toBe(window.location.origin);
+
+    // Only the agent service is reachable through the model endpoint; a direct
+    // OpenCode agent keeps its own URL and its WebSocket.
+    mocks.tunnel = true;
+    expect(bridgeUsesTunnel({ id: "local-1", serviceAgentId: "svc-1" })).toBe(true);
+    expect(bridgeUsesTunnel({ id: "local-1" })).toBe(false);
+    mocks.tunnel = false;
+    expect(bridgeUsesTunnel({ id: "local-1", serviceAgentId: "svc-1" })).toBe(false);
   });
 
   it("keeps other failures as a broken bridge", async () => {
@@ -184,7 +351,7 @@ describe("useAgentBridge", () => {
     const { result } = renderHook(() =>
       useAgentBridge({
         ...props,
-        agent: { id: "local-1", serviceAgentId: "svc-1" },
+        agent: serviceAgent,
       }),
     );
 

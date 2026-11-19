@@ -1358,10 +1358,15 @@ keep their status/conflict handling unchanged. It cannot be a header or a query 
 rebuilds that request from `content-type` and the body, so everything else is dropped on the hop.
 `opencodeAgents.js#rawRequest` uses the tunnel only for a service-managed agent (a direct server
 keeps its own URL), `subscribeOpencodeEvents` passes `tunnelStream: true` and gets the target's SSE
-bytes back from base64 deltas, and `useAgentBridge` reports the bridge unavailable without a request
-because a chat completion cannot carry the WebSocket. The service end is `agent-service`'s
+bytes back from base64 deltas, and `useAgentBridge` (`bridgeUsesTunnel`) uses it for the workspace
+bridge as well. A completion cannot carry a WebSocket, so the bridge's browser leg has an HTTP
+transport for this case: `GET .../bridge/poll/<id>` long-polls for the next `tool_call` and
+`POST .../bridge/reply/<id>` delivers the `tool_result` (§4.27). Both name the browser token as
+`?token=`, because the tunnel forwards no `Authorization` header; the agent leg and `mcpUrl` stay
+outside the tunnel, between the service and the agent process. The service end is `agent-service`'s
 `tunnel.py` (§ its AGENTS.md). An `/agents` call through the tunnel is bounded by the engine's 600 s
-read timeout, so a stream is cut at that window.
+read timeout, so a stream is cut at that window; an idle poll holds its request for 20 s, well
+inside it.
 `agents/agentStore.js` persists the agent metadata in localStorage.
 Every agent carries `createdAt`, `updatedAt` and an optional `pinned` flag. `load()` backfills the
 timestamps of agents created before they existed and persists them once. `updateAgent` bumps
@@ -1414,12 +1419,19 @@ and every call times out. Do not move the registry there without shared state.
 Routes (both hosts): `POST .../bridge/sessions` creates a session and returns browser/agent tokens
 and URLs, `WS .../bridge/ws` attaches the browser, `WS .../bridge/agent` attaches the sidecar,
 `POST .../bridge/mcp/:id` is the fallback MCP endpoint, and `DELETE .../bridge/sessions/:id` tears it
-down. Tool calls are relayed to the browser and answered over the browser WebSocket. If the browser
+down. The agent service additionally serves the browser leg over HTTP for a tunneled deployment
+(`GET .../bridge/poll/:id` and `POST .../bridge/reply/:id`, §4.26): the first poll answers
+`{"type":"ready"}`, each later poll holds for `POLL_HOLD` (20 s) and answers `{"type":"idle"}`, and
+both take the browser token as `?token=` because a completion carries no header. A call the agent
+gave up on is never delivered from the poll outbox afterwards. Tool calls are relayed to the browser
+and answered over the browser leg (WebSocket, or poll+reply). If the browser
 is disconnected, the sidecar still lists tools but calls return an `isError` content result with
 `BRIDGE_OFFLINE` so the agent can continue with OpenCode's own tools. The agent service returns the
 browser leg as a path (the page origin completes it) and the agent leg plus `mcpUrl` as absolute
 URLs, since the agent process must reach them; they default to the request base URL and
-`AGENT_SERVICE_BRIDGE_AGENT_URL` overrides them.
+`AGENT_SERVICE_BRIDGE_AGENT_URL` overrides them. A tunneled create request has no real socket, so
+`tunnel.py` restores the outer request's scheme and host in the replayed scope; without that the
+agent leg would be `http://tunnel/…`, which no agent process can reach.
 
 The bridge exposes `workspace_list`, `workspace_stat`, `workspace_read`, and, only when the agent's
 write toggle is on, `workspace_write`, `workspace_mkdir`, `workspace_remove`. Local MCP tools are
