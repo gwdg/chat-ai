@@ -32,7 +32,7 @@ const openSessionMenu = () => {
 };
 
 describe("AgentSessionList workspace view", () => {
-  it("shows no robot icon beside a top-level session", () => {
+  it("shows no icon or status dot beside a top-level session", () => {
     const child = { id: "session-2", title: "Child session" };
     render(
       <AgentSessionList
@@ -47,13 +47,10 @@ describe("AgentSessionList workspace view", () => {
       />,
     );
 
-    // Status dot and label only.
-    expect(
-      screen
-        .getByText(session.title)
-        .closest("button")
-        .querySelectorAll("svg"),
-    ).toHaveLength(0);
+    // The label only: neither an icon nor a status dot.
+    const row = screen.getByText(session.title).closest("button");
+    expect(row.querySelectorAll("svg")).toHaveLength(0);
+    expect(row.querySelectorAll("[aria-label]")).toHaveLength(0);
     // A subagent keeps the branch marker that shows the nesting.
     expect(
       screen.getByText(child.title).closest("button").querySelectorAll("svg"),

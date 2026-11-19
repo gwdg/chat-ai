@@ -136,9 +136,6 @@ export default function AgentList({
   const [statuses, setStatuses] = useState<
     Record<string, "ready" | "working" | "error" | "checking">
   >({});
-  const [sessionStatuses, setSessionStatuses] = useState<
-    Record<string, Record<string, "ready" | "working" | "error">>
-  >({});
   const statusPollingRef = useRef<Promise<void> | null>(null);
   const workspaceLinks = useWorkspaceAgentLinks();
   const sessionLinks = useWorkspaceAgentSessionLinks();
@@ -245,10 +242,6 @@ export default function AgentList({
         string,
         "ready" | "working" | "error" | "checking"
       > = {};
-      const nextSessions: Record<
-        string,
-        Record<string, "ready" | "working" | "error">
-      > = {};
       await Promise.all(
         listedAgents.map(async (agent) => {
           if (!agent.sessionId) {
@@ -259,12 +252,6 @@ export default function AgentList({
             const statusMap = await getOpencodeSessionStatus(agent);
             next[agent.id] = classifySessionStatus(
               statusMap?.[agent.sessionId],
-            );
-            nextSessions[agent.id] = Object.fromEntries(
-              Object.entries(statusMap || {}).map(([id, value]) => [
-                id,
-                classifySessionStatus(value),
-              ]),
             );
           } catch {
             try {
@@ -278,7 +265,6 @@ export default function AgentList({
       );
       if (!cancelled) {
         setStatuses(next);
-        setSessionStatuses(nextSessions);
       }
     };
     const poll = async () => {
@@ -662,7 +648,6 @@ export default function AgentList({
                     agent={agent}
                     tree={sessionTree}
                     activeSessionId={activeSessionIdFor(openAgent, agent)}
-                    statuses={sessionStatuses[agent.id]}
                     summaries={sessionSummariesFor(agent)}
                     workspaces={[]}
                     onSelect={(session) => switchSession(agent, session)}
@@ -751,8 +736,7 @@ export default function AgentList({
                           tree={filterSessionTree(sessionTree, sessionIds)}
                           dragSourceWorkspaceId={workspace.id}
                           activeSessionId={activeSessionIdFor(openAgent, agent)}
-                          statuses={sessionStatuses[agent.id]}
-                          summaries={sessionSummariesFor(agent)}
+                                summaries={sessionSummariesFor(agent)}
                           workspaces={agentWorkspaces}
                           sessionWorkspaceIds={assignedWorkspaces}
                           onToggleWorkspace={toggleWorkspace}
@@ -793,8 +777,7 @@ export default function AgentList({
                         tree={filterSessionTree(sessionTree, unassigned)}
                         dragSourceWorkspaceId={null}
                         activeSessionId={activeSessionIdFor(openAgent, agent)}
-                        statuses={sessionStatuses[agent.id]}
-                        summaries={sessionSummariesFor(agent)}
+                            summaries={sessionSummariesFor(agent)}
                         workspaces={agentWorkspaces}
                         sessionWorkspaceIds={assignedWorkspaces}
                         onToggleWorkspace={toggleWorkspace}

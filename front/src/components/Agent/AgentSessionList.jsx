@@ -35,7 +35,6 @@ const SessionRow = ({
   agent,
   depth,
   active,
-  status,
   summary,
   workspaces = [],
   sessionWorkspaceIds,
@@ -48,19 +47,10 @@ const SessionRow = ({
   subLabel,
 }) => {
   const { t } = useTranslation();
-  // Subagent sessions keep the branch marker; a top-level session needs no icon
-  // next to its status dot and label.
+  // Subagent sessions keep the branch marker; a top-level session needs no icon.
   const Icon = depth > 0 ? GitBranch : null;
   const assignedWorkspaceIds =
     sessionWorkspaceIds?.get?.(session.id) ?? NO_WORKSPACES;
-  const statusClass =
-    status === "working"
-      ? "bg-warning animate-pulse"
-      : status === "error"
-        ? "bg-error"
-        : status === "ready"
-          ? "bg-success"
-          : "bg-base-content/20";
   const draggable = Boolean(agent?.id && session?.id);
   const row = (
     <div
@@ -90,11 +80,6 @@ const SessionRow = ({
         style={{ paddingLeft: `${8 + depth * 14}px` }}
         title={summary || undefined}
       >
-        <span
-          className={`h-1.5 w-1.5 shrink-0 rounded-full ${statusClass}`}
-          title={t(`agents.status_${status || "checking"}`)}
-          aria-label={t(`agents.status_${status || "checking"}`)}
-        />
         {Icon && (
           <Icon size={11} className="shrink-0 text-base-content/45" />
         )}
@@ -210,7 +195,6 @@ export default function AgentSessionList({
   agent,
   tree,
   activeSessionId,
-  statuses = {},
   summaries = {},
   workspaces = [],
   sessionWorkspaceIds,
@@ -244,7 +228,6 @@ export default function AgentSessionList({
         agent={agent}
         depth={depth}
         active={activeSessionId === session.id}
-        status={statuses[session.id]}
         summary={summaries[session.id]?.summary}
         workspaces={workspaces}
         sessionWorkspaceIds={sessionWorkspaceIds}
