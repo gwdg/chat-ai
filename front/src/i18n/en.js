@@ -484,11 +484,13 @@ export default {
       title: "Spawn a remote agent",
       step1: "Use the + button in the Agents section to add an agent. Pick the GWDG HPC agentic service and its HPC project, or connect an OpenCode server.",
       step2: "Agents appear in the list; click one to open its chat on the right.",
-      step3: "Expand an agent with the chevron to see each workspace with the sessions attached there, plus sessions that are not in a workspace. Click a session to switch, use + to create one, or open the ... menu to rename, detach or close it.",
+      step3:
+        "Expand an agent with the chevron to see each workspace with the sessions attached there, plus “Unassigned sessions”. Click a session to switch, use + to create one, or open the ... menu to rename it, move it to a workspace, or close it.",
     },
     close_group_sessions: {
       title: "Close all sessions of a group",
-      step1: "Expand an agent to see its sessions grouped by workspace and under “Not in a workspace”.",
+      step1:
+        "Expand an agent to see its sessions grouped by workspace and under “Unassigned sessions”.",
       step2: "The trash icon in the group header closes every session of that group. Running turns are interrupted first, and you must confirm the action in a dialog before any session is removed.",
     },
     agent_workspace_access: {
@@ -1855,9 +1857,10 @@ export default {
     new_session: "New session",
     no_sessions: "No sessions yet.",
     no_workspace_sessions: "No sessions attached to this workspace yet.",
-    unassigned_sessions: "Not in a workspace",
+    unassigned_sessions: "Unassigned sessions",
     no_unassigned_sessions: "Every session is attached to a workspace.",
     detach_session: "Remove from workspace",
+    attach_to_workspace: "Attach to workspace",
     offline_cached:
       "The agent is not reachable. Showing the history cached at {{time}}.",
     offline_no_cache:

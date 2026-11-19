@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router";
 import { configureStore } from "@reduxjs/toolkit";
@@ -10,6 +10,12 @@ import {
   removeAgent,
   setAgentPinned,
 } from "../../../agents/agentStore";
+import { db } from "../../../db";
+import {
+  attachWorkspaceAgent,
+  createWorkspace,
+} from "../../../db/workspaceDb";
+import { buildSessionTree } from "../../../agents/agentSessions";
 import { pinnedStateId } from "../pinnedState";
 import interfaceSettingsReducer from "../../../Redux/reducers/interfaceSettingsSlice";
 
@@ -20,6 +26,7 @@ const mocks = vi.hoisted(() => ({
   status: vi.fn(async () => ({})),
   notifyError: vi.fn(),
   deleteServiceAgent: vi.fn(async () => null),
+  sessionTree: { roots: [], all: [], children: new Map() },
 }));
 
 vi.mock("../../../modals/ModalContext", () => ({
@@ -37,8 +44,17 @@ vi.mock("../../../hooks/useToast", () => ({
 vi.mock("../../../apis/agentService", () => ({
   deleteServiceAgent: (...args) => mocks.deleteServiceAgent(...args),
 }));
+// The session list otherwise needs a live agent server; the tree is the part the
+// grouping and the row menu read.
+vi.mock("../../../agents/agentSessions", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    fetchAgentSessions: vi.fn(async () => mocks.sessionTree),
+  };
+});
 
-beforeEach(() => {
+beforeEach(async () => {
   mocks.openModal.mockReset();
   mocks.interrupt.mockReset();
   mocks.deleteSession.mockReset();
@@ -49,9 +65,14 @@ beforeEach(() => {
   mocks.deleteSession.mockResolvedValue(null);
   mocks.status.mockResolvedValue({});
   mocks.deleteServiceAgent.mockResolvedValue(null);
+  mocks.sessionTree = { roots: [], all: [], children: new Map() };
   localStorage.clear();
   removeAgent("agent-1");
   removeAgent("agent-2");
+  await db.workspace_agent_sessions.clear();
+  await db.workspace_agents.clear();
+  await db.workspaces.clear();
+  await db.workspace_sources.clear();
 });
 
 const makeStore = () =>
@@ -318,6 +339,43 @@ describe("AgentList", () => {
       "aria-expanded",
       "true",
     );
+  });
+
+  it("moves a session from Unassigned sessions into a workspace from its menu", async () => {
+    const workspaceId = await createWorkspace("Research");
+    mocks.sessionTree = buildSessionTree([
+      { id: "session-1", title: "Active session", time: { updated: 20 } },
+      { id: "session-2", title: "Loose session", time: { updated: 10 } },
+    ]);
+
+    renderAgentList();
+    addAgentThroughModal();
+    await act(async () => {
+      await attachWorkspaceAgent(workspaceId, "agent-1");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Sessions" }));
+
+    // The active session is seeded into the workspace, the other one has no group yet.
+    expect(await screen.findByText("Unassigned sessions")).toBeInTheDocument();
+    const looseRow = screen.getByText("Loose session").closest(".group");
+    fireEvent.click(within(looseRow).getByLabelText("Session options"));
+
+    // The group header carries the workspace name too, so take the checkable menu row.
+    const assign = screen
+      .getAllByRole("button", { name: "Research" })
+      .find((element) => element.hasAttribute("aria-pressed"));
+    expect(assign).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(assign);
+    await waitFor(() =>
+      expect(screen.queryByText("Unassigned sessions")).toBeNull(),
+    );
+    expect(screen.getByText("Loose session")).toBeInTheDocument();
+    const links = await db.workspace_agent_sessions.toArray();
+    expect(links.map((link) => link.sessionId).sort()).toEqual([
+      "session-1",
+      "session-2",
+    ]);
   });
 
   it("marks the section with an icon beside the collapse control", () => {

@@ -101,7 +101,7 @@ describe("CloseGroupSessionsButton", () => {
       <CloseGroupSessionsButton
         agent={agent}
         sessionIds={["session-1", "child-1"]}
-        groupName="Not in a workspace"
+        groupName="Unassigned sessions"
       />,
     );
 

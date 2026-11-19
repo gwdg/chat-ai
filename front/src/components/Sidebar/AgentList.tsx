@@ -58,6 +58,7 @@ import {
 } from "../../db/workspaceDb";
 import {
   agentWorkspaceIds,
+  attachSessionToWorkspace,
   createWorkspaceAgentSession,
   detachSessionFromWorkspace,
   filterSessionTree,
@@ -65,6 +66,7 @@ import {
   sessionSubtreeIds,
   unassignedSessionIds,
   workspaceSessionIds,
+  workspacesBySession,
 } from "../../agents/workspaceAgentSessions";
 import { topicIconById } from "./topicIcons";
 import { pinnedStateId } from "./pinnedState";
@@ -354,6 +356,25 @@ export default function AgentList({
     navigate(`/agent/${agent.id}`);
   };
 
+  // The row menu moves one session between the agent's workspaces; the live session links
+  // re-group the sidebar on their own. `nextAttached` is the state the row asked for.
+  const toggleSessionWorkspace = async (
+    agent,
+    session,
+    workspaceId: string,
+    nextAttached: boolean,
+  ) => {
+    try {
+      if (nextAttached) {
+        await attachSessionToWorkspace(workspaceId, agent, session);
+      } else {
+        await detachSessionFromWorkspace(workspaceId, agent, session);
+      }
+    } catch (reason) {
+      notifyError(reason instanceof Error ? reason.message : String(reason));
+    }
+  };
+
   const toggleSessions = (agentId) => {
     dispatch(toggleExpandedAgent(expandId(agentId)));
   };
@@ -545,6 +566,17 @@ export default function AgentList({
                   workspaces.find((workspace) => workspace.id === workspaceId),
                 )
                 .filter(Boolean);
+              const assignedWorkspaces = workspacesBySession(
+                sessionLinks,
+                agent.id,
+              );
+              const toggleWorkspace = (workspaceId, session, nextAttached) =>
+                void toggleSessionWorkspace(
+                  agent,
+                  session,
+                  workspaceId,
+                  nextAttached,
+                );
               const unassigned = unassignedSessionIds(
                 sessionTree,
                 sessionLinks,
@@ -558,6 +590,7 @@ export default function AgentList({
                     activeSessionId={activeSessionIdFor(openAgent, agent)}
                     statuses={sessionStatuses[agent.id]}
                     summaries={sessionSummariesFor(agent)}
+                    workspaces={[]}
                     onSelect={(session) => switchSession(agent, session)}
                     onCreate={createSession}
                     creating={creatingSession === agent.id}
@@ -619,6 +652,9 @@ export default function AgentList({
                           activeSessionId={activeSessionIdFor(openAgent, agent)}
                           statuses={sessionStatuses[agent.id]}
                           summaries={sessionSummariesFor(agent)}
+                          workspaces={agentWorkspaces}
+                          sessionWorkspaceIds={assignedWorkspaces}
+                          onToggleWorkspace={toggleWorkspace}
                           onSelect={(session) =>
                             switchSession(agent, session, workspace.id)
                           }
@@ -657,6 +693,9 @@ export default function AgentList({
                         activeSessionId={activeSessionIdFor(openAgent, agent)}
                         statuses={sessionStatuses[agent.id]}
                         summaries={sessionSummariesFor(agent)}
+                        workspaces={agentWorkspaces}
+                        sessionWorkspaceIds={assignedWorkspaces}
+                        onToggleWorkspace={toggleWorkspace}
                         onSelect={(session) => switchSession(agent, session)}
                         showHeader={false}
                         showCreate={false}

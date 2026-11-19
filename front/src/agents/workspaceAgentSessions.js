@@ -76,6 +76,21 @@ export const agentWorkspaceIds = (links, agentId) => {
 };
 
 /**
+ * The workspaces each session of `agentId` is attached to, keyed by session id. A session row
+ * ticks the workspaces it already belongs to, so the per-row menu needs them grouped by session.
+ */
+export const workspacesBySession = (links, agentId) => {
+  const map = new Map();
+  for (const link of links || []) {
+    if (link?.agentId !== agentId || !link.sessionId) continue;
+    const ids = map.get(link.sessionId) || new Set();
+    ids.add(link.workspaceId);
+    map.set(link.sessionId, ids);
+  }
+  return map;
+};
+
+/**
  * Keep the sessions in `ids` with their subtrees and ancestors, so an attached session keeps
  * its subagent sessions and an attached subagent session still renders under its parent.
  * `ids` may be null to mean "every session".
@@ -114,7 +129,7 @@ export const sessionSubtreeIds = (tree, ids) => {
 
 /**
  * Sessions of an agent that no workspace of that agent shows, directly or through a parent.
- * They stay reachable in the sidebar's "not in a workspace" group.
+ * They stay reachable in the sidebar's "Unassigned sessions" group.
  */
 export const unassignedSessionIds = (tree, links, agentId) => {
   if (!tree) return new Set();
@@ -152,6 +167,20 @@ export async function createWorkspaceAgentSession(workspaceId, agent) {
   }
   notifyAgentSessionsChanged(agent.id);
   return session;
+}
+
+/**
+ * Attach one existing session to a workspace from its row menu.
+ *
+ * Only a workspace the agent is attached to is accepted: the session link is what a workspace
+ * panel and the sidebar group read, and an agent that is not in the workspace would never show
+ * it. Returns false when the link was not written.
+ */
+export async function attachSessionToWorkspace(workspaceId, agent, session) {
+  if (!workspaceId || !agent?.id || !session?.id) return false;
+  if (!(await hasWorkspaceAgentLink(workspaceId, agent.id))) return false;
+  await attachWorkspaceAgentSession(workspaceId, agent.id, session.id);
+  return true;
 }
 
 export async function detachSessionFromWorkspace(workspaceId, agent, session) {

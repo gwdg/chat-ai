@@ -497,11 +497,13 @@ export default {
       title: "Einen Remote-Agenten starten",
       step1: "Verwenden Sie die +-Schaltfläche im Bereich Agenten, um einen Agenten hinzuzufügen. Wählen Sie den GWDG HPC-Agenten-Dienst und sein HPC-Projekt oder verbinden Sie einen OpenCode-Server.",
       step2: "Agenten erscheinen in der Liste; klicken Sie auf einen, um seinen Chat rechts zu öffnen.",
-      step3: "Klappen Sie einen Agenten über das Chevron auf, um jeden Arbeitsbereich mit den zugeordneten Sitzungen sowie Sitzungen ohne Arbeitsbereich zu sehen. Klicken Sie eine Sitzung zum Wechseln an, erstellen Sie mit + eine neue oder öffnen Sie das ...-Menü zum Umbenennen, Entfernen oder Schließen.",
+      step3:
+        "Klappen Sie einen Agenten über das Chevron auf, um jeden Arbeitsbereich mit den zugeordneten Sitzungen sowie „Nicht zugeordnete Sitzungen“ zu sehen. Klicken Sie eine Sitzung zum Wechseln an, erstellen Sie mit + eine neue oder öffnen Sie das ...-Menü zum Umbenennen, Zuordnen zu einem Arbeitsbereich oder Schließen.",
     },
     close_group_sessions: {
       title: "Alle Sitzungen einer Gruppe schließen",
-      step1: "Klappen Sie einen Agenten auf, um seine Sitzungen nach Arbeitsbereich gruppiert und unter „Nicht in einem Arbeitsbereich“ zu sehen.",
+      step1:
+        "Klappen Sie einen Agenten auf, um seine Sitzungen nach Arbeitsbereich gruppiert und unter „Nicht zugeordnete Sitzungen“ zu sehen.",
       step2: "Das Papierkorb-Symbol in der Gruppenüberschrift schließt alle Sitzungen dieser Gruppe. Laufende Antworten werden zuerst unterbrochen, und Sie müssen die Aktion in einem Dialog bestätigen, bevor eine Sitzung entfernt wird.",
     },
     agent_workspace_access: {
@@ -1881,9 +1883,10 @@ export default {
     new_session: "Neue Sitzung",
     no_sessions: "Noch keine Sitzungen.",
     no_workspace_sessions: "Diesem Arbeitsbereich sind noch keine Sitzungen zugeordnet.",
-    unassigned_sessions: "Nicht in einem Arbeitsbereich",
+    unassigned_sessions: "Nicht zugeordnete Sitzungen",
     no_unassigned_sessions: "Jede Sitzung ist einem Arbeitsbereich zugeordnet.",
     detach_session: "Aus dem Arbeitsbereich entfernen",
+    attach_to_workspace: "Einem Arbeitsbereich zuordnen",
     offline_cached:
       "Der Agent ist nicht erreichbar. Angezeigt wird der um {{time}} gespeicherte Verlauf.",
     offline_no_cache:

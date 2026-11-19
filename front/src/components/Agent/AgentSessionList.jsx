@@ -7,6 +7,7 @@ import {
 import {
   Add,
   Bot,
+  Checkmark,
   Edit,
   OverflowMenuVertical,
   TrashCan,
@@ -23,20 +24,28 @@ import { useToast } from "../../hooks/useToast";
 import Tooltip from "../Others/Tooltip";
 import ShortcutTooltip from "../Sidebar/ShortcutTooltip";
 
+// A session that belongs to no workspace must still read `has` safely.
+const NO_WORKSPACES = new Set();
+
 const SessionRow = ({
   session,
   depth,
   active,
   status,
   summary,
+  workspaces = [],
+  sessionWorkspaceIds,
   onSelect,
   onRename,
   onClose,
   onDetach,
+  onToggleWorkspace,
   subLabel,
 }) => {
   const { t } = useTranslation();
   const Icon = depth > 0 ? GitBranch : Bot;
+  const assignedWorkspaceIds =
+    sessionWorkspaceIds?.get?.(session.id) ?? NO_WORKSPACES;
   const statusClass =
     status === "working"
       ? "bg-warning animate-pulse"
@@ -86,10 +95,42 @@ const SessionRow = ({
         </PopoverButton>
         <PopoverPanel
           anchor="bottom end"
-          className="z-50 w-40 rounded-xl border border-base-300 bg-base-100 p-1 shadow-lg"
+          className={`z-50 rounded-xl border border-base-300 bg-base-100 p-1 shadow-lg ${
+            workspaces.length ? "max-h-72 w-56 overflow-y-auto" : "w-40"
+          }`}
         >
           {({ close }) => (
             <>
+              {workspaces.length > 0 && (
+                <>
+                  <div className="px-2 pb-0.5 pt-1 text-[10px] font-semibold uppercase tracking-wide text-base-content/45">
+                    {t("agents.attach_to_workspace")}
+                  </div>
+                  {workspaces.map((workspace) => {
+                    const attached = assignedWorkspaceIds.has(workspace.id);
+                    return (
+                      <button
+                        key={workspace.id}
+                        type="button"
+                        aria-pressed={attached}
+                        onClick={() => {
+                          close();
+                          onToggleWorkspace?.(workspace.id, session, !attached);
+                        }}
+                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
+                      >
+                        <span className="flex w-3 shrink-0 justify-center text-base-content/70">
+                          {attached && <Checkmark size={12} />}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate">
+                          {workspace.name}
+                        </span>
+                      </button>
+                    );
+                  })}
+                  <div className="my-1 border-t border-base-300" />
+                </>
+              )}
               {onDetach && (
                 <button
                   type="button"
@@ -151,9 +192,12 @@ export default function AgentSessionList({
   activeSessionId,
   statuses = {},
   summaries = {},
+  workspaces = [],
+  sessionWorkspaceIds,
   onSelect,
   onCreate = undefined,
   onDetach = undefined,
+  onToggleWorkspace = undefined,
   creating = false,
   showCreate = true,
   showHeader = true,
@@ -179,10 +223,13 @@ export default function AgentSessionList({
         active={activeSessionId === session.id}
         status={statuses[session.id]}
         summary={summaries[session.id]?.summary}
+        workspaces={workspaces}
+        sessionWorkspaceIds={sessionWorkspaceIds}
         onSelect={onSelect}
         onRename={renameSession}
         onClose={closeSession}
         onDetach={onDetach}
+        onToggleWorkspace={onToggleWorkspace}
         subLabel={subLabel}
       />
       {(children.get(session.id) || []).map((child) =>

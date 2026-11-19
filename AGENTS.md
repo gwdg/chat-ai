@@ -1014,8 +1014,12 @@ of every session of an agent. The workspace page's Agents panel, the sidebar's W
 (each attached agent has its own expand/collapse toggle for the sessions of that workspace, kept per
 workspace and agent) and the chat sidebar list those
 sessions; the sidebar agent list groups an agent's sessions by workspace and keeps sessions that
-belong to no workspace under "Not in a workspace". Creating a session from a workspace attaches it
-there, opening one from an attached workspace attaches it, and `AppDB` version 13 adds the table.
+belong to no workspace under "Unassigned sessions". A session row's "…" menu lists the agent's
+workspaces with a tick on the ones the session is attached to and moves it between them
+(`attachSessionToWorkspace` / `detachSessionFromWorkspace`); only workspaces the agent itself is
+attached to are offered, because a session link alone would never be shown. Creating a session from
+a workspace attaches it there, opening one from an attached workspace attaches it, and `AppDB`
+version 13 adds the table.
 `workspace_agents.sessionsSeeded` records that the agent's active session was copied into the
 workspace once (`seedWorkspaceAgentSessions`), so existing data upgrades without duplicating
 sessions and a detached session is not re-added. Detaching an agent, deleting a workspace, removing
@@ -1166,8 +1170,9 @@ remote ids as a value.
 `Sidebar/AgentList.tsx` lists remote agents like conversation rows and polls
 `GET /api/session/status` every 5 s for the status dot (green idle, yellow working, red connection
 error). Each agent row expands into its OpenCode sessions grouped by the workspaces the agent is
-attached to, with the sessions attached to each workspace and a final "Not in a workspace" group for
-the rest; the active `sessionId` is stored on the
+attached to, with the sessions attached to each workspace and a final "Unassigned sessions" group
+for the rest that the session row's "…" menu can move into a workspace; the active `sessionId` is
+stored on the
 local agent entry, while the session list is read from `GET /api/session` by
 `agents/agentSessions.js`. Children are fetched with
 `GET /api/session?parentID=<id>&limit=200`; current OpenCode (2.3) no longer serves

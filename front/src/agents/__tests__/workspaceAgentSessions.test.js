@@ -1,13 +1,20 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
+import { db } from "../../db";
+import {
+  attachWorkspaceAgent,
+  createWorkspace,
+} from "../../db/workspaceDb";
 import { buildSessionTree } from "../agentSessions";
 import {
   agentWorkspaceIds,
   agentWorkspaceSessionIds,
+  attachSessionToWorkspace,
   filterSessionTree,
   sessionSubtreeIds,
   unassignedSessionIds,
   workspaceSessionIds,
+  workspacesBySession,
 } from "../workspaceAgentSessions";
 
 const sessions = [
@@ -36,6 +43,13 @@ const links = [
 
 const ids = (set) => [...set].sort();
 
+beforeEach(async () => {
+  await db.workspace_agent_sessions.clear();
+  await db.workspace_agents.clear();
+  await db.workspaces.clear();
+  await db.workspace_sources.clear();
+});
+
 describe("workspace agent sessions", () => {
   it("collects the sessions of one workspace and agent", () => {
     expect(ids(workspaceSessionIds(links, "ws-1", "agent-1"))).toEqual([
@@ -53,6 +67,55 @@ describe("workspace agent sessions", () => {
     ]);
     expect(agentWorkspaceIds(links, "agent-1")).toEqual(["ws-1", "ws-2"]);
     expect(agentWorkspaceIds(links, "missing")).toEqual([]);
+  });
+
+  it("groups the workspaces of each session for the row menus", () => {
+    const bySession = workspacesBySession(links, "agent-1");
+    expect([...bySession.keys()].sort()).toEqual([
+      "child-b",
+      "root-a",
+      "root-b",
+    ]);
+    expect(ids(bySession.get("root-a"))).toEqual(["ws-1"]);
+    expect(ids(bySession.get("root-b"))).toEqual(["ws-2"]);
+    // Another agent's links never answer for this one.
+    expect(workspacesBySession(links, "agent-2").get("root-a")).toEqual(
+      new Set(["ws-2"]),
+    );
+    expect(workspacesBySession(links, "missing").size).toBe(0);
+  });
+
+  it("attaches a session only to a workspace its agent is part of", async () => {
+    const workspaceId = await createWorkspace("Attachment");
+    const agent = { id: "agent-1" };
+    const session = { id: "session-1" };
+
+    // The workspace does not know the agent yet, so the link would never be shown.
+    expect(
+      await attachSessionToWorkspace(workspaceId, agent, session),
+    ).toBe(false);
+    expect(await db.workspace_agent_sessions.toArray()).toEqual([]);
+    // An incomplete call is a no-op rather than a broken row.
+    expect(await attachSessionToWorkspace(workspaceId, agent, null)).toBe(
+      false,
+    );
+
+    await attachWorkspaceAgent(workspaceId, agent.id);
+    expect(await attachSessionToWorkspace(workspaceId, agent, session)).toBe(
+      true,
+    );
+
+    const rows = await db.workspace_agent_sessions.toArray();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      workspaceId,
+      agentId: "agent-1",
+      sessionId: "session-1",
+    });
+
+    // Attaching twice keeps one link.
+    await attachSessionToWorkspace(workspaceId, agent, session);
+    expect(await db.workspace_agent_sessions.count()).toBe(1);
   });
 
   it("filters a session tree and keeps subtrees and parents", () => {
