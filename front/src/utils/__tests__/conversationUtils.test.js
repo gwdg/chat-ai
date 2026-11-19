@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { getBrandProfile, setCurrentBrand } from "../../config/brands";
 import {
   getDefaultChatAIModel,
   getDefaultConversation,
   getDefaultSettings,
+  getDefaultSystemPrompt,
 } from "../conversationUtils";
 
 describe("conversation defaults", () => {
@@ -63,5 +65,22 @@ describe("conversation defaults", () => {
 
   it("resolves the default chat model", () => {
     expect(getDefaultChatAIModel({ model: { id: "test-model" } })).toBe("test-model");
+  });
+
+  it("keeps the Chat AI system prompt when the brand has none", () => {
+    expect(getDefaultSystemPrompt()).toBe("You are a helpful assistant.");
+  });
+
+  it("uses the active brand's system prompt for a new conversation", () => {
+    setCurrentBrand(getBrandProfile("mpg"));
+    try {
+      expect(getDefaultSystemPrompt()).toContain("Max Planck Society");
+      const conversation = getDefaultConversation();
+      expect(conversation.messages[0].content[0].text).toContain(
+        "ROLE & OBJECTIVE",
+      );
+    } finally {
+      setCurrentBrand(null);
+    }
   });
 });

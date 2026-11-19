@@ -270,6 +270,27 @@ own links.
     }
   },
 
+  // Optional full-width bar above every page.
+  "header": {
+    "logo": "logo.svg",
+    "logoAlt": "AI X",
+    "title":   { "en": "AI Assistant", "de": "KI-Assistent" },
+    "subtitle": { "en": "Instructions and working aids", "de": "Anweisungen und Arbeitshilfen" },
+    "textColor": "#123f7a",
+    "backgroundColor": "#ffffff"
+  },
+
+  // HTML files inlined at build time; the UI language selects one.
+  "disclaimer": {
+    "de": "disclaimer.de.html",
+    "en": "disclaimer.en.html"
+  },
+  "chatDisclaimer": {
+    "de": "chat-disclaimer.de.html",
+    "en": "chat-disclaimer.en.html"
+  },
+  "systemPrompt": "system-prompt.md",
+
   "links": {
     "imprint": "https://uni-x.example/imprint",
     "privacy": "https://uni-x.example/privacy",
@@ -280,6 +301,7 @@ own links.
   },
 
   "footer": {
+    "help": "help.pdf",
     "isoCertified": false,
     "links": {
       "privacy": {
@@ -326,9 +348,29 @@ Rules:
   `url` (defaults to `links.<id>`) and `visible: false`; a new id appends a link.
   `footer.isoCertified: false` removes the ISO 27001 claim in brands that do not
   hold that certificate.
+- `header` is optional: a brand without it renders no bar, so Chat AI and UGOE
+  are unchanged. `logo` names a file next to `brand.json`; `title`, `subtitle`
+  and `logoAlt` are presentation only, and `textColor`/`backgroundColor` are any
+  CSS colour.
+- `disclaimer` and `chatDisclaimer` name HTML files (or a `{de, en}` map). The
+  loader inlines them with `?raw`, `BrandDisclaimer`/`BrandChatWarning` sanitize
+  them with DOMPurify (allowing `target`) and style the plain tags `h2`, `p`,
+  `strong`, `ul`, `ol` and `a`. A missing value renders nothing.
+- `systemPrompt` names a Markdown file (or a `{de, en}` map) whose text becomes
+  the system message of a new conversation; without it the Chat AI default
+  “You are a helpful assistant.” is used.
+- `footer.help` names a PDF next to `brand.json` or an absolute `https://` URL.
+  When set, the footer shows a localized Help link in a new tab; relative files
+  go through `withBase`, so a sub-path deployment keeps working.
 - A brand profile may not contain `modules`, `features`, `layout` or model
   settings; their presence is a build error (invariant 1).
 - A brand cannot suppress `WarningExternalModel` or the data-security notice.
+
+The MPG/OHB brand lives in `front/src/config/branding/mpg/` (its content files
+were migrated from the old build-time `branding/mpg-ohb/` folder). A deployment
+becomes the MPG look with `"brands": { "default": "mpg" }` in its profile; for a
+visit, `?brand=MPG` (or the aliases `mpg-ohb` / `ohb`) selects it. Chat AI and
+UGOE define none of the new surfaces, so they render exactly as before.
 
 ## 6. Runtime behaviour
 

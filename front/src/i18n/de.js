@@ -1262,6 +1262,7 @@ export default {
   },
   // Footer
   footer: {
+    help: "Hilfe",
     imprint: "Impressum",
     terms: "Nutzungsbedingungen",
     docs: "Doku",

@@ -1600,9 +1600,12 @@ while editing:
   or a tour points at an element that is no longer rendered. `import_git` is the worked
   example: it hides the "clone repository" mode in `CreateWorkspaceModal` and nothing else.
 - **A brand may not change features or layout.** Brand objects are only read for presentation
-  (`BrandLogo`, `AiServicesMenu`, `LogoContainer`, `useTabTitle`, `CollapsibleFooter`, the
-  `brand-sidebar` surface); the feature/module accessors never look at a brand. Keep it that
-  way, or the guarantee in the design doc stops being true.
+  (`BrandLogo`, `BrandHeader`, `BrandDisclaimer`, `BrandChatWarning`, `AiServicesMenu`,
+  `LogoContainer`, `useTabTitle`, `CollapsibleFooter`, the `brand-sidebar` surface). By
+  exception it may own its own disclaimers (`disclaimer`, `chatDisclaimer`) and default system
+  prompt (`systemPrompt`) — the admin approved these on 2026-11-19. The feature/module
+  accessors never look at a brand. Keep it that way, or the guarantee in the design doc stops
+  being true.
 - **Brand CSS goes into `<style id="brand-theme">` at runtime**, and the dark block must
   target `body.dark`. `index.css` re-declares `--chat` and the `base-*` colours on `.dark`,
   so a root-only rule is shadowed on `<body>`. Only values matching `/^#[0-9a-f]{3,8}$/i`
@@ -1635,7 +1638,8 @@ while editing:
   add `max-w-*` for wide lockups. A brand whose lockup is very wide (UGOE is 5.6:1, and its
   wordmark is illegible in the 40 px sidebar slot) sets `logo.headerVariant: "mark"`.
 - **A brand is one folder.** `front/src/config/branding/<folder>/` holds `brand.json` plus
-  every image it names; `brand.json` carries name, logo variant, aliases, links, **footer**,
+  every file it names (images, disclaimer HTML, system-prompt Markdown, help PDF); `brand.json`
+  carries name, logo variant, aliases, links, **footer**,
   theme and surface colours, so nothing about a brand is spread over the deployment profile
   or a defaults module. The loader (`brands.js`, `import.meta.glob("./branding/*/brand.json")`)
   resolves the file names with `?url&no-inline`, so they become hashed build assets and are

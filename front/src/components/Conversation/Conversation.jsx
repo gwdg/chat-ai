@@ -6,7 +6,10 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 
 // Hooks
 import { selectShowSettings } from "../../Redux/reducers/interfaceSettingsSlice";
+import { useBrand } from "../../config/BrandProvider";
 import Prompt from "../Prompt/Prompt";
+import BrandChatWarning from "./BrandChatWarning";
+import BrandDisclaimer from "./BrandDisclaimer";
 import EmptyConversation from "./EmptyConversation";
 import HallucinationWarning from "./HallucinationWarning";
 import MessageAssistant from "./MessageAssistant/MessageAssistant";
@@ -25,8 +28,10 @@ export default function Conversation({
 }) {
   const showSettings = useSelector(selectShowSettings);
   const { t } = useTranslation();
+  const { brand } = useBrand();
   const [searchParams] = useSearchParams();
   const targetMessageId = searchParams.get("message");
+  const hasBrandChatDisclaimer = Boolean(brand?.chatDisclaimer);
 
   // UI
   const [copied, setCopied] = useState(false);
@@ -397,7 +402,7 @@ export default function Conversation({
           localState?.isMetaChat === true ||
           localState?.id === "meta-chat" ||
           localState?.persona
-        ) && <HallucinationWarning />}
+        ) && (hasBrandChatDisclaimer ? <BrandChatWarning /> : <HallucinationWarning />)}
 
         {/* Close chat - normal flow, below every banner */}
         {!hideCloseButton && localState?.id && (
@@ -558,6 +563,7 @@ export default function Conversation({
         userData={userData}
         modelsData={modelsData}
       />
+      {emptyConversation && <BrandDisclaimer />}
       {emptyConversation && <Motto />}
     </div>
   );

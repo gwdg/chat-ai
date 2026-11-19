@@ -1,7 +1,19 @@
 import { v4 as uuidv4 } from "uuid";
 import { getConversation, getFolder, listConversationMetas } from "../db";
+import { currentBrand, localizeBrandValue } from "../config/brands";
 import { processContentItems } from "./sendMessage";
 import packageJson from "../../package.json";
+import i18n from "../i18n";
+
+const DEFAULT_SYSTEM_PROMPT = "You are a helpful assistant.";
+
+/** The active brand's localized system prompt, or the Chat AI default. */
+export const getDefaultSystemPrompt = () => {
+  const prompt = localizeBrandValue(currentBrand()?.systemPrompt, i18n.language);
+  return (
+    (typeof prompt === "string" ? prompt.trim() : "") || DEFAULT_SYSTEM_PROMPT
+  );
+};
 
 export const getDefaultSettings = (userSettings = {}) => {
   // Get environment settings
@@ -103,7 +115,7 @@ export const getDefaultConversation = (userSettings = {}, folderId = null) => {
         content: [
           {
             type: "text",
-            text: "You are a helpful assistant."
+            text: getDefaultSystemPrompt()
           }
         ],
       }, {

@@ -1,0 +1,52 @@
+{
+  "id": "mpg",
+  "aliases": ["mpg-ohb", "ohb"],
+  "name": {
+    "de": "KI-Assistent zum Organisationshandbuch",
+    "en": "AI Assistant for the Organisational Handbook"
+  },
+  "shortName": {
+    "de": "KI-Assistent zum Organisationshandbuch",
+    "en": "AI Assistant for the Organisational Handbook"
+  },
+  "homeUrl": "https://www.mpg.de/",
+  "logo": {
+    "alt": "Max-Planck-Gesellschaft"
+  },
+  "assets": {
+    "full": "logo.svg",
+    "small": "logo.svg",
+    "mark": "logo.svg",
+    "favicon": "logo.svg",
+    "help": "OHB-Chatbot__DE___EN__v1.0.pdf"
+  },
+  "header": {
+    "logo": "logo.svg",
+    "logoAlt": "Max-Planck-Gesellschaft",
+    "title": {
+      "de": "KI-Assistent zum Organisationshandbuch",
+      "en": "AI Assistant for the Organisational Handbook"
+    },
+    "subtitle": {
+      "de": "Anweisungen und Arbeitshilfen",
+      "en": "Instructions and Working Aids"
+    },
+    "textColor": "#006c66",
+    "backgroundColor": "#ffffff"
+  },
+  "disclaimer": {
+    "de": "disclaimer.de.html",
+    "en": "disclaimer.en.html"
+  },
+  "chatDisclaimer": {
+    "de": "chat-disclaimer.de.html",
+    "en": "chat-disclaimer.en.html"
+  },
+  "systemPrompt": "system-prompt.md",
+  "footer": {
+    "help": "OHB-Chatbot__DE___EN__v1.0.pdf",
+    "isoCertified": false,
+    "links": {}
+  },
+  "services": false
+}

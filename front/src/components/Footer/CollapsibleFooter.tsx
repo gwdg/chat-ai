@@ -6,6 +6,7 @@ import VersionDisplay from "./VersionDisplay";
 import LanguageSelector from "./LanguageSelector";
 import ThemeToggle from "../Header/ThemeToggle";
 import { useBrand } from "../../config/BrandProvider";
+import { localizeBrandValue, withBase } from "../../config/brands";
 
 // Links every brand gets unless its profile replaces the `footer.links` map.
 const DEFAULT_FOOTER_LINKS: Record<string, Record<string, unknown>> = {
@@ -49,6 +50,9 @@ export default function CollapsibleFooter({ className }: { className?: string })
   const { brand } = useBrand();
 
   const configured = brand?.footer?.links ?? DEFAULT_FOOTER_LINKS;
+  const helpUrl = brand?.footer?.help
+    ? withBase(localizeBrandValue(brand.footer.help, i18n.language))
+    : null;
   const links: FooterLink[] = Object.entries(configured)
     .map(([id, entry]: [string, any]) => ({
       id,
@@ -78,6 +82,13 @@ export default function CollapsibleFooter({ className }: { className?: string })
           <div className="hidden md:block flex flex-col md:flex-row justify-center items-center gap-4 text-base-content w-full md:p-0 py-2">
             <VersionDisplay />
           </div>
+          {helpUrl && (
+            <Link to={helpUrl} target="_blank">
+              <p className="text-center text-info hover:underline">
+                {t("footer.help")}
+              </p>
+            </Link>
+          )}
           {links.map((link) => (
             <Link key={link.id} to={link.url} target="_blank">
               <p className="text-center text-info hover:underline">{link.label}</p>

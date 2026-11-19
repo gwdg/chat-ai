@@ -15,6 +15,7 @@ import {
   defaultBrandProfile,
   getBrandProfile,
   resolveBrandId,
+  setCurrentBrand,
 } from "./brands";
 
 // Re-exported for callers that only need the storage key.
@@ -70,6 +71,7 @@ export function BrandProvider({ children }) {
   );
 
   useEffect(() => {
+    setCurrentBrand(brand);
     applyBrandDocument(brand);
   }, [brand]);
 

@@ -2,11 +2,14 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   brandCss,
+  currentBrand,
   defaultBrandId,
   getBrandProfile,
+  localizeBrandValue,
   matchBrandId,
   resolveBrandId,
   ruleMatches,
+  setCurrentBrand,
   withBase,
 } from "../brands";
 
@@ -175,5 +178,74 @@ describe("brand theme", () => {
     } finally {
       vi.unstubAllEnvs();
     }
+  });
+});
+
+describe("brand content", () => {
+  it("inlines the MPG disclaimers, system prompt and header", () => {
+    const brand = getBrandProfile("mpg");
+    expect(brand.id).toBe("mpg");
+    expect(matchBrandId("MPG")).toBe("mpg");
+    expect(matchBrandId("mpg-ohb")).toBe("mpg");
+    expect(matchBrandId("OHB")).toBe("mpg");
+
+    expect(brand.disclaimer.de).toContain("Wichtiger Hinweis");
+    expect(brand.disclaimer.en).toContain("Important information");
+    expect(brand.chatDisclaimer.de).toContain("keine verbindliche Auskunft");
+    expect(brand.chatDisclaimer.en).toContain("initial guidance only");
+    expect(brand.systemPrompt).toContain("ROLE & OBJECTIVE");
+    expect(brand.systemPrompt).toContain("Max Planck Society");
+
+    expect(brand.header.logo).toContain("branding/mpg/logo.svg");
+    expect(brand.header.textColor).toBe("#006c66");
+    expect(brand.header.backgroundColor).toBe("#ffffff");
+    expect(brand.footer.help).toContain(
+      "branding/mpg/OHB-Chatbot__DE___EN__v1.0.pdf",
+    );
+    expect(brand.footer.isoCertified).toBe(false);
+  });
+
+  it("localizes a brand value, falling back to English and then the first entry", () => {
+    expect(localizeBrandValue("only", "de")).toBe("only");
+    expect(localizeBrandValue({ de: "Deutsch", en: "English" }, "de-DE")).toBe(
+      "Deutsch",
+    );
+    expect(localizeBrandValue({ en: "English" }, "de")).toBe("English");
+    expect(localizeBrandValue({ fr: "Français" }, "de")).toBe("Français");
+    expect(localizeBrandValue(undefined, "de")).toBeUndefined();
+  });
+});
+
+describe("current brand", () => {
+  beforeEach(() => {
+    setCurrentBrand(null);
+    sessionStorage.clear();
+    window.history.replaceState({}, "", "/");
+  });
+
+  afterEach(() => {
+    setCurrentBrand(null);
+    sessionStorage.clear();
+    window.history.replaceState({}, "", "/");
+  });
+
+  it("falls back to the deployment default", () => {
+    expect(currentBrand().id).toBe("chat-ai");
+  });
+
+  it("uses the stored testing override", () => {
+    sessionStorage.setItem("chatai.brand.override", "ugoe");
+    expect(currentBrand().id).toBe("ugoe");
+  });
+
+  it("prefers ?brand= over the stored override", () => {
+    sessionStorage.setItem("chatai.brand.override", "ugoe");
+    window.history.replaceState({}, "", "/?brand=MPG");
+    expect(currentBrand().id).toBe("mpg");
+  });
+
+  it("sees the brand BrandProvider applied for the user", () => {
+    setCurrentBrand(getBrandProfile("ugoe"));
+    expect(currentBrand().id).toBe("ugoe");
   });
 });

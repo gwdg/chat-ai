@@ -1244,6 +1244,7 @@ export default {
   },
   // Footer
   footer: {
+    help: "Help",
     imprint: "Imprint",
     terms: "Terms of Use",
     docs: "Docs",

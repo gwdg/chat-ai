@@ -1,4 +1,5 @@
 import { brandConfig } from "./deployment";
+import { BRAND_OVERRIDE_KEY } from "./brandIds";
 
 const isPlainObject = (value) =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -14,27 +15,54 @@ const brandModules = import.meta.glob("./branding/*/brand.json", {
   import: "default",
 });
 
-const assetModules = import.meta.glob("./branding/*/*.{svg,png,ico}", {
+const assetModules = import.meta.glob("./branding/*/*.{svg,png,ico,pdf}", {
   eager: true,
   import: "default",
   query: "?url&no-inline",
+});
+
+// Disclaimers and system prompts are inlined, because they are rendered as
+// HTML/text and never fetched as a file.
+const rawModules = import.meta.glob("./branding/*/*.{html,md}", {
+  eager: true,
+  import: "default",
+  query: "?raw",
 });
 
 const folderOf = (key) => key.split("/")[2];
 
 // A value that looks like a URL or a leading slash is already resolved; anything
 // else names a file next to the brand's `brand.json`.
+const resolveFile = (folder, value, modules) => {
+  const isPath =
+    typeof value === "string" && !/^(?:[a-z]+:|\/|data:|#)/i.test(value);
+  return isPath ? modules[`./branding/${folder}/${value}`] ?? value : value;
+};
+
 const resolveAssets = (folder, assets) => {
   if (!isPlainObject(assets)) return assets;
   const resolved = {};
   for (const [key, value] of Object.entries(assets)) {
-    const isPath =
-      typeof value === "string" && !/^(?:[a-z]+:|\/|data:|#)/i.test(value);
-    resolved[key] = isPath
-      ? assetModules[`./branding/${folder}/${value}`] ?? value
-      : value;
+    resolved[key] = resolveFile(folder, value, assetModules);
   }
   return resolved;
+};
+
+// A localized value may be one file name or one per language, so the shape is
+// preserved and each entry resolved like an asset.
+const resolveContent = (folder, value) => {
+  // Text is inlined, so a file name that does not resolve must render nothing
+  // rather than the name itself; an absolute URL is kept as written.
+  const read = (file) =>
+    typeof file === "string" && /^(?:[a-z]+:|\/|data:|#)/i.test(file)
+      ? file
+      : (rawModules[`./branding/${folder}/${file}`] ?? null);
+  if (isPlainObject(value)) {
+    return Object.fromEntries(
+      Object.entries(value).map(([language, file]) => [language, read(file)]),
+    );
+  }
+  return read(value);
 };
 
 const loadBrands = () => {
@@ -43,7 +71,26 @@ const loadBrands = () => {
     const folder = folderOf(key);
     const data = module ?? {};
     const id = data.id || folder;
-    profiles[id] = { ...data, id, assets: resolveAssets(folder, data.assets) };
+    profiles[id] = {
+      ...data,
+      id,
+      assets: resolveAssets(folder, data.assets),
+      header: isPlainObject(data.header)
+        ? {
+            ...data.header,
+            logo: resolveFile(folder, data.header.logo, assetModules),
+          }
+        : data.header,
+      disclaimer: resolveContent(folder, data.disclaimer),
+      chatDisclaimer: resolveContent(folder, data.chatDisclaimer),
+      systemPrompt: resolveContent(folder, data.systemPrompt),
+      footer: isPlainObject(data.footer)
+        ? {
+            ...data.footer,
+            help: resolveFile(folder, data.footer.help, assetModules),
+          }
+        : data.footer,
+    };
   }
   return profiles;
 };
@@ -91,6 +138,22 @@ export const defaultBrandId = () =>
 
 export const defaultBrandProfile = () =>
   getBrandProfile(defaultBrandId()) ?? baseBrand;
+
+/**
+ * A brand text value is either a string or a map of language code to string.
+ * The UI language wins, then English, then the first value.
+ */
+export function localizeBrandValue(value, language = "") {
+  if (value == null) return undefined;
+  if (typeof value !== "object") return value;
+  const languageCode = String(language).split("-")[0];
+  return (
+    value[language] ??
+    value[languageCode] ??
+    value.en ??
+    Object.values(value)[0]
+  );
+}
 
 const claimValues = (userData, claims) => {
   const names = Array.isArray(claims) ? claims : [claims];
@@ -147,6 +210,32 @@ export function resolveBrandId({ userData, search, override } = {}) {
     ) ??
     defaultBrandId()
   );
+}
+
+// Non-React callers (getDefaultConversation) cannot read context. BrandProvider
+// applies its claim-resolved brand here after the profile request answers.
+let appliedBrand = null;
+
+export function setCurrentBrand(brand) {
+  appliedBrand = brand ?? null;
+}
+
+/**
+ * The active brand for modules outside React. The query and the stored testing
+ * override are read live, then the brand BrandProvider applied, then the
+ * deployment default — the same precedence, without the async user claims.
+ */
+export function currentBrand() {
+  const search = typeof window === "undefined" ? "" : window.location.search;
+  let stored = null;
+  try {
+    stored = matchBrandId(sessionStorage.getItem(BRAND_OVERRIDE_KEY));
+  } catch {
+    // Private mode or blocked storage: no override.
+  }
+  const overrideId = brandFromSearch(search) ?? stored;
+  if (overrideId) return getBrandProfile(overrideId) ?? defaultBrandProfile();
+  return appliedBrand ?? defaultBrandProfile();
 }
 
 /** Prefix a public path with Vite's base, leaving imported asset URLs alone. */
