@@ -450,15 +450,15 @@ export default {
   feature_guide: {
     workspace_overview: {
       title: "Arbeitsbereiche",
-      step1: "Erstellen Sie einen Arbeitsbereich oder öffnen Sie einen in der Seitenleiste; er enthält bereits Browserspeicher und eine Arcana-Dateisystem-Quelle.",
-      step2: "Wählen Sie links eine Quelle. Gerätequellen tragen die Markierung \"Nur dieses Gerät\".",
-      step3: "Durchsuchen Sie hier die Dateien. Ziehen Sie eine Datei auf eine andere Quelle zum Kopieren; mit Alt zum Verschieben.",
+      step1: "Das rechte Fenster gehört zum Arbeitsbereich: Zuerst öffnet sich Neuigkeiten, Dateien zeigt den gespeicherten Inhalt, Agenten die Ausführung.",
+      step2: "Fügen Sie eine Quelle hinzu — Browserspeicher, dieses Gerät, ein Arcana, ein Repository oder einen MCP-Server — und sie erscheint im Baum.",
+      step3: "Durchsuchen Sie den Baum im Reiter Dateien. Die Markierung jeder Zeile zeigt, wo der Eintrag liegt: Browser, Gerät, Arcana, MCP oder Agent.",
       step4: "Wählen Sie, wie der Agent in diesem Arbeitsbereich läuft: im Browser, über einen OpenCode-Server oder mit dem Remote-Agenten.",
     },
     manage_chat_data: {
       title: "Dateien eines Chats verwalten",
       step1: "Auf Speicher zugreifen ist standardmäßig an und steht oben im Arbeitsbereich-Menü. Schalten Sie es aus, erhält das Modell keine Dateiwerkzeuge; Anhänge werden weiterhin in die Nachricht aufgenommen, sofern möglich.",
-      step2: "Wählen Sie Daten verwalten, um die Dateien hinter diesem Schalter zu sehen. Chats, die einem Arbeitsbereich zugeordnet sind, öffnen diesen, wo das Dateisystem angezeigt wird; Chats ohne Arbeitsbereich durchsuchen die für den Chat in diesem Browser gespeicherten Dateien.",
+      step2: "Wählen Sie Daten verwalten, um die Dateien hinter diesem Schalter zu sehen. Chats, die einem Arbeitsbereich zugeordnet sind, öffnen diesen, dessen Reiter Dateien das Dateisystem zeigt; Chats ohne Arbeitsbereich durchsuchen die für den Chat in diesem Browser gespeicherten Dateien.",
       step3: "Laden Sie die Dateien des Chats hier hoch, erstellen, benennen Sie sie um, laden Sie sie herunter oder löschen Sie sie.",
     },
     workspace_clone: {
@@ -467,17 +467,17 @@ export default {
     },
     workspace_upload: {
       title: "Dateien in einen Arbeitsbereich hochladen",
-      step1: "Öffnen Sie einen Arbeitsbereich und wählen Sie Datei hochladen in der Dateiansicht; der Browser fragt nach einer Datei von diesem Computer.",
+      step1: "Öffnen Sie einen Arbeitsbereich, wählen Sie rechts den Reiter Dateien und dort Datei hochladen; der Browser fragt nach einer Datei von diesem Computer.",
       step2: "Die hochgeladene Datei erscheint in dem Ordner, den Sie gerade ansehen.",
     },
     workspace_multiselect: {
-      title: "Mehrere Dateien gleichzeitig auswählen",
-      step1: "Neben jeder Datei und jedem Ordner, den Sie ändern können, erscheint ein Kontrollkästchen. Markieren Sie die gewünschten Einträge.",
-      step2: "Alle auswählen in der Werkzeugleiste markiert jeden Eintrag im aktuellen Ordner; verschieben oder löschen Sie die Auswahl über die Leiste über der Liste.",
+      title: "Eine Datei aus einem Arbeitsbereich entfernen",
+      step1: "Der Reiter Dateien rechts listet alles, was der Arbeitsbereich speichert — jede Zeile mit ihrer Herkunft.",
+      step2: "Jede Zeile endet mit einem Papierkorb; er entfernt diese Datei oder diesen Ordner nach einer Bestätigung.",
     },
     arcana_filesystem: {
       title: "Ein Arcana-Dateisystem verwenden",
-      step1: "Jeder Arbeitsbereich enthält bereits eine Arcana-Dateisystem-Quelle.",
+      step1: "Jeder Arbeitsbereich enthält bereits eine Arcana-Dateisystem-Quelle, aufgeführt im Reiter Dateien.",
       step2: "Jede Arcana erscheint als Ordner; öffnen Sie einen, um seine Dateien zu durchsuchen.",
     },
     attach_from_workspace: {
@@ -2183,6 +2183,12 @@ export default {
     tab_preview: "Vorschau",
     tab_agents: "Agenten",
     root_hint: "Dateien und Ordner in diesem Arbeitsbereich.",
+    chat_count_one: "{{count}} Chat",
+    chat_count_other: "{{count}} Chats",
+    empty_title: "Noch keine Chats in diesem Arbeitsbereich",
+    empty_body: "Schreiben Sie unten eine Eingabe, um den ersten Chat zu starten.",
+    composer_placeholder: "Fragen Sie alles — startet einen neuen Chat in {{name}}",
+    files_tab: "Dateien",
     storage: "Speicher",
     available_storage: "Verfügbarer Speicher",
     add_folder: "Ordner hinzufügen",

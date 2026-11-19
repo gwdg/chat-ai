@@ -127,7 +127,7 @@ export default function WorkspaceRootBrowser({
             </button>
           </span>
         ))}
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-1">
           {toolbarInfo}
           {selectable && onSelectAll && selectableEntries.length > 0 && (
             <label

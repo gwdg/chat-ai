@@ -437,15 +437,15 @@ export default {
   feature_guide: {
     workspace_overview: {
       title: "Workspaces",
-      step1: "Create a workspace or open an existing one from the sidebar; it already includes browser storage and an Arcana filesystem source.",
-      step2: "Pick a source on the left. Device sources carry a \"This device only\" badge.",
-      step3: "Browse the files here. Drag a file onto another source to copy it; hold Alt for a move.",
+      step1: "The right-hand panel belongs to the workspace: What's new opens first, Files shows what the workspace stores, and Agents shows how it runs.",
+      step2: "Add a source — browser storage, this device, an Arcana, a repository or an MCP server — and it joins the workspace tree.",
+      step3: "Browse the tree in the Files tab. The pill on each row says where that entry lives: browser, device, arcana, MCP or agent.",
       step4: "Choose how this workspace runs its agent: in the browser, through an OpenCode server, or with the Remote agent.",
     },
     manage_chat_data: {
       title: "Manage the files of a chat",
       step1: "Access storage is on by default and sits at the top of the Workspace menu. Switch it off to give the model no file tools at all; attachments are still included in the message where possible.",
-      step2: "Choose Manage data to see the files behind this switch. A chat attached to a workspace opens that workspace, where the file system is shown; a chat without a workspace browses the files kept in this browser for the chat.",
+      step2: "Choose Manage data to see the files behind this switch. A chat attached to a workspace opens that workspace, whose Files tab shows the file system; a chat without a workspace browses the files kept in this browser for the chat.",
       step3: "Upload, create, rename, download and delete the chat's files here.",
     },
     workspace_clone: {
@@ -454,17 +454,17 @@ export default {
     },
     workspace_upload: {
       title: "Upload files into a workspace",
-      step1: "Open a workspace and choose Upload file in the file browser; the browser asks for a file from this computer.",
+      step1: "Open a workspace, pick the Files tab on the right and choose Upload file; the browser asks for a file from this computer.",
       step2: "The uploaded file appears in the folder you are viewing.",
     },
     workspace_multiselect: {
-      title: "Select several files at once",
-      step1: "A checkbox appears next to each file and folder you can change. Tick the ones you want to act on.",
-      step2: "Select all in the toolbar ticks every entry in the current folder; move or delete the selection from the bar above the list.",
+      title: "Remove a file from a workspace",
+      step1: "The Files tab on the right lists everything the workspace stores, each row with its origin pill.",
+      step2: "Every row ends with a trash button; it removes that file or folder after a confirmation.",
     },
     arcana_filesystem: {
       title: "Use an Arcana filesystem",
-      step1: "Every workspace already includes an Arcana filesystem source.",
+      step1: "Every workspace already includes an Arcana filesystem source, listed in the Files tab.",
       step2: "Each Arcana appears as a folder; open one to browse its files.",
     },
     attach_from_workspace: {
@@ -2329,6 +2329,12 @@ export default {
     create_error: "Could not create the workspace",
     not_found: "Workspace not found",
     subtitle: "Files from this device and from Arcana, in one place.",
+    chat_count_one: "{{count}} chat",
+    chat_count_other: "{{count}} chats",
+    empty_title: "No chats in this workspace yet",
+    empty_body: "Write a prompt below to start the first chat here.",
+    composer_placeholder: "Ask anything — starts a new chat in {{name}}",
+    files_tab: "Files",
     storage_browser_private: "Private to this workspace",
     repositories: "Repositories",
     repositories_count_one: "{{count}} repository",
