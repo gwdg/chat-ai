@@ -2,6 +2,11 @@
 import { randomUUID } from "crypto";
 import { createInterface } from "readline";
 import WebSocket from "ws";
+import {
+  RESOURCE_TEMPLATE,
+  listWorkspaceResources,
+  readWorkspaceResource,
+} from "./bridge-resources.mjs";
 
 const url = process.env.CHAT_AI_BRIDGE_URL || "";
 const token = process.env.CHAT_AI_BRIDGE_TOKEN || "";
@@ -209,13 +214,34 @@ const handle = async (message) => {
   if (method === "initialize") {
     return rpcResult(id, {
       protocolVersion: "2025-03-26",
-      capabilities: { tools: {} },
+      capabilities: {
+        tools: {},
+        // Workspace files are resources, so a client can read one without a
+        // tool call. No subscriptions: the browser does not push changes.
+        resources: { subscribe: false, listChanged: false },
+      },
       serverInfo: { name: "chat-ai-bridge-sidecar", version: "1.0.0" },
     });
   }
   if (method === "notifications/initialized") return;
   if (method === "ping") return rpcResult(id, {});
   if (method === "tools/list") return rpcResult(id, { tools });
+  if (method === "resources/list") {
+    return rpcResult(id, await listWorkspaceResources(callBridge));
+  }
+  if (method === "resources/templates/list") {
+    return rpcResult(id, { resourceTemplates: [RESOURCE_TEMPLATE] });
+  }
+  if (method === "resources/read") {
+    const answer = await readWorkspaceResource(callBridge, message.params?.uri);
+    if (answer.error !== undefined) return rpcError(id, -32602, answer.error);
+    return rpcResult(id, answer);
+  }
+  if (method === "prompts/list") {
+    // No prompts are served; an empty list is the protocol's answer, and an
+    // error here makes a client report a broken server.
+    return rpcResult(id, { prompts: [] });
+  }
   if (method === "tools/call") {
     const name = String(message.params?.name ?? "");
     if (!tools.some((tool) => tool.name === name)) {

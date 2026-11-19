@@ -1,6 +1,11 @@
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "crypto";
 import cors from "cors";
 import { WebSocketServer } from "ws";
+import {
+  RESOURCE_TEMPLATE,
+  listWorkspaceResources,
+  readWorkspaceResource,
+} from "./bridge-resources.mjs";
 
 const SESSION_TTL_MS = 15 * 60 * 1000;
 const MAX_SESSIONS = 32;
@@ -364,10 +369,18 @@ export const registerBridge = ({
     const fail = (code, message) =>
       res.status(200).json({ jsonrpc: "2.0", id, error: { code, message } });
 
+    const browserCall = (name, args) =>
+      callBridgeBrowser(session, name, args);
+
     if (method === "initialize") {
       return respond({
         protocolVersion: "2025-03-26",
-        capabilities: { tools: {} },
+        capabilities: {
+          tools: {},
+          // Workspace files are resources, so a client can read one without a
+          // tool call. No subscriptions: the browser does not push changes.
+          resources: { subscribe: false, listChanged: false },
+        },
         serverInfo: { name: "chat-ai-bridge", version: "1.0.0" },
       });
     }
@@ -379,6 +392,22 @@ export const registerBridge = ({
     }
     if (method === "tools/list") {
       return respond({ tools: bridgeToolDefinitions(session) });
+    }
+    if (method === "resources/list") {
+      return respond(await listWorkspaceResources(browserCall));
+    }
+    if (method === "resources/templates/list") {
+      return respond({ resourceTemplates: [RESOURCE_TEMPLATE] });
+    }
+    if (method === "resources/read") {
+      const answer = await readWorkspaceResource(browserCall, rpc.params?.uri);
+      if (answer.error !== undefined) return fail(-32602, answer.error);
+      return respond(answer);
+    }
+    if (method === "prompts/list") {
+      // No prompts are served; an empty list is the protocol's answer, and an
+      // error here makes a client report a broken server.
+      return respond({ prompts: [] });
     }
     if (method === "tools/call") {
       const name = String(rpc.params?.name ?? "");

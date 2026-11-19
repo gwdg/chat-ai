@@ -179,6 +179,43 @@ new base. Verify the entry reads `connected` in `/api/mcp`; a `connected` entry
 exposes `workspace_list`, `workspace_stat` and `workspace_read`, plus the write
 and MCP tools when those switches are on.
 
+### 4.3 MCP resources
+
+Tools let the model *ask* for a path. MCP resources are the other half of the
+protocol: a client enumerates what exists and reads one entry without a tool
+call, and an agent UI's MCP panel lists them.
+
+Both hosts serve the workspace as resources, over the same two browser calls the
+tools use (`workspace_list`, `workspace_read`), so no second transport exists and
+data still leaves the browser only as the answer to an explicit read:
+
+| Method | Answer |
+| --- | --- |
+| `initialize` | `capabilities.resources = {subscribe: false, listChanged: false}` (plus `tools`) |
+| `resources/list` | every file under the workspace root, `chatai-workspace:///<path>` |
+| `resources/templates/list` | `chatai-workspace:///{path}`, for a path the bounded walk did not reach |
+| `resources/read` | `{contents: [{uri, mimeType, text \| blob}]}`; text is `text`, binary is base64 `blob` |
+| `prompts/list` | `{prompts: []}` — an empty list, never an error |
+
+- **Bounds.** One `resources/list` walks at most 40 directories to depth 3 and
+  returns at most 200 files, because every step is a browser round trip. A folder
+  the browser refuses (permission, unavailable source) is skipped rather than
+  failing the listing.
+- **The scheme is not `file://`.** A resource path is inside the user's workspace,
+  not on the agent host, so a client must not open it locally. The uri has an
+  empty authority (`chatai-workspace:///docs/a.md`) so the first segment is not
+  parsed as a host; `path_for`/`resourcePath` also accept `//segment/path`.
+- **A refused read is a protocol error** (`-32602`), not an empty resource: a file
+  the bridge will not return (over 2 MB) has no other way to say so.
+- **One source of truth per language.** `bridge_resources.py` serves both Python
+  transports (sidecar and `mcpUrl`), `back/bridge-resources.mjs` serves both JS
+  ones (`back/bridge-sidecar.mjs` and `back/bridge.mjs`). Change one, change the
+  other; `test_bridge_resources.py` and `test-bridge-resources.mjs` pin the same
+  cases.
+- **A restart is required.** The capability is negotiated in `initialize`, so an
+  agent page loaded against a pre-upgrade service still shows "no MCP resources"
+  until the service is restarted (`make start`) and the bridge reconnected.
+
 ## 5. Not implemented
 
 ### 5.1 Route `/agents/*` at the gateway
@@ -251,9 +288,11 @@ leg's status is visible.
 | `front/src/apis/agentTunnel.js` | carries an `/agents` call in a `saia-agent` completion |
 | `back/bridge-sidecar.mjs` | stdio MCP sidecar for **direct** agents (WebSocket + Bearer) |
 | `back/bridge.mjs` | `/bridge/*` for direct agents |
+| `back/bridge-resources.mjs` | MCP resources for both JS hosts (sidecar + `mcpUrl`) |
 | `agent-service/src/saia_agent_service/bridge.py` | `/agents/<id>/bridge/*`, `_agent_base`, `_sidecar_command`, both legs |
 | `agent-service/src/saia_agent_service/bridge_tools.py` | the one tool list both transports offer |
+| `agent-service/src/saia_agent_service/bridge_resources.py` | MCP resources for both Python transports (§4.3) |
 | `agent-service/src/saia_agent_service/bridge_sidecar.py` | the stdio MCP server a service-managed agent spawns |
-| `agent-service/tests/test_bridge_sidecar.py` | runs that file as a subprocess (tools, offline, no `PYTHONPATH`) |
+| `agent-service/tests/test_bridge_sidecar.py` | runs that file as a subprocess (tools, resources, offline, no `PYTHONPATH`) |
 | `agent-service/src/saia_agent_service/tunnel.py` | replays a carried request, restores the outer `scheme`/`server` |
 | `backends.example.yml` (`agent-service`) | backend kinds that decide which address is reachable |

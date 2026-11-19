@@ -1514,6 +1514,13 @@ write toggle is on, `workspace_write`, `workspace_mkdir`, `workspace_remove`. Lo
 exposed as `mcp_list_servers`, `mcp_list_tools`, and `mcp_call` only when its toggle is on; headers
 and tokens stay in the browser. Workspace operations go through `WorkspaceAgentVfs`, so provider
 capabilities, source/mount read-only flags, and IndexedDB/local/Arcana behavior stay authoritative.
+It also serves MCP **resources** (`resources/list`, `resources/templates/list`, `resources/read`, and
+an empty `prompts/list`): the attached workspace enumerated as `chatai-workspace:///<path>` over the
+same `workspace_list`/`workspace_read` calls, bounded to 40 directories / depth 3 / 200 files, text
+as `text` and binary as base64 `blob`. Answering `resources/list` with an error is what an MCP panel
+shows as "no MCP resources", so neither host may. The logic is `bridge_resources.py` (both Python
+transports) and `back/bridge-resources.mjs` (both JS ones) — change them together, and do not add a
+resource that reads anything the user did not attach.
 The agent page's workspace access is an explicit switch (`bridgeEnabled`) in the composer's
 workspace popover (`components/Agent/AgentWorkspaceButton.jsx`, through
 `agents/agentBridgeAccess.js`); the left file panel is only the file browser and shows no bridge

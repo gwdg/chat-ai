@@ -339,3 +339,114 @@ test("an expired session is rejected", async () => {
     await bridge.close();
   }
 });
+
+const mcp = (bridge, session, body) =>
+  fetch(`${bridge.base}/bridge/mcp/${session.id}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.token}`,
+    },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, ...body }),
+  }).then((response) => response.json());
+
+test("the MCP endpoint advertises resources and answers the empty lists", async () => {
+  const bridge = await startBridge({ secret: "correct-secret" });
+  try {
+    const created = await createSession(bridge.base, {
+      "x-bridge-key": "correct-secret",
+    });
+    const session = await created.json();
+
+    // An error here is what a client's MCP panel shows as a broken server.
+    const initialized = await mcp(bridge, session, { method: "initialize" });
+    assert.deepEqual(initialized.result.capabilities.resources, {
+      subscribe: false,
+      listChanged: false,
+    });
+
+    const templates = await mcp(bridge, session, {
+      method: "resources/templates/list",
+    });
+    assert.equal(
+      templates.result.resourceTemplates[0].uriTemplate,
+      "chatai-workspace:///{path}",
+    );
+
+    // No prompts are served, but the answer is a list, not an error.
+    const prompts = await mcp(bridge, session, { method: "prompts/list" });
+    assert.deepEqual(prompts.result, { prompts: [] });
+
+    // A uri that is not a workspace path is refused without a browser call.
+    const foreign = await mcp(bridge, session, {
+      method: "resources/read",
+      params: { uri: "file:///etc/passwd" },
+    });
+    assert.equal(foreign.error.code, -32602);
+  } finally {
+    await bridge.close();
+  }
+});
+
+test("resources/list and resources/read relay to the connected browser", async () => {
+  const bridge = await startBridge({ secret: "correct-secret" });
+  try {
+    const created = await createSession(bridge.base, {
+      "x-bridge-key": "correct-secret",
+    });
+    const session = await created.json();
+    const socket = new WebSocket(session.wsUrl, [
+      "bridge.v1",
+      `bridge-token.${session.token}`,
+    ]);
+    // The bridge sends {"type":"ready"} on attach; wait for it before asking.
+    await once(socket, "message");
+
+    const asked = [];
+    socket.on("message", (data) => {
+      const message = JSON.parse(String(data));
+      if (message.type !== "tool_call") return;
+      asked.push(`${message.name}:${message.arguments.path}`);
+      const path = message.arguments.path;
+      let result = [];
+      if (message.name === "workspace_list" && path === "/") {
+        result = [
+          { name: "notes.md", dir: false },
+          { name: "docs", dir: true },
+        ];
+      } else if (message.name === "workspace_list") {
+        result = [{ name: "guide.md", dir: false }];
+      } else if (message.name === "workspace_read") {
+        result = { path, size: 5, content: "hello" };
+      }
+      socket.send(
+        JSON.stringify({
+          type: "tool_result",
+          requestId: message.requestId,
+          ok: true,
+          result,
+        }),
+      );
+    });
+
+    const listed = await mcp(bridge, session, { method: "resources/list" });
+    assert.deepEqual(
+      listed.result.resources.map((item) => item.uri),
+      ["chatai-workspace:///notes.md", "chatai-workspace:///docs/guide.md"],
+    );
+    assert.equal(listed.result.resources[0].mimeType, "text/markdown");
+
+    const read = await mcp(bridge, session, {
+      method: "resources/read",
+      params: { uri: "chatai-workspace:///notes.md" },
+    });
+    assert.equal(read.result.contents[0].text, "hello");
+    assert.equal(read.result.contents[0].mimeType, "text/markdown");
+    assert.ok(asked.includes("workspace_read:/notes.md"));
+
+    socket.close();
+    await once(socket, "close");
+  } finally {
+    await bridge.close();
+  }
+});

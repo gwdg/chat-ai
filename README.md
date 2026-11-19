@@ -485,6 +485,9 @@ port:
   pair — front on `:8080`, `back` on `:8081` — is *cross-origin*, because the port is part of the
   origin, so name the app origin in `corsOrigins` (a string or a JSON array) in `back.json` or the
   browser refuses the session request.
+- The MCP endpoint serves the attached workspace as tools **and** as resources
+  (`chatai-workspace:///<path>`, text or base64 `blob`), so an agent UI's MCP panel lists the files
+  instead of reporting "no MCP resources". The same is true of the SAIA agent service.
 
 Agents managed by a SAIA agent service use `/agents/<id>/bridge` on the app origin instead, which is
 served by that service rather than by `back`.
