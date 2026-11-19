@@ -1430,7 +1430,12 @@ Every agent carries `createdAt`, `updatedAt` and an optional `pinned` flag. `loa
 timestamps of agents created before they existed and persists them once. `updateAgent` bumps
 `updatedAt` for metadata changes but not for session tracking (`sessionId`, `sessionSummaries`);
 `setAgentPinned` adds the agent to the top-level pinned section; `AgentList` still lists it. The agent
-conversation header shows both timestamps. A custom per-agent
+conversation header shows both timestamps. The store also follows the shared `chatai.agents` key
+through a `storage` listener (a `key: null` clear counts), because a second tab otherwise keeps a
+stale in-memory list: `WorkspacePage` prunes links for every agent id it cannot see, so a tab opened
+before an agent was added would delete that agent's `workspace_agents` /
+`workspace_agent_sessions` rows. For the same reason `removeAgent` deletes those links itself
+(`removeWorkspaceAgentLinks`) instead of waiting for a workspace page to prune them. A custom per-agent
 password is persisted with it; agents left on the configured default re-read that
 password from `front.json` on load. `modules.agents: false` in
 `front.json` sets `VITE_MODULE_AGENTS=false`, hiding the sidebar section and its route. Removing an

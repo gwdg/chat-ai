@@ -100,6 +100,21 @@ const emit = () => {
   for (const listener of listeners) listener();
 };
 
+// localStorage is shared by every tab, but this module keeps its own copy. Without this
+// listener a second tab never learns about an agent that the first tab added: the
+// workspace page prunes links for every agent id it does not know, so it would delete
+// that agent's `workspace_agents` / `workspace_agent_sessions` rows on its next render.
+const onStorage = (event) => {
+  // A cleared localStorage reports `key: null`; both mean "re-read the store".
+  if (event.key !== STORAGE_KEY && event.key !== null) return;
+  agents = load();
+  emit();
+};
+
+if (typeof window !== "undefined") {
+  window.addEventListener("storage", onStorage);
+}
+
 export const getAgents = () => agents;
 
 export const getAgent = (id) => agents.find((agent) => agent.id === id);
@@ -144,11 +159,16 @@ export const removeAgent = (id) => {
   clearAgentFormHistory(id);
   clearAgentPermissionPolicies(id);
   clearAgentShellHistory(id);
-  // Imported lazily: the DB module pulls in the workspace/agent layer.
+  // Imported lazily: the DB module pulls in the workspace/agent layer. The workspace
+  // links go with the agent here rather than waiting for a workspace page to prune
+  // them, so removing an agent on any page detaches its sessions immediately.
   void import("../db/agentSessionCache")
     .then(({ removeAgentSessionCacheForAgent }) =>
       removeAgentSessionCacheForAgent(id),
     )
+    .catch(() => {});
+  void import("../db/workspaceDb")
+    .then(({ removeWorkspaceAgentLinks }) => removeWorkspaceAgentLinks(id))
     .catch(() => {});
   persist();
   emit();
