@@ -333,9 +333,10 @@ describe("ToolsContainer list layout", () => {
     expect(rows.at(-1).textContent).toContain("MCP Servers");
 
     const children = [...rows.at(-2).firstElementChild.children];
-    expect(children.at(-1).getAttribute("class")).toContain(
-      "lucide-chevron-right",
-    );
+    expect(children.at(-1).tagName).toBe("BUTTON");
+    expect(
+      children.at(-1).querySelector("svg.lucide-chevron-right"),
+    ).toBeTruthy();
     expect(children.at(-2).getAttribute("role")).toBe("switch");
   });
 
@@ -350,6 +351,22 @@ describe("ToolsContainer list layout", () => {
         "PRIVACY WARNING: Your chat history may be sent to a search engine (e.g., Google)",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("opens the tool page when the arrow itself is clicked", () => {
+    render(
+      <ToolsContainer
+        localState={stateWith({ arcana: true })}
+        setLocalState={vi.fn()}
+      />,
+    );
+
+    const arrow = [
+      ...document.querySelectorAll('[data-guide="tools-grid"] svg.lucide-chevron-right'),
+    ][0].closest("button");
+    fireEvent.click(arrow);
+
+    expect(screen.getByPlaceholderText("Arcana id")).toBeInTheDocument();
   });
 
   it("lists each tool as a row whose switch shows whether it is on", () => {

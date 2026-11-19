@@ -444,10 +444,15 @@ export default function ToolsContainer({ localState, setLocalState }) {
                       )}
                     </button>
                     {toolSwitch({ active, onToggle, disabled, label })}
-                    <ChevronRight
-                      className="h-4 w-4 shrink-0 text-base-content/50"
+                    <button
+                      type="button"
+                      onClick={() => setDetailKey(key)}
+                      tabIndex={-1}
                       aria-hidden="true"
-                    />
+                      className="shrink-0 cursor-pointer rounded p-0.5 text-base-content/50 hover:text-base-content"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
                   </div>
                 ) : (
                   <button
