@@ -4,10 +4,14 @@ import { useTranslation } from "react-i18next";
 
 import PublicRoute from "./Route/PublicRoute";
 import { BrowserRouter } from "react-router";
+import AgentConflictWatcher from "./components/Others/AgentConflictWatcher";
 import { ToastProvider } from "./components/Others/ToastProvider";
 import { ModalProvider } from "./modals/ModalContext";
+import { FilePreviewProvider } from "./context/FilePreviewContext";
 import { FeatureGuideProvider } from "./context/FeatureGuideContext";
 import { requestPersistentStorage } from "./utils/storagePersistence";
+import { BrandProvider } from "./config/BrandProvider";
+import { TabTitleManager } from "./hooks/useTabTitle";
 
 function App() {
   const { i18n } = useTranslation();
@@ -42,12 +46,18 @@ function App() {
   // Render the PublicRoute component
   return (
     <BrowserRouter key={i18n.language}>
-      <ToastProvider/>
-      <ModalProvider>
-        <FeatureGuideProvider>
-          <PublicRoute />
-        </FeatureGuideProvider>
-      </ModalProvider>
+      <BrandProvider>
+        <TabTitleManager />
+        <ToastProvider/>
+        <AgentConflictWatcher />
+        <ModalProvider>
+          <FilePreviewProvider>
+            <FeatureGuideProvider>
+              <PublicRoute />
+            </FeatureGuideProvider>
+          </FilePreviewProvider>
+        </ModalProvider>
+      </BrandProvider>
     </BrowserRouter>
   );
 }

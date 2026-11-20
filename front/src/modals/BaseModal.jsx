@@ -23,6 +23,7 @@ export default function BaseModal({
   maxWidth = "max-w-md",
   isForced = false,
   minimal = false,
+  titleValues,
   contentClassName = "p-5 pt-0 flex flex-col gap-0",
 }) {
 
@@ -64,7 +65,7 @@ export default function BaseModal({
                 {/* Header */}
                 <div className="flex justify-between items-center p-5 pb-3">
                   <Dialog.Title className="font-semibold text-sm text-accent">
-                    <Trans i18nKey={titleKey} />
+                    <Trans i18nKey={titleKey} values={titleValues} />
                   </Dialog.Title>
 
                   {/* Close button */}

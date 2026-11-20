@@ -2,7 +2,7 @@ import { Trans, useTranslation } from "react-i18next";
 import { useAttachments } from "../../hooks/useAttachments";
 import MiniAudioButton from "./MiniAudioButton";
 import { useState } from "react";
-import { useModal } from "../../modals/ModalContext";
+import { useFilePreview } from "../../context/FilePreviewContext";
 import {
   useFileMeta,
   useFileBase64,
@@ -13,6 +13,7 @@ import { WarningAltFilled, CheckmarkFilled, Close, Download, Video, DocumentBlan
 import { useSelector } from "react-redux";
 import { processFile } from "../../apis/processFile";
 import { getFileType } from "../../utils/attachments";
+import { downloadBlob } from "../../utils/download";
 import { modelSupportsFileType } from "../../utils/modelCapabilities";
 import {
   canConvertDocumentLocally,
@@ -32,7 +33,7 @@ export default function Attachment({
   inAssistant = false,
   suppressUnsupportedWarning = false,
 }) {
-  const { openModal } = useModal();
+  const { toggleFilePreview } = useFilePreview();
   const { t } = useTranslation();
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -76,16 +77,13 @@ export default function Attachment({
   const handleDownload = async (event) => {
     event.stopPropagation();
     try {
-      const bytes = await loadFile(attachment.fileId);
-      const blob = new Blob([bytes], { type: file.type || "application/octet-stream" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = file.name || "download";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 300);
+      // A missing row yields no file; saving it would download a blob without the content.
+      const fileToSave = await loadFile(attachment.fileId);
+      if (!fileToSave) {
+        notifyError(t("file_preview.save_failed"));
+        return;
+      }
+      downloadBlob(fileToSave, fileToSave.name || file.name || "download");
     } catch (error) {
       console.error("Download failed:", error);
       notifyError(t("file_preview.save_failed"));
@@ -232,7 +230,7 @@ export default function Attachment({
       data-guide={inHistory ? undefined : "attachment-card"}
       className={`cursor-pointer flex-shrink-0 w-[200px] h-[80px] ${displayInfo.bgColor} ${displayInfo.hoverColor} ${displayInfo.borderColor} border rounded-lg transition-all duration-200 overflow-hidden shadow-sm hover:shadow-md`}
       onClick={() => {
-        openModal("preview", { previewFile: file, fileId: attachment.fileId });
+        toggleFilePreview({ fileId: attachment.fileId, name: file.name });
       }}
     >
       {canProcess ? (

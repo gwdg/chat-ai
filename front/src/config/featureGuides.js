@@ -6,22 +6,360 @@ import {
   hasAttachmentCard,
   isToolActive,
   mcpConfigured,
+  openAgentMenu,
+  openAgentRecovery,
+  openChatWorkspaces,
   openConversationMenu,
   openConversationSettings,
-  openLocalTools,
   openSearch,
   openSortMenu,
   openTools,
   openTopicCreate,
   openTopicMenu,
+  openWorkspaceMenu,
+  openWorkspaceAgents,
+  openWorkspaceFiles,
   openUserSettings,
   searchHasQuery,
   selectSettingsTab,
   toolsAreEnabled,
   topicNameEntered,
 } from "./featureGuideActions.js";
+import { isAgentsEnabled } from "../utils/modules.js";
 
 export const featureGuides = {
+  workspace_overview: {
+    titleKey: "feature_guide.workspace_overview.title",
+    prompt:
+      "Open a workspace from the sidebar. A workspace is the home of the chats you run there: a prompt box starts a new chat, the list holds the ones already in it, and the right-hand panel shows what's new, the files the workspace stores, and the agent it runs.",
+    keywords: ["workspace", "workspaces", "files", "browser storage", "local folder", "arcana files", "mcp files"],
+    steps: [
+      {
+        target: '[data-guide="meta-tab-files"]',
+        textKey: "feature_guide.workspace_overview.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="workspace-add-source"]',
+        textKey: "feature_guide.workspace_overview.step2",
+        prepare: openWorkspaceFiles,
+      },
+      {
+        target: '[data-guide="workspace-files"]',
+        textKey: "feature_guide.workspace_overview.step3",
+        prepare: openWorkspaceFiles,
+      },
+      {
+        target: '[data-guide="workspace-agent"]',
+        textKey: "feature_guide.workspace_overview.step4",
+        prepare: openWorkspaceAgents,
+      },
+    ],
+  },
+  manage_chat_data: {
+    titleKey: "feature_guide.manage_chat_data.title",
+    prompt:
+      "Open the Workspace menu in the prompt box of a chat that belongs to a workspace. Access storage sits at the top: it is on by default and with it off the model gets no file tools. Manage Workspace is where this chat keeps its files: with one workspace it opens that workspace's editor — the same dialog as Create workspace, with its storage locations, its name, icon and colour, and Apply Changes — and with several the chevron turns the menu into a list of the attached workspaces, each one opening the same editor, with a back arrow to return to the settings. A chat that belongs to no workspace has no Workspace menu at all; attach it from the workspace itself.",
+    keywords: [
+      "manage workspace",
+      "manage data",
+      "access storage",
+      "chat files",
+      "browser storage",
+      "opfs",
+      "file system",
+      "storage off",
+    ],
+    steps: [
+      {
+        target: '[data-guide="access-storage"]',
+        textKey: "feature_guide.manage_chat_data.step1",
+        prepare: openChatWorkspaces,
+      },
+      {
+        target: '[data-guide="manage-workspace"]',
+        textKey: "feature_guide.manage_chat_data.step2",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
+  workspace_edit_storage: {
+    titleKey: "feature_guide.workspace_edit_storage.title",
+    prompt:
+      "Manage a workspace that already exists. Open the workspace's options menu in the sidebar and choose Manage Workspace: it is Create workspace with the fields filled in, so you rename the workspace, change its icon and colour, and work on the same storage locations rail — browser storage, this device, Arcanas, the SAIA account folder and MCP servers — mount a folder, or add a local folder, a Git repository or an MCP server.",
+    keywords: [
+      "edit storage",
+      "workspace storage",
+      "add folder to workspace",
+      "add source to workspace",
+      "workspace sources",
+      "mount folder later",
+    ],
+    steps: [
+      {
+        target: '[data-guide="workspace-menu"]',
+        textKey: "feature_guide.workspace_edit_storage.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="workspace-manage"]',
+        prepare: openWorkspaceMenu,
+        textKey: "feature_guide.workspace_edit_storage.step2",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
+  workspace_clone: {
+    titleKey: "feature_guide.workspace_clone.title",
+    prompt:
+      "Create a workspace from a public Git repository. Choose Clone Git repository, select a local OpenCode agent for the real git clone, and pick a writable storage target. If the repository contains chat-ai-manifest.json, review the confirmation summary before any agent or chats are created.",
+    keywords: ["clone repository", "import repository", "github workspace", "workspace manifest", "git clone", "chat-ai-manifest"],
+    steps: [
+      {
+        target: '[data-guide="workspace-add-source"]',
+        textKey: "feature_guide.workspace_clone.step1",
+        completeOnTargetClick: true,
+        prepare: openWorkspaceFiles,
+      },
+    ],
+  },
+  workspace_upload: {
+    titleKey: "feature_guide.workspace_upload.title",
+    prompt:
+      "Upload a file from your computer into a workspace. Open a workspace and use Add file in the file browser; it writes into the folder you are viewing.",
+    keywords: ["upload file", "workspace upload", "add file to workspace", "local file"],
+    steps: [
+      {
+        target: '[data-guide="workspace-upload"]',
+        textKey: "feature_guide.workspace_upload.step1",
+        completeOnTargetClick: true,
+        prepare: openWorkspaceFiles,
+      },
+      {
+        target: '[data-guide="workspace-files"]',
+        textKey: "feature_guide.workspace_upload.step2",
+        prepare: openWorkspaceFiles,
+      },
+    ],
+  },
+  workspace_multiselect: {
+    titleKey: "feature_guide.workspace_multiselect.title",
+    prompt:
+      "Select several files or folders in a workspace browser to delete or move them at once. Tick the checkbox that appears next to each entry, or use Select all in the toolbar, then move or delete the whole selection from the bar above the list.",
+    keywords: [
+      "delete workspace file",
+      "remove file from workspace",
+      "delete workspace folder",
+      "trash workspace file",
+    ],
+    steps: [
+      {
+        target: '[data-guide="meta-tab-files"]',
+        textKey: "feature_guide.workspace_multiselect.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="workspace-files"]',
+        textKey: "feature_guide.workspace_multiselect.step2",
+        prepare: openWorkspaceFiles,
+      },
+    ],
+  },
+  arcana_filesystem: {
+    titleKey: "feature_guide.arcana_filesystem.title",
+    prompt:
+      "Every workspace includes an Arcana filesystem source. It lists every Arcana as a folder, and each collection's files inside it.",
+    keywords: ["arcana filesystem", "arcana files", "browse arcanas", "arcana folder"],
+    steps: [
+      {
+        target: '[data-guide="meta-tab-files"]',
+        textKey: "feature_guide.arcana_filesystem.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="workspace-files"]',
+        textKey: "feature_guide.arcana_filesystem.step2",
+        prepare: openWorkspaceFiles,
+      },
+    ],
+  },
+  workspace_saia_fs: {
+    titleKey: "feature_guide.workspace_saia_fs.title",
+    prompt:
+      "Chat AI can show your SAIA account folder as a filesystem inside a workspace. It only appears while this deployment's saia-fs service answers its health check, which Chat AI runs when a workspace's storage opens. Open Create workspace: the Sources rail lists it next to browser storage, this device, Arcanas and MCP servers, and you can mount one of its folders into the workspace.",
+    keywords: [
+      "saia files",
+      "saia filesystem",
+      "account folder",
+      "saia-fs",
+      "workspace files",
+      "mount folder",
+    ],
+    steps: [
+      {
+        target: '[data-guide="workspace-add-source"]',
+        textKey: "feature_guide.workspace_saia_fs.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="workspace-source-saia-fs"]',
+        textKey: "feature_guide.workspace_saia_fs.step2",
+      },
+    ],
+  },
+  attach_from_workspace: {
+    titleKey: "feature_guide.attach_from_workspace.title",
+    prompt:
+      "Attach a file from a workspace to the current chat. Attach the chat to a workspace with the workspace button in the prompt box, then click the attach button and choose From workspace to pick a file from the tree.",
+    keywords: ["attach from workspace", "workspace file", "workspace attachment", "workspace tree"],
+    steps: [
+      {
+        target: '[data-guide="chat-workspaces"]',
+        textKey: "feature_guide.attach_from_workspace.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="attach-file"]',
+        textKey: "feature_guide.attach_from_workspace.step2",
+        check: hasAttachmentCard,
+      },
+      {
+        target: '[data-guide="send"]',
+        textKey: "feature_guide.attach_from_workspace.step3",
+        completeOnEvent: "message-complete",
+      },
+    ],
+  },
+  agent_recovery: {
+    titleKey: "feature_guide.agent_recovery.title",
+    prompt:
+      "Open the agent's tools from the composer. Exports fall back to the local cache when the agent server is unreachable, and Recovery can write the cached transcript into the instructions of a new session.",
+    keywords: [
+      "agent recovery",
+      "recover agent",
+      "cached agent history",
+      "restore agent session",
+      "agent offline",
+      "export cached history",
+    ],
+    steps: [
+      {
+        target: '[data-guide="agent-tools-button"]',
+        textKey: "feature_guide.agent_recovery.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="agent-recovery"]',
+        textKey: "feature_guide.agent_recovery.step2",
+        prepare: openAgentRecovery,
+      },
+      {
+        target: '[data-guide="agent-recovery-restore"]',
+        textKey: "feature_guide.agent_recovery.step3",
+      },
+    ],
+  },
+  remote_agents: {
+    titleKey: "feature_guide.remote_agents.title",
+    prompt:
+      "Spawn a remote agent from the Agents section in the sidebar. An agent runs either on the GWDG HPC agentic service, where you pick one of your HPC projects, or on an OpenCode server you connect with its URL and password. Expand an agent to switch between its sessions and subagent sessions, or use + to create a new session.",
+    keywords: ["agent", "agents", "remote agent", "hpc project", "gwdg infrastructure", "external opencode server", "agent session", "subagent", "new session"],
+    steps: [
+      {
+        target: '[data-guide="agents-spawn"]',
+        textKey: "feature_guide.remote_agents.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="agents-list"]',
+        textKey: "feature_guide.remote_agents.step2",
+      },
+      {
+        target: '[data-guide="agent-clear-history"]',
+        textKey: "feature_guide.remote_agents.step3",
+      },
+    ],
+  },
+  close_group_sessions: {
+    titleKey: "feature_guide.close_group_sessions.title",
+    prompt:
+      "Close every session of an agent inside one sidebar group, such as a workspace or “Unassigned sessions”. Running turns are interrupted first, and the action always asks for confirmation in a dialog.",
+    keywords: [
+      "close all sessions",
+      "close group sessions",
+      "stop agent sessions",
+      "close workspace sessions",
+      "close unassigned sessions",
+    ],
+    steps: [
+      {
+        target: '[data-guide="agents-list"]',
+        textKey: "feature_guide.close_group_sessions.step1",
+      },
+      {
+        target: '[data-guide="close-group-sessions"]',
+        textKey: "feature_guide.close_group_sessions.step2",
+      },
+    ],
+  },
+  session_workspaces: {
+    titleKey: "feature_guide.session_workspaces.title",
+    prompt:
+      "Move an agent session between workspaces by dragging its row onto another workspace group under the same expanded agent. The session is detached from the source workspace and attached to the target, which is the same move the session row's “…” menu offers. A session can also be attached from the workspace's own “…” menu.",
+    keywords: [
+      "move session",
+      "drag session",
+      "drag and drop session",
+      "session workspace",
+      "attach session",
+      "attach agent session",
+      "detach session",
+    ],
+    steps: [
+      {
+        target: '[data-guide="agents-list"]',
+        textKey: "feature_guide.session_workspaces.step1",
+      },
+      {
+        target: '[data-guide="agent-session-group"]',
+        textKey: "feature_guide.session_workspaces.step2",
+      },
+      {
+        target: '[data-guide="attach-agent-session-menu-item"]',
+        prepare: openWorkspaceMenu,
+        textKey: "feature_guide.session_workspaces.step3",
+      },
+    ],
+  },
+  agent_workspace_access: {
+    titleKey: "feature_guide.agent_workspace_access.title",
+    prompt:
+      "Open an agent, then open the workspace button next to its prompt box and switch on Agent workspace access. While it is on, Chat AI keeps a reverse proxy (the agent bridge) to the browser open, so the agent can list, read and optionally write the files of the workspace chosen there.",
+    keywords: [
+      "agent workspace access",
+      "agent bridge",
+      "workspace access",
+      "agent files",
+      "reverse proxy",
+      "allow writes",
+      "mcp tools",
+      "inject mcp",
+    ],
+    steps: [
+      {
+        target: '[data-guide="agent-files"]',
+        textKey: "feature_guide.agent_workspace_access.step1",
+      },
+      {
+        target: '[data-guide="agent-workspaces"]',
+        textKey: "feature_guide.agent_workspace_access.step2",
+      },
+      {
+        target: '[data-guide="agent-workspaces"]',
+        textKey: "feature_guide.agent_workspace_access.step3",
+      },
+    ],
+  },
   attach_media: {
     titleKey: "feature_guide.attach_media.title",
     prompt:
@@ -272,39 +610,20 @@ export const featureGuides = {
       },
     ],
   },
-  browser_storage: {
-    titleKey: "feature_guide.browser_storage.title",
-    prompt:
-      "Let the agent use this chat's browser workspace. Open Browser & local tools from the prompt box, then select Browser storage to allow reading and writing files.",
-    keywords: ["browser storage", "browser workspace", "opfs", "local files"],
-    steps: [
-      {
-        target: '[data-guide="local-tools"]',
-        textKey: "feature_guide.browser_storage.step1",
-        completeOnTargetClick: true,
-      },
-      {
-        target: '[data-guide="tool-browser_storage"]',
-        prepare: openLocalTools,
-        textKey: "feature_guide.browser_storage.step2",
-        check: () => isToolActive("browser_storage"),
-      },
-    ],
-  },
   image_analysis: {
     titleKey: "feature_guide.image_analysis.title",
     prompt:
-      "Analyze images with SAIA's Gemma vision model. Open Browser & local tools from the prompt box, then select Analyze images.",
+      "Analyze images with SAIA's Gemma vision model. Open GWDG Tools from the prompt box, then select Analyze images.",
     keywords: ["analyze image", "analyse image", "read image", "image text", "vision"],
     steps: [
       {
-        target: '[data-guide="local-tools"]',
+        target: '[data-guide="tools"]',
         textKey: "feature_guide.image_analysis.step1",
         completeOnTargetClick: true,
       },
       {
         target: '[data-guide="tool-image_analysis"]',
-        prepare: openLocalTools,
+        prepare: openTools,
         textKey: "feature_guide.image_analysis.step2",
         check: () => isToolActive("image_analysis"),
       },
@@ -335,28 +654,36 @@ export const featureGuides = {
       },
     ],
   },
-  arcana_v2: {
-    titleKey: "feature_guide.arcana_v2.title",
+  arcana_tools: {
+    titleKey: "feature_guide.arcana_tools.title",
     prompt:
-      "Use ArcanaV2 from GWDG Tools. Enable tools, then select ArcanaV2 so the assistant can inspect Arcana collections, manage their files and indexes, and handle sharing.",
-    keywords: ["arcana v2", "arcanav2", "arcana", "rag index", "sharing"],
+      "Use Arcana Tools from GWDG Tools. Enable tools, then select Arcana Tools so the assistant can inspect Arcana collections, manage their files and indexes, and handle sharing.",
+    keywords: [
+      "arcana tools",
+      "arcane tools",
+      "arcana v2",
+      "arcanav2",
+      "arcana",
+      "rag index",
+      "sharing",
+    ],
     steps: [
       {
         target: '[data-guide="tools"]',
-        textKey: "feature_guide.arcana_v2.step1",
+        textKey: "feature_guide.arcana_tools.step1",
         completeOnTargetClick: true,
       },
       {
         target: '[data-guide="tools-enable"]',
         prepare: openTools,
-        textKey: "feature_guide.arcana_v2.step2",
+        textKey: "feature_guide.arcana_tools.step2",
         check: toolsAreEnabled,
       },
       {
-        target: '[data-guide="tool-arcana_v2"]',
+        target: '[data-guide="tool-arcana_tools"]',
         prepare: ensureToolsEnabled,
-        textKey: "feature_guide.arcana_v2.step3",
-        check: () => isToolActive("arcana_v2"),
+        textKey: "feature_guide.arcana_tools.step3",
+        check: () => isToolActive("arcana_tools"),
       },
     ],
   },
@@ -380,38 +707,43 @@ export const featureGuides = {
   mcp_server: {
     titleKey: "feature_guide.mcp_server.title",
     prompt:
-      "Connect an MCP server. Open Tools, enable tools, select MCP Server, then enter the server configuration.",
+      "Configure an MCP server once in the sidebar's MCP Servers section, test the connection, then select the server for this chat under MCP Servers in GWDG Tools.",
     keywords: ["mcp", "mcp server", "model context protocol"],
     steps: [
       {
-        target: '[data-guide="tools"]',
+        target: '[data-guide="mcp-servers-add"]',
         textKey: "feature_guide.mcp_server.step1",
         completeOnTargetClick: true,
       },
       {
-        target: '[data-guide="tools-enable"]',
-        prepare: openTools,
-        textKey: "feature_guide.mcp_server.step2",
-        check: toolsAreEnabled,
-      },
-      {
-        target: '[data-guide="tool-mcp_remote"]',
-        prepare: ensureToolsEnabled,
-        textKey: "feature_guide.mcp_server.step3",
-        check: () => isToolActive("mcp_remote"),
+        target: '[data-guide="mcp-scan"]',
+        textKey: "feature_guide.mcp_server.scan",
       },
       {
         target: '[data-guide="mcp-input"]',
-        prepare: () => ensureTool("mcp_remote"),
-        textKey: "feature_guide.mcp_server.step4",
+        textKey: "feature_guide.mcp_server.step2",
         check: mcpConfigured,
+      },
+      {
+        target: '[data-guide="mcp-server-details"]',
+        textKey: "feature_guide.mcp_server.details",
+      },
+      {
+        target: '[data-guide="mcp-server-picker"]',
+        prepare: () => ensureTool("mcp"),
+        textKey: "feature_guide.mcp_server.step3",
+      },
+      {
+        target: '[data-guide="mcp-tool-policy"]',
+        prepare: () => selectSettingsTab("advanced"),
+        textKey: "feature_guide.mcp_server.policy",
       },
     ],
   },
   tools_overview: {
     titleKey: "feature_guide.tools_overview.title",
     prompt:
-      "GWDG Tools add web search, image, audio, and video generation, Arcana, ArcanaV2, and MCP servers. Open Tools and enable them to see the available buttons.",
+      "GWDG Tools add web search, image, audio, and video generation, Arcana, Arcana Tools, and MCP servers. Open Tools and enable them to see the available buttons.",
     keywords: ["tools", "gwdg tools", "tool use"],
     steps: [
       {
@@ -474,13 +806,48 @@ export const featureGuides = {
         textKey: "feature_guide.manage_topics.step3",
         completeOnTargetClick: true,
       },
+      {
+        target: '[data-guide="collapse-all-topics"]',
+        textKey: "feature_guide.manage_topics.step4",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
+  attach_chat_to_workspace: {
+    titleKey: "feature_guide.attach_chat_to_workspace.title",
+    prompt:
+      "Attach a chat to a workspace by dragging it from the sidebar onto a workspace row. The workspace then shows the chat and can use its files. Drag the chat out of the workspace onto a topic to detach it again.",
+    keywords: [
+      "attach chat",
+      "detach chat",
+      "workspace chat",
+      "drag chat",
+      "move chat to workspace",
+    ],
+    steps: [
+      {
+        target: '[data-guide="workspace-row"]',
+        textKey: "feature_guide.attach_chat_to_workspace.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="workspace-chat-row"]',
+        textKey: "feature_guide.attach_chat_to_workspace.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="topic-list"]',
+        textKey: "feature_guide.attach_chat_to_workspace.step3",
+        completeOnTargetClick: true,
+      },
     ],
   },
   sort_organize: {
     titleKey: "feature_guide.sort_organize.title",
     prompt:
-      "Use Sort & organize in the sidebar header to let the model suggest topics, titles, and cleanup for your chats. Review the proposal, select what you want, and apply it. Nothing changes before you apply.",
+      "Use Smart Sort in the sidebar header to let the model suggest topics, titles, and cleanup for your chats. Review the proposal, select what you want, and apply it. Nothing changes before you apply.",
     keywords: [
+      "smart sort",
       "sort and organize",
       "sort & organize",
       "organize chats",
@@ -558,6 +925,48 @@ export const featureGuides = {
         target: '[data-guide="pin-topic-menu-item"]',
         prepare: openTopicMenu,
         textKey: "feature_guide.pin_topic.step2",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
+  pin_workspace: {
+    titleKey: "feature_guide.pin_workspace.title",
+    prompt:
+      "Pin a workspace from its options menu so it moves to the pinned section at the top of the sidebar, above the chats.",
+    keywords: ["pin workspace", "pinned workspace", "unpin workspace", "keep workspace on top"],
+    steps: [
+      {
+        target: '[data-guide="workspace-menu"]',
+        textKey: "feature_guide.pin_workspace.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="pin-workspace-menu-item"]',
+        prepare: openWorkspaceMenu,
+        textKey: "feature_guide.pin_workspace.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="pinned-section"]',
+        textKey: "feature_guide.pin_workspace.step3",
+      },
+    ],
+  },
+  pin_agent: {
+    titleKey: "feature_guide.pin_agent.title",
+    prompt:
+      "Pin an agent from its options menu so it moves to the pinned section at the top of the sidebar, above the chats.",
+    keywords: ["pin agent", "pinned agent", "unpin agent", "keep agent on top"],
+    steps: [
+      {
+        target: '[data-guide="agent-menu"]',
+        textKey: "feature_guide.pin_agent.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="pin-agent-menu-item"]',
+        prepare: openAgentMenu,
+        textKey: "feature_guide.pin_agent.step2",
         completeOnTargetClick: true,
       },
     ],
@@ -720,13 +1129,16 @@ export const featureGuides = {
         prepare: openUserSettings,
       },
       {
-        target: [
-          '[data-guide="rendering-preference"]',
-          '[data-guide="document-conversion-preference"]',
-        ],
+        target: '[data-guide="document-conversion-preference"]',
         textKey: "feature_guide.settings_overview.step3",
         completeOnTargetClick: true,
         prepare: () => selectSettingsTab("chat"),
+      },
+      {
+        target: '[data-guide="rendering-preference"]',
+        textKey: "feature_guide.settings_overview.step4",
+        completeOnTargetClick: true,
+        prepare: () => selectSettingsTab("advanced"),
       },
     ],
   },
@@ -749,10 +1161,57 @@ export const featureGuides = {
       },
     ],
   },
+  e2ee: {
+    titleKey: "feature_guide.e2ee.title",
+    prompt:
+      "Encrypt a model end to end: open user settings, choose the Encryption tab, import the public key of an encryption-capable model (load the keys published under the configured key directory for all models at once, or paste one, choose a .pub file, load it from a URL, import a key directory, or pick a local folder and read every .pub file in it), then bind the model to that key. The model shows a lock and every request through it is encrypted in this browser.",
+    keywords: [
+      "encryption",
+      "end-to-end encryption",
+      "e2ee",
+      "public key",
+      "key",
+      "verschlüsselung",
+      "schlüssel",
+    ],
+    steps: [
+      {
+        target: ['[data-guide="user-settings"]', ".user-profile-button", ".user-profile-block"],
+        textKey: "feature_guide.e2ee.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="settings-tab-encryption"]',
+        prepare: openUserSettings,
+        textKey: "feature_guide.e2ee.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="e2ee-add"]',
+        textKey: "feature_guide.e2ee.step3",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="e2ee-published"]',
+        textKey: "feature_guide.e2ee.step_published",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="e2ee-models"]',
+        textKey: "feature_guide.e2ee.step4",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="e2ee-keys"]',
+        textKey: "feature_guide.e2ee.step_test",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
   chat_preferences: {
     titleKey: "feature_guide.chat_preferences.title",
     prompt:
-      "Open user settings and choose the Chat tab to change chat preferences, rendering, document conversion, and more.",
+      "Open user settings and choose the Chat tab to change chat preferences and document conversion; rendering lives in the Advanced tab.",
     keywords: ["chat preferences", "preferences", "user settings"],
     steps: [
       {
@@ -811,14 +1270,14 @@ export const featureGuides = {
         completeOnTargetClick: true,
       },
       {
-        target: '[data-guide="settings-tab-chat"]',
+        target: '[data-guide="settings-tab-advanced"]',
         prepare: openUserSettings,
         textKey: "feature_guide.rendering.step2",
         completeOnTargetClick: true,
       },
       {
         target: '[data-guide="rendering-preference"]',
-        prepare: () => selectSettingsTab("chat"),
+        prepare: () => selectSettingsTab("advanced"),
         textKey: "feature_guide.rendering.step3",
         completeOnTargetClick: true,
       },
@@ -836,14 +1295,14 @@ export const featureGuides = {
         completeOnTargetClick: true,
       },
       {
-        target: '[data-guide="settings-tab-chat"]',
+        target: '[data-guide="settings-tab-advanced"]',
         prepare: openUserSettings,
         textKey: "feature_guide.reasoning_streaming.step2",
         completeOnTargetClick: true,
       },
       {
         target: '[data-guide="reasoning-streaming-preference"]',
-        prepare: () => selectSettingsTab("chat"),
+        prepare: () => selectSettingsTab("advanced"),
         textKey: "feature_guide.reasoning_streaming.step3",
         completeOnTargetClick: true,
       },
@@ -1039,7 +1498,7 @@ export const featureGuides = {
   meta_chat_pins: {
     titleKey: "feature_guide.meta_chat_pins.title",
     prompt:
-      "Ask the Meta chat to pin or unpin a chat or topic. Pinned items appear in the pinned area at the top of the sidebar. The change is proposed in a warning card and applied only after the user accepts it.",
+      "Ask the Meta chat to pin or unpin a chat, topic, workspace or agent. Pinned items appear in the pinned section at the top of the sidebar. The change is proposed in a warning card and applied only after the user accepts it.",
     keywords: [
       "meta chat pin",
       "pin chat with meta chat",
@@ -1095,6 +1554,123 @@ export const featureGuides = {
       },
     ],
   },
+  meta_chat_agents: {
+    titleKey: "feature_guide.meta_chat_agents.title",
+    prompt:
+      "Use the Meta chat to check agent connections, read an agent's recent history, list or search agent files, fetch an agent file into the chat, or send a confirmable prompt/interrupt to an agent. Use list_agents first, then ask for the agent by name or id.",
+    keywords: [
+      "meta chat agents",
+      "check agents",
+      "agent status",
+      "agent history",
+      "agent files",
+      "fetch agent file",
+      "prompt an agent",
+      "interrupt agent",
+    ],
+    steps: [
+      {
+        target: '[data-guide="meta-chat"]',
+        textKey: "feature_guide.meta_chat_agents.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: ".prompt-area",
+        textKey: "feature_guide.meta_chat_agents.step2",
+        completeOnEvent: "message-complete",
+      },
+      {
+        target: ".prompt-area",
+        textKey: "feature_guide.meta_chat_agents.step3",
+        completeOnEvent: "message-complete",
+      },
+    ],
+  },
+  meta_chat_workspaces: {
+    titleKey: "feature_guide.meta_chat_workspaces.title",
+    prompt:
+      "Use the Meta chat to list workspaces and propose attaching or detaching a workspace to an agent or chat. Changes appear as warning cards and are applied only after Accept.",
+    keywords: [
+      "meta chat workspace",
+      "attach workspace with meta chat",
+      "detach workspace",
+      "workspace link",
+    ],
+    steps: [
+      {
+        target: '[data-guide="meta-chat"]',
+        textKey: "feature_guide.meta_chat_workspaces.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: ".prompt-area",
+        textKey: "feature_guide.meta_chat_workspaces.step2",
+        completeOnEvent: "message-complete",
+      },
+      {
+        target: '[data-guide="meta-action-accept"]',
+        textKey: "feature_guide.meta_chat_workspaces.step3",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
+  meta_chat_digest: {
+    titleKey: "feature_guide.meta_chat_digest.title",
+    prompt:
+      "Ask the Meta chat what is new. It remembers the last check, then reports changed chats, new topics and memories, agent status, and recently modified agent files. The Meta banner shows when changes were last checked.",
+    keywords: [
+      "meta chat what's new",
+      "anything new",
+      "recent activity",
+      "new agent files",
+      "daily digest",
+    ],
+    steps: [
+      {
+        target: '[data-guide="meta-chat"]',
+        textKey: "feature_guide.meta_chat_digest.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="meta-last-check"]',
+        textKey: "feature_guide.meta_chat_digest.step2",
+      },
+      {
+        target: ".prompt-area",
+        textKey: "feature_guide.meta_chat_digest.step3",
+        completeOnEvent: "message-complete",
+      },
+    ],
+  },
+  meta_chat_mcp: {
+    titleKey: "feature_guide.meta_chat_mcp.title",
+    prompt:
+      "Manage MCP servers with the Meta chat. It can test local servers, list their tools, add, update, or remove global MCP servers, and report agent/MCP health. Changes to the sidebar list require Accept.",
+    keywords: [
+      "meta chat mcp",
+      "mcp status",
+      "mcp tools",
+      "add mcp server",
+      "test mcp server",
+    ],
+    steps: [
+      {
+        target: '[data-guide="mcp-servers-add"]',
+        textKey: "feature_guide.meta_chat_mcp.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="meta-chat"]',
+        textKey: "feature_guide.meta_chat_mcp.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: ".prompt-area",
+        textKey: "feature_guide.meta_chat_mcp.step3",
+        completeOnEvent: "message-complete",
+      },
+    ],
+  },
   meta_chat_usage: {
     titleKey: "feature_guide.meta_chat_usage.title",
     prompt:
@@ -1118,6 +1694,10 @@ export const FEATURE_CATEGORIES = {
     "meta_chat_navigation",
     "meta_chat_actions",
     "meta_chat_pins",
+    "meta_chat_agents",
+    "meta_chat_workspaces",
+    "meta_chat_digest",
+    "meta_chat_mcp",
   ],
   prompt: [
     "attach_media",
@@ -1135,14 +1715,14 @@ export const FEATURE_CATEGORIES = {
     "image_generation",
     "image_modification",
     "image_analysis",
-    "browser_storage",
     "audio_generation",
-    "arcana_v2",
+    "arcana_tools",
     "mcp_server",
   ],
   chats: [
     "search_chats",
     "manage_topics",
+    "attach_chat_to_workspace",
     "sort_group_chats",
     "sort_organize",
     "pin_chat",
@@ -1154,9 +1734,11 @@ export const FEATURE_CATEGORIES = {
     "summarize_conversation",
     "close_chat",
   ],
+  workspace: ["workspace_overview", "manage_chat_data", "pin_workspace", "pin_agent", "workspace_edit_storage", "workspace_clone", "workspace_upload", "workspace_multiselect", "arcana_filesystem", "workspace_saia_fs", "attach_from_workspace", "remote_agents", "agent_recovery", "close_group_sessions", "session_workspaces", "agent_workspace_access"],
   personas: ["chat_with_persona"],
   settings: [
     "settings_overview",
+    "e2ee",
     "chat_preferences",
     "message_timestamps",
     "memories",
@@ -1216,10 +1798,12 @@ const germanGuideKeywords = {
   image_generation: ["bilder erzeug", "bild erzeug", "bild generier", "bilder generier", "bild erstell", "bilder erstell", "text zu bild"],
   image_modification: ["bild bearbeit", "bilder bearbeit", "bild änder", "bilder änder", "bild modifizier", "bilder modifizier"],
   audio_generation: ["audio erzeug", "audio generier", "audio", "sprache erzeug", "sprache generier", "ton erzeug"],
-  arcana_v2: ["arcana v2", "arcanav2", "arcana", "rag index", "freigabe", "teilen"],
+  arcana_tools: ["arcana tools", "arcane tools", "arcana v2", "arcanav2", "arcana", "rag index", "freigabe", "teilen"],
   mcp_server: ["mcp", "mcp server", "mcp-server", "model context protocol"],
   diagram_renderers: ["graphviz", "dot", "vega", "vega-lite", "chart.js", "chartjs", "diagramm", "diagramme", "diagramm zeichnen", "chart"],
   browser_storage: ["browserspeicher", "browser speicher", "arbeitsbereich", "arbeitsfläche", "opfs", "lokale dateien"],
+  workspace_edit_storage: ["speicher bearbeit", "speicherort", "quelle hinzufüg", "quelle einhäng", "ordner hinzufüg", "speicher hinzufüg"],
+  workspace_saia_fs: ["saia dateien", "saia-dateien", "saia dateisystem", "kontoordner", "saia-fs"],
   tools_overview: ["werkzeuge", "tools", "gwdg tools", "tool nutzung", "werkzeug verwend"],
   search_chats: ["chats durchsuch", "chat durchsuch", "chat such", "unterhaltung such", "chat find", "suche nach chat"],
   manage_topics: ["thema", "themen", "topic", "themen erstell", "chats organisier"],
@@ -1246,6 +1830,10 @@ const germanGuideKeywords = {
   meta_chat_navigation: ["metachat navigation", "nachricht finden", "entscheidung finden", "aufgaben finden", "zum chat springen", "zur einstellung", "deep link", "zitat"],
   meta_chat_actions: ["metachat umbenennen", "meta chat umbenennen", "chat umbenennen", "chat verschieben", "chat in thema verschieben", "änderungen übernehmen", "vorschlag bestätigen"],
   meta_chat_pins: ["metachat anheften", "chat anheften", "chat nicht mehr anheften", "thema anheften", "angeheftete chats", "anheften metachat"],
+  meta_chat_agents: ["metachat agenten", "agentenstatus", "agent verlauf", "agent dateien", "agent datei abrufen", "agent prompt", "agent unterbrechen"],
+  meta_chat_workspaces: ["metachat arbeitsbereich", "arbeitsbereich verknüpfen", "arbeitsbereich trennen", "workspace link"],
+  meta_chat_digest: ["metachat neuigkeiten", "was gibt es neues", "letzte aktivität", "neue agent dateien", "tagesübersicht"],
+  meta_chat_mcp: ["metachat mcp", "mcp status", "mcp werkzeuge", "mcp server hinzufügen", "mcp server testen"],
   meta_chat_usage: ["metachat", "meta chat", "metachat verwend", "metachat öffn"],
 };
 
@@ -1324,6 +1912,7 @@ export function findFeatureGuideForText(text) {
 
 export function buildFeatureGuidePrompt() {
   return Object.entries(featureGuides)
+    .filter(([featureId]) => featureId !== "remote_agents" || isAgentsEnabled())
     .map(([featureId, guide]) => `- ${featureId}: ${guide.prompt}`)
     .join("\n");
 }

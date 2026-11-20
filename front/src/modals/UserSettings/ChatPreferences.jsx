@@ -34,7 +34,12 @@ import {
   selectShowTimestamps,
   setShowTimestamps,
   setSendWithEnter,
+  selectAdvancedMode,
+  setAdvancedMode,
+  selectMcpToolPolicy,
+  setMcpToolPolicy,
 } from "../../Redux/reducers/userSettingsReducer";
+import { isToolsEnabled } from "../../utils/modules";
 import { useModal } from "../ModalContext";
 import { useSendWithEnter } from "../../hooks/useSendWithEnter";
 import ProfilePreferenceSwitch from "./ProfilePreferenceSwitch";
@@ -61,6 +66,33 @@ const DOCUMENT_CONVERSION_OPTIONS = [
   { value: "browser", key: "browser" },
   { value: "choice", key: "choice" },
 ];
+
+const MCP_TOOL_POLICY_OPTIONS = [
+  { value: "ask", key: "ask" },
+  { value: "always", key: "always" },
+  { value: "never", key: "never" },
+];
+
+export function AdvancedModePreference() {
+  const dispatch = useDispatch();
+  const { t } = useTranslation();
+  const advancedMode = useSelector(selectAdvancedMode);
+
+  return (
+    <section className="flex flex-col gap-2">
+      <div data-guide="profile-advanced-mode-preference">
+        <ProfilePreferenceSwitch
+          label={t("user_settings.chat_preferences.sidebar.advanced.label")}
+          description={t(
+            "user_settings.chat_preferences.sidebar.advanced.description",
+          )}
+          checked={advancedMode}
+          onChange={(checked) => dispatch(setAdvancedMode(checked))}
+        />
+      </div>
+    </section>
+  );
+}
 
 export function MemoryPreference() {
   const dispatch = useDispatch();
@@ -138,46 +170,27 @@ export function MemoryPreference() {
 export function SuggestionPreference() {
   const dispatch = useDispatch();
   const { t } = useTranslation();
-  const { openModal } = useModal();
   const suggestUserPrompts = useSelector(selectSuggestUserPrompts);
   const setTitleOnce = useSelector(selectSetTitleOnce);
 
   return (
-    <section>
-      <div className="flex items-center gap-1.5 px-2">
-        <h3 className="text-sm font-medium text-base-content">
-          {t("user_settings.chat_preferences.suggestions.section_label")}
-        </h3>
-        <button
-          type="button"
-          onClick={() => openModal("helpChoiceProposer")}
-          aria-label={t(
-            "user_settings.chat_preferences.suggestions.help_label",
-          )}
-          title={t("user_settings.chat_preferences.suggestions.help_label")}
-          className="btn btn-ghost btn-xs btn-square text-accent"
-        >
-          <HelpCircle className="h-4 w-4" aria-hidden="true" />
-        </button>
-      </div>
-      <div className="flex flex-col gap-3 px-2">
-        <ProfilePreferenceSwitch
-          label={t("user_settings.chat_preferences.suggestions.label")}
-          description={t(
-            "user_settings.chat_preferences.suggestions.description",
-          )}
-          checked={suggestUserPrompts}
-          onChange={(checked) => dispatch(setSuggestUserPrompts(checked))}
-        />
-        <ProfilePreferenceSwitch
-          label={t("user_settings.chat_preferences.suggestions.title_once.label")}
-          description={t(
-            "user_settings.chat_preferences.suggestions.title_once.description",
-          )}
-          checked={setTitleOnce}
-          onChange={(checked) => dispatch(setSetTitleOnce(checked))}
-        />
-      </div>
+    <section className="flex flex-col gap-2">
+      <ProfilePreferenceSwitch
+        label={t("user_settings.chat_preferences.suggestions.label")}
+        description={t(
+          "user_settings.chat_preferences.suggestions.description",
+        )}
+        checked={suggestUserPrompts}
+        onChange={(checked) => dispatch(setSuggestUserPrompts(checked))}
+      />
+      <ProfilePreferenceSwitch
+        label={t("user_settings.chat_preferences.suggestions.title_once.label")}
+        description={t(
+          "user_settings.chat_preferences.suggestions.title_once.description",
+        )}
+        checked={setTitleOnce}
+        onChange={(checked) => dispatch(setSetTitleOnce(checked))}
+      />
     </section>
   );
 }
@@ -228,9 +241,6 @@ export function ConversationSummaryPreference() {
 
   return (
     <section className="flex flex-col gap-2">
-      <h3 className="px-2 text-sm font-medium text-base-content">
-        {t("user_settings.chat_preferences.summaries.section_label")}
-      </h3>
       <ProfilePreferenceSwitch
         label={t("user_settings.chat_preferences.summaries.label")}
         description={t(
@@ -250,9 +260,6 @@ export function MessageDisplayPreference() {
 
   return (
     <section className="flex flex-col gap-2">
-      <h3 className="px-2 text-sm font-medium text-base-content">
-        {t("user_settings.chat_preferences.messages.section_label")}
-      </h3>
       <div data-guide="message-timestamps-preference">
         <ProfilePreferenceSwitch
           label={t("user_settings.chat_preferences.messages.timestamps.label")}
@@ -393,6 +400,42 @@ export function DocumentConversionPreference() {
         value={documentConversionMode}
         onChange={(value) => dispatch(setDocumentConversionMode(value))}
       />
+    </section>
+  );
+}
+
+export function McpToolPolicyPreference() {
+  const dispatch = useDispatch();
+  const { t } = useTranslation();
+  const policy = useSelector(selectMcpToolPolicy);
+
+  // The policy only concerns the MCP servers the user added; without the tools module
+  // there is no MCP UI at all.
+  if (!isToolsEnabled()) return null;
+
+  const selectedOption =
+    MCP_TOOL_POLICY_OPTIONS.find((option) => option.value === policy) ??
+    MCP_TOOL_POLICY_OPTIONS[0];
+
+  return (
+    <section className="flex flex-col gap-2" data-guide="mcp-tool-policy">
+      <SegmentedPreference
+        label={t("user_settings.chat_preferences.mcp_tools.label")}
+        description={t(
+          `user_settings.chat_preferences.mcp_tools.options.${selectedOption.key}.description`,
+        )}
+        options={MCP_TOOL_POLICY_OPTIONS.map((option) => ({
+          value: option.value,
+          label: t(
+            `user_settings.chat_preferences.mcp_tools.options.${option.key}.label`,
+          ),
+        }))}
+        value={policy}
+        onChange={(value) => dispatch(setMcpToolPolicy(value))}
+      />
+      <p className="px-2 text-xs text-base-content/70">
+        {t("user_settings.chat_preferences.mcp_tools.note")}
+      </p>
     </section>
   );
 }

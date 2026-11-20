@@ -1,4 +1,5 @@
 import HamburgerMenu from "./HamburgerMenu";
+import BrandHeader from "./BrandHeader";
 import LogoContainer from "./LogoContainer";
 import ModelSelectorWrapper from "./ModelSelectorWrapper";
 import WarningExternalModel from "./WarningExternalModel";
@@ -6,6 +7,7 @@ import WarningExternalModel from "./WarningExternalModel";
 function Header({ className, localState, setLocalState, modelsData, userData }) {
   return (
     <>
+      <BrandHeader />
       {/* Mobile/Tablet Header - Show below desktop breakpoint (1281px) */}
       <nav className={`${className} flex top-0 left-0 z-[995] w-full h-14 bg-base-100 border-b border-base-300`}>
         <div className="w-full pr-4 pl-2 flex items-center gap-3">

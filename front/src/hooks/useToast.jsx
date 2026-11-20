@@ -40,7 +40,7 @@ export const useToast = () => {
   );
 
   const notifyError = useCallback(
-    (message) => {
+    (message, options) => {
       // If there's an active toast, don't create a new one
       if (toast.isActive(toastIdRef.current)) {
         return;
@@ -53,10 +53,16 @@ export const useToast = () => {
       const newToastId = `error-${Date.now()}`;
       toastIdRef.current = newToastId;
 
+      // Some errors explain a removal the user must read; callers may keep them
+      // on screen longer. A plain second argument is tolerated: one caller
+      // passes the caught error object.
+      const autoClose =
+        typeof options === "number" ? options : (options?.autoClose ?? 1000);
+
       toast.error(message, {
         className: toastClass,
         toastId: newToastId,
-        autoClose: 1000,
+        autoClose,
         position: "top-right",
         hideProgressBar: false,
         closeOnClick: true,

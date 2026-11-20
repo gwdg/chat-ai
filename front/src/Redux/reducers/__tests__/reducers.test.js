@@ -1,16 +1,28 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import userSettingsReducer, {
+  addMcpServer,
   addMemory,
+  addMemoryGroup,
   deleteAllMemories,
   deleteMemory,
+  deleteMemoryGroup,
   editMemory,
+  getDefaultUserSettings,
   importUserSettings,
+  removeMcpServer,
+  renameMemoryGroup,
+  setDefaultMemoryGroup,
+  setMemoryGroup,
   setMemoryMode,
+  updateMcpServer,
   setSendWithEnter,
   setRenderGraphviz,
   setRenderVega,
   setRenderChartjs,
   selectMemoryMode,
+  selectGlobalMcpServers,
+  selectMemoryGroups,
+  selectDefaultMemoryGroup,
   selectRenderGraphviz,
   selectRenderVega,
   selectRenderChartjs,
@@ -19,9 +31,22 @@ import userSettingsReducer, {
   selectShowTimestamps,
   setCollapseReasoningWhileStreaming,
   setShowTimestamps,
+  selectAdvancedMode,
+  setAdvancedMode,
+  selectMcpToolPolicy,
+  setMcpToolPolicy,
+  addE2eeKey,
+  updateE2eeKey,
+  removeE2eeKey,
+  clearE2eeKeys,
+  setE2eeModelKey,
+  selectE2eeKeys,
+  selectE2eeModels,
 } from "../userSettingsReducer";
 import interfaceSettingsReducer, {
   agreeWebSearch,
+  collapseTopics,
+  expandTopics,
   markTutorialCompleted,
   markUseCaseCompleted,
   setConversationGrouping,
@@ -49,6 +74,123 @@ describe("user settings reducer", () => {
     expect(state.memories).toHaveLength(1);
     state = userSettingsReducer(state, deleteAllMemories());
     expect(state.memories).toEqual([]);
+  });
+
+  it("groups memories and moves them to the default group on delete", () => {
+    let state = init(userSettingsReducer);
+    state = userSettingsReducer(
+      state,
+      addMemoryGroup({ id: "work", name: "Work" }),
+    );
+    state = userSettingsReducer(
+      state,
+      addMemoryGroup({ id: "work-2", name: "  work  " }),
+    );
+    expect(state.memory_groups).toEqual([{ id: "work", name: "Work" }]);
+
+    state = userSettingsReducer(
+      state,
+      addMemory({ text: "a", groupId: "work" }),
+    );
+    state = userSettingsReducer(state, addMemory({ text: "b" }));
+    state = userSettingsReducer(
+      state,
+      addMemory({ text: "c", groupId: "work" }),
+    );
+    expect(state.memories.map((memory) => memory.groupId)).toEqual([
+      "work",
+      "default",
+      "work",
+    ]);
+
+    state = userSettingsReducer(
+      state,
+      editMemory({ index: 0, text: "a2", groupId: "work" }),
+    );
+    expect(state.memories[0].text).toBe("a2");
+    expect(state.memories[2].text).toBe("c");
+
+    state = userSettingsReducer(state, setDefaultMemoryGroup("work"));
+    expect(state.default_memory_group).toBe("work");
+
+    state = userSettingsReducer(
+      state,
+      setMemoryGroup({ index: 2, groupId: "default" }),
+    );
+    expect(state.memories[2].groupId).toBe("default");
+
+    state = userSettingsReducer(state, renameMemoryGroup({ id: "work", name: "Job" }));
+    expect(state.memory_groups).toEqual([{ id: "work", name: "Job" }]);
+
+    state = userSettingsReducer(state, deleteMemoryGroup({ id: "work" }));
+    expect(state.memory_groups).toEqual([]);
+    expect(state.default_memory_group).toBe("default");
+    expect(state.memories.map((memory) => memory.groupId)).toEqual([
+      "default",
+      "default",
+      "default",
+    ]);
+    expect(selectMemoryGroups({ user_settings: state })).toEqual([]);
+    expect(selectDefaultMemoryGroup({ user_settings: state })).toBe("default");
+  });
+
+  it("manages globally configured MCP servers", () => {
+    let state = init(userSettingsReducer);
+    state = userSettingsReducer(
+      state,
+      addMcpServer({
+        id: "mcp-1",
+        name: "Local files",
+        url: "http://localhost:9000/mcp",
+      }),
+    );
+    state = userSettingsReducer(
+      state,
+      addMcpServer({
+        id: "mcp-2",
+        name: "Notes",
+        url: "http://localhost:9100/mcp",
+      }),
+    );
+    expect(selectGlobalMcpServers({ user_settings: state })).toHaveLength(2);
+
+    state = userSettingsReducer(
+      state,
+      updateMcpServer({ id: "mcp-1", patch: { name: "Files" } }),
+    );
+    expect(
+      selectGlobalMcpServers({ user_settings: state }).find(
+        (server) => server.id === "mcp-1",
+      )?.name,
+    ).toBe("Files");
+
+    state = userSettingsReducer(state, removeMcpServer("mcp-2"));
+    expect(selectGlobalMcpServers({ user_settings: state })).toHaveLength(1);
+  });
+
+  it("rejects an MCP server without a URL", () => {
+    let state = init(userSettingsReducer);
+    state = userSettingsReducer(
+      state,
+      addMcpServer({ id: "legacy", name: "Gateway", serverId: "server-1" }),
+    );
+    expect(selectGlobalMcpServers({ user_settings: state })).toEqual([]);
+  });
+
+  it("imports only MCP servers that have an address", () => {
+    let state = init(userSettingsReducer);
+    state = userSettingsReducer(
+      state,
+      importUserSettings({
+        mcp_servers: [
+          { id: "kept", name: "Files", url: "http://localhost:9000/mcp" },
+          { id: "gateway", name: "GWDG", kind: "remote", serverId: "server-1" },
+        ],
+      }),
+    );
+    expect(state.mcp_servers).toEqual([
+      { id: "kept", name: "Files", url: "http://localhost:9000/mcp" },
+    ]);
   });
 
   it("validates memory mode and send shortcut", () => {
@@ -114,6 +256,46 @@ describe("user settings reducer", () => {
     expect(selectMemoryMode({ user_settings: { memory_mode: 99 } })).toBe(0);
     expect(selectConversationSummaries({ user_settings: {} })).toBe(true);
     expect(selectShowTimestamps({ user_settings: {} })).toBe(false);
+    expect(selectAdvancedMode({ user_settings: {} })).toBe(false);
+  });
+
+  it("toggles advanced mode and restores it from an import", () => {
+    let state = init(userSettingsReducer);
+    expect(selectAdvancedMode({ user_settings: state })).toBe(false);
+
+    state = userSettingsReducer(state, setAdvancedMode(true));
+    expect(selectAdvancedMode({ user_settings: state })).toBe(true);
+
+    state = userSettingsReducer(
+      state,
+      importUserSettings({ advanced_mode: false }),
+    );
+    expect(selectAdvancedMode({ user_settings: state })).toBe(false);
+  });
+
+  it("validates the MCP tool policy and falls back to ask", () => {
+    let state = init(userSettingsReducer);
+    expect(selectMcpToolPolicy({ user_settings: state })).toBe("ask");
+
+    state = userSettingsReducer(state, setMcpToolPolicy("always"));
+    expect(selectMcpToolPolicy({ user_settings: state })).toBe("always");
+
+    state = userSettingsReducer(state, setMcpToolPolicy("sometimes"));
+    expect(selectMcpToolPolicy({ user_settings: state })).toBe("always");
+
+    state = userSettingsReducer(
+      state,
+      importUserSettings({ mcp_tool_policy: "never" }),
+    );
+    expect(state.mcp_tool_policy).toBe("never");
+
+    state = userSettingsReducer(
+      state,
+      importUserSettings({ mcp_tool_policy: "bogus" }),
+    );
+    expect(state.mcp_tool_policy).toBe("never");
+
+    expect(selectMcpToolPolicy({ user_settings: {} })).toBe("ask");
   });
 
   it("toggles diagram rendering preferences and imports them", () => {
@@ -140,6 +322,118 @@ describe("user settings reducer", () => {
     expect(selectRenderGraphviz({ user_settings: state })).toBe(false);
     expect(selectRenderVega({ user_settings: state })).toBe(false);
     expect(selectRenderChartjs({ user_settings: state })).toBe(false);
+  });
+
+  it("stores encryption keys and model bindings, and drops dangling ones", () => {
+    let state = init(userSettingsReducer);
+    expect(selectE2eeKeys({ user_settings: state })).toEqual([]);
+    expect(selectE2eeModels({ user_settings: state })).toEqual({});
+
+    state = userSettingsReducer(
+      state,
+      addE2eeKey({
+        id: "node-a",
+        name: "Node A",
+        publicKey: "  abc  ",
+        source: "paste",
+        // Derived data is not trusted; it is recomputed from the key.
+        kid: "stale",
+        // The last sealed test is stored with the key so the list can show it
+        // green, and only well-formed model ids are kept.
+        testedAt: "2026-01-01T00:00:00.000Z",
+        testedModels: ["qwen-a", "", 7],
+      }),
+    );
+    expect(selectE2eeKeys({ user_settings: state })[0]).toMatchObject({
+      id: "node-a",
+      name: "Node A",
+      publicKey: "abc",
+      source: "paste",
+      testedAt: "2026-01-01T00:00:00.000Z",
+      testedModels: ["qwen-a"],
+    });
+    expect(selectE2eeKeys({ user_settings: state })[0].kid).toBeUndefined();
+
+    state = userSettingsReducer(
+      state,
+      updateE2eeKey({ id: "node-a", patch: { name: "Renamed" } }),
+    );
+    expect(selectE2eeKeys({ user_settings: state })[0].name).toBe("Renamed");
+
+    state = userSettingsReducer(
+      state,
+      setE2eeModelKey({ modelId: "qwen-a", keyId: "node-a" }),
+    );
+    expect(selectE2eeModels({ user_settings: state })).toEqual({
+      "qwen-a": "node-a",
+    });
+
+    // A binding can only name an existing key.
+    state = userSettingsReducer(
+      state,
+      setE2eeModelKey({ modelId: "qwen-a", keyId: "missing" }),
+    );
+    expect(selectE2eeModels({ user_settings: state })).toEqual({
+      "qwen-a": "node-a",
+    });
+
+    // Removing the key removes the binding, so the model is not left keyed
+    // without a key (which would fail closed).
+    state = userSettingsReducer(state, removeE2eeKey("node-a"));
+    expect(selectE2eeKeys({ user_settings: state })).toEqual([]);
+    expect(selectE2eeModels({ user_settings: state })).toEqual({});
+  });
+
+  it("clears every key and binding in one step", () => {
+    let state = init(userSettingsReducer);
+    state = userSettingsReducer(
+      state,
+      addE2eeKey({ id: "node-a", name: "Node A", publicKey: "abc" }),
+    );
+    state = userSettingsReducer(
+      state,
+      setE2eeModelKey({ modelId: "qwen-a", keyId: "node-a" }),
+    );
+
+    state = userSettingsReducer(state, clearE2eeKeys());
+
+    expect(selectE2eeKeys({ user_settings: state })).toEqual([]);
+    expect(selectE2eeModels({ user_settings: state })).toEqual({});
+  });
+
+  it("sanitises imported encryption keys and bindings", () => {
+    let state = init(userSettingsReducer);
+    state = userSettingsReducer(
+      state,
+      importUserSettings({
+        e2ee_keys: [
+          {
+            id: "node-a",
+            publicKey: "abc",
+            secret: "do-not-import",
+            testedAt: "2026-01-01T00:00:00.000Z",
+            testedModels: ["qwen-a", 42],
+          },
+          { id: "", publicKey: "abc" },
+          { id: "node-b", publicKey: "   " },
+        ],
+        e2ee_models: { "qwen-a": "node-a", "qwen-b": "node-missing" },
+      }),
+    );
+
+    expect(selectE2eeKeys({ user_settings: state })).toHaveLength(1);
+    expect(selectE2eeKeys({ user_settings: state })[0]).not.toHaveProperty(
+      "secret",
+    );
+    // A backup keeps the test record, so an imported key does not have to be
+    // re-tested to show what was already known.
+    expect(selectE2eeKeys({ user_settings: state })[0].testedModels).toEqual([
+      "qwen-a",
+    ]);
+    // A binding to an unknown key is dropped instead of becoming a trap.
+    expect(selectE2eeModels({ user_settings: state })).toEqual({
+      "qwen-a": "node-a",
+    });
   });
 
   it("returns a stable empty list for old interface settings", () => {
@@ -187,5 +481,98 @@ describe("interface settings reducer", () => {
       setWarning({ key: "warn_fork", value: false }),
     );
     expect(state.warn_fork).toBe(false);
+  });
+
+  it("collapses and expands topic groups in bulk without duplicates", () => {
+    let state = init(interfaceSettingsReducer);
+    state = interfaceSettingsReducer(state, collapseTopics(["t1", "t2"]));
+    state = interfaceSettingsReducer(state, collapseTopics(["t2", "t3"]));
+    expect(state.collapsed_topics).toEqual(["t1", "t2", "t3"]);
+
+    // Expanding only drops the ids it was given; other sections stay collapsed.
+    state = interfaceSettingsReducer(state, collapseTopics("__pinned__"));
+    state = interfaceSettingsReducer(state, expandTopics(["t1", "t2"]));
+    expect(state.collapsed_topics).toEqual(["t3", "__pinned__"]);
+  });
+});
+
+describe("deployment user settings defaults", () => {
+  // The value arrives as VITE_USER_SETTINGS (JSON) from `userSettings` in front.json.
+  const stubSettings = (value) => {
+    vi.stubEnv(
+      "VITE_USER_SETTINGS",
+      value === undefined ? undefined : JSON.stringify(value),
+    );
+  };
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("uses the built-in defaults when the config sets nothing", () => {
+    stubSettings(undefined);
+    const settings = getDefaultUserSettings();
+    expect(settings.memory_mode).toBe(0);
+    expect(settings.advanced_mode).toBe(false);
+    expect(settings.mcp_tool_policy).toBe("ask");
+    expect(settings.send_with_enter).toBeNull();
+    expect(settings.timeout).toBe(300000);
+    expect(settings.memories).toEqual([]);
+    expect(settings.e2ee_models).toEqual({});
+  });
+
+  it("applies valid overrides from the config", () => {
+    stubSettings({
+      memory_mode: 2,
+      advanced_mode: true,
+      suggest_user_prompts: true,
+      send_with_enter: false,
+      mcp_tool_policy: "never",
+      document_conversion_mode: "browser",
+      timeout: 45000,
+    });
+    const settings = getDefaultUserSettings();
+    expect(settings.memory_mode).toBe(2);
+    expect(settings.advanced_mode).toBe(true);
+    expect(settings.suggest_user_prompts).toBe(true);
+    expect(settings.send_with_enter).toBe(false);
+    expect(settings.mcp_tool_policy).toBe("never");
+    expect(settings.document_conversion_mode).toBe("browser");
+    expect(settings.timeout).toBe(45000);
+  });
+
+  it("ignores unknown keys, wrong types, and out-of-range values", () => {
+    stubSettings({
+      not_a_setting: "ignored",
+      memory_mode: 9,
+      mcp_tool_policy: "sometimes",
+      html_sanitization: "loose",
+      advanced_mode: "yes",
+      timeout: 1,
+    });
+    const settings = getDefaultUserSettings();
+    expect(settings).not.toHaveProperty("not_a_setting");
+    expect(settings.memory_mode).toBe(0);
+    expect(settings.mcp_tool_policy).toBe("ask");
+    expect(settings.html_sanitization).toBe("strict");
+    expect(settings.advanced_mode).toBe(false);
+    // Clamped to the 5 s minimum by the shared import validation.
+    expect(settings.timeout).toBe(5000);
+  });
+
+  it("falls back to the defaults when the config value is not usable", () => {
+    for (const raw of ["{not json", "[]", "null", "42", "true"]) {
+      vi.stubEnv("VITE_USER_SETTINGS", raw);
+      const settings = getDefaultUserSettings();
+      expect(settings.memory_mode).toBe(0);
+      expect(settings.mcp_tool_policy).toBe("ask");
+    }
+  });
+
+  it("keeps the reducer's initial state independent of later env changes", () => {
+    const state = init(userSettingsReducer);
+    stubSettings({ memory_mode: 2, advanced_mode: true });
+    expect(state.memory_mode).toBe(0);
+    expect(state.advanced_mode).toBe(false);
   });
 });

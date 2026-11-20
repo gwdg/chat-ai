@@ -38,9 +38,12 @@ type Exchange = { event: "call" | "result"; message: any };
  * A fetch that removes the gateway's status events from SSE responses and reports its
  * `gwdg_tool.event`s to `onExchange`.
  */
-export function gatewayFetch(onExchange: (exchange: Exchange) => void): typeof fetch {
+export function gatewayFetch(
+  onExchange: (exchange: Exchange) => void,
+  baseFetch: typeof fetch = (...args) => globalThis.fetch(...args),
+): typeof fetch {
   return async (input, init) => {
-    const response = await fetch(input, init);
+    const response = await baseFetch(input, init);
     const type = response.headers.get("content-type") ?? "";
     // Streams only; a JSON answer has no events in it
     if (!response.body || type.includes("json")) return response;

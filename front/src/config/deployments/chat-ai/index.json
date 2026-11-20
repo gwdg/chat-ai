@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "features": {
+    "meta_chat": true,
+    "workspaces": true,
+    "mcp_servers": true,
+    "e2ee": true,
+    "tutorials": true,
+    "import_git": true
+  },
+  "brands": {
+    "default": "chat-ai",
+    "trustedField": "brand",
+    "rules": [
+      {
+        "claims": [
+          "brand",
+          "groups",
+          "entitlements",
+          "oidc_claim_groups",
+          "oidc_claim_entitlements",
+          "oidc_claim_ou"
+        ],
+        "contains": "UGOE",
+        "brand": "ugoe"
+      },
+      {
+        "claims": [
+          "email",
+          "oidc_claim_email"
+        ],
+        "suffix": "@uni-goettingen.de",
+        "brand": "ugoe"
+      }
+    ]
+  }
+}

@@ -11,12 +11,16 @@ const interfaceSettingsSlice = createSlice({
     warn_share_settings: true,
     warn_regenerate: true,
     warn_fork: true,
+    warn_workspace_delete: true,
+    warn_workspace_file_delete: true,
+    warn_restore_agent_sessions: true,
     show_tour: true,
     count_hallucination: 0,
     count_announcement: 0,
     agree_web_search: false,
     show_usage_in_sidebar: true,
     collapsed_topics: [],
+    expanded_agents: [],
     conversation_sort: "created_desc",
     conversation_grouping: "topic",
     completed_tutorials: [],
@@ -88,6 +92,29 @@ const interfaceSettingsSlice = createSlice({
         }
       }
     },
+    // Counterpart to collapseTopics, used by the sidebar's expand-all control.
+    expandTopics: (state, action) => {
+      const ids = Array.isArray(action.payload)
+        ? action.payload
+        : [action.payload];
+      state.collapsed_topics = state.collapsed_topics.filter(
+        (id) => !ids.includes(id),
+      );
+    },
+    // Agent rows in the sidebar start collapsed, so their session lists are
+    // stored as the explicitly expanded ones instead of as collapsed ids.
+    toggleExpandedAgent: (state, action) => {
+      const id = action.payload;
+      if (!id) return;
+      if (!Array.isArray(state.expanded_agents)) state.expanded_agents = [];
+      if (state.expanded_agents.includes(id)) {
+        state.expanded_agents = state.expanded_agents.filter(
+          (entry) => entry !== id,
+        );
+      } else {
+        state.expanded_agents.push(id);
+      }
+    },
     setConversationSort: (state, action) => {
       state.conversation_sort = action.payload;
     },
@@ -148,6 +175,8 @@ export const selectConversationGrouping = (state) => {
 // Stable empty arrays keep useSelector from reporting a new snapshot for old,
 // persisted state that predates these lists.
 const EMPTY_LIST = [];
+export const selectExpandedAgents = (state) =>
+  state.interface_settings.expanded_agents ?? EMPTY_LIST;
 export const selectCompletedTutorials = (state) =>
   state.interface_settings.completed_tutorials ?? EMPTY_LIST;
 export const selectCompletedUseCases = (state) =>
@@ -158,7 +187,8 @@ export const {
   toggleTheme, setDarkMode, setLightMode,
   closeSettings, toggleSettings, toggleSidebar, closeSidebar, openSidebar,
   closeAnnouncement, closeHallucination, agreeWebSearch, closeTour,
-  setShowUsageInSidebar, setWarning, toggleTopic, collapseTopics,
+  setShowUsageInSidebar, setWarning, toggleTopic, collapseTopics, expandTopics,
+  toggleExpandedAgent,
   setConversationSort, setConversationGrouping, markTutorialCompleted, markUseCaseCompleted,
   suppressTutorial,
 } = interfaceSettingsSlice.actions;

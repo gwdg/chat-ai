@@ -1,9 +1,10 @@
 import { Popover, PopoverButton, PopoverPanel, Transition } from '@headlessui/react'
 import { Fragment } from 'react'
-import Logo from '../../assets/logos/chat_ai.svg'
-import LogoSmall from '../../assets/logos/chat_ai_small.ico'
+import LogoSmall from '../../config/branding/chatai/logo-small.ico'
 import ImageAiLogo from '../../assets/logos/image-ai.svg'
 import VoiceAiLogo from '../../assets/logos/voice-ai.svg'
+import BrandLogo from '../Others/BrandLogo'
+import { useBrand } from '../../config/BrandProvider'
 import { isArcanasEnabled } from '../../utils/modules'
 
 const items = [
@@ -34,13 +35,33 @@ const items = [
 ]
 
 export default function AiServicesMenu() {
+  const { brand } = useBrand()
+  const headerVariant = brand.logo?.headerVariant ?? "full"
+
+  // A sub-brand may present its own identity without the GWDG service family.
+  if (brand.services === false) {
+    return (
+      <div className="m-1 p-2 inline-flex items-center" aria-label={brand.name}>
+        <BrandLogo
+          variant={headerVariant}
+          className="h-10 w-auto max-w-[180px] object-contain"
+          alt={brand.logo?.alt || brand.name}
+        />
+      </div>
+    )
+  }
+
   return (
     <Popover className="relative ">
       <PopoverButton
         aria-label="Open AI services menu"
         className="focus:outline-none m-1 p-2 inline-flex items-center rounded-xl hover:bg-base-200 cursor-pointer transition-colors duration-150 "
       >
-        <img className="h-10 w-auto object-contain" src={Logo} alt="Chat AI Logo" />
+        <BrandLogo
+          variant={headerVariant}
+          className="h-10 w-auto max-w-[180px] object-contain"
+          alt={brand.logo?.alt || brand.name}
+        />
       </PopoverButton>
 
       <Transition

@@ -1,7 +1,19 @@
 import { v4 as uuidv4 } from "uuid";
 import { getConversation, getFolder, listConversationMetas } from "../db";
+import { currentBrand, localizeBrandValue } from "../config/brands";
 import { processContentItems } from "./sendMessage";
 import packageJson from "../../package.json";
+import i18n from "../i18n";
+
+const DEFAULT_SYSTEM_PROMPT = "You are a helpful assistant.";
+
+/** The active brand's localized system prompt, or the Chat AI default. */
+export const getDefaultSystemPrompt = () => {
+  const prompt = localizeBrandValue(currentBrand()?.systemPrompt, i18n.language);
+  return (
+    (typeof prompt === "string" ? prompt.trim() : "") || DEFAULT_SYSTEM_PROMPT
+  );
+};
 
 export const getDefaultSettings = (userSettings = {}) => {
   // Get environment settings
@@ -26,6 +38,7 @@ export const getDefaultSettings = (userSettings = {}) => {
     top_p: 0.5,
     memory: 0,
     memory_mode_override: "default",
+    memory_group_override: "default",
     enable_tools: false,
     reasoning_effort: null,
     tools: {
@@ -33,14 +46,13 @@ export const getDefaultSettings = (userSettings = {}) => {
       "image_generation": true,
       "image_modification": true,
       "audio_generation": true,
-      "arcana_v2": false,
+      "arcana_tools": false,
       "arcana": true,
       "mcp": false,
-      "mcp_remote": false,
-      // Agent mode only
-      "write_access": false,
-      "browser_storage": false,
-      "codemode": true,
+      // Agent mode only. Access storage is on by default: the model may read and write the files
+      // of this chat (see agent/storageAccess.ts). An attached workspace has its own write switch.
+      "workspace_write_access": true,
+      "browser_storage": true,
       "create_docx": true,
     },
     audio: {
@@ -59,13 +71,15 @@ export const getDefaultSettings = (userSettings = {}) => {
     ])
   );
   const tools = mergedSettings.tools;
-  if (
-    tools &&
-    typeof tools === "object" &&
-    tools.arcana_v2 === undefined &&
-    tools.remote_file_access !== undefined
-  ) {
-    mergedSettings.tools = { ...tools, arcana_v2: tools.remote_file_access };
+  // `arcana_v2` and `remote_file_access` are the previous names of the toggle.
+  if (tools && typeof tools === "object" && tools.arcana_tools === undefined) {
+    const legacy =
+      tools.arcana_v2 !== undefined ? tools.arcana_v2 : tools.remote_file_access;
+    if (legacy !== undefined) {
+      mergedSettings.tools = { ...tools, arcana_tools: legacy };
+      delete mergedSettings.tools.arcana_v2;
+      delete mergedSettings.tools.remote_file_access;
+    }
   }
   return mergedSettings ;
 };
@@ -100,7 +114,7 @@ export const getDefaultConversation = (userSettings = {}, folderId = null) => {
         content: [
           {
             type: "text",
-            text: "You are a helpful assistant."
+            text: getDefaultSystemPrompt()
           }
         ],
       }, {

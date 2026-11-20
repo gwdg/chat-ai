@@ -4,7 +4,20 @@
     "type": "module",
     "scripts": {
         "e2e": "tsx src/cli.ts",
-        "check": "tsc --noEmit"
+        "check": "tsc --noEmit",
+        "setup:e2e": "bash scripts/install-browsers.sh",
+        "analyze": "node scripts/analyze.mjs",
+        "analyze:check": "node scripts/analyze.mjs --check",
+        "opencode:serve": "node scripts/opencode-server.mjs",
+        "opencode:check": "node scripts/opencode-server.mjs --check",
+        "test:e2e": "playwright test",
+        "test:e2e:chrome": "playwright test --project=chrome-desktop --project=chrome-tablet --project=chrome-phone",
+        "test:e2e:ui": "playwright test --ui",
+        "test:e2e:report": "playwright show-report results/html",
+        "test:opencode": "E2E_OPENCODE=1 playwright test --project=opencode-local",
+        "test:opencode:agentic": "E2E_OPENCODE=1 playwright test tests/agent-agentic-tasks.spec.ts --project=opencode-local",
+        "test:real": "E2E_REAL_MODEL=1 playwright test tests/chat-real-model.spec.ts --project=chrome-desktop",
+        "test:saia-fs": "E2E_SAIA_FS=1 playwright test --project=saia-fs"
     },
     "dependencies": {
         "openai": "^4.104.0",
@@ -12,6 +25,7 @@
         "yaml": "^2.8.1"
     },
     "devDependencies": {
+        "@playwright/test": "^1.65.1",
         "@types/node": "^22.18.0",
         "tsx": "^4.20.5",
         "typescript": "^5.9.2"

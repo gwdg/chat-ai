@@ -13,6 +13,7 @@ import { validate as validateUUID, version as versionUUID } from "uuid";
 import { useModal } from "../modals/ModalContext";
 import { selectUserSettings } from "../Redux/reducers/userSettingsReducer";
 import { getDefaultConversation } from "../utils/conversationUtils";
+import { CONVERSATION_MOVED_EVENT } from "../utils/conversationEvents";
 import { useImportConversation } from "./useImportConversation";
 import { decodeBase64UrlUtf8 } from "../utils/base64url";
 function validateConversationId(conversationId: string): boolean {
@@ -482,6 +483,10 @@ export function useSyncConversation({
         return;
       }
       const snapshot = { ...stateForConversation };
+      // The topic belongs to the sidebar's move actions (assignConversationToFolder),
+      // which bump lastModified on their own. A content save must not repeat the
+      // folderId it loaded: after a move that would put the chat back.
+      delete snapshot.folderId;
       let ignoreConflict = false;
       if (snapshot?.ignoreConflict) {
         ignoreConflict = true;
@@ -598,4 +603,28 @@ export function useSyncConversation({
       console.log("Loaded updated conversation from browser");
     })();
   }, [isActive]);
+
+  // Effect 5: adopt a topic move made elsewhere (sidebar drag and drop, "Move to
+  // topic", the organizer, a Meta-chat proposal). The move bumps lastModified, so
+  // without adopting it the next autosave here looks stale and reports a conflict.
+  useEffect(() => {
+    const handleMoved = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (!detail?.conversationId) return;
+      const movedId = detail.conversationId;
+      const movedLastModified = detail.lastModified ?? Date.now();
+      lastModified.current[movedId] = movedLastModified;
+      setLocalState((prev: any) =>
+        prev && prev.id === movedId
+          ? {
+              ...prev,
+              folderId: detail.folderId ?? null,
+              lastModified: movedLastModified,
+            }
+          : prev,
+      );
+    };
+    window.addEventListener(CONVERSATION_MOVED_EVENT, handleMoved);
+    return () => window.removeEventListener(CONVERSATION_MOVED_EVENT, handleMoved);
+  }, [setLocalState]);
 }

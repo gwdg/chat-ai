@@ -1,5 +1,5 @@
 // components/settings/ToolsContainer.jsx
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useModal } from "../../modals/ModalContext";
 import { useDispatch, useSelector } from "react-redux";
@@ -8,46 +8,58 @@ import {
   agreeWebSearch,
 } from "../../Redux/reducers/interfaceSettingsSlice";
 import {
+  selectGlobalMcpServers,
+  selectMcpToolPolicy,
+} from "../../Redux/reducers/userSettingsReducer";
+import {
+  BookOpen,
   CircleHelp,
   Globe,
   Image as ImageIcon,
   Wand2,
   AudioLines,
   Database,
-  Server, // MCP
+  FileText,
+  ScanEye,
+  Server,
+  TriangleAlert,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBookOpen } from "@fortawesome/free-solid-svg-icons";
 import ArcanaContainer from "./ArcanaContainer";
-import MCPContainer from "./MCPContainer";
-import MiniToolButton from "./MiniToolButton";
+import McpServerPicker from "./McpServerPicker";
+import Tooltip from "../Others/Tooltip";
 import { agentGatewayTools, isAgentEnabled, modelSupportsTools } from "../../apis/agentEndpoints";
-import { remoteMcpEnabled } from "../../agent/mcp";
+import { mcpServers } from "../../agent/mcp";
 import { isArcanasEnabled } from "../../utils/modules";
 
 // Tools the agent has no counterpart for
 const AGENT_UNAVAILABLE = new Set(
   agentGatewayTools() ? [] : ["arcana"],
 );
-// Agent tools that are off unless switched on: web search and writing files (agent/tools.ts),
-// ArcanaV2 (agent/arcanaV2.ts), arcana, which the gateway runs (agent/gateway.ts), and MCP
-// servers (agent/mcp.ts)
+// Agent tools that are off unless switched on: web search (agent/tools.ts), Arcana Tools
+// (agent/arcanaTools.ts), arcana, which the gateway runs (agent/gateway.ts), and MCP servers
+// (agent/mcp.ts). Writing files is part of Access storage (agent/storageAccess.ts).
 const AGENT_OPT_IN = new Set([
   "web_search",
   "arcana",
-  "arcana_v2",
-  "write_access",
+  "arcana_tools",
   "mcp",
-  "mcp_remote",
 ]);
 // Tools that only exist in agent mode
-const AGENT_ONLY = new Set(["write_access", "codemode", "create_docx"]);
+const AGENT_ONLY = new Set([
+  "create_docx",
+  "image_analysis",
+]);
 
 export default function ToolsContainer({ localState, setLocalState }) {
   const { t } = useTranslation();
+  const [detailKey, setDetailKey] = useState(null);
   const { openModal } = useModal();
   const dispatch = useDispatch();
   const agreedWebSearch = useSelector(selectAgreeWebSearch);
+  const globalMcpServers = useSelector(selectGlobalMcpServers);
+  const mcpToolPolicy = useSelector(selectMcpToolPolicy);
   
   const settings = localState?.settings || {};
   const modelName = settings?.model?.name;
@@ -57,7 +69,6 @@ export default function ToolsContainer({ localState, setLocalState }) {
 
   const toolsState = settings.tools || {};
   const toolsEnabled = !!settings.enable_tools && !isExternalModel;
-  const remoteMcpOn = remoteMcpEnabled(settings);
   // In agent mode every tool is switched on its own and a missing key counts as on
   // (as in agent/tools.ts); the master switch and the server-side tools do not apply.
   const agentMode = isAgentEnabled();
@@ -65,13 +76,8 @@ export default function ToolsContainer({ localState, setLocalState }) {
   const bulkActionsDisabled = agentMode ? agentWithoutTools : isExternalModel;
   const arcanasEnabled = isArcanasEnabled();
 
-  const showArcanaBox =
-    arcanasEnabled &&
-    (agentMode
-      ? agentGatewayTools() && toolsState.arcana === true
-      : !!settings?.enable_tools && !!toolsState.arcana);
-  const showMCPBox =
-    (agentMode ? !agentWithoutTools : !!settings?.enable_tools) && remoteMcpOn;
+  // One switch for every configured MCP server.
+  const mcpEnabled = !!toolsState.mcp;
 
   // Tool list (labels are translated)
   const TOOL_DEFS = useMemo(
@@ -93,28 +99,32 @@ export default function ToolsContainer({ localState, setLocalState }) {
         label: t("settings.label_audio_generation"),
       },
       {
-        key: "arcana_v2",
+        key: "arcana_tools",
         Icon: Database,
-        label: t("settings.label_arcana_v2"),
+        label: t("settings.label_arcana_tools"),
       },
       {
-        key: "arcana",
-        Icon: ({ className = "", ...rest }) => (
-          <FontAwesomeIcon
-            icon={faBookOpen}
-            className={[
-              "leading-none",
-              "text-[18px] md:text-[22px] lg:text-[26px]",
-              className,
-            ].join(" ")}
-            {...rest}
-          />
-        ),
-        label: t("settings.label_arcana"),
+        key: "image_analysis",
+        Icon: ScanEye,
+        label: t("settings.label_image_analysis"),
       },
-      { key: "mcp_remote",
+      {
+        key: "create_docx",
+        Icon: FileText,
+        label: t("settings.label_create_docx"),
+      },
+      // The two with a settings page sit last: they are the ones you open, not tick.
+      {
+        key: "arcana",
+        Icon: BookOpen,
+        label: t("settings.label_arcana"),
+        detail: true,
+      },
+      {
+        key: "mcp",
         Icon: Server,
-        label: t("settings.label_mcp_server")
+        label: t("mcp.section_title"),
+        detail: true,
       },
     ],
     [t, arcanasEnabled]
@@ -122,7 +132,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
     .filter(({ key }) => agentMode || !AGENT_ONLY.has(key))
     .filter(
       ({ key }) =>
-        arcanasEnabled || (key !== "arcana" && key !== "arcana_v2")
+        arcanasEnabled || (key !== "arcana" && key !== "arcana_tools")
     );
 
   // Simple setter for per-tool flags
@@ -141,21 +151,43 @@ export default function ToolsContainer({ localState, setLocalState }) {
     setTools({ [toolKey]: nextValue });
   };
 
+  // Turning MCP support on without picking a server means "all configured servers", so the
+  // picker shows every server ticked. An explicit selection, or a chat that still carries
+  // legacy per-chat server entries, keeps what it has.
+  const withAllMcpServers = (prev) => {
+    const selected = Array.isArray(prev.settings?.mcp_local_server_ids)
+      ? prev.settings.mcp_local_server_ids
+      : [];
+    if (selected.length > 0 || mcpServers(prev.settings).length > 0) return prev;
+    const allIds = globalMcpServers.map((server) => server.id).filter(Boolean);
+    if (!allIds.length) return prev;
+    return {
+      ...prev,
+      settings: {
+        ...prev.settings,
+        mcp_local_server_ids: allIds,
+      },
+    };
+  };
+
   const handleEnableAll = () => {
     const patch = { fetch_url: true };
     TOOL_DEFS.forEach(({ key }) => {
       patch[key] = true;
     });
     const apply = () =>
-      setLocalState((prev) => ({
-        ...prev,
-        settings: {
-          ...prev.settings,
-          ...(agentMode ? {} : { enable_tools: true }),
-          tools: { ...prev.settings?.tools, ...patch },
-        },
-        flush: true,
-      }));
+      setLocalState((prev) => {
+        const next = withAllMcpServers(prev);
+        return {
+          ...next,
+          settings: {
+            ...next.settings,
+            ...(agentMode ? {} : { enable_tools: true }),
+            tools: { ...next.settings?.tools, ...patch },
+          },
+          flush: true,
+        };
+      });
     if (!agreedWebSearch) {
       openModal("disclaimerWebSearch", {
         onAgree: () => {
@@ -196,9 +228,88 @@ export default function ToolsContainer({ localState, setLocalState }) {
   const handleToggleArcana = (nextValue) => {
     toggleTool("arcana", nextValue);
   };
-  const handleToggleMCP = (nextValue) => {
-    toggleTool("mcp_remote", nextValue);
+  const handleToggleMcp = (nextValue) => {
+    if (!nextValue) {
+      toggleTool("mcp", false);
+      return;
+    }
+    setLocalState((prev) => {
+      const next = withAllMcpServers(prev);
+      return {
+        ...next,
+        settings: {
+          ...next.settings,
+          tools: { ...next.settings?.tools, mcp: true },
+        },
+        flush: true,
+      };
+    });
   };
+
+  const getToolState = (key) => {
+    const unavailable = agentMode && AGENT_UNAVAILABLE.has(key);
+    const active =
+      key === "mcp"
+        ? mcpEnabled
+        : !agentMode
+          ? !!toolsState[key]
+          : unavailable
+            ? false
+            : AGENT_OPT_IN.has(key)
+              ? toolsState[key] === true
+              : toolsState[key] !== false;
+    const onToggle =
+      key === "web_search"
+        ? () => handleToggleWebSearch(!active)
+        : key === "mcp"
+          ? () => handleToggleMcp(!active)
+          : () => toggleTool(key, !active);
+    const disabled = agentMode
+      ? unavailable || agentWithoutTools
+      : !toolsEnabled;
+    return { active, onToggle, disabled, unavailable };
+  };
+
+  const detailTool = detailKey
+    ? TOOL_DEFS.find(({ key }) => key === detailKey)
+    : null;
+  const detailState = detailTool ? getToolState(detailTool.key) : null;
+
+  const toolSwitch = ({
+    active,
+    onToggle,
+    disabled,
+    label,
+    className = "",
+    dataGuide,
+  }) => (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={active}
+      aria-label={label}
+      data-guide={dataGuide}
+      disabled={disabled}
+      onClick={onToggle}
+      className={[
+        "inline-flex shrink-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50",
+        className,
+      ].join(" ")}
+    >
+      <input
+        type="checkbox"
+        readOnly
+        checked={active}
+        disabled={disabled}
+        className="toggle toggle-sm toggle-success pointer-events-none"
+        tabIndex={-1}
+        aria-hidden="true"
+      />
+    </button>
+  );
+
+  const warningTooltip = (key) =>
+    key === "web_search" ? t("alert.web_search_usage") : t("alert.mcp_usage");
 
   return (
     <div className="w-full space-y-3">
@@ -261,82 +372,195 @@ export default function ToolsContainer({ localState, setLocalState }) {
           )}
         </div>
         )}
-        <div className="ml-auto flex items-center gap-1">
-          <button
-            type="button"
-            onClick={handleEnableAll}
-            disabled={bulkActionsDisabled}
-            className="btn btn-xs btn-ghost"
-            data-guide="tools-enable-all"
-          >
-            {t("settings.tools_enable_all")}
-          </button>
-          <button
-            type="button"
-            onClick={handleDisableAll}
-            disabled={bulkActionsDisabled}
-            className="btn btn-xs btn-ghost"
-            data-guide="tools-disable-all"
-          >
-            {t("settings.tools_disable_all")}
-          </button>
+        {!detailKey && (
+          <div className="ml-auto flex items-center gap-1">
+            <button
+              type="button"
+              onClick={handleEnableAll}
+              disabled={bulkActionsDisabled}
+              className="btn btn-xs btn-ghost"
+              data-guide="tools-enable-all"
+            >
+              {t("settings.tools_enable_all")}
+            </button>
+            <button
+              type="button"
+              onClick={handleDisableAll}
+              disabled={bulkActionsDisabled}
+              className="btn btn-xs btn-ghost"
+              data-guide="tools-disable-all"
+            >
+              {t("settings.tools_disable_all")}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {detailTool ? (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setDetailKey(null)}
+              aria-label={t("common.back")}
+              className="btn btn-ghost btn-xs btn-square"
+            >
+              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <p className="min-w-0 truncate text-sm font-medium">
+              {detailTool.label}
+            </p>
+            {toolSwitch({
+              active: detailState.active,
+              onToggle: detailState.onToggle,
+              disabled: detailState.disabled,
+              label: detailTool.label,
+              className: "ml-auto",
+              dataGuide: `tool-${detailTool.key}`,
+            })}
+          </div>
+          {detailState.active && !detailState.disabled ? (
+            detailTool.key === "arcana" ? (
+              <ArcanaContainer
+                localState={localState}
+                setLocalState={setLocalState}
+              />
+            ) : (
+              <div className="space-y-3">
+                {mcpToolPolicy === "never" && (
+                  <p
+                    className="rounded-lg border border-base-300 bg-base-200 px-3 py-2 text-xs leading-relaxed text-base-content/80"
+                    data-guide="mcp-tool-policy-notice"
+                  >
+                    {t("mcp.policy_never_notice")}
+                  </p>
+                )}
+                <McpServerPicker
+                  localState={localState}
+                  setLocalState={setLocalState}
+                />
+              </div>
+            )
+          ) : (
+            <p className="text-sm text-base-content/70">
+              {t("settings.tools_enable_to_configure")}
+            </p>
+          )}
         </div>
-      </div>
+      ) : (
+        <ul
+          data-guide="tools-grid"
+          className="overflow-hidden rounded-xl border border-base-300 bg-base-100"
+        >
+          {TOOL_DEFS.map(({ key, Icon, label, detail }) => {
+            const { active, onToggle, disabled, unavailable } =
+              getToolState(key);
+            const title = unavailable
+              ? `${label}: ${t("settings.tools_agent_unavailable")}`
+              : label;
 
-      {/* Compact, responsive grid */}
-      <div
-        data-guide="tools-grid"
-        className={[
-          "grid gap-2.5 sm:gap-3",
-          "grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))]",
-        ].join(" ")}
-      >
-        {TOOL_DEFS.map(({ key, Icon, label }) => {
-          const unavailable = agentMode && AGENT_UNAVAILABLE.has(key);
-          const active =
-            key === "mcp_remote"
-              ? remoteMcpOn
-              : !agentMode
-                ? !!toolsState[key]
-                : unavailable
-                  ? false
-                  : AGENT_OPT_IN.has(key)
-                    ? toolsState[key] === true
-                    : toolsState[key] !== false;
-          const onToggle =
-            key === "web_search"
-              ? () => handleToggleWebSearch(!active)
-              : () => toggleTool(key, !active);
-
-          return (
-            <MiniToolButton
-              key={key}
-              active={active}
-              disabled={agentMode ? unavailable || agentWithoutTools : !toolsEnabled}
-              onClick={onToggle}
-              Icon={Icon}
-              label={label}
-              title={unavailable ? `${label}: ${t("settings.tools_agent_unavailable")}` : label}
-              guideKey={key}
-              warning={key === "web_search" || key === "mcp_remote"}
-            />
-          );
-        })}
-      </div>
-      {/* Arcana box (only when enabled AND has an ID) */}
-      {showArcanaBox && (
-        <ArcanaContainer
-          localState={localState}
-          setLocalState={setLocalState}
-        />
-      )}
-      {/* MCP box (only when enabled AND has a value) */}
-      {showMCPBox && (
-        <MCPContainer
-          localState={localState}
-          setLocalState={setLocalState}
-          remote
-        />
+            return (
+              <li
+                key={key}
+                className="border-b border-base-300/70 last:border-b-0"
+              >
+                {detail ? (
+                  <div className="flex w-full items-center gap-3 py-2.5 pl-3 pr-2 text-sm">
+                    <button
+                      type="button"
+                      onClick={() => setDetailKey(key)}
+                      aria-label={t("settings.tool_details", { name: label })}
+                      data-guide={`tool-${key}`}
+                      title={title}
+                      className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left"
+                    >
+                      <Icon
+                        className="h-5 w-5 shrink-0 text-base-content/70"
+                        aria-hidden="true"
+                      />
+                      <span className="min-w-0 flex-1 truncate font-medium">
+                        {label}
+                      </span>
+                      {(key === "web_search" || key === "mcp") && (
+                        <Tooltip text={warningTooltip(key)}>
+                          <TriangleAlert
+                            className="h-3.5 w-3.5 shrink-0 text-warning"
+                            aria-hidden="true"
+                          />
+                        </Tooltip>
+                      )}
+                    </button>
+                    {/* One trailing slot per row, so every switch sits at the
+                        same x: the chevron here, an empty box of its size on a
+                        row that has no page. */}
+                    <span
+                      data-testid="tool-row-trail"
+                      className="flex shrink-0 items-center gap-0.5"
+                    >
+                      {toolSwitch({ active, onToggle, disabled, label })}
+                      <button
+                        type="button"
+                        onClick={() => setDetailKey(key)}
+                        tabIndex={-1}
+                        aria-hidden="true"
+                        className="flex h-3.5 w-3.5 shrink-0 cursor-pointer items-center justify-center rounded text-base-content/50 hover:text-base-content"
+                      >
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      </button>
+                    </span>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={onToggle}
+                    disabled={disabled}
+                    aria-pressed={active}
+                    aria-label={label}
+                    data-guide={`tool-${key}`}
+                    title={title}
+                    className={[
+                      "flex w-full items-center gap-3 py-2.5 pl-3 pr-2 text-left text-sm",
+                      disabled
+                        ? "cursor-not-allowed opacity-50"
+                        : "cursor-pointer hover:bg-base-200",
+                    ].join(" ")}
+                  >
+                    <Icon
+                      className="h-5 w-5 shrink-0 text-base-content/70"
+                      aria-hidden="true"
+                    />
+                    <span className="min-w-0 flex-1 truncate font-medium">
+                      {label}
+                    </span>
+                    {(key === "web_search" || key === "mcp") && (
+                      <Tooltip text={warningTooltip(key)}>
+                        <TriangleAlert
+                          className="h-3.5 w-3.5 shrink-0 text-warning"
+                          aria-hidden="true"
+                        />
+                      </Tooltip>
+                    )}
+                    <span
+                      data-testid="tool-row-trail"
+                      className="flex shrink-0 items-center gap-0.5"
+                    >
+                      <input
+                        type="checkbox"
+                        aria-hidden="true"
+                        tabIndex={-1}
+                        readOnly
+                        checked={active}
+                        disabled={disabled}
+                        className="toggle toggle-sm toggle-success pointer-events-none shrink-0"
+                      />
+                      <span aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+                    </span>
+                  </button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
       )}
     </div>
   );

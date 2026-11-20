@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { DragEvent } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
@@ -10,10 +17,11 @@ import {
 } from "@headlessui/react";
 
 import {
-  AiLabel,
   ArrangeHorizontal,
   Calendar,
+  Chat,
   Checkmark,
+  ChevronDown,
   ChevronLeft,
   Close,
   DataBase,
@@ -26,7 +34,6 @@ import {
   SortAscending,
 } from "@carbon/icons-react";
 import {
-  assignConversationToFolder,
   setConversationPinned,
   setFolderPinned,
   useConversationList,
@@ -36,19 +43,25 @@ import { useModal } from "../../modals/ModalContext";
 
 import {
   collapseTopics,
+  selectCollapsedTopics,
   selectConversationGrouping,
   selectConversationSort,
   selectDarkMode,
   selectShowUsageInSidebar,
   setConversationGrouping,
   toggleSidebar,
+  toggleTopic,
 } from "../../Redux/reducers/interfaceSettingsSlice";
-import { selectConversationSummaries } from "../../Redux/reducers/userSettingsReducer";
+import {
+  selectAdvancedMode,
+  selectConversationSummaries,
+} from "../../Redux/reducers/userSettingsReducer";
 
 import { useWindowSize } from "../../hooks/useWindowSize";
 import { getWorkspaceSize } from "../../agent/workspace";
 import { sortConversations } from "../../utils/conversationSort";
 import { formatBytes } from "../../utils/formatBytes";
+import { isAgentsEnabled } from "../../utils/modules";
 import {
   formatCompactDate,
   formatModifiedTime,
@@ -63,11 +76,24 @@ import TopicList, {
   dateBucketCollapseId,
 } from "./TopicList";
 import TopicCreateBubble from "./TopicCreateBubble";
+import {
+  dropConversationOnTopic,
+  dropConversationOnWorkspace,
+  setChatDragData,
+} from "./chatDrop";
+import { dropAgentSessionOnWorkspace } from "./sessionDrop";
+import { rememberSidebarScroll, restoreSidebarScroll } from "./sidebarScroll";
+import { chatRowTint, neutralRowTint, topicColor } from "./topicColors";
+import { SECTION_BOTTOM, SECTION_TOP } from "./sectionSpacing";
+import PinnedSection from "./PinnedSection";
+import { showAdvancedSidebarSections } from "./sidebarVisibility";
 import SidebarUserCard from "./SidebarUserCard";
 import AiServicesMenu from "./AiServicesMenu";
 import { useToast } from "../../hooks/useToast";
 import SidebarUsageSummary from "../../modals/UserSettings/SidebarUsageSummary";
 import ShortcutTooltip from "./ShortcutTooltip";
+import Tooltip from "../Others/Tooltip";
+import ChattyLogo from "../Others/ChattyLogo";
 import ImportChatButton from "./Buttons/ImportChatButton";
 import ImportPersonaButton from "./Buttons/ImportPersonaButton";
 import NewChatButton from "./Buttons/NewChatButton";
@@ -76,6 +102,10 @@ import ExportChatButton from "./Buttons/ExportChatButton";
 import DeleteChatButton from "./Buttons/DeleteChatButton";
 import RenameChatButton from "./Buttons/RenameChatButton";
 import TutorialStatus from "../Others/TutorialStatus";
+import WorkspaceList from "../Workspace/WorkspaceList";
+import AgentList from "./AgentList";
+import McpServerList from "./McpServerList";
+import { isFeatureEnabled } from "../../config/deployment";
 
 export default function SidebarContent({
   localState,
@@ -102,6 +132,13 @@ export default function SidebarContent({
   const conversationSort = useSelector(selectConversationSort);
   const conversationGrouping = useSelector(selectConversationGrouping);
   const summariesEnabled = useSelector(selectConversationSummaries);
+  // Advanced mode is off by default: an ordinary account sees chats, topics and
+  // workspaces only; the Agents and MCP server lists stay hidden until it is on.
+  const advancedMode = useSelector(selectAdvancedMode);
+  const { agents: showAgents, mcpServers: showMcpServers } =
+    showAdvancedSidebarSections(advancedMode, isAgentsEnabled());
+  const collapsedTopicIds = useSelector(selectCollapsedTopics) ?? [];
+  const chatsCollapsed = collapsedTopicIds.includes("__chats__");
 
   const { isDesktop, windowWidth } = useWindowSize();
   // Below this the sidebar is an overlay drawer (see Sidebar.jsx), which leaves
@@ -203,6 +240,11 @@ export default function SidebarContent({
   const [draggingConversationId, setDraggingConversationId] = useState<
     string | null
   >(null);
+  // Set while a chat row is dragged out of a workspace row, so the drop can
+  // detach it from that workspace.
+  const [draggingWorkspaceId, setDraggingWorkspaceId] = useState<string | null>(
+    null,
+  );
   const [dragOverTopicId, setDragOverTopicId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -235,6 +277,28 @@ export default function SidebarContent({
   const menuRef = useRef(null);
   const menuButtonRefs = useRef({}); // Add refs for menu buttons
 
+  // The sticky chats header only casts a shadow while the list is scrolled
+  // underneath it. At rest every sidebar section then has the same flat edge.
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const [chatsHeaderElevated, setChatsHeaderElevated] = useState(false);
+  const syncChatsHeaderShadow = useCallback(() => {
+    const container = scrollContainerRef.current;
+    // Opening a topic or workspace row replaces this page, and with it this
+    // component, so the offset is kept outside it (see ./sidebarScroll).
+    rememberSidebarScroll(container);
+    setChatsHeaderElevated((container?.scrollTop ?? 0) > 0);
+  }, []);
+
+  // The list is new after such a navigation. Restore the offset before paint,
+  // and keep retrying while the first render still shows an empty list.
+  const scrollRestorePending = useRef(true);
+  useLayoutEffect(() => {
+    if (!scrollRestorePending.current) return;
+    if (!restoreSidebarScroll(scrollContainerRef.current)) return;
+    scrollRestorePending.current = false;
+    syncChatsHeaderShadow();
+  });
+
   const visibleConversations = useMemo(() => {
     if (!hasSearch) return orderedConversations;
     return orderedConversations.filter((conv) => {
@@ -263,6 +327,24 @@ export default function SidebarContent({
       (conv) => !conv.folderId || !known.has(conv.folderId),
     );
   }, [groupableConversations, folders]);
+
+  // The colour a chat wears when it is the open one: its own topic's, or the
+  // unsorted bucket's slate. Every list — under a topic, in a pinned group, in
+  // a date bucket, in the search results — asks this map, so the selected row
+  // is never the neutral grey.
+  const topicHexByConversation = useMemo(() => {
+    const hexByFolder = new Map<string, string>();
+    folders.forEach((folder) =>
+      hexByFolder.set(folder.id, topicColor(folder).hex),
+    );
+    const unsortedHex = isDark ? "#94A3B8" : "#64748B";
+    const map = new Map<string, string>();
+    orderedConversations.forEach((conv) => {
+      const hex = conv.folderId ? hexByFolder.get(conv.folderId) : undefined;
+      map.set(conv.id, hex ?? unsortedHex);
+    });
+    return map;
+  }, [orderedConversations, folders, isDark]);
 
   const dateGroups = useMemo(
     () => groupConversationsByDate(dateGroupableConversations),
@@ -305,9 +387,20 @@ export default function SidebarContent({
 
   const handleConversationDragStart = useCallback(
     (event: DragEvent<HTMLDivElement>, conversationId: string) => {
-      event.dataTransfer?.setData("text/plain", conversationId);
-      event.dataTransfer.effectAllowed = "move";
+      setChatDragData(event.dataTransfer, conversationId);
       setDraggingConversationId(conversationId);
+      setDraggingWorkspaceId(null);
+      setDragOverTopicId(null);
+    },
+    [],
+  );
+
+  // A chat row inside a workspace row: the same drag, but it also remembers the
+  // workspace it came from so dropping it elsewhere detaches it.
+  const handleWorkspaceChatDragStart = useCallback(
+    (conversationId: string, workspaceId: string) => {
+      setDraggingConversationId(conversationId);
+      setDraggingWorkspaceId(workspaceId);
       setDragOverTopicId(null);
     },
     [],
@@ -315,6 +408,7 @@ export default function SidebarContent({
 
   const handleConversationDragEnd = useCallback(() => {
     setDraggingConversationId(null);
+    setDraggingWorkspaceId(null);
     setDragOverTopicId(null);
   }, []);
 
@@ -327,29 +421,97 @@ export default function SidebarContent({
       );
       if (!conversation) {
         setDraggingConversationId(null);
+        setDraggingWorkspaceId(null);
         setDragOverTopicId(null);
         return;
       }
 
       // The Unsorted row is virtual, so dropping on it clears the topic.
       const nextFolderId = targetId === UNSORTED_TOPIC_ID ? null : targetId;
-      if ((conversation.folderId ?? null) === nextFolderId) {
-        setDraggingConversationId(null);
-        setDragOverTopicId(null);
-        return;
-      }
 
       try {
-        await assignConversationToFolder(draggingConversationId, nextFolderId);
+        await dropConversationOnTopic({
+          conversationId: draggingConversationId,
+          currentFolderId: conversation.folderId ?? null,
+          targetFolderId: nextFolderId,
+          sourceWorkspaceId: draggingWorkspaceId,
+        });
       } catch (error) {
         console.error("Failed to move conversation via drag & drop", error);
         notifyError(t("folders.error_generic"));
       } finally {
         setDraggingConversationId(null);
+        setDraggingWorkspaceId(null);
         setDragOverTopicId(null);
       }
     },
-    [orderedConversations, draggingConversationId, notifyError, t],
+    [
+      orderedConversations,
+      draggingConversationId,
+      draggingWorkspaceId,
+      notifyError,
+      t,
+    ],
+  );
+
+  // Dropping a chat on a workspace row attaches it. A chat dragged out of
+  // another workspace moves instead of being attached to both.
+  const handleWorkspaceDrop = useCallback(
+    async ({
+      conversationId,
+      targetWorkspaceId,
+      sourceWorkspaceId,
+    }: {
+      conversationId: string;
+      targetWorkspaceId: string;
+      sourceWorkspaceId: string | null;
+    }) => {
+      try {
+        await dropConversationOnWorkspace({
+          conversationId,
+          targetWorkspaceId,
+          sourceWorkspaceId,
+        });
+      } catch (error) {
+        console.error("Failed to attach conversation via drag & drop", error);
+        notifyError(t("workspace.attach_chat_error"));
+      } finally {
+        setDraggingConversationId(null);
+        setDraggingWorkspaceId(null);
+        setDragOverTopicId(null);
+      }
+    },
+    [notifyError, t],
+  );
+
+  // Dropping an agent session on a workspace row attaches the session there.
+  // A session dragged out of another workspace moves instead of being
+  // attached to both.
+  const handleWorkspaceSessionDrop = useCallback(
+    async ({
+      agentId,
+      sessionId,
+      targetWorkspaceId,
+      sourceWorkspaceId,
+    }: {
+      agentId: string;
+      sessionId: string;
+      targetWorkspaceId: string;
+      sourceWorkspaceId: string | null;
+    }) => {
+      try {
+        await dropAgentSessionOnWorkspace({
+          agentId,
+          sessionId,
+          targetWorkspaceId,
+          sourceWorkspaceId,
+        });
+      } catch (error) {
+        console.error("Failed to attach session via drag & drop", error);
+        notifyError(t("workspace.attach_session_error"));
+      }
+    },
+    [notifyError, t],
   );
 
   function onClose() {
@@ -466,7 +628,8 @@ export default function SidebarContent({
   const handleSelectConversation = (id) => {
     if (id === currentConversationId) return;
     setSelectedConversationId(id); // update selected now for nicer user interaction
-    navigate(`/chat/${id}`);
+    // A chat that lives in a workspace opens its Files panel too; a plain chat has no panel.
+    navigate(`/chat/${id}`, { state: { openWorkspacePanel: true } });
     if (!isDesktop) {
       onClose();
     }
@@ -579,6 +742,29 @@ export default function SidebarContent({
     const showSummary = summary.length > 0;
     const showCreated = options.showCreated === true;
     const showDateModified = options.showModified === true;
+    const leadingDash = options.leadingDash === true;
+    // A chat listed under a topic or a workspace takes that group's colour, so
+    // its selected state is a tint of the group, never the neutral grey. It
+    // also runs edge to edge between the group's two coloured rules.
+    const accentHex = options.accentHex ?? topicHexByConversation.get(id);
+    // A row inside a topic's or a workspace's four-pixel rails runs edge to
+    // edge between them; nowhere else has rules to sit between.
+    const flush = options.flush === true;
+    const accentStyle = accentHex
+      ? options.neutral
+        ? {
+            // Chats under Unsorted Chats follow that group's near-transparent scale.
+            "--chat-tint": neutralRowTint(isDark, { active: true, chat: true }),
+            "--chat-tint-hover": neutralRowTint(isDark, {
+              hover: true,
+              chat: true,
+            }),
+          }
+        : {
+            "--chat-tint": chatRowTint(accentHex, isDark, { active: true }),
+            "--chat-tint-hover": chatRowTint(accentHex, isDark, { hover: true }),
+          }
+      : undefined;
     const showDates =
       !showCreated &&
       (showDateModified || (isActive && options.showMetadata !== false));
@@ -612,19 +798,37 @@ export default function SidebarContent({
           onMouseLeave={() => setHoveredId(null)}
           onDragStart={(event) => handleConversationDragStart(event, id)}
           onDragEnd={handleConversationDragEnd}
-          className={`sidebar-wrapper group relative px-2 py-1 rounded-xl touch-manipulation border border-transparent ${
+          className={`sidebar-wrapper group relative px-2 py-1 touch-manipulation border border-transparent ${
+            flush ? "-mx-2" : ""
+          } ${flush || isActive ? "" : "rounded-xl"} ${
             isActive
-              ? "bg-base-200 text-base-content shadow-sm"
-              : "text-base-content hover:bg-base-200 transition-all duration-100"
+              ? accentHex
+                ? "bg-[var(--chat-tint)] text-base-content"
+                : "bg-base-200 text-base-content"
+              : accentHex
+                ? "text-base-content hover:bg-[var(--chat-tint-hover)] transition-all duration-100"
+                : "text-base-content hover:bg-base-200 transition-all duration-100"
           } ${isDragging ? "border-accent/60 bg-accent/10 dark:bg-accent/20" : ""}`}
           data-current={isActive ? "true" : "false"}
           style={{
             WebkitTapHighlightColor: "transparent",
             minHeight: "16px",
+            ...accentStyle,
           }}
         >
           {/* Title container */}
           <div className="flex items-center h-full w-full group">
+            {leadingDash && (
+              // Sits exactly where a topic's collapse button sits: that row has
+              // px-1 plus the button's p-1, this row has px-2, so the slot is
+              // pulled 4px left and keeps the same 20px footprint.
+              <span
+                aria-hidden="true"
+                className="-ml-1 mr-2 flex h-5 w-5 shrink-0 select-none items-center justify-center text-xs leading-none text-base-content/50"
+              >
+                -
+              </span>
+            )}
             <div
               className="flex-1 overflow-hidden min-w-0"
               title={showSummary ? undefined : conv.title || "Untitled Chat"}
@@ -688,6 +892,32 @@ export default function SidebarContent({
     (conv) => conv.id === activeMenu,
   );
 
+  // Shared by the pinned section and the chats list; each renders its own half.
+  const topicListProps = {
+    topics: unpinnedFolders,
+    pinnedTopics,
+    pinnedConversations,
+    conversationsByTopic,
+    unsortedConversations,
+    sizeConversations: dateGroupableConversations,
+    onCreateTopic: handleCreateFolder,
+    onRenameTopic: handleRenameFolder,
+    onDeleteTopic: handleDeleteFolder,
+    onToggleTopicPinned: handleToggleTopicPinned,
+    onOpenTopic: handleOpenTopic,
+    draggingConversationId,
+    dragOverTopicId,
+    onDragEnterTopic: setDragOverTopicId,
+    onDragLeaveTopic: (topicId: string) =>
+      setDragOverTopicId((current) => (current === topicId ? null : current)),
+    onDropTopic: handleTopicDrop,
+    renderConversationRow,
+    dateGroups,
+    creationDateGroups,
+    isDark,
+    grouping: conversationGrouping,
+  };
+
   return (
     <div
       className="flex flex-col select-none h-full w-full transition-all duration-200 ease-in-out"
@@ -714,28 +944,112 @@ export default function SidebarContent({
         </ShortcutTooltip>
       </div>
 
+      {isFeatureEnabled("meta_chat") && (
+        <div className="px-1 pb-1">
+          <Tooltip text={t("meta_chat.help_tooltip")}>
+            <button
+              type="button"
+              onClick={() => navigate("/meta")}
+              data-guide="meta-chat"
+              className={`flex min-h-8 w-full items-center gap-1.5 rounded-lg py-1 pl-4 pr-1.5 text-left text-xs transition ${
+                location.pathname === "/meta"
+                  ? "bg-accent/10 text-accent"
+                  : "text-base-content/80 hover:bg-base-200 hover:text-base-content"
+              }`}
+            >
+              <ChattyLogo className="h-4 w-4 shrink-0" />
+              <span className="min-w-0 truncate font-medium">
+                {t("meta_chat.help_label")}
+              </span>
+            </button>
+          </Tooltip>
+        </div>
+      )}
+
+      <div className="flex items-center justify-between gap-1 px-3 pb-0">
+        <NewChatButton
+          topicId={localState?.folderId}
+          variant={"sidebar"}
+          onNewConversation={handleNewConversation}
+        />
+        <div className="flex items-center justify-between gap-1">
+          <ImportPersonaButton
+            topicId={localState?.folderId}
+            variant={"sidebar"}
+          />
+          <ImportChatButton
+            topicId={localState?.folderId}
+            variant={"sidebar"}
+          />
+        </div>
+      </div>
+
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Conversations header, with the search field it reveals */}
-        <div className="sticky top-0 z-20 bg-base-100 px-3 pt-3 pb-2 shadow-[0_2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.5)]">
-          <TutorialStatus />
-          <div className="flex items-center justify-between gap-1 pb-3">
-            <NewChatButton topicId={localState?.folderId} variant={"sidebar"} onNewConversation={handleNewConversation} />
-          <div className="flex items-center justify-between gap-1">
-            <ImportPersonaButton topicId={localState?.folderId} variant={"sidebar"} />
-            <ImportChatButton topicId={localState?.folderId} variant={"sidebar"} />
+        {isFeatureEnabled("tutorials") && (
+          <div className="px-3 pb-1">
+            <TutorialStatus />
           </div>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] uppercase tracking-wide text-base-content/70">
-              {t("folders.title")}
+        )}
+        <div
+          ref={scrollContainerRef}
+          onScroll={syncChatsHeaderShadow}
+          data-guide="sidebar-list"
+          className="flex-1 overflow-y-auto overflow-x-hidden"
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
+          {!hasSearch && (
+            <PinnedSection
+              chatCount={pinnedTopics.length + pinnedConversations.length}
+              showAgents={showAgents}
+            >
+              <TopicList {...topicListProps} variant="pinned" />
+              {isFeatureEnabled("workspaces") && (
+                <WorkspaceList
+                  variant="pinned"
+                  draggingConversationId={draggingConversationId}
+                  onChatDragStart={handleWorkspaceChatDragStart}
+                  onChatDragEnd={handleConversationDragEnd}
+                  onChatDrop={handleWorkspaceDrop}
+                  onSessionDrop={handleWorkspaceSessionDrop}
+                />
+              )}
+              {showAgents && <AgentList variant="pinned" />}
+            </PinnedSection>
+          )}
+          <div
+            className={`sticky top-0 z-20 bg-base-100 px-3 ${SECTION_TOP} ${
+              chatsCollapsed && !hasSearch ? SECTION_BOTTOM : "pb-0"
+            } ${
+              chatsHeaderElevated
+                ? "shadow-[0_2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.5)]"
+                : ""
+            }`}
+          >
+          <div className="-mx-2 mb-1 flex min-h-8 items-center gap-1 rounded-lg bg-base-200/70 px-3 py-1">
+            <button
+              type="button"
+              onClick={() => dispatch(toggleTopic("__chats__"))}
+              className="flex min-w-0 flex-1 cursor-pointer items-center gap-1 rounded-md text-left text-[11px] font-semibold uppercase tracking-wide text-base-content/70 transition hover:text-base-content"
+              aria-expanded={!chatsCollapsed}
+            >
+              <ChevronDown
+                size={12}
+                className={`shrink-0 transition-transform ${chatsCollapsed ? "-rotate-90" : ""}`}
+              />
+              <Chat size={12} className="shrink-0" />
+              <span className="truncate">{t("folders.title")}</span>
+            </button>
+            <span className="text-[11px] font-normal tabular-nums text-base-content/35">
+              {conversations.length}
             </span>
+            {!(chatsCollapsed && !hasSearch) && (
             <div className="flex items-center gap-1">
               <Popover className="relative">
                 <PopoverButton
                   aria-label={t("folders.sort_label")}
                   title={t("folders.sort_label")}
                   data-guide="sort-chats"
-                  className="btn btn-ghost btn-sm btn-square text-base-content/70 hover:text-base-content"
+                  className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-base-content/60 transition hover:bg-base-200 hover:text-base-content"
                 >
                   {conversationGrouping === "date" ? (
                     <Calendar size={16} />
@@ -853,7 +1167,7 @@ export default function SidebarContent({
                   })
                 }
                 data-guide="sort-organize"
-                className="btn btn-ghost btn-sm btn-square text-base-content/70 hover:text-base-content"
+                className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-base-content/60 transition hover:bg-base-200 hover:text-base-content"
                 aria-label={t("sorter.button")}
                 title={t("sorter.button")}
               >
@@ -861,21 +1175,9 @@ export default function SidebarContent({
               </button>
               <button
                 type="button"
-                onClick={() => navigate("/meta")}
-                data-guide="meta-chat"
-                className={`btn btn-ghost btn-sm btn-square text-base-content/70 hover:text-base-content ${
-                  location.pathname === "/meta" ? "btn-active" : ""
-                }`}
-                aria-label={t("meta_chat.open")}
-                title={t("meta_chat.open")}
-              >
-                <AiLabel size={16} />
-              </button>
-              <button
-                type="button"
                 onClick={openSearch}
                 data-guide="search-chats"
-                className={`flex items-center rounded-lg p-1.5 text-base-content/70 hover:text-base-content hover:bg-base-200 transition cursor-pointer ${
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-base-content/60 hover:text-base-content hover:bg-base-200 transition cursor-pointer ${
                   searchVisible ? "opacity-0 pointer-events-none" : "opacity-100"
                 }`}
                 aria-label={t("folders.search_label")}
@@ -883,7 +1185,9 @@ export default function SidebarContent({
                 <Search size={16} />
               </button>
             </div>
+            )}
           </div>
+          {(!chatsCollapsed || hasSearch) && (
           <div
             className={`relative overflow-hidden transform-gpu transition-[max-height,opacity,transform,padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
               searchVisible
@@ -936,14 +1240,12 @@ export default function SidebarContent({
               )}
             </div>
           </div>
+          )}
         </div>
 
-        <div
-          className="flex-1 overflow-y-auto overflow-x-hidden"
-          style={{ WebkitOverflowScrolling: "touch" }}
-        >
           {/* Conversations, grouped by topic */}
-          <div className="pl-3 pr-2 pt-2 pb-1 space-y-1">
+          {(!chatsCollapsed || hasSearch) && (
+          <div className="pl-3 pr-2 pb-1 space-y-1">
             {hasSearch ? (
               <div className="space-y-1">
                 {noSearchResults ? (
@@ -958,42 +1260,53 @@ export default function SidebarContent({
                 )}
               </div>
             ) : (
-              <TopicList
-                topics={unpinnedFolders}
-                pinnedTopics={pinnedTopics}
-                pinnedConversations={pinnedConversations}
-                conversationsByTopic={conversationsByTopic}
-                unsortedConversations={unsortedConversations}
-                sizeConversations={dateGroupableConversations}
-                onCreateTopic={handleCreateFolder}
-                onRenameTopic={handleRenameFolder}
-                onDeleteTopic={handleDeleteFolder}
-                onToggleTopicPinned={handleToggleTopicPinned}
-                onOpenTopic={handleOpenTopic}
-                draggingConversationId={draggingConversationId}
-                dragOverTopicId={dragOverTopicId}
-                onDragEnterTopic={setDragOverTopicId}
-                onDragLeaveTopic={(topicId) =>
-                  setDragOverTopicId((current) =>
-                    current === topicId ? null : current,
-                  )
-                }
-                onDropTopic={handleTopicDrop}
-                renderConversationRow={renderConversationRow}
-                dateGroups={dateGroups}
-                creationDateGroups={creationDateGroups}
-                isDark={isDark}
-                grouping={conversationGrouping}
-              />
+              <TopicList {...topicListProps} />
             )}
           </div>
+          )}
+          {!hasSearch && (
+            <>
+              {isFeatureEnabled("workspaces") && (
+                <>
+                  <WorkspaceList
+                    draggingConversationId={draggingConversationId}
+                    onChatDragStart={handleWorkspaceChatDragStart}
+                    onChatDragEnd={handleConversationDragEnd}
+                    onChatDrop={handleWorkspaceDrop}
+                    onSessionDrop={handleWorkspaceSessionDrop}
+                  />
+                </>
+              )}
+              {showMcpServers && isFeatureEnabled("mcp_servers") && (
+                <>
+                  {showAgents && (
+                    <>
+                      <AgentList />
+                    </>
+                  )}
+                  <McpServerList />
+                </>
+              )}
+            </>
+          )}
         </div>
 
         {/* Pinned footer: the user block */}
-        <div className="sticky bottom-0 bg-base-100 pt-3 pb-4 shadow-[0_-2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_-2px_6px_rgba(0,0,0,0.5)]">
-          <div className="flex flex-col gap-3 mx-3">
+        <div className="mx-2 my-1.5 border-t border-base-300" />
+        <div className="bg-base-100 pb-4">
+          <div className="flex flex-col gap-1.5 mx-1">
             {showUsageInSidebar && userData && (
-              <SidebarUsageSummary data={userData} />
+              <SidebarUsageSummary
+                data={userData}
+                onOpenUsage={() =>
+                  openModal("userSettings", {
+                    localState,
+                    userData,
+                    modelsData,
+                    initialTab: "usage",
+                  })
+                }
+              />
             )}
             <SidebarUserCard
               localState={localState}

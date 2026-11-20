@@ -3,6 +3,12 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useCallback, useEffect, useState } from 'react'
 import {v4 as uuidv4} from 'uuid';
 import { deleteAllWorkspaces, deleteWorkspace } from '../agent/workspace'
+import i18n from '../i18n'
+import { isArcanasEnabled } from '../utils/modules'
+import { notifyConversationMoved } from '../utils/conversationEvents'
+import { defaultCapabilities } from '../workspace/capabilities'
+import { SHARED_BROWSER_STORAGE_ID, workspaceBrowserStorageId } from '../workspace/browserStorage'
+import { chatStorageSourceId } from '../workspace/chatStorage'
 
 import type { 
   ConversationRow, 
@@ -17,7 +23,20 @@ import type {
   ContentItemInput,
   FolderRow,
   FeedbackRow,
-  PersonaInfo
+  PersonaInfo,
+  WorkspaceRow,
+  WorkspaceSourceRow,
+  WorkspaceHandleRow,
+  TransferJobRow,
+  WorkspaceMountRow,
+  WorkspaceChatRow,
+  WorkspaceAgentRow,
+  WorkspaceAgentSessionRow,
+  AgentSessionRow,
+  AgentSessionMessageRow,
+  WorkspaceNodeRow,
+  WorkspaceBlobRow,
+  WorkspaceFileReferenceRow
 } from "./dbTypes"
 
 // ---------- Dexie DB ----------
@@ -29,6 +48,19 @@ export class AppDB extends Dexie {
   files_meta!: Table<FileMetaRow, string>
   files_data!: Table<FileDataRow, string>
   folders!: Table<FolderRow, string>
+  workspaces!: Table<WorkspaceRow, string>
+  workspace_sources!: Table<WorkspaceSourceRow, string>
+  workspace_handles!: Table<WorkspaceHandleRow, string>
+  workspace_transfers!: Table<TransferJobRow, string>
+  workspace_mounts!: Table<WorkspaceMountRow, string>
+  workspace_chats!: Table<WorkspaceChatRow, string>
+  workspace_agents!: Table<WorkspaceAgentRow, string>
+  workspace_agent_sessions!: Table<WorkspaceAgentSessionRow, string>
+  agent_sessions!: Table<AgentSessionRow, string>
+  agent_session_messages!: Table<AgentSessionMessageRow, string>
+  workspace_nodes!: Table<WorkspaceNodeRow, string>
+  workspace_blobs!: Table<WorkspaceBlobRow, string>
+  workspace_file_references!: Table<WorkspaceFileReferenceRow, string>
 
   constructor() {
     super('app-conversations-db')
@@ -89,8 +121,338 @@ export class AppDB extends Dexie {
         }
       });
     });
+
+    this.version(6).stores({
+      conversations: 'id, lastModified, createdAt, title, folderId, [folderId+lastModified]',
+      messages: 'id, conversationId, [conversationId+idx], idx, createdAt',
+      content_items: 'id, messageId, [messageId+idx], idx, type',
+      files_meta: 'id, conversationId, type, size, name',
+      files_data: 'id',
+      folders: 'id, name, createdAt',
+      workspaces: 'id, lastModified, name',
+      workspace_sources: 'id, workspaceId, kind, [workspaceId+kind]',
+      workspace_handles: 'sourceId',
+      workspace_transfers: 'id, workspaceId, status, createdAt'
+    });
+
+    this.version(7).stores({
+      conversations: 'id, lastModified, createdAt, title, folderId, [folderId+lastModified]',
+      messages: 'id, conversationId, [conversationId+idx], idx, createdAt',
+      content_items: 'id, messageId, [messageId+idx], idx, type',
+      files_meta: 'id, conversationId, type, size, name',
+      files_data: 'id',
+      folders: 'id, name, createdAt',
+      workspaces: 'id, lastModified, name',
+      workspace_sources: 'id, workspaceId, kind, [workspaceId+kind]',
+      workspace_handles: 'sourceId',
+      workspace_transfers: 'id, workspaceId, status, createdAt',
+      workspace_mounts: 'id, workspaceId, sourceId, [workspaceId+path]',
+      workspace_chats: 'id, workspaceId, conversationId, [workspaceId+conversationId]'
+    });
+
+    this.version(8).stores({
+      conversations: 'id, lastModified, createdAt, title, folderId, [folderId+lastModified]',
+      messages: 'id, conversationId, [conversationId+idx], idx, createdAt',
+      content_items: 'id, messageId, [messageId+idx], idx, type',
+      files_meta: 'id, conversationId, type, size, name',
+      files_data: 'id',
+      folders: 'id, name, createdAt',
+      workspaces: 'id, lastModified, name',
+      workspace_sources: 'id, workspaceId, kind, [workspaceId+kind]',
+      workspace_handles: 'sourceId',
+      workspace_transfers: 'id, workspaceId, status, createdAt',
+      workspace_mounts: 'id, workspaceId, sourceId, [workspaceId+path]',
+      workspace_chats: 'id, workspaceId, conversationId, [workspaceId+conversationId]',
+      workspace_nodes: 'id, sourceId, path, [sourceId+path], [sourceId+parentPath]',
+      workspace_blobs: 'id, sourceId'
+    });
+
+    this.version(9).stores({
+      conversations: 'id, lastModified, createdAt, title, folderId, [folderId+lastModified]',
+      messages: 'id, conversationId, [conversationId+idx], idx, createdAt',
+      content_items: 'id, messageId, [messageId+idx], idx, type',
+      files_meta: 'id, conversationId, type, size, name',
+      files_data: 'id',
+      folders: 'id, name, createdAt',
+      workspaces: 'id, lastModified, name',
+      workspace_sources: 'id, workspaceId, kind, [workspaceId+kind]',
+      workspace_handles: 'sourceId',
+      workspace_transfers: 'id, workspaceId, status, createdAt',
+      workspace_mounts: 'id, workspaceId, sourceId, [workspaceId+path]',
+      workspace_chats: 'id, workspaceId, conversationId, [workspaceId+conversationId]',
+      workspace_nodes: 'id, sourceId, path, [sourceId+path], [sourceId+parentPath]',
+      workspace_blobs: 'id, sourceId',
+      workspace_file_references: 'id, conversationId, workspaceId, sourceId, nodeId'
+    });
+
+    this.version(10).stores({
+      conversations: 'id, lastModified, createdAt, title, folderId, [folderId+lastModified]',
+      messages: 'id, conversationId, [conversationId+idx], idx, createdAt',
+      content_items: 'id, messageId, [messageId+idx], idx, type',
+      files_meta: 'id, conversationId, type, size, name',
+      files_data: 'id',
+      folders: 'id, name, createdAt',
+      workspaces: 'id, lastModified, name',
+      workspace_sources: 'id, workspaceId, kind, [workspaceId+kind]',
+      workspace_handles: 'sourceId',
+      workspace_transfers: 'id, workspaceId, status, createdAt',
+      workspace_mounts: 'id, workspaceId, sourceId, [workspaceId+path]',
+      workspace_chats: 'id, workspaceId, conversationId, [workspaceId+conversationId]',
+      workspace_nodes: 'id, sourceId, path, [sourceId+path], [sourceId+parentPath]',
+      workspace_blobs: 'id, sourceId',
+      workspace_file_references: 'id, conversationId, workspaceId, sourceId, nodeId'
+    }).upgrade(async (tx) => {
+      if (!isArcanasEnabled()) return;
+      const workspaces = await tx.table('workspaces').toArray();
+      const sources = tx.table('workspace_sources');
+      for (const workspace of workspaces) {
+        const existing = await sources
+          .where('[workspaceId+kind]')
+          .equals([workspace.id, 'arcana-filesystem'])
+          .first();
+        if (existing) continue;
+        const now = Date.now();
+        await sources.add({
+          id: uuidv4(),
+          workspaceId: workspace.id,
+          kind: 'arcana-filesystem',
+          label: i18n.t('workspace.kind_arcana-filesystem'),
+          config: {},
+          capabilities: defaultCapabilities('arcana-filesystem'),
+          readOnly: false,
+          status: 'offline',
+          createdAt: now,
+          lastModified: now,
+        });
+      }
+    });
+
+    this.version(11).stores({
+      conversations: 'id, lastModified, createdAt, title, folderId, [folderId+lastModified]',
+      messages: 'id, conversationId, [conversationId+idx], idx, createdAt',
+      content_items: 'id, messageId, [messageId+idx], idx, type',
+      files_meta: 'id, conversationId, type, size, name',
+      files_data: 'id',
+      folders: 'id, name, createdAt',
+      workspaces: 'id, lastModified, name',
+      workspace_sources: 'id, workspaceId, kind, [workspaceId+kind]',
+      workspace_handles: 'sourceId',
+      workspace_transfers: 'id, workspaceId, status, createdAt',
+      workspace_mounts: 'id, workspaceId, sourceId, [workspaceId+path]',
+      workspace_chats: 'id, workspaceId, conversationId, [workspaceId+conversationId]',
+      workspace_nodes: 'id, sourceId, path, [sourceId+path], [sourceId+parentPath]',
+      workspace_blobs: 'id, sourceId',
+      workspace_file_references: 'id, conversationId, workspaceId, sourceId, nodeId'
+    }).upgrade(async (tx) => {
+      const now = Date.now();
+      const workspaces = await tx.table('workspaces').toArray();
+      const sources = tx.table('workspace_sources');
+      for (const workspace of workspaces) {
+        const existing = await sources
+          .where('[workspaceId+kind]')
+          .equals([workspace.id, 'browser'])
+          .first();
+        if (existing) continue;
+        await sources.add({
+          id: uuidv4(),
+          workspaceId: workspace.id,
+          kind: 'browser',
+          label: i18n.t('workspace.source_browser_label'),
+          config: { storage: 'indexeddb' },
+          capabilities: defaultCapabilities('browser'),
+          readOnly: false,
+          status: 'offline',
+          createdAt: now,
+          lastModified: now,
+        });
+      }
+
+      // Every browser source and every workspace root now uses one shared IndexedDB tree.
+      const allSources = await sources.toArray();
+      const browserSourceIds = new Set(
+        allSources
+          .filter((source: any) => source.kind === 'browser')
+          .map((source: any) => source.id),
+      );
+      const nodesTable = tx.table('workspace_nodes');
+      const blobsTable = tx.table('workspace_blobs');
+      const refsTable = tx.table('workspace_file_references');
+      const nodes = await nodesTable.toArray();
+      const candidates = nodes.filter(
+        (node: any) =>
+          node.sourceId !== SHARED_BROWSER_STORAGE_ID &&
+          (browserSourceIds.has(node.sourceId) ||
+            String(node.sourceId).startsWith('workspace-root:')),
+      );
+      if (!candidates.length) return;
+
+      const keepByPath = new Map<string, any>();
+      const dropToKeep = new Map<string, string>();
+      for (const node of candidates) {
+        const kept = keepByPath.get(node.path);
+        if (!kept) keepByPath.set(node.path, node);
+        else dropToKeep.set(node.id, kept.id);
+      }
+      const keepIds = new Set(
+        [...keepByPath.values()].map((node: any) => node.id),
+      );
+      const dropIds = candidates
+        .filter((node: any) => !keepIds.has(node.id))
+        .map((node: any) => node.id);
+
+      await refsTable.toCollection().modify((reference: any) => {
+        if (dropToKeep.has(reference.nodeId)) {
+          reference.nodeId = dropToKeep.get(reference.nodeId);
+        }
+        if (keepIds.has(reference.nodeId)) {
+          reference.sourceId = SHARED_BROWSER_STORAGE_ID;
+        }
+      });
+
+      if (dropIds.length) {
+        await nodesTable.bulkDelete(dropIds);
+        await blobsTable.bulkDelete(dropIds);
+      }
+      for (const node of keepByPath.values()) {
+        await nodesTable.update(node.id, {
+          sourceId: SHARED_BROWSER_STORAGE_ID,
+        });
+      }
+      const blobs = await blobsTable.toArray();
+      for (const blob of blobs) {
+        if (keepIds.has(blob.id)) {
+          await blobsTable.update(blob.id, {
+            sourceId: SHARED_BROWSER_STORAGE_ID,
+          });
+        }
+      }
+    });
+
+    this.version(12).stores({
+      workspace_agents: 'id, workspaceId, agentId, [workspaceId+agentId]',
+    });
+
+    this.version(13).stores({
+      workspace_agent_sessions:
+        'id, workspaceId, agentId, sessionId, [workspaceId+agentId], [workspaceId+agentId+sessionId]',
+    });
+
+    this.version(14).stores({
+      agent_sessions: 'id, agentId, sessionId, [agentId+sessionId]',
+      agent_session_messages:
+        'id, agentId, sessionId, [agentId+sessionId], [agentId+sessionId+position]',
+    });
+
+    // `arcana_v2` / `remote_file_access` were renamed to `arcana_tools`. Chats
+    // store their tool toggles inline, so old rows are rewritten once here.
+    this.version(15).stores({}).upgrade(async (tx) => {
+      const conversations = tx.table('conversations');
+      await conversations.toCollection().modify((conversation) => {
+        migrateLegacyToolKeys(conversation?.settings);
+      });
+    });
+
+    // v11 merged every browser source and workspace root into one shared tree.
+    // Each workspace gets its own tree now: copy what the shared tree holds into
+    // every workspace, so no workspace loses the files it could already see,
+    // point that workspace's file references at its copy, then drop the shared
+    // rows. Provenance was lost in v11, so the copy is the safest isolation.
+    this.version(16).stores({}).upgrade(isolateWorkspaceBrowserStorage);
+
+    // A migration must never change a consent flag. No stored row can tell the old opt-in
+    // default from an explicit opt-out, so v17 leaves `settings.tools.browser_storage` and
+    // every other row value exactly as it is. The version stays registered so PR builds that
+    // already opened as v17 do not hit a downgrade error.
+    this.version(17).stores({}).upgrade(preserveStorageConsent);
   }
 }
+
+/**
+ * Moves the data of the pre-v16 shared browser tree into every workspace's own
+ * tree. Runs inside the Dexie v16 upgrade transaction.
+ */
+export async function isolateWorkspaceBrowserStorage(tx: any) {
+  const nodesTable = tx.table('workspace_nodes');
+  const blobsTable = tx.table('workspace_blobs');
+  const refsTable = tx.table('workspace_file_references');
+  const workspaces = await tx.table('workspaces').toArray();
+  const sharedNodes = await nodesTable
+    .where('sourceId')
+    .equals(SHARED_BROWSER_STORAGE_ID)
+    .toArray();
+  if (!sharedNodes.length) return;
+
+  for (const workspace of workspaces) {
+    const treeId = workspaceBrowserStorageId(workspace.id);
+    const existingPaths = new Set(
+      (await nodesTable.where('sourceId').equals(treeId).toArray()).map(
+        (node: any) => node.path,
+      ),
+    );
+    const copied = new Map<string, string>();
+    const nodes: any[] = [];
+    const blobs: any[] = [];
+    const flush = async () => {
+      if (nodes.length) await nodesTable.bulkPut(nodes.splice(0));
+      if (blobs.length) await blobsTable.bulkPut(blobs.splice(0));
+    };
+    for (const node of sharedNodes) {
+      // A tree that already has this path keeps its own row.
+      if (existingPaths.has(node.path)) continue;
+      const id = uuidv4();
+      copied.set(node.id, id);
+      nodes.push({ ...node, id, sourceId: treeId });
+      if (node.kind === 'file') {
+        const blob = await blobsTable.get(node.id);
+        if (blob) blobs.push({ ...blob, id, sourceId: treeId });
+      }
+      if (nodes.length >= 100) await flush();
+    }
+    await flush();
+
+    const references = await refsTable
+      .where('workspaceId')
+      .equals(workspace.id)
+      .toArray();
+    for (const reference of references) {
+      if (reference.sourceId !== SHARED_BROWSER_STORAGE_ID) continue;
+      const nodeId = copied.get(reference.nodeId);
+      if (!nodeId) continue;
+      await refsTable.update(reference.id, { sourceId: treeId, nodeId });
+    }
+  }
+
+  const sharedIds = sharedNodes.map((node: any) => node.id);
+  await nodesTable.bulkDelete(sharedIds);
+  await blobsTable.bulkDelete(sharedIds);
+}
+
+/**
+ * Renames the pre-rename tool toggles (`arcana_v2`, `remote_file_access`) to
+ * `arcana_tools` in a conversation's settings object. Mutates and returns it:
+ * an explicit `arcana_tools` value wins over a legacy one, and legacy keys are
+ * always removed so nothing reads two switches.
+ */
+export function migrateLegacyToolKeys(settings: any) {
+  const tools = settings?.tools;
+  if (!tools || typeof tools !== 'object' || Array.isArray(tools)) return settings;
+  if (tools.arcana_tools === undefined) {
+    const legacy =
+      tools.arcana_v2 !== undefined ? tools.arcana_v2 : tools.remote_file_access;
+    if (legacy !== undefined) tools.arcana_tools = legacy;
+  }
+  delete tools.arcana_v2;
+  delete tools.remote_file_access;
+  return settings;
+}
+
+/**
+ * The Dexie v17 upgrade, and deliberately a no-op: a migration must never change
+ * a consent flag. A row that stored `browser_storage: false` (the old opt-in
+ * default) is indistinguishable from an explicit opt-out, so row values stay as
+ * they are. Absent values read as enabled through `storageAccessEnabled`.
+ */
+export async function preserveStorageConsent(_tx: any) {}
 
 export const db = new AppDB()
 
@@ -720,13 +1082,21 @@ export async function setConversationSummary(
 
 // Delete entire conversation (messages + content items + files)
 export async function deleteConversation(conversationId: string) {
+  const chatLinks = await db.workspace_chats
+    .where('conversationId')
+    .equals(conversationId)
+    .toArray();
   await db.transaction(
     'rw',
     [db.messages,
     db.content_items,
     db.files_meta,
     db.files_data,
-    db.conversations],
+    db.conversations,
+    db.workspace_chats,
+    db.workspace_sources,
+    db.workspace_mounts,
+    db.workspace_file_references],
     async () => {
       // Delete all files for this conversation (meta + data)
       const fileIds = await db.files_meta
@@ -754,6 +1124,18 @@ export async function deleteConversation(conversationId: string) {
 
       // Finally, delete the conversation record itself
       await db.conversations.delete(conversationId);
+      await db.workspace_chats.where('conversationId').equals(conversationId).delete();
+      // The chat's own folder disappears from the workspaces it was attached to; the files are
+      // deleted with the chat below (workspace/chatStorage.ts).
+      for (const link of chatLinks) {
+        const sourceId = chatStorageSourceId(link.workspaceId, conversationId);
+        await db.workspace_mounts.where('sourceId').equals(sourceId).delete();
+        await db.workspace_sources.delete(sourceId);
+      }
+      await db.workspace_file_references
+        .where('conversationId')
+        .equals(conversationId)
+        .delete();
     }
   );
   // The agent's files live in OPFS, outside the database
@@ -784,6 +1166,14 @@ function debounce<T extends (...args: any[]) => any>(fn: T, wait = 1000) {
 }
 
 // Hook to list conversation metas for a sidebar
+//
+// Every page mounts its own sidebar, and `useLiveQuery` starts from its default
+// result until the query resolves. An empty default empties the list for the
+// first frames of a topic or workspace page, which reads as a flash while the
+// page swaps, so the last snapshot is the default. The query still replaces it
+// as soon as it answers.
+let conversationListSnapshot: ConversationRow[] = []
+
 export function useConversationList() {
   const list = useLiveQuery(
     async () => {
@@ -800,8 +1190,9 @@ export function useConversationList() {
         )
     },
   [],
-  [] as ConversationRow[]
+  conversationListSnapshot
   )
+  conversationListSnapshot = list
   return list
 }
 
@@ -900,10 +1291,15 @@ export async function deleteFolder(folderId: string) {
 }
 
 export async function assignConversationToFolder(conversationId: string, folderId: string | null) {
+  const lastModified = Date.now();
   await db.conversations.update(conversationId, {
     folderId: folderId ?? null,
-    lastModified: Date.now(),
+    lastModified,
   });
+  // The move bumps lastModified outside the chat page's own save bookkeeping.
+  // Tell the open conversation, or its next autosave reports a false conflict.
+  notifyConversationMoved({ conversationId, folderId, lastModified });
+  return lastModified;
 }
 
 export async function ensureFolder(name: string, id?: string | null): Promise<string | null> {
@@ -914,11 +1310,15 @@ export async function ensureFolder(name: string, id?: string | null): Promise<st
   return await createFolder(trimmed, {}, id);
 }
 
+// Same snapshot default as `useConversationList`: without it the topics vanish
+// for the first frames of every page that mounts its own sidebar.
+let folderListSnapshot: FolderRow[] = []
+
 export function useFolderList() {
-  return useLiveQuery(
+  const folders = useLiveQuery(
     async () => {
-      const folders = await db.folders.toArray();
-      return folders.sort((a, b) => {
+      const rows = await db.folders.toArray();
+      return rows.sort((a, b) => {
         const aOrder = typeof a.sortOrder === 'number' ? a.sortOrder : null;
         const bOrder = typeof b.sortOrder === 'number' ? b.sortOrder : null;
         if (aOrder !== null && bOrder !== null) return aOrder - bOrder;
@@ -928,8 +1328,10 @@ export function useFolderList() {
       });
     },
     [],
-    [] as FolderRow[],
+    folderListSnapshot,
   );
+  folderListSnapshot = folders;
+  return folders;
 }
 
 // ---------- Files ----------
@@ -1019,6 +1421,8 @@ export function useFileMeta(fileId : string) {
       setFile(null);
       return;
     }
+    // A new id must not keep showing the previous file while it loads.
+    setFile(null);
     let cancelled = false;
     async function checkUntilReady() {
       while (!cancelled) {
@@ -1046,8 +1450,12 @@ export function useFile(fileId : string) {
   useEffect(() => {
     if (!fileId) {
       setFile(null);
+      setData(null);
       return;
     }
+    // A new id must not keep showing the previous file while it loads.
+    setFile(null);
+    setData(null);
     let cancelled = false;
     async function checkMetaUntilReady() {
       while (!cancelled) {
@@ -1088,6 +1496,9 @@ export function useFileBase64(fileId: string) {
       setBase64(null);
       return;
     }
+    // A new id must not keep the previous file's data URL, which an <img> would try
+    // to decode and report as a broken image.
+    setBase64(null);
     let cancelled = false;
     async function checkUntilReady() {
       while (!cancelled) {
@@ -1127,6 +1538,8 @@ export function useFileContent(fileId: string, encoding: string = "utf-8") {
       setContent(null);
       return;
     }
+    // A new id must not keep showing the previous file while it loads.
+    setContent(null);
 
     let cancelled = false;
 

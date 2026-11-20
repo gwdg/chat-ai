@@ -10,9 +10,12 @@ import { setWarning } from "../../Redux/reducers/interfaceSettingsSlice";
  *
  * Props:
  * - messageKey (string): i18n key explaining what the action does
+ * - messageValues (object): values for that i18n message (count, group, …)
  * - confirmKey (string): i18n key for the confirm button label
  * - warningKey (string): interface setting that keeps this dialog enabled;
  *   ticking "don't show this again" and confirming turns it off for good
+ * - showDontShowAgain (boolean): hide the "don't show this again" checkbox, for
+ *   actions that must always be confirmed
  * - danger (boolean): style the confirm button as destructive
  * - onConfirm (function): runs when the user confirms
  */
@@ -20,8 +23,10 @@ export default function ConfirmActionModal({
   isOpen,
   onClose,
   messageKey,
+  messageValues,
   confirmKey,
   warningKey,
+  showDontShowAgain = true,
   danger = false,
   onConfirm,
 }) {
@@ -30,7 +35,9 @@ export default function ConfirmActionModal({
 
   // Only remember the choice once the action is actually confirmed.
   const handleConfirm = () => {
-    if (dontShowAgain) dispatch(setWarning({ key: warningKey, value: false }));
+    if (dontShowAgain && warningKey) {
+      dispatch(setWarning({ key: warningKey, value: false }));
+    }
     onConfirm();
     onClose();
   };
@@ -40,26 +47,28 @@ export default function ConfirmActionModal({
       {/* Message */}
       <div className="pt-0 pb-2">
         <p className="text-base-content text-justify text-sm">
-          <Trans i18nKey={messageKey} />
+          <Trans i18nKey={messageKey} values={messageValues} />
         </p>
       </div>
 
       {/* Checkbox */}
-      <div className="flex items-center gap-3">
-        <input
-          type="checkbox"
-          id={`dontShowAgain-${warningKey}`}
-          checked={dontShowAgain}
-          onChange={(event) => setDontShowAgain(event.target.checked)}
-          className="checkbox checkbox-accent checkbox-sm"
-        />
-        <label
-          htmlFor={`dontShowAgain-${warningKey}`}
-          className="text-sm text-base-content cursor-pointer select-none"
-        >
-          <Trans i18nKey="common.dont_show_again" />
-        </label>
-      </div>
+      {showDontShowAgain && warningKey && (
+        <div className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            id={`dontShowAgain-${warningKey}`}
+            checked={dontShowAgain}
+            onChange={(event) => setDontShowAgain(event.target.checked)}
+            className="checkbox checkbox-accent checkbox-sm"
+          />
+          <label
+            htmlFor={`dontShowAgain-${warningKey}`}
+            className="text-sm text-base-content cursor-pointer select-none"
+          >
+            <Trans i18nKey="common.dont_show_again" />
+          </label>
+        </div>
+      )}
 
       {/* Action buttons */}
       <div className="flex flex-col md:flex-row gap-2 justify-between w-full text-sm mt-4">

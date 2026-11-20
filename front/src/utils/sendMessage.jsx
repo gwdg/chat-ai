@@ -7,11 +7,18 @@ import generateChoiceProposal from "../apis/generateChoiceProposal";
 import generateTitle from "../apis/generateTitle";
 import { loadFile, loadFileMeta, saveFile, updateConversation, updateConversationMeta } from "../db";
 import { getFileType, readFileAsBase64, readFileAsText } from "./attachments";
-import { isAgentEnabled } from "../apis/agentEndpoints";
-import { remoteMcpEnabled } from "../agent/mcp";
-import { isArcanasEnabled } from "./modules";
+import { isAgentEnabled, modelSupportsTools } from "../apis/agentEndpoints";
+import { resolveMcpServers } from "../agent/mcp";
+import { isArcanasEnabled, isChoicesEnabled, isFeedbackEnabled, isToolsEnabled } from "./modules";
 import { confirmMcpNameChange } from "./mcpNameChange";
 import { BINARY_DOCUMENT_TYPES, modelSupportsFileType } from "./modelCapabilities";
+
+/**
+ * The Browser agent is the default workflow. A model without tool support cannot run it, so that
+ * chat uses the plain chat path instead and never gets a tool.
+ */
+export const shouldUseBrowserAgent = (model) =>
+  isAgentEnabled() && modelSupportsTools(model);
 
 // Text to be appended to system prompt for memories
 const memoryExplanation = "The following list of memories was gathered by the system from previous conversations and may be irrelevant now. You may refer to relevant items only if justified to provide a more personalized and contextual response. Do not make any assumptions based on memories, instead focus on the user messages and requests:"
@@ -311,29 +318,46 @@ const sendMessage = async ({
   dispatch,
   timeout,
   memoryMode = 0,
+  memoryGroupId = "default",
+  globalMcpServers = [],
+  mcpToolPolicy = "ask",
   suggestUserPrompts = false,
   formSubmission = null,
   setTitleOnce = true,
   speechMode = false,
 }) => {
   const conversationId = localState.id
+  const effectiveMcpServers = resolveMcpServers(
+    localState.settings,
+    globalMcpServers,
+  )
   // Index of the assistant placeholder this turn will stream into. Using a
   // fixed index keeps updates correct when a barge-in starts another turn
   // before this one has fully unwound.
   const assistantIndex = localState.messages.length
 
   try {
-    const feedbackModule = import.meta.env.VITE_MODULE_FEEDBACK === "true";
-    const toolsModule = import.meta.env.VITE_MODULE_TOOLS === "true";
-    const choicesModule = import.meta.env.VITE_MODULE_CHOICES === "true";
+    const feedbackModule = isFeedbackEnabled();
+    const toolsModule = isToolsEnabled();
+    const choicesModule = isChoicesEnabled();
 
     const arcanasModule = isArcanasEnabled();
     const isExternalModel =
       typeof localState.settings.model?.name === "string" &&
       localState.settings.model.name.toLowerCase().includes("external");
-    const isToolsEnabled = toolsModule && !isExternalModel && localState.settings?.enable_tools;
+    // A model without tool support never gets a tool. It uses the plain chat workflow instead of
+    // the Browser agent, which needs tools to act on files.
+    const useBrowserAgent = shouldUseBrowserAgent(localState.settings.model);
+    const modelSupports = modelSupportsTools(localState.settings.model);
+    // Named separately from the `isToolsEnabled()` module gate above: a local
+    // binding with that name would shadow the import and throw a TDZ error.
+    const toolsActive =
+      modelSupports &&
+      toolsModule &&
+      !isExternalModel &&
+      localState.settings?.enable_tools;
     const isArcanaSupported =
-      arcanasModule && isToolsEnabled && !!localState.settings.tools.arcana;
+      arcanasModule && toolsActive && !!localState.settings.tools.arcana;
   
     let finalConversationForState; // For local state updates
     let conversationForAPI = await buildConversationForAPI(localState, {
@@ -353,24 +377,25 @@ const sendMessage = async ({
     }
     
     // Handle tools
-    if (isToolsEnabled || speechMode) {
+    if (toolsActive || speechMode) {
       // Inject the current date and time to the system prompt in human-readable format
       const currentDate = new Date().toLocaleString();
       systemPromptAPI = `\n\n--- Begin System Context ---\nCurrent Date: ${currentDate}\n--- End System Context ---` + systemPromptAPI;
       // Convert tools dictionary to OpenAI-compatible tools list
-      if (isToolsEnabled) {
+      if (toolsActive) {
         conversationForAPI.settings.tools = Object.entries(localState.settings.tools)
                   .filter(
                     ([toolKey, enabled]) =>
                       enabled &&
                       (arcanasModule ||
-                        (toolKey !== "arcana" && toolKey !== "arcana_v2"))
+                        (toolKey !== "arcana" &&
+                          toolKey !== "arcana_tools" &&
+                          toolKey !== "arcana_v2"))
                   )
                   .map(([toolKey]) => ({ type: toolKey }));
         if (conversationForAPI.settings?.arcana?.id && conversationForAPI.settings.arcana.id !== "") {
           conversationForAPI.settings.arcana.limit = 3;
         }
-        if (!remoteMcpEnabled(localState.settings)) delete conversationForAPI.settings.mcp_servers;
         if (!arcanasModule || !localState.settings.tools.arcana) {
           delete conversationForAPI.settings.arcana;
         }
@@ -384,6 +409,8 @@ const sendMessage = async ({
     } else {
       delete conversationForAPI.settings.enable_tools;
       delete conversationForAPI.settings.tools;
+      delete conversationForAPI.settings.function_tools;
+      delete conversationForAPI.settings.tool_choice;
     }
 
     // Clean conversation for API call
@@ -680,7 +707,8 @@ const sendMessage = async ({
         // Up to and including the new user message
         uiMessages: localState.messages,
         systemPrompt: systemPromptAPI,
-        settings: localState.settings,
+        settings: { ...localState.settings, mcp_servers: effectiveMcpServers },
+        mcpToolPolicy,
         onUpdate: showTurn,
         onMcpNameMismatch: handleMcpNameMismatch,
       });
@@ -701,7 +729,7 @@ const sendMessage = async ({
     let choicesProposed = [];
     try {
       // Get chat completion response
-      chatChunk = isAgentEnabled()
+      chatChunk = useBrowserAgent
         ? await getAgentChunk(conversationId)
         : await getChatChunk(conversationId);
       responseContent = chatChunk?.answer || ""
@@ -751,9 +779,13 @@ const sendMessage = async ({
             { role: "assistant", content: responseContent, loading: false, meta, createdAt: Date.now() },
             { role: "user", content: [{ type: "text", text: "" }] },
           ];
+          // The topic is not part of this snapshot's contract: a move may have
+          // happened while the response was streaming, and writing the old
+          // folderId back would undo it.
+          const { folderId: _folderId, ...snapshot } = localState;
           void updateConversation(
             conversationId,
-            { ...localState, messages, hasFirstPrompt: true },
+            { ...snapshot, messages, hasFirstPrompt: true },
             true
           ).catch((error) => {
             console.error("Failed to save inactive conversation:", error);
@@ -833,9 +865,15 @@ const sendMessage = async ({
           const memoryText = jsonResponse.memory_sentence.trim();
           if (jsonResponse.replace) {
             const line_number = jsonResponse.line_number - 1;
-            dispatch(editMemory({ index: line_number, text: memoryText }));
+            dispatch(
+              editMemory({
+                index: line_number,
+                text: memoryText,
+                groupId: memoryGroupId,
+              }),
+            );
           } else {
-            dispatch(addMemory({ text: memoryText }));
+            dispatch(addMemory({ text: memoryText, groupId: memoryGroupId }));
           }
           notifySuccess("Memory updated successfully.");
         }

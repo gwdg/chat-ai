@@ -9,6 +9,29 @@ import { dataURLtoFile } from "../utils/attachments";
 import { selectUserSettings, importUserSettings } from "../Redux/reducers/userSettingsReducer";
 
 /**
+ * `arcana_v2` and `remote_file_access` were the previous names of the
+ * `arcana_tools` tool toggle. Map old exports and tool-type lists onto it.
+ */
+function normalizeImportedToolKey(key) {
+  return key === "arcana_v2" || key === "remote_file_access"
+    ? "arcana_tools"
+    : key;
+}
+
+function normalizeImportedTools(tools) {
+  if (!tools || typeof tools !== "object") return tools;
+  const normalized = {};
+  for (const [key, value] of Object.entries(tools)) {
+    const nextKey = normalizeImportedToolKey(key);
+    // A legacy key must not override an explicit new one.
+    if (nextKey === key || normalized[nextKey] === undefined) {
+      normalized[nextKey] = value;
+    }
+  }
+  return normalized;
+}
+
+/**
  * useImportConversation
  * Returns an async function you can call from a component to import a conversation.
  */
@@ -281,17 +304,17 @@ export function useImportConversation() {
         const allFalse = Object.fromEntries(
           Object.keys(settings.tools || {}).map(key => [key, false])
         );
-        settings.tools = {
+        settings.tools = normalizeImportedTools({
           ...allFalse,
           ...Object.fromEntries(tools
             .filter(t => t.type !== "web_search" && t.type !== "fetch_url")
-            .map(t => [t.type, true]))
-        };
+            .map(t => [normalizeImportedToolKey(t.type), true]))
+        });
         // TODO check if web search can be added
       } else if (tools && typeof tools === "object") {
         tools['web_search'] = false;
         tools['fecth_url'] = false;
-        settings.tools = tools
+        settings.tools = normalizeImportedTools(tools)
       }
 
       // MCP servers
@@ -311,6 +334,12 @@ export function useImportConversation() {
         settings.memory_mode_override = "default";
       } else if ([0, 1, 2].includes(Number(memory_mode_override))) {
         settings.memory_mode_override = Number(memory_mode_override);
+      }
+
+      // per-conversation memory group
+      const memory_group_override = extractParameter(data, "memory_group_override");
+      if (typeof memory_group_override === "string") {
+        settings.memory_group_override = memory_group_override;
       }
 
       // arcana
@@ -396,6 +425,7 @@ export function useImportConversation() {
       console.log("Navigating to new chat");
       if (!silent && !options.metaChat) navigate(`/chat/${newId}`, { replace: true });
       if (!silent && !options.metaChat) notifySuccess("Chat imported successfully");
+      return newId;
     } catch (error) {
       console.error("Import error:", error);
       notifyError("Failed to import conversation")

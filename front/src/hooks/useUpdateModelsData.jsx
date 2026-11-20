@@ -1,6 +1,7 @@
 // useUpdateModelsData.js
 import { useState, useEffect, useCallback } from "react";
 import { getModelsData } from "../apis/getModelsData";
+import { withoutServiceModels } from "../apis/serviceModels";
 import { useToast } from "./useToast";
 import { useModal } from "../modals/ModalContext";
 
@@ -23,7 +24,14 @@ export function useUpdateModelsData() {
         notifyError("No models available or network error");
         return;
       }
-      setModelsData(data);
+      // `saia-fs` is an MCP server that must stay out of the selector. The
+      // agent service (`saia-agent`) is a chat model and is kept.
+      const chatModels = withoutServiceModels(data);
+      if (Array.isArray(chatModels) && chatModels.length === 0) {
+        notifyError("No models available or network error");
+        return;
+      }
+      setModelsData(chatModels);
     } catch {
       notifyError("Error fetching models");
     }

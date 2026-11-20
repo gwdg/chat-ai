@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 
 import ModelSelectorWrapper from "../../components/Header/ModelSelectorWrapper";
+import E2eeLock from "../../components/Others/E2eeLock";
 import {
   selectDefaultModel,
   setDefaultModel,
@@ -37,10 +38,11 @@ export default function DefaultModelSelector({ modelsData }) {
         </div>
         {currentDefaultModel?.name && (
           <span
-            className="max-w-[45%] shrink-0 truncate rounded-md bg-base-200 px-2 py-1 text-xs font-medium text-base-content/70"
+            className="flex max-w-[45%] shrink-0 items-center gap-1 rounded-md bg-base-200 px-2 py-1 text-xs font-medium text-base-content/70"
             title={currentDefaultModel.name}
           >
-            {currentDefaultModel.name}
+            <span className="truncate">{currentDefaultModel.name}</span>
+            <E2eeLock modelId={currentDefaultModel.id} size={12} />
           </span>
         )}
       </div>

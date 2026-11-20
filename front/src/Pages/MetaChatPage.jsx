@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import { useSearchParams } from "react-router";
-import { AiLabel } from "@carbon/icons-react";
+import ChattyLogo from "../components/Others/ChattyLogo";
 
 import { getDefaultConversation } from "../utils/conversationUtils";
 import { selectUserSettings } from "../Redux/reducers/userSettingsReducer";
@@ -15,16 +15,25 @@ import { useUpdateUserData } from "../hooks/useUpdateUserData";
 import { useSettingsDeepLink } from "../hooks/useSettingsDeepLink";
 
 import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
+import MetaChangesPanel from "../components/Meta/MetaChangesPanel";
+import AgentFilePreviewPanel from "../components/Agent/AgentFilePreviewPanel";
+import ChatFilePreviewPanel from "../components/Conversation/ChatFilePreviewPanel";
 import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
 import Header from "../components/Header/Header";
 import Conversation from "../components/Conversation/Conversation";
+import CloseChatButton from "../components/Conversation/CloseChatButton";
 import TourManager from "../components/SettingsPanel/TourManager";
 import AnnouncementBar from "../components/Header/AnnouncementBar";
+import { isFeatureEnabled } from "../config/deployment";
 import FeatureGuideCard from "../components/Others/FeatureGuideCard";
 import TutorialCatalog from "../components/Others/TutorialCatalog";
 import UseCaseCatalog from "../components/Others/UseCaseCatalog";
+import HallucinationWarning from "../components/Conversation/HallucinationWarning";
 import { MetaChatSendContext } from "../context/MetaChatContext";
+import { useFilePreview } from "../context/FilePreviewContext";
 import { useFeatureGuide } from "../context/FeatureGuideContext";
+import { useAgents } from "../agents/agentStore";
+
 
 export default function MetaChatPage() {
   const { t } = useTranslation();
@@ -44,6 +53,9 @@ export default function MetaChatPage() {
 
   const [loaded, setLoaded] = useState(false);
   const [openCatalog, setOpenCatalog] = useState(null);
+  const [filePreview, setFilePreview] = useState(null);
+  const { preview: chatFilePreview } = useFilePreview();
+  const agents = useAgents();
   const catalogRef = useRef(null);
   const latestStateRef = useRef(localState);
   const loadedRef = useRef(false);
@@ -51,6 +63,23 @@ export default function MetaChatPage() {
   useEffect(() => {
     if (isActive) setOpenCatalog(null);
   }, [isActive]);
+
+  useEffect(() => {
+    const onPreview = (event) => {
+      const agent = agents.find(
+        (item) => item.id === event.detail?.agentId,
+      );
+      if (!agent || !event.detail?.path) return;
+      event.preventDefault();
+      setFilePreview({
+        agentId: agent.id,
+        path: event.detail.path,
+      });
+    };
+    window.addEventListener("chatai:preview-agent-file", onPreview);
+    return () =>
+      window.removeEventListener("chatai:preview-agent-file", onPreview);
+  }, [agents]);
 
   useEffect(() => {
     if (!openCatalog) return;
@@ -168,9 +197,10 @@ export default function MetaChatPage() {
 
   return (
     <MetaChatSendContext.Provider value={metaChatSend}>
-      <div className="h-dvh grid grid-rows-[auto_1fr]">
-        <div className="min-w-0 overflow-hidden">
-          <TourManager />
+      <div className="flex h-dvh min-h-0">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="min-w-0 overflow-x-clip">
+          {isFeatureEnabled("tutorials") && <TourManager />}
           <AnnouncementBar />
           <Header
             className="md:hidden"
@@ -183,6 +213,7 @@ export default function MetaChatPage() {
 
         <div
           className="
+            flex-1 min-h-0
             grid
             grid-cols-1 grid-rows-[1fr_auto]
             md:grid-cols-[auto_1fr] md:grid-rows-[1fr_auto]
@@ -198,29 +229,42 @@ export default function MetaChatPage() {
             modelsData={modelsData}
           />
 
-          <div className="flex min-h-0 min-w-0 flex-col">
+          <div className="flex min-h-0 min-w-0 flex-1 gap-2">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            <div className="mx-auto w-full md:max-w-[85vw] xl:max-w-[1300px]">
+              <HallucinationWarning />
+            </div>
             <div className="mx-auto mb-2 flex w-full md:max-w-[85vw] xl:max-w-[1300px] items-start gap-2 rounded-xl border border-warning/40 bg-warning/10 px-3 py-2 shadow-sm">
-              <AiLabel
-                size={16}
-                className="mt-0.5 shrink-0 text-warning"
-                aria-hidden="true"
-              />
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-base-content">
-                  {t("meta_chat.title")}
-                </p>
+              <ChattyLogo className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-x-2">
+                  <p className="min-w-0 flex-1 text-xs font-semibold text-base-content">
+                    {t("meta_chat.name")}
+                    <span className="ml-1 font-normal text-base-content/60">
+                      · {t("meta_chat.title")}
+                    </span>
+                  </p>
+                  <div className="ml-auto flex shrink-0 items-center gap-2">
+                    <CloseChatButton
+                      localState={localState}
+                      setLocalState={setLocalState}
+                    />
+                  </div>
+                </div>
                 <p className="mt-0.5 text-[11px] leading-relaxed text-base-content/70">
                   {t("meta_chat.banner_description")}
                 </p>
                 <ul className="mt-1 list-disc space-y-1 pl-4 text-[11px] leading-relaxed text-base-content/70">
-                  <li>
-                    <span className="font-medium text-base-content/80">
-                      {t("meta_chat.purposes.tutor")}
-                    </span>
-                    {" — "}
-                    {t("meta_chat.purposes.tutor_example")}
-                    <FeatureGuideCard featureId="meta_chat_catalogs" compact />
-                  </li>
+                  {isFeatureEnabled("tutorials") && (
+                    <li>
+                      <span className="font-medium text-base-content/80">
+                        {t("meta_chat.purposes.tutor")}
+                      </span>
+                      {" — "}
+                      {t("meta_chat.purposes.tutor_example")}
+                      <FeatureGuideCard featureId="meta_chat_catalogs" compact />
+                    </li>
+                  )}
                   <li>
                     <span className="font-medium text-base-content/80">
                       {t("meta_chat.purposes.find")}
@@ -229,23 +273,29 @@ export default function MetaChatPage() {
                     {t("meta_chat.purposes.find_example")}
                   </li>
                 </ul>
-                <div
-                  ref={catalogRef}
-                  className="mt-2 flex flex-wrap items-center gap-2"
-                >
-                  <TutorialCatalog
-                    open={openCatalog === "tutorials"}
-                    onOpenChange={(next) =>
-                      setOpenCatalog(next ? "tutorials" : null)
-                    }
-                  />
-                  <UseCaseCatalog
-                    open={openCatalog === "useCases"}
-                    onOpenChange={(next) =>
-                      setOpenCatalog(next ? "useCases" : null)
-                    }
-                  />
-                </div>
+                {/* The catalogs anchor their panel to this row, so the panel
+                    stays inside the conversation when the buttons wrap or the
+                    second button sits far right on a phone. A deployment with
+                    tours off renders no runtime, so the buttons would be dead. */}
+                {isFeatureEnabled("tutorials") && (
+                  <div
+                    ref={catalogRef}
+                    className="relative mt-2 flex flex-wrap items-center gap-2"
+                  >
+                    <TutorialCatalog
+                      open={openCatalog === "tutorials"}
+                      onOpenChange={(next) =>
+                        setOpenCatalog(next ? "tutorials" : null)
+                      }
+                    />
+                    <UseCaseCatalog
+                      open={openCatalog === "useCases"}
+                      onOpenChange={(next) =>
+                        setOpenCatalog(next ? "useCases" : null)
+                      }
+                    />
+                  </div>
+                )}
               </div>
             </div>
             <div className="min-h-0 flex-1">
@@ -254,12 +304,26 @@ export default function MetaChatPage() {
                 setLocalState={setLocalState}
                 userData={userData}
                 modelsData={modelsData}
+                hideCloseButton
               />
             </div>
+            </div>
+            {!filePreview && !chatFilePreview && (
+              <MetaChangesPanel userSettings={userSettings} />
+            )}
           </div>
 
           <CollapsibleFooter className="row-start-3 col-span-full md:row-start-2 md:col-start-1 md:col-end-3" />
         </div>
+        </div>
+        {filePreview && (
+          <AgentFilePreviewPanel
+            agent={agents.find((item) => item.id === filePreview.agentId)}
+            path={filePreview.path}
+            onClose={() => setFilePreview(null)}
+          />
+        )}
+        <ChatFilePreviewPanel />
       </div>
     </MetaChatSendContext.Provider>
   );

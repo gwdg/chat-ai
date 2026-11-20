@@ -2,3 +2,5 @@
 .serena/
 .claude/
 deploy.sh
+
+remote-example/

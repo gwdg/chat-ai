@@ -29,6 +29,22 @@ export function openTools() {
   }
 }
 
+export function openAgentTools() {
+  if (!find('[data-guide="agent-recovery-tab"]')) {
+    click('[data-guide="agent-tools-button"]');
+  }
+}
+
+export function openAgentRecovery() {
+  openAgentTools();
+  retry(() => {
+    const tab = find('[data-guide="agent-recovery-tab"]');
+    if (!tab) return false;
+    if (tab.getAttribute("aria-pressed") !== "true") tab.click();
+    return true;
+  });
+}
+
 export function ensureToolsEnabled() {
   openTools();
   retry(() => {
@@ -55,10 +71,11 @@ export function ensureTool(toolKey) {
     }
     const tool = find(`[data-guide="tool-${toolKey}"]`);
     if (!tool) return false;
-    if (!tool.className.includes("border-success")) {
-      tool.click();
-    }
-    return true;
+    if (isToolActive(toolKey)) return true;
+    // A tool with a settings page swaps the row for that page's switch, which
+    // carries the same data-guide; the next tick finds it and flips it.
+    tool.click();
+    return false;
   });
 }
 
@@ -108,6 +125,34 @@ export function openTopicMenu() {
   }
 }
 
+export function openWorkspaceMenu() {
+  if (!find('[data-guide="pin-workspace-menu-item"]')) {
+    click('[data-guide="workspace-menu"]');
+  }
+}
+
+export function openChatWorkspaces() {
+  if (!find('[data-guide="manage-workspace"]')) {
+    click('[data-guide="chat-workspaces"]');
+  }
+}
+
+export function openWorkspaceAgents() {
+  const tab = find('[data-guide="meta-tab-agents"]');
+  if (tab && tab.getAttribute("aria-selected") !== "true") tab.click();
+}
+
+export function openWorkspaceFiles() {
+  const tab = find('[data-guide="meta-tab-files"]');
+  if (tab && tab.getAttribute("aria-selected") !== "true") tab.click();
+}
+
+export function openAgentMenu() {
+  if (!find('[data-guide="pin-agent-menu-item"]')) {
+    click('[data-guide="agent-menu"]');
+  }
+}
+
 export function openSearch() {
   if (!find('[data-guide="search-input"]')) {
     click('[data-guide="search-chats"]');
@@ -150,7 +195,12 @@ export function toolsAreEnabled() {
 
 export function isToolActive(toolKey) {
   const tool = find(`[data-guide="tool-${toolKey}"]`);
-  return !!tool && tool.className.includes("border-success");
+  if (!tool) return false;
+  const pressed = tool.getAttribute("aria-pressed");
+  if (pressed !== null) return pressed === "true";
+  const checked = tool.getAttribute("aria-checked");
+  if (checked !== null) return checked === "true";
+  return tool.className.includes("border-success");
 }
 
 export function arcanaIdEntered() {

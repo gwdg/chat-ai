@@ -58,7 +58,7 @@ export default function UseCaseCatalog({ open: controlledOpen, onOpenChange }) {
   };
 
   return (
-    <div className="relative inline-flex">
+    <div className="inline-flex">
       <button
         type="button"
         className="btn btn-accent btn-xs gap-1"

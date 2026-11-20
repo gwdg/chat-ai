@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   requestMcpConfirmation,
@@ -95,6 +95,42 @@ describe("AgentSteps", () => {
 
     expect(screen.getByText("Code output")).toBeInTheDocument();
     expect(screen.getByText("hello")).toBeInTheDocument();
+  });
+
+  it("keeps an image out of the tool result text", () => {
+    render(
+      <AgentSteps
+        isLoading={false}
+        renderMode="Default"
+        agentMessages={[
+          {
+            role: "assistant",
+            content: [
+              {
+                type: "toolCall",
+                id: "call-image",
+                name: "read",
+                arguments: { path: "/charts/random.png" },
+              },
+            ],
+          },
+          {
+            role: "toolResult",
+            toolCallId: "call-image",
+            content: [
+              { type: "text", text: "Read image file [image/png]" },
+              { type: "image", data: "iVBORw0KGgo=", mimeType: "image/png" },
+            ],
+            isError: false,
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /read/ }));
+    expect(screen.getByText("Read image file [image/png]")).toBeInTheDocument();
+    // The image is attached to the message as a file instead (agent/writtenFiles.ts).
+    expect(screen.queryByText("[image]")).not.toBeInTheDocument();
   });
 
   it("marks a tool call that is always allowed", async () => {

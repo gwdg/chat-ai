@@ -3,8 +3,11 @@ import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import {
   Brain,
+  ChartColumn,
   Database,
   Download,
+  Lock,
+  Settings2,
   SlidersHorizontal,
   Trash2,
   UserRound,
@@ -17,8 +20,10 @@ import UserInfoContainer from "./UserInfoContainer";
 import TimeoutSetter from "./TimeoutSetter";
 import UserMemoryContainer from "./UserMemoryContainer";
 import {
+  AdvancedModePreference,
   ConversationSummaryPreference,
   DocumentConversionPreference,
+  McpToolPolicyPreference,
   MemoryPreference,
   MessageDisplayPreference,
   RenderingPreferences,
@@ -30,6 +35,10 @@ import { useToast } from "../../hooks/useToast";
 import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
 import ImportChatButton from "../../components/Sidebar/Buttons/ImportChatButton";
 import StorageStatus from "./StorageStatus";
+import UsageSettings from "./UsageSettings";
+import EncryptionSettings from "./EncryptionSettings";
+import { isChoicesEnabled, isToolsEnabled } from "../../utils/modules";
+import { isFeatureEnabled } from "../../config/deployment";
 
 const PROFILE_TABS = [
   {
@@ -40,6 +49,13 @@ const PROFILE_TABS = [
     descriptionKey: "user_settings.tabs.profile.description",
   },
   {
+    id: "usage",
+    icon: ChartColumn,
+    labelKey: "user_settings.tabs.usage.label",
+    titleKey: "user_settings.usage.title",
+    descriptionKey: "user_settings.usage.description",
+  },
+  {
     id: "chat",
     icon: SlidersHorizontal,
     labelKey: "user_settings.tabs.chat.label",
@@ -47,11 +63,25 @@ const PROFILE_TABS = [
     descriptionKey: "user_settings.tabs.chat.description",
   },
   {
+    id: "advanced",
+    icon: Settings2,
+    labelKey: "user_settings.tabs.advanced.label",
+    titleKey: "user_settings.tabs.advanced.title",
+    descriptionKey: "user_settings.tabs.advanced.description",
+  },
+  {
     id: "memories",
     icon: Brain,
     labelKey: "user_settings.tabs.memories.label",
     titleKey: "user_settings.tabs.memories.title",
     descriptionKey: "user_settings.tabs.memories.description",
+  },
+  {
+    id: "encryption",
+    icon: Lock,
+    labelKey: "user_settings.tabs.encryption.label",
+    titleKey: "user_settings.tabs.encryption.title",
+    descriptionKey: "user_settings.tabs.encryption.description",
   },
   {
     id: "data",
@@ -85,15 +115,20 @@ export default function UserSettingsModal({
   const { openModal } = useModal();
   const { notifySuccess, notifyError } = useToast();
   const userSettings = useSelector(selectUserSettings);
-  const choicesModule = import.meta.env.VITE_MODULE_CHOICES === "true";
-  const [activeTab, setActiveTab] = useState(initialTab || "profile");
+  const choicesModule = isChoicesEnabled();
+  const availableTabs = PROFILE_TABS.filter(
+    (tab) => tab.id !== "encryption" || isFeatureEnabled("e2ee"),
+  );
+  const resolveTab = (tab) =>
+    availableTabs.some((entry) => entry.id === tab) ? tab : "profile";
+  const [activeTab, setActiveTab] = useState(() => resolveTab(initialTab));
   const [highlightActiveTab, setHighlightActiveTab] = useState(false);
   const activeTabConfig =
-    PROFILE_TABS.find((tab) => tab.id === activeTab) ?? PROFILE_TABS[0];
+    availableTabs.find((tab) => tab.id === activeTab) ?? availableTabs[0];
 
   useEffect(() => {
     if (!isOpen) return undefined;
-    setActiveTab(initialTab || "profile");
+    setActiveTab(resolveTab(initialTab));
     setHighlightActiveTab(Boolean(initialTab));
     if (!initialTab) return undefined;
     const timer = setTimeout(() => setHighlightActiveTab(false), 1800);
@@ -132,6 +167,26 @@ export default function UserSettingsModal({
       );
     }
 
+    if (activeTab === "usage") {
+      return <UsageSettings userData={userData} />;
+    }
+
+    if (activeTab === "advanced") {
+      return (
+        <div className="flex flex-col gap-5">
+          <AdvancedModePreference />
+          {isToolsEnabled() && (
+            <div className="border-t border-base-300 pt-5">
+              <McpToolPolicyPreference />
+            </div>
+          )}
+          <div className="border-t border-base-300 pt-5" data-guide="rendering-preference">
+            <RenderingPreferences />
+          </div>
+        </div>
+      );
+    }
+
     if (activeTab === "chat") {
       return (
         <div className="flex flex-col gap-5">
@@ -142,29 +197,16 @@ export default function UserSettingsModal({
               {t("common.loading")}
             </p>
           )}
-          <div className="border-t border-base-300 pt-5" data-guide="submission-preference">
+          <div data-guide="submission-preference">
             <SubmissionPreference />
           </div>
-          <div className="border-t border-base-300 pt-5">
-            <ConversationSummaryPreference />
-          </div>
-          <div className="border-t border-base-300 pt-5">
-            <MessageDisplayPreference />
-          </div>
-          <div className="border-t border-base-300 pt-5" data-guide="rendering-preference">
-            <RenderingPreferences />
-          </div>
-          <div className="border-t border-base-300 pt-5" data-guide="document-conversion-preference">
+          <ConversationSummaryPreference />
+          <MessageDisplayPreference />
+          <div data-guide="document-conversion-preference">
             <DocumentConversionPreference />
           </div>
-          {choicesModule && (
-            <div className="border-t border-base-300 pt-5">
-              <SuggestionPreference />
-            </div>
-          )}
-          <div className="border-t border-base-300 pt-5">
-            <TimeoutSetter />
-          </div>
+          {choicesModule && <SuggestionPreference />}
+          <TimeoutSetter />
         </div>
       );
     }
@@ -178,6 +220,10 @@ export default function UserSettingsModal({
           </div>
         </div>
       );
+    }
+
+    if (activeTab === "encryption" && isFeatureEnabled("e2ee")) {
+      return <EncryptionSettings modelsData={modelsData} />;
     }
 
     return (
@@ -230,7 +276,7 @@ export default function UserSettingsModal({
           aria-label={t("user_settings.tabs.navigation_label")}
           className="flex shrink-0 gap-1 overflow-x-auto border-b border-base-300 bg-base-200 p-2 md:w-56 md:flex-col md:overflow-y-auto md:border-r md:border-b-0 md:p-3"
         >
-          {PROFILE_TABS.map((tab) => {
+          {availableTabs.map((tab) => {
             const Icon = tab.icon;
             const selected = tab.id === activeTab;
             return (

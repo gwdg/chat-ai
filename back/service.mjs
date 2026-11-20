@@ -9,6 +9,7 @@ import fs from "fs";
 import path from "path";
 import { Readable, pipeline } from "stream"; // Node's stream module
 import OpenAI from "openai";
+import { registerBridge } from "./bridge.mjs";
 
 const app = express();
 
@@ -30,6 +31,12 @@ let remoteFilesArcana =
   process.env.REMOTE_FILES_ARCANA ||
   process.env.SAIA_RAG_WEB_ARCANA ||
   "remote-files";
+let bridgePublicUrl = process.env.BRIDGE_PUBLIC_URL || "";
+// Bridge credentials may also live in back.json: a native checkout started with
+// `npm run start` has no environment file, and the bridge fails closed without
+// them. The env var still wins, so a deployment can override the file.
+let bridgeSharedSecret = process.env.BRIDGE_SHARED_SECRET || "";
+let bridgeCorsOrigins = process.env.CORS_ORIGINS || "";
 
 // Load configuration
 try {
@@ -61,6 +68,33 @@ try {
     configuredRemoteFilesArcana.trim()
   ) {
     remoteFilesArcana = configuredRemoteFilesArcana.trim();
+  }
+  if (
+    typeof config.bridgePublicUrl === "string" &&
+    config.bridgePublicUrl.trim()
+  ) {
+    bridgePublicUrl = config.bridgePublicUrl.trim();
+  }
+  if (
+    typeof config.bridgeSharedSecret === "string" &&
+    config.bridgeSharedSecret.trim() &&
+    !process.env.BRIDGE_SHARED_SECRET
+  ) {
+    bridgeSharedSecret = config.bridgeSharedSecret.trim();
+    console.log("Bridge shared secret: set");
+  }
+  // A list is accepted so a front end served from another origin (the usual
+  // `front` on :8080 → `back` on :8081 dev pair) can be named without shell quoting.
+  const configuredCorsOrigins = Array.isArray(config.corsOrigins)
+    ? config.corsOrigins.join(",")
+    : config.corsOrigins;
+  if (
+    typeof configuredCorsOrigins === "string" &&
+    configuredCorsOrigins.trim() &&
+    !process.env.CORS_ORIGINS
+  ) {
+    bridgeCorsOrigins = configuredCorsOrigins.trim();
+    console.log("Bridge CORS origins:", bridgeCorsOrigins);
   }
   if (testMode) {
     console.log("TEST MODE ENABLED: no upstream calls will be made.");
@@ -134,7 +168,13 @@ app.use((err, req, res, next) => {
 });
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
-app.use(cors());
+// Non-bridge routes keep the previous wildcard CORS behaviour. Bridge routes
+// own their allowlist in registerBridge, so this must never add a second
+// Access-Control-Allow-Origin header there.
+app.use((req, res, next) => {
+  if (req.path.startsWith("/bridge")) return next();
+  return cors()(req, res, next);
+});
 
 // Function to process file with docling
 async function processFile(file, inference_id) {
@@ -696,8 +736,19 @@ app.delete(/^\/remote-files\/(.+)$/, (req, res) =>
   deleteRemoteFile(req, res, remoteRouteParam(req.params[0]))
 );
 
+// `/arcana-v2/*` is the old name of these routes; keep it working for older
+// front-end builds and bookmarks. A path-less middleware is required: Express
+// restores `req.url` when a mounted path is trimmed, which undoes the rewrite.
+app.use((req, _res, next) => {
+  const legacy = "/arcana-v2";
+  if (req.url === legacy || req.url.startsWith(`${legacy}/`) || req.url.startsWith(`${legacy}?`)) {
+    req.url = `/arcana-tools${req.url.slice(legacy.length)}`;
+  }
+  next();
+});
+
 const encodeArcana = (value) => encodeURIComponent(String(value ?? ""));
-const arcanaV2Path = (name) => `/arcana/${encodeArcana(name)}`;
+const arcanaToolsPath = (name) => `/arcana/${encodeArcana(name)}`;
 
 async function proxyArcanaJson(req, pathname, init = {}) {
   const response = await remoteApi(req, pathname, init);
@@ -711,7 +762,7 @@ async function proxyArcanaJson(req, pathname, init = {}) {
   }
 }
 
-app.get("/arcana-v2/arcanas", async (req, res) => {
+app.get("/arcana-tools/arcanas", async (req, res) => {
   try {
     const arcanas = await proxyArcanaJson(req, "/arcana/");
     return res.status(200).json(
@@ -724,7 +775,7 @@ app.get("/arcana-v2/arcanas", async (req, res) => {
   }
 });
 
-app.post("/arcana-v2/arcanas", async (req, res) => {
+app.post("/arcana-tools/arcanas", async (req, res) => {
   try {
     const name = String(req.body?.name ?? "").trim();
     if (!name) {
@@ -745,20 +796,32 @@ app.post("/arcana-v2/arcanas", async (req, res) => {
   }
 });
 
-app.get("/arcana-v2/arcanas/:name", async (req, res) => {
+app.get("/arcana-tools/arcanas/:name", async (req, res) => {
   try {
-    const arcana = await proxyArcanaJson(req, arcanaV2Path(req.params.name));
+    const arcana = await proxyArcanaJson(req, arcanaToolsPath(req.params.name));
     return res.status(200).json(arcana);
   } catch (error) {
     return sendRemoteError(res, error);
   }
 });
 
-app.get("/arcana-v2/arcanas/:name/files", async (req, res) => {
+app.get("/arcana-tools/arcanas/:name/quota", async (req, res) => {
+  try {
+    const quota = await proxyArcanaJson(
+      req,
+      `${arcanaToolsPath(req.params.name)}/quota`
+    );
+    return res.status(200).json(quota);
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
+
+app.get("/arcana-tools/arcanas/:name/files", async (req, res) => {
   try {
     const files = await proxyArcanaJson(
       req,
-      `${arcanaV2Path(req.params.name)}/files/?grouped=false`
+      `${arcanaToolsPath(req.params.name)}/files/?grouped=false`
     );
     return res.status(200).json(files);
   } catch (error) {
@@ -766,11 +829,11 @@ app.get("/arcana-v2/arcanas/:name/files", async (req, res) => {
   }
 });
 
-app.get("/arcana-v2/arcanas/:name/files/:file/download", async (req, res) => {
+app.get("/arcana-tools/arcanas/:name/files/:file/download", async (req, res) => {
   try {
     const response = await remoteApi(
       req,
-      `${arcanaV2Path(req.params.name)}/files/${encodeArcana(req.params.file)}/download`
+      `${arcanaToolsPath(req.params.name)}/files/${encodeArcana(req.params.file)}/download`
     );
     if (!response.ok) throw await remoteRequestError(response);
     const content = Buffer.from(await response.arrayBuffer());
@@ -808,8 +871,8 @@ async function handleArcanaFileWrite(req, res, replace) {
       filename
     );
     const pathname = replace
-      ? `${arcanaV2Path(name)}/files/${encodeArcana(filename)}`
-      : `${arcanaV2Path(name)}/files/`;
+      ? `${arcanaToolsPath(name)}/files/${encodeArcana(filename)}`
+      : `${arcanaToolsPath(name)}/files/`;
     const result = await proxyArcanaJson(req, pathname, {
       method: replace ? "PUT" : "POST",
       body: form,
@@ -826,18 +889,18 @@ async function handleArcanaFileWrite(req, res, replace) {
   }
 }
 
-app.post("/arcana-v2/arcanas/:name/files", (req, res) =>
+app.post("/arcana-tools/arcanas/:name/files", (req, res) =>
   handleArcanaFileWrite(req, res, false)
 );
-app.put("/arcana-v2/arcanas/:name/files/:file", (req, res) =>
+app.put("/arcana-tools/arcanas/:name/files/:file", (req, res) =>
   handleArcanaFileWrite(req, res, true)
 );
 
-app.delete("/arcana-v2/arcanas/:name/files/:file", async (req, res) => {
+app.delete("/arcana-tools/arcanas/:name/files/:file", async (req, res) => {
   try {
     const result = await proxyArcanaJson(
       req,
-      `${arcanaV2Path(req.params.name)}/files/${encodeArcana(req.params.file)}`,
+      `${arcanaToolsPath(req.params.name)}/files/${encodeArcana(req.params.file)}`,
       { method: "DELETE" }
     );
     return res.status(200).json({
@@ -851,11 +914,11 @@ app.delete("/arcana-v2/arcanas/:name/files/:file", async (req, res) => {
   }
 });
 
-app.post("/arcana-v2/arcanas/:name/index", async (req, res) => {
+app.post("/arcana-tools/arcanas/:name/index", async (req, res) => {
   try {
     const result = await proxyArcanaJson(
       req,
-      `${arcanaV2Path(req.params.name)}/generate-index`,
+      `${arcanaToolsPath(req.params.name)}/generate-index`,
       { method: "POST" }
     );
     return res.status(200).json(result);
@@ -864,11 +927,11 @@ app.post("/arcana-v2/arcanas/:name/index", async (req, res) => {
   }
 });
 
-app.get("/arcana-v2/arcanas/:name/index/status", async (req, res) => {
+app.get("/arcana-tools/arcanas/:name/index/status", async (req, res) => {
   try {
     const result = await proxyArcanaJson(
       req,
-      `${arcanaV2Path(req.params.name)}/index-status`
+      `${arcanaToolsPath(req.params.name)}/index-status`
     );
     return res.status(200).json(result);
   } catch (error) {
@@ -876,11 +939,11 @@ app.get("/arcana-v2/arcanas/:name/index/status", async (req, res) => {
   }
 });
 
-app.get("/arcana-v2/arcanas/:name/index/running", async (req, res) => {
+app.get("/arcana-tools/arcanas/:name/index/running", async (req, res) => {
   try {
     const result = await proxyArcanaJson(
       req,
-      `${arcanaV2Path(req.params.name)}/index-job-running`
+      `${arcanaToolsPath(req.params.name)}/index-job-running`
     );
     return res.status(200).json(result);
   } catch (error) {
@@ -888,11 +951,11 @@ app.get("/arcana-v2/arcanas/:name/index/running", async (req, res) => {
   }
 });
 
-app.get("/arcana-v2/arcanas/:name/index/jobs/:jobId", async (req, res) => {
+app.get("/arcana-tools/arcanas/:name/index/jobs/:jobId", async (req, res) => {
   try {
     const result = await proxyArcanaJson(
       req,
-      `${arcanaV2Path(req.params.name)}/index-job/${encodeArcana(req.params.jobId)}`
+      `${arcanaToolsPath(req.params.name)}/index-job/${encodeArcana(req.params.jobId)}`
     );
     return res.status(200).json(result);
   } catch (error) {
@@ -900,11 +963,11 @@ app.get("/arcana-v2/arcanas/:name/index/jobs/:jobId", async (req, res) => {
   }
 });
 
-app.delete("/arcana-v2/arcanas/:name/index", async (req, res) => {
+app.delete("/arcana-tools/arcanas/:name/index", async (req, res) => {
   try {
     const result = await proxyArcanaJson(
       req,
-      `${arcanaV2Path(req.params.name)}/delete-index`,
+      `${arcanaToolsPath(req.params.name)}/delete-index`,
       { method: "DELETE" }
     );
     return res.status(200).json(result);
@@ -913,11 +976,11 @@ app.delete("/arcana-v2/arcanas/:name/index", async (req, res) => {
   }
 });
 
-app.get("/arcana-v2/arcanas/:name/members", async (req, res) => {
+app.get("/arcana-tools/arcanas/:name/members", async (req, res) => {
   try {
     const result = await proxyArcanaJson(
       req,
-      `${arcanaV2Path(req.params.name)}/members`
+      `${arcanaToolsPath(req.params.name)}/members`
     );
     return res.status(200).json(result);
   } catch (error) {
@@ -925,7 +988,7 @@ app.get("/arcana-v2/arcanas/:name/members", async (req, res) => {
   }
 });
 
-app.post("/arcana-v2/arcanas/:name/members", async (req, res) => {
+app.post("/arcana-tools/arcanas/:name/members", async (req, res) => {
   try {
     const user = String(req.body?.user ?? "").trim();
     if (!user) {
@@ -934,7 +997,7 @@ app.post("/arcana-v2/arcanas/:name/members", async (req, res) => {
     const role = req.body?.role === "editor" ? "editor" : "reader";
     const result = await proxyArcanaJson(
       req,
-      `${arcanaV2Path(req.params.name)}/members`,
+      `${arcanaToolsPath(req.params.name)}/members`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -947,11 +1010,11 @@ app.post("/arcana-v2/arcanas/:name/members", async (req, res) => {
   }
 });
 
-app.delete("/arcana-v2/arcanas/:name/members/:member", async (req, res) => {
+app.delete("/arcana-tools/arcanas/:name/members/:member", async (req, res) => {
   try {
     const result = await proxyArcanaJson(
       req,
-      `${arcanaV2Path(req.params.name)}/members/${encodeArcana(req.params.member)}`,
+      `${arcanaToolsPath(req.params.name)}/members/${encodeArcana(req.params.member)}`,
       { method: "DELETE" }
     );
     return res.status(200).json(result);
@@ -1087,6 +1150,61 @@ app.post("/chat/completions", async (req, res) => {
   const mcp_servers = req.body["mcp-servers"] || null;
   const inference_id = req.headers["inference-id"];
   const uid = req.headers["oidc_claim_uid"];
+
+  // ----- END-TO-END ENCRYPTED CHAT -----
+  // The body is a sealed envelope only the model node can open, so nothing here
+  // may validate or rebuild it: `messages` is inside the ciphertext, and adding
+  // a cleartext field would break the envelope. The node seals its answer the
+  // same way; this proxy only routes bytes, so a keyed model can never fall back
+  // to a cleartext request or response.
+  if (
+    req.body &&
+    typeof req.body === "object" &&
+    req.body.e2ee &&
+    typeof req.body.e2ee === "object"
+  ) {
+    const e2eeModel = req.body.model;
+    if (typeof e2eeModel !== "string" || !e2eeModel) {
+      return res.status(422).json({ error: "Invalid model provided" });
+    }
+    const controller = new AbortController();
+    res.on("close", () => controller.abort());
+    try {
+      const upstream = await globalThis.fetch(`${apiEndpoint}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "inference-service": e2eeModel,
+          "inference-portal": serviceName,
+          ...(uid ? { user: uid } : {}),
+          ...(inference_id ? { "inference-id": inference_id } : {}),
+          ...(apiKey || inference_id
+            ? { Authorization: "Bearer " + (apiKey || inference_id) }
+            : {}),
+        },
+        body: JSON.stringify(req.body),
+        signal: controller.signal,
+      });
+      res.status(upstream.status);
+      const contentType = upstream.headers.get("content-type");
+      if (contentType) res.setHeader("Content-Type", contentType);
+      const e2eeStatus = upstream.headers.get("x-saia-e2ee");
+      if (e2eeStatus) res.setHeader("x-saia-e2ee", e2eeStatus);
+      if (upstream.body) {
+        pipeline(Readable.fromWeb(upstream.body), res, () => {});
+      } else {
+        res.end();
+      }
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      console.error("Error in encrypted /chat/completions:", error);
+      if (!res.headersSent) res.status(502);
+      res.end("Upstream request failed.");
+    }
+    return;
+  }
+  // ----- END END-TO-END ENCRYPTED CHAT -----
+
   if (!Array.isArray(messages)) {
     return res.status(422).json({ error: "Invalid messages provided" });
   }
@@ -1252,7 +1370,13 @@ app.post("/chat/completions", async (req, res) => {
           if (tool.type === "audio_generation") {
             params.tools.push({type: "audio_generation"});
           }
-          if (tool.type === "remote_file_access" || tool.type === "arcana_v2") {
+          // The gateway still calls this tool `arcana_v2`; our own name is
+          // `arcana_tools` (and `remote_file_access` before it).
+          if (
+            tool.type === "remote_file_access" ||
+            tool.type === "arcana_v2" ||
+            tool.type === "arcana_tools"
+          ) {
             params.tools.push({type: "arcana_v2"});
           }
           if (tool.type === "arcana" && (!params.arcana || !params.arcana.id)) {
@@ -1380,6 +1504,15 @@ app.post("/chat/completions", async (req, res) => {
 });
 
 // Start Chat AI Backend App
-app.listen(port, () => {
-  console.log(`Chat AI backend listening on port ${port}`);
+const server = app.listen(port, () => {
+  console.log(`Chat AI Backend listening on port ${port}`);
+});
+
+registerBridge({
+  app,
+  server,
+  publicUrl: bridgePublicUrl,
+  secret: bridgeSharedSecret,
+  corsOrigins: bridgeCorsOrigins,
+  allowAnonymous: process.env.BRIDGE_ALLOW_ANON === "1",
 });

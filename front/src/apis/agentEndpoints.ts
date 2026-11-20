@@ -1,10 +1,19 @@
 // Upstream calls used by the agent's tools. They go to the same backend as plain chat
 // (backendPath), which adds the credentials. Agent mode is switched on by front.json modules.agent.
 import getModelDefaults from "../config/getModelDefaults";
+import { authHeaders, getApiKey } from "./authHeaders";
 import { resolveBaseURL } from "./openaiClient";
+import { e2eeFetch } from "../e2ee/fetch";
 
 export const agentEndpoint = () => resolveBaseURL().replace(/\/$/, "");
-export const isAgentEnabled = () => import.meta.env.VITE_MODULE_AGENT === "true";
+export { isAgentEnabled } from "../utils/modules";
+
+// pi-ai insists on a key. `back` ignores it and adds the real one, so the placeholder only has
+// to be non-empty. A direct endpoint (a SAIA engine) checks it, so the configured key wins.
+const PROXY_KEY = "set-by-backend";
+export const agentApiKey = () => getApiKey() || PROXY_KEY;
+/** Request headers for the agent's own upstream calls (auth plus caller headers). */
+export const agentRequestHeaders = () => authHeaders();
 // Arcana in agent mode runs in the SAIA gateway. On unless front.json sets agentGatewayTools
 // to false, in which case agent requests reach the plain chat endpoint without gateway fields. Web search is an
 // agent tool of its own (agent/tools.ts) and does not need the gateway.
@@ -15,26 +24,63 @@ const toollessModels = new Set<string>();
 export const markToolless = (modelId: string) => toollessModels.add(modelId);
 
 /**
- * Whether the agent may offer tools to this model. External models get none; a model whose
- * server has no tool calling is marked with `"tools": false` in config/models/<id>.json, or
- * found out at runtime.
+ * Whether the agent may offer tools to this model.
+ *
+ * "External" in a display name is a routing and accounting label, not a capability: models
+ * served through a bridge carry it so the engine's demand updater skips them, while the engine
+ * explicitly keeps their tools in the request body. Tool support therefore comes from data:
+ * `external` in the extended /models response, `"tools": false` (or `true`) in
+ * config/models/<id>.json, or a rejection learned at runtime (`markToolless`). Anything else
+ * starts with tools; `runAgent` retries without them if the first request is rejected.
  */
-export function modelSupportsTools(model: { id?: string; name?: string } | undefined) {
-  if ((model?.name ?? "").toLowerCase().includes("external")) return false;
+export function modelSupportsTools(model: { id?: string; name?: string; external?: boolean } | undefined) {
   if (!model?.id) return true;
-  return getModelDefaults(model.id)?.tools !== false && !toollessModels.has(model.id);
+  if (toollessModels.has(model.id)) return false;
+  const configured = getModelDefaults(model.id)?.tools;
+  if (configured === true) return true;
+  if (configured === false) return false;
+  return model.external !== true;
 }
 
 const blob = (data: Uint8Array, type = "") => new Blob([data as Uint8Array<ArrayBuffer>], { type });
 
+// These tools do not compute anything themselves: the engine forwards each route to a separate
+// service of its registry. When that service is not registered (or has no instance), the engine
+// answers 404 `{"detail":"Unknown model/service"}` on the non-chat routes, or names the service in
+// an `error.message` ("No instance available for service '<name>'"). Neither body says which
+// service the route needed, so a model reporting the failure can only repeat the opaque text.
+const UPSTREAM_SERVICE: Record<string, string> = {
+  "/documents/convert/file": "docling-serve",
+  "/audio/transcriptions": "whisperx",
+  "/audio/speech": "kokoro-82m",
+  "/images/generations": "flux",
+  "/images/edits": "image-edit-2511",
+};
+
+/** Why a 404/503 means "this deployment cannot do that", appended to the raw body. */
+const missingServiceHint = (path: string, status: number, body: string) => {
+  if (status !== 404 && status !== 503) return "";
+  if (!/unknown model\/service|no instance available/i.test(body)) return "";
+  const named = /service '([^']+)'/i.exec(body)?.[1];
+  const service = named || UPSTREAM_SERVICE[path];
+  if (!service) return "";
+  return `\nThe deployment's SAIA registry has no "${service}" service (or no instance of it), so ${path} never reached one. Chat, document conversion and media generation each need their own registered service; only the deployment's administrator can add one.`;
+};
+
 async function post(path: string, body: BodyInit, json = false, signal?: AbortSignal) {
-  const response = await fetch(`${agentEndpoint()}${path}`, {
+  const headers = { ...(json ? { "Content-Type": "application/json" } : {}), ...agentRequestHeaders() };
+  // `e2eeFetch` only rewrites keyed-model `/chat/completions` calls (explainImage);
+  // every other endpoint passes through untouched.
+  const response = await e2eeFetch(`${agentEndpoint()}${path}`, {
     method: "POST",
     body,
     signal,
-    headers: json ? { "Content-Type": "application/json" } : undefined,
+    headers: Object.keys(headers).length ? headers : undefined,
   });
-  if (!response.ok) throw new Error(`${path} failed: ${response.status} ${(await response.text()).slice(0, 500)}`);
+  if (!response.ok) {
+    const body = (await response.text()).slice(0, 500);
+    throw new Error(`${path} failed: ${response.status} ${body}${missingServiceHint(path, response.status, body)}`);
+  }
   return response;
 }
 

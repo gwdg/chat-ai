@@ -10,9 +10,12 @@ import {
   subscribeMcpConfirmations,
 } from "../../../agent/mcpConfirmation";
 
+// Images are attached to the message as files (agent/writtenFiles.ts), so the tool result only
+// contributes its text; the old "[image]" placeholder is gone.
 const resultText = (result) =>
   (result?.content ?? [])
-    .map((block) => (block.type === "text" ? block.text : `[${block.type}]`))
+    .filter((block) => block.type === "text")
+    .map((block) => block.text)
     .join("\n");
 
 // One tool call of the agent, collapsed to its name and main argument

@@ -10,11 +10,18 @@ vi.mock("react-redux", () => ({
       user_settings: {
         model: { id: "test-model", name: "Test Model" },
         memories: [{ text: "one memory" }],
+        memory_groups: [],
+        default_memory_group: "default",
         timeout: 300000,
         memory_mode: 0,
       },
       interface_settings: {},
     }),
+  useDispatch: () => vi.fn(),
+}));
+
+vi.mock("../useToast", () => ({
+  useToast: () => ({ notifySuccess: vi.fn(), notifyError: vi.fn() }),
 }));
 
 vi.mock("react-i18next", () => ({
@@ -29,6 +36,9 @@ vi.mock("../../apis/chatCompletions", () => ({
 
 vi.mock("../../utils/metaTools", () => ({
   META_TOOL_DEFINITIONS: [
+    { type: "function", function: { name: "list_memories" } },
+  ],
+  getMetaToolDefinitions: () => [
     { type: "function", function: { name: "list_memories" } },
   ],
   createMetaToolRunner: vi.fn(),
@@ -96,6 +106,30 @@ describe("useMetaChatSend", () => {
     ]);
     expect(payload.messages[0].content).toContain("Use the provided tools");
     expect(setter.getState().messages.at(-2).content[0].text).toBe("Hello from meta");
+  });
+
+  it("checks what is new when the user asks for recent changes", async () => {
+    const runner = vi.fn(async (name) =>
+      name === "get_whats_new" ? "Agent A: connected" : "tool result",
+    );
+    vi.mocked(createMetaToolRunner).mockReturnValue(runner);
+    vi.mocked(chatCompletions).mockImplementationOnce(finalMessage("Nothing new"));
+
+    const state = makeState([
+      { role: "user", content: [{ type: "text", text: "What's new?" }] },
+    ]);
+    const setter = makeSetter(state);
+    const { result } = renderHook(() => useMetaChatSend([]));
+
+    await act(async () => {
+      await result.current({ localState: state, setLocalState: setter.setLocalState });
+    });
+
+    expect(runner).toHaveBeenCalledWith("get_whats_new", {
+      since: expect.any(String),
+    });
+    const payload = vi.mocked(chatCompletions).mock.calls[0][0];
+    expect(payload.messages[0].content).toContain("Agent A: connected");
   });
 
   it("executes a tool call and feeds the result back to the model", async () => {

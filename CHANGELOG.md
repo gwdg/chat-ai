@@ -1,5 +1,15 @@
 # Changelog 
 
+## Version: v2.0.0 (14.11.2026)
+Highlights:
+- Added multi-session OpenCode agents with session creation, switching, renaming, removal, and nested subagent sessions
+- Added agent workspace bridge access, local agent filesystems as workspace storage, and workspace file previews as full-height sidebars
+- Expanded the Meta chat with agent/session access, workspace links, MCP management, cross-app search, and stateful what's-new checks across all sessions
+- Added persistent agent forms, shell history, drafts, permission policies, and transcript exports
+- Added collapsible code blocks and improved rendering for Typst, LaTeX, and TikZ content
+- Improved workspace file operations, Git log previews, and agent filesystem metadata
+- Added new tutorials and expanded English and German localizations
+
 ## Version: v1.0.2 (08.10.2026)
 Highlights:
 - Code refactor and cleanup

@@ -1,44 +1,178 @@
 // userMemorySlice.js
 import { createSlice } from "@reduxjs/toolkit";
 
-const initialState = {
-  memories: [],
-  timeout: 300000,
-  memory_mode: 0,
-  suggest_user_prompts: false,
-  html_render_mode: "off",
-  html_load_external: false,
-  html_sanitization: "strict",
-  set_title_once: true,
-  render_typst: false,
-  render_latex: false,
-  render_graphviz: false,
-  render_vega: false,
-  render_chartjs: false,
-  collapse_reasoning_while_streaming: true,
-  document_conversion_mode: "choice",
-  conversation_summaries: true,
-  show_timestamps: false,
-  // null = device default (Enter on desktop, Shift+Enter on mobile).
-  send_with_enter: null,
-};
+// Every key the store understands, with the built-in defaults. `getDefaultUserSettings()`
+// layers the deployment's `userSettings` from front.json on top of this.
+function baseInitialState() {
+  return {
+    memories: [],
+    memory_groups: [],
+    default_memory_group: "default",
+    mcp_servers: [],
+    timeout: 300000,
+    memory_mode: 0,
+    suggest_user_prompts: false,
+    html_render_mode: "off",
+    html_load_external: false,
+    html_sanitization: "strict",
+    set_title_once: true,
+    render_typst: false,
+    render_latex: false,
+    render_graphviz: false,
+    render_vega: false,
+    render_chartjs: false,
+    collapse_reasoning_while_streaming: true,
+    document_conversion_mode: "choice",
+    conversation_summaries: true,
+    show_timestamps: false,
+    // Off by default: the sidebar shows chats and workspaces only. The Agents and
+    // MCP server lists are advanced tools and appear when this is switched on.
+    advanced_mode: false,
+    // null = device default (Enter on desktop, Shift+Enter on mobile).
+    send_with_enter: null,
+    // Ask before each call of a user-added MCP server tool; "always" runs them directly and
+    // "never" leaves them out of chat turns. The agent's own file tools are never affected.
+    mcp_tool_policy: "ask",
+    // End-to-end encryption: published model public keys, and model → key bindings.
+    e2ee_keys: [],
+    e2ee_models: {},
+  };
+}
 
 const MEMORY_MODES = [0, 1, 2];
 const RENDER_MODES = ["render", "code", "off"];
 const SANITIZATION_MODES = ["strict", "relaxed"];
 const DOCUMENT_CONVERSION_MODES = ["server", "browser", "choice"];
+const MCP_TOOL_POLICIES = ["ask", "always", "never"];
+
+function ensureMemoryState(state) {
+  if (!Array.isArray(state.memories)) state.memories = [];
+  if (!Array.isArray(state.memory_groups)) state.memory_groups = [];
+  if (typeof state.default_memory_group !== "string") {
+    state.default_memory_group = "default";
+  }
+}
+
+function ensureE2eeState(state) {
+  if (!Array.isArray(state.e2ee_keys)) state.e2ee_keys = [];
+  if (
+    !state.e2ee_models ||
+    typeof state.e2ee_models !== "object" ||
+    Array.isArray(state.e2ee_models)
+  ) {
+    state.e2ee_models = {};
+  }
+}
 
 // Apply settings from an exported backup without trusting arbitrary fields.
 function importUserSettingsState(state, incoming) {
   if (!incoming || typeof incoming !== "object" || Array.isArray(incoming)) return;
+  ensureMemoryState(state);
   if (Array.isArray(incoming.memories)) {
     state.memories = incoming.memories
       .filter((memory) => memory && typeof memory === "object")
       .map((memory) => ({ ...memory }));
   }
+  if (Array.isArray(incoming.memory_groups)) {
+    state.memory_groups = incoming.memory_groups
+      .filter(
+        (group) =>
+          group &&
+          typeof group.id === "string" &&
+          group.id !== "default" &&
+          typeof group.name === "string" &&
+          group.name.trim(),
+      )
+      .map((group) => ({ id: group.id, name: group.name.trim() }));
+  }
+  if (typeof incoming.default_memory_group === "string") {
+    state.default_memory_group =
+      incoming.default_memory_group === "default" ||
+      state.memory_groups.some(
+        (group) => group.id === incoming.default_memory_group,
+      )
+        ? incoming.default_memory_group
+        : "default";
+  }
+  const validGroupIds = new Set([
+    "default",
+    ...state.memory_groups.map((group) => group.id),
+  ]);
+  state.memories = state.memories.map((memory) => {
+    const groupId = memory.groupId ?? "default";
+    return {
+      ...memory,
+      groupId: validGroupIds.has(groupId) ? groupId : "default",
+    };
+  });
+  if (Array.isArray(incoming.mcp_servers)) {
+    // Only browser-connected servers remain; a legacy gateway entry has no URL and is dropped.
+    state.mcp_servers = incoming.mcp_servers
+      .filter(
+        (server) =>
+          server &&
+          typeof server.id === "string" &&
+          typeof server.url === "string" &&
+          server.url.trim(),
+      )
+      .map((server) => ({
+        id: server.id,
+        name: typeof server.name === "string" ? server.name : undefined,
+        url: server.url.trim(),
+        ...(server.headers && typeof server.headers === "object"
+          ? { headers: { ...server.headers } }
+          : {}),
+      }));
+  }
   const timeout = Number(incoming.timeout);
   if (Number.isFinite(timeout)) {
     state.timeout = Math.min(Math.max(timeout, 5000), 900000);
+  }
+  // E2EE keys are public material only; anything else in the entry is dropped.
+  if (Array.isArray(incoming.e2ee_keys)) {
+    ensureE2eeState(state);
+    state.e2ee_keys = incoming.e2ee_keys
+      .filter(
+        (key) =>
+          key &&
+          typeof key === "object" &&
+          typeof key.id === "string" &&
+          key.id &&
+          typeof key.publicKey === "string" &&
+          key.publicKey.trim(),
+      )
+      .map((key) => ({
+        id: key.id,
+        name: typeof key.name === "string" ? key.name : "",
+        publicKey: key.publicKey.trim(),
+        ...(typeof key.source === "string" ? { source: key.source } : {}),
+        ...(typeof key.url === "string" ? { url: key.url } : {}),
+        ...(typeof key.addedAt === "string" ? { addedAt: key.addedAt } : {}),
+        ...(typeof key.testedAt === "string" ? { testedAt: key.testedAt } : {}),
+        ...(Array.isArray(key.testedModels)
+          ? {
+              testedModels: key.testedModels.filter(
+                (modelId) => typeof modelId === "string" && modelId,
+              ),
+            }
+          : {}),
+      }));
+  }
+  if (
+    incoming.e2ee_models &&
+    typeof incoming.e2ee_models === "object" &&
+    !Array.isArray(incoming.e2ee_models)
+  ) {
+    ensureE2eeState(state);
+    const keyIds = new Set(state.e2ee_keys.map((key) => key.id));
+    state.e2ee_models = Object.fromEntries(
+      Object.entries(incoming.e2ee_models).filter(
+        ([modelId, keyId]) =>
+          modelId &&
+          typeof keyId === "string" &&
+          keyIds.has(keyId),
+      ),
+    );
   }
   const memoryMode = Number(incoming.memory_mode);
   if (MEMORY_MODES.includes(memoryMode)) state.memory_mode = memoryMode;
@@ -65,14 +199,47 @@ function importUserSettingsState(state, incoming) {
     "collapse_reasoning_while_streaming",
     "conversation_summaries",
     "show_timestamps",
+    "advanced_mode",
   ]) {
     if (typeof incoming[key] === "boolean") state[key] = incoming[key];
   }
   if (typeof incoming.send_with_enter === "boolean" || incoming.send_with_enter === null) {
     state.send_with_enter = incoming.send_with_enter;
   }
+  if (MCP_TOOL_POLICIES.includes(incoming.mcp_tool_policy)) {
+    state.mcp_tool_policy = incoming.mcp_tool_policy;
+  }
   if (incoming.model !== undefined) state.model = incoming.model;
 }
+
+// Deployment defaults from front.json (`userSettings` → VITE_USER_SETTINGS). The value is
+// JSON because it is a whole settings object. An unparseable or non-object value is
+// ignored, so a broken config never prevents the app from starting.
+function readConfiguredUserSettings() {
+  const raw = import.meta.env?.VITE_USER_SETTINGS;
+  if (typeof raw !== "string" || !raw.trim()) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+// The defaults for a profile with no persisted settings yet, and after a reset.
+// Imported user settings still overwrite these on rehydrate, so a deployed default
+// only applies to fresh profiles (or an explicit reset). Validation is shared with
+// the backup import: unknown or malformed fields are ignored.
+export function getDefaultUserSettings() {
+  const state = baseInitialState();
+  const configured = readConfiguredUserSettings();
+  if (configured) importUserSettingsState(state, configured);
+  return state;
+}
+
+const initialState = getDefaultUserSettings();
 
 const userSettingsSlice = createSlice({
   name: "user_settings",
@@ -80,20 +247,40 @@ const userSettingsSlice = createSlice({
   reducers: {
     // Add new memory
     addMemory: (state, action) => {
-      const { text } = action.payload;
+      ensureMemoryState(state);
+      const { text, groupId } = action.payload;
+      const group =
+        typeof groupId === "string" &&
+        (groupId === "default" ||
+          state.memory_groups.some((item) => item.id === groupId))
+          ? groupId
+          : "default";
       const newMemory = {
-        id: state.nextId,
+        id:
+          typeof crypto !== "undefined" && "randomUUID" in crypto
+            ? crypto.randomUUID()
+            : `mem-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
         text: text.trim(),
         createdAt: new Date().toISOString(),
+        groupId: group,
       };
 
       state.memories.push(newMemory);
-      state.nextId += 1;
     },
 
     // Edit existing memory
     editMemory: (state, action) => {
-      const { index, text } = action.payload;
+      const { index, text, groupId } = action.payload;
+
+      if (typeof groupId === "string") {
+        const groupMemories = state.memories.filter(
+          (memory) => (memory.groupId ?? "default") === groupId,
+        );
+        if (index >= 0 && index < groupMemories.length) {
+          groupMemories[index].text = text.trim();
+        }
+        return;
+      }
 
       if (index >= 0 && index < state.memories.length) {
         state.memories[index].text = text.trim();
@@ -112,6 +299,81 @@ const userSettingsSlice = createSlice({
     // Delete all memories
     deleteAllMemories: (state) => {
       state.memories = [];
+    },
+
+    addMemoryGroup: (state, action) => {
+      ensureMemoryState(state);
+      const { id, name } = action.payload || {};
+      const trimmed = typeof name === "string" ? name.trim() : "";
+      if (!id || id === "default" || !trimmed) return;
+      if (state.memory_groups.some((group) => group.id === id)) return;
+      if (
+        state.memory_groups.some(
+          (group) => group.name.toLowerCase() === trimmed.toLowerCase(),
+        )
+      ) {
+        return;
+      }
+      state.memory_groups.push({ id, name: trimmed });
+    },
+
+    renameMemoryGroup: (state, action) => {
+      ensureMemoryState(state);
+      const { id, name } = action.payload || {};
+      const trimmed = typeof name === "string" ? name.trim() : "";
+      if (!id || !trimmed) return;
+      const group = state.memory_groups.find((item) => item.id === id);
+      if (!group) return;
+      if (
+        state.memory_groups.some(
+          (item) =>
+            item.id !== id &&
+            item.name.toLowerCase() === trimmed.toLowerCase(),
+        )
+      ) {
+        return;
+      }
+      group.name = trimmed;
+    },
+
+    deleteMemoryGroup: (state, action) => {
+      ensureMemoryState(state);
+      const { id } = action.payload || {};
+      if (!id || id === "default") return;
+      state.memory_groups = state.memory_groups.filter(
+        (group) => group.id !== id,
+      );
+      state.memories = state.memories.map((memory) =>
+        (memory.groupId ?? "default") === id
+          ? { ...memory, groupId: "default" }
+          : memory,
+      );
+      if (state.default_memory_group === id) {
+        state.default_memory_group = "default";
+      }
+    },
+
+    setDefaultMemoryGroup: (state, action) => {
+      ensureMemoryState(state);
+      const id = action.payload;
+      if (
+        id === "default" ||
+        state.memory_groups.some((group) => group.id === id)
+      ) {
+        state.default_memory_group = id;
+      }
+    },
+
+    setMemoryGroup: (state, action) => {
+      ensureMemoryState(state);
+      const { index, groupId } = action.payload || {};
+      if (index < 0 || index >= state.memories.length) return;
+      state.memories[index].groupId =
+        typeof groupId === "string" &&
+        (groupId === "default" ||
+          state.memory_groups.some((group) => group.id === groupId))
+          ? groupId
+          : "default";
     },
 
     // Set default model
@@ -191,8 +453,113 @@ const userSettingsSlice = createSlice({
       state.show_timestamps = Boolean(action.payload);
     },
 
+    setAdvancedMode: (state, action) => {
+      state.advanced_mode = Boolean(action.payload);
+    },
+
     setSendWithEnter: (state, action) => {
       state.send_with_enter = Boolean(action.payload);
+    },
+
+    setMcpToolPolicy: (state, action) => {
+      const policy = action.payload;
+      if (MCP_TOOL_POLICIES.includes(policy)) state.mcp_tool_policy = policy;
+    },
+
+    addE2eeKey: (state, action) => {
+      ensureE2eeState(state);
+      const key = action.payload;
+      if (!key?.id || typeof key.publicKey !== "string" || !key.publicKey.trim()) {
+        return;
+      }
+      const entry = {
+        id: key.id,
+        name: typeof key.name === "string" ? key.name : "",
+        publicKey: key.publicKey.trim(),
+        ...(typeof key.source === "string" ? { source: key.source } : {}),
+        ...(typeof key.url === "string" ? { url: key.url } : {}),
+        addedAt: key.addedAt || new Date().toISOString(),
+        // The last sealed test, per model, so the key list can show whether the
+        // key still works instead of only whether it parses. Absent means it was
+        // never tested; an empty list means the last test failed everywhere.
+        ...(typeof key.testedAt === "string" ? { testedAt: key.testedAt } : {}),
+        ...(Array.isArray(key.testedModels)
+          ? {
+              testedModels: key.testedModels.filter(
+                (modelId) => typeof modelId === "string" && modelId,
+              ),
+            }
+          : {}),
+      };
+      const index = state.e2ee_keys.findIndex((item) => item.id === key.id);
+      if (index >= 0) state.e2ee_keys[index] = { ...state.e2ee_keys[index], ...entry };
+      else state.e2ee_keys.push(entry);
+    },
+
+    updateE2eeKey: (state, action) => {
+      ensureE2eeState(state);
+      const { id, patch } = action.payload || {};
+      if (!id || !patch) return;
+      const index = state.e2ee_keys.findIndex((item) => item.id === id);
+      if (index < 0) return;
+      const next = { ...state.e2ee_keys[index], ...patch, id };
+      if (typeof next.publicKey === "string") next.publicKey = next.publicKey.trim();
+      state.e2ee_keys[index] = next;
+    },
+
+    removeE2eeKey: (state, action) => {
+      ensureE2eeState(state);
+      const id = action.payload;
+      if (!id) return;
+      state.e2ee_keys = state.e2ee_keys.filter((key) => key.id !== id);
+      // An assignment without its key would fail closed on every send, so it goes too.
+      state.e2ee_models = Object.fromEntries(
+        Object.entries(state.e2ee_models).filter(([, keyId]) => keyId !== id),
+      );
+    },
+
+    // Removes every key and every binding in one step. A binding without its
+    // key fails closed, so the two always move together.
+    clearE2eeKeys: (state) => {
+      ensureE2eeState(state);
+      state.e2ee_keys = [];
+      state.e2ee_models = {};
+    },
+
+    setE2eeModelKey: (state, action) => {
+      ensureE2eeState(state);
+      const { modelId, keyId } = action.payload || {};
+      if (!modelId) return;
+      if (!keyId) {
+        delete state.e2ee_models[modelId];
+        return;
+      }
+      if (!state.e2ee_keys.some((key) => key.id === keyId)) return;
+      state.e2ee_models[modelId] = keyId;
+    },
+
+    addMcpServer: (state, action) => {
+      if (!Array.isArray(state.mcp_servers)) state.mcp_servers = [];
+      const server = action.payload;
+      if (!server?.id || typeof server.url !== "string" || !server.url.trim()) return;
+      if (state.mcp_servers.some((item) => item.id === server.id)) return;
+      state.mcp_servers.push(server);
+    },
+    updateMcpServer: (state, action) => {
+      if (!Array.isArray(state.mcp_servers)) state.mcp_servers = [];
+      const { id, patch } = action.payload || {};
+      const index = state.mcp_servers.findIndex((item) => item.id === id);
+      if (index >= 0 && patch) state.mcp_servers[index] = {
+        ...state.mcp_servers[index],
+        ...patch,
+        id,
+      };
+    },
+    removeMcpServer: (state, action) => {
+      if (!Array.isArray(state.mcp_servers)) state.mcp_servers = [];
+      state.mcp_servers = state.mcp_servers.filter(
+        (item) => item.id !== action.payload,
+      );
     },
 
     importUserSettings: (state, action) => {
@@ -221,17 +588,30 @@ const userSettingsSlice = createSlice({
 
 export const {
   addMemory, editMemory, deleteMemory, deleteAllMemories,
+  addMemoryGroup, renameMemoryGroup, deleteMemoryGroup,
+  setDefaultMemoryGroup, setMemoryGroup,
+  addMcpServer, updateMcpServer, removeMcpServer,
+  addE2eeKey, updateE2eeKey, removeE2eeKey, clearE2eeKeys, setE2eeModelKey,
   setTimeoutTime, resetTimeoutTime, setTimeoutInSeconds,
   setDefaultModel, setMemoryMode, setSuggestUserPrompts, setHtmlRenderMode,
   setHtmlLoadExternal, setHtmlSanitization, setSetTitleOnce, setRenderTypst,
   setRenderLatex, setRenderGraphviz, setRenderVega, setRenderChartjs,
   setCollapseReasoningWhileStreaming, setDocumentConversionMode,
   setConversationSummaries, setShowTimestamps,
-  setSendWithEnter, importUserSettings
+  setAdvancedMode,
+  setSendWithEnter, setMcpToolPolicy, importUserSettings
 } = userSettingsSlice.actions;
 
 // Selectors
 export const selectAllMemories = (state) => state.user_settings.memories;
+export const selectGlobalMcpServers = (state) =>
+  (state.user_settings.mcp_servers ?? []).filter(
+    (server) => server && typeof server.url === "string" && server.url.trim(),
+  );
+export const selectMemoryGroups = (state) =>
+  state.user_settings.memory_groups ?? [];
+export const selectDefaultMemoryGroup = (state) =>
+  state.user_settings.default_memory_group ?? "default";
 export const selectTimeout = (state) => state.user_settings.timeout;
 export const selectDefaultModel = (state) => state.user_settings.model;
 export const selectMemoryMode = (state) => {
@@ -272,8 +652,19 @@ export const selectConversationSummaries = (state) =>
   state.user_settings.conversation_summaries ?? true;
 export const selectShowTimestamps = (state) =>
   state.user_settings.show_timestamps ?? false;
+// Advanced mode reveals the Agents and MCP server lists in the sidebar; off by default so
+// an ordinary account sees only chats, topics and workspaces.
+export const selectAdvancedMode = (state) =>
+  state.user_settings.advanced_mode ?? false;
 // null means "use the device default", resolved in the prompt component.
 export const selectSendWithEnter = (state) =>
   state.user_settings.send_with_enter ?? null;
+// Whether chat turns may call tools of the user's MCP servers: "ask" (default), "always", "never".
+export const selectMcpToolPolicy = (state) => {
+  const policy = state.user_settings.mcp_tool_policy;
+  return MCP_TOOL_POLICIES.includes(policy) ? policy : "ask";
+};
 export const selectUserSettings = (state) => state.user_settings;
+export const selectE2eeKeys = (state) => state.user_settings?.e2ee_keys ?? [];
+export const selectE2eeModels = (state) => state.user_settings?.e2ee_models ?? {};
 export default userSettingsSlice.reducer;

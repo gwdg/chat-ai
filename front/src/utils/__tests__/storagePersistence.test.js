@@ -18,7 +18,12 @@ describe("storage persistence", () => {
       },
     });
 
-    await expect(requestPersistentStorage()).resolves.toBe(true);
+    await expect(requestPersistentStorage()).resolves.toEqual({
+      ok: true,
+      reason: "granted",
+      supported: true,
+      persisted: true,
+    });
     await expect(getStorageStatus()).resolves.toEqual({
       supported: true,
       persisted: true,
@@ -30,7 +35,12 @@ describe("storage persistence", () => {
   it("handles unavailable storage", async () => {
     vi.stubGlobal("navigator", {});
 
-    await expect(requestPersistentStorage()).resolves.toBe(false);
+    await expect(requestPersistentStorage()).resolves.toEqual({
+      ok: false,
+      reason: "unsupported",
+      supported: false,
+      persisted: false,
+    });
     await expect(getStorageStatus()).resolves.toEqual({
       supported: false,
       persisted: false,
@@ -40,7 +50,12 @@ describe("storage persistence", () => {
   it("reports supported storage when optional APIs are missing", async () => {
     vi.stubGlobal("navigator", { storage: {} });
 
-    await expect(requestPersistentStorage()).resolves.toBe(false);
+    await expect(requestPersistentStorage()).resolves.toEqual({
+      ok: false,
+      reason: "unsupported",
+      supported: false,
+      persisted: false,
+    });
     await expect(getStorageStatus()).resolves.toEqual({
       supported: true,
       persisted: false,
@@ -62,7 +77,12 @@ describe("storage persistence", () => {
       },
     });
 
-    await expect(requestPersistentStorage()).resolves.toBe(false);
+    await expect(requestPersistentStorage()).resolves.toMatchObject({
+      ok: false,
+      reason: "error",
+      supported: true,
+      persisted: false,
+    });
     await expect(getStorageStatus()).resolves.toEqual({
       supported: true,
       persisted: false,

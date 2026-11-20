@@ -1,8 +1,14 @@
 import { Trans } from "react-i18next";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Locked, WarningAltFilled, Close } from "@carbon/icons-react";
+import { useSelector } from "react-redux";
+import { Link, Locked, WarningAltFilled, Close } from "@carbon/icons-react";
 import { isAgentEnabled } from "../../apis/agentEndpoints";
+import {
+  selectE2eeKeys,
+  selectE2eeModels,
+} from "../../Redux/reducers/userSettingsReducer";
+import { isModelKeyed } from "../../e2ee/registry";
 
 function isSafeSettings(localState) {
   const modelName = localState?.settings?.model?.name;
@@ -21,7 +27,7 @@ function isSafeSettings(localState) {
       !!tools.web_search ||
       !!tools.fetch_url);
 
-  const mcpEnabled = !!(tools.mcp || tools.mcp_remote);
+  const mcpEnabled = !!tools.mcp;
 
   return !(isExternalModel || webSearchEnabled || mcpEnabled);
 }
@@ -53,6 +59,13 @@ const TONES = {
       `bg-success/10 hover:bg-success/20 border-success/30 text-success`,
     text: "text-success",
   },
+  // A keyed model keeps the same lock, but blue and with a chain link to show
+  // that an additional end-to-end layer sits between the browser and the model.
+  e2ee: {
+    Icon: Locked,
+    button: `bg-info/10 hover:bg-info/20 border-info/30 text-info`,
+    text: "text-info",
+  },
   warning: {
     Icon: WarningAltFilled,
     button:
@@ -74,6 +87,13 @@ export default function WarningExternalModel({
 }) {
   // Add safety check for model
   const isSafe = isSafeSettings(localState);
+  const modelId = localState?.settings?.model?.id;
+  const e2eeKeys = useSelector(selectE2eeKeys);
+  const e2eeModels = useSelector(selectE2eeModels);
+  const e2ee =
+    isSafe &&
+    Boolean(modelId) &&
+    isModelKeyed({ keys: e2eeKeys, models: e2eeModels }, modelId);
 
   useEffect(() => {
     setShowTextBox(true);
@@ -131,10 +151,12 @@ export default function WarningExternalModel({
     setShowTextBox((prev) => !prev);
   };
 
-  const tone = isSafe ? TONES.safe : TONES.warning;
+  const tone = isSafe ? (e2ee ? TONES.e2ee : TONES.safe) : TONES.warning;
   const ToneIcon = tone.Icon;
   const messageKey = isSafe
-    ? "alert.data_security_notice"
+    ? e2ee
+      ? "alert.data_security_notice_e2ee"
+      : "alert.data_security_notice"
     : userData?.org === "MPG"
       ? "alert.data_security_warning_mpg"
       : "alert.data_security_warning";
@@ -142,7 +164,7 @@ export default function WarningExternalModel({
   const panel = (
     <div
       className={`${
-        portalPanel ? "fixed z-[999999]" : "absolute right-0 bottom-full mb-2 z-20"
+        portalPanel ? "fixed z-[45]" : "absolute right-0 bottom-full mb-2 z-20"
       } p-4 bg-base-100
  border border-base-300
          rounded-lg shadow-xl w-56 max-w-[calc(100vw-2rem)]`}
@@ -185,7 +207,14 @@ export default function WarningExternalModel({
                     ${compact ? "h-8 w-8 p-1.5" : "h-10 w-10 px-2 py-1"}
                     ${tone.button}`}
       >
-        <ToneIcon size={compact ? 20 : 24} />
+        <span className="relative inline-flex">
+          <ToneIcon size={compact ? 20 : 24} />
+          {e2ee && (
+            <span className="absolute -right-1 -bottom-1 rounded-full bg-base-100 p-[1px]">
+              <Link size={compact ? 12 : 14} aria-hidden="true" />
+            </span>
+          )}
+        </span>
       </button>
 
       {isPopoverVisible &&

@@ -23,7 +23,18 @@ export interface Vfs {
 export const enoent = (path: string) =>
   Object.assign(new Error(`ENOENT: no such file or directory, '${path}'`), { code: "ENOENT" });
 
-export const parts = (path: string) => path.split("/").filter((p) => p && p !== ".");
+export const parts = (path: string) => {
+  const resolved: string[] = [];
+  for (const part of path.split("/")) {
+    if (!part || part === ".") continue;
+    if (part === "..") {
+      resolved.pop();
+      continue;
+    }
+    resolved.push(part);
+  }
+  return resolved;
+};
 export const normalize = (path: string) => `/${parts(path).join("/")}`;
 const toBytes = (data: Uint8Array | string) => (typeof data === "string" ? new TextEncoder().encode(data) : data);
 

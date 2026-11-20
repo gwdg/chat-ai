@@ -10,9 +10,11 @@ import WarningExternalModel from "../Header/WarningExternalModel";
 import ModelButton from "./ModelButton";
 import ToolsButton from "./ToolsButton";
 import AttachButton from "./AttachButton";
-import MountFolderButton from "./MountFolderButton";
+import WorkspaceAttachButton from "./WorkspaceAttachButton";
+import { isFeatureEnabled } from "../../config/deployment";
 import AttachMediaButton from "./AttachMediaButton";
 import PromptTextArea from "./PromptTextArea";
+import ModelNoToolsWarning from "./ModelNoToolsWarning";
 import SpeechModeButton from "./SpeechModeButton";
 import SpeechModePanel from "./SpeechModePanel";
 
@@ -167,6 +169,7 @@ export default function Prompt({
           localState={localState}
           setLocalState={setLocalState}
         />
+        <ModelNoToolsWarning localState={localState} />
         <div className={`flex flex-col gap-4 w-full relative select-none rounded-2xl shadow-lg text-base-content bg-base-100`} >
         {/* Prompt Text Area */}
         <PromptTextArea
@@ -201,11 +204,12 @@ export default function Prompt({
           <div className="flex gap-4 items-center justify-center">
             {!metaChatSend && (
               <>
-                {/* Local folder and write access for the agent */}
-                <MountFolderButton
-                  localState={localState}
-                  setLocalState={setLocalState}
-                />
+                {isFeatureEnabled("workspaces") && (
+                  <WorkspaceAttachButton
+                    localState={localState}
+                    setLocalState={setLocalState}
+                  />
+                )}
                 {/* Tools Button */}
                 <ToolsButton
                   localState={localState}

@@ -52,19 +52,6 @@ function hasGenericFlag(model) {
   return DEFAULT_GENERIC_FLAGS.some((flag) => defaults?.[flag] === true);
 }
 
-// True when the model advertises any form of binary/file input.
-export function modelSupportsBinaryData(model) {
-  const values = capabilityValues(model);
-  return (
-    hasGenericFlag(model) ||
-    values.some(
-      (value) =>
-        GENERIC_BINARY_CAPABILITIES.has(value) ||
-        BINARY_DOCUMENT_TYPES.includes(value)
-    )
-  );
-}
-
 // True when the model can accept this specific document type unprocessed.
 export function modelSupportsFileType(model, fileType) {
   if (!BINARY_DOCUMENT_TYPES.includes(fileType)) return false;

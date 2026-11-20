@@ -4,7 +4,16 @@ import MemoryModeContainer from "../MemoryModeContainer";
 
 const openModal = vi.fn();
 vi.mock("react-redux", () => ({
-  useSelector: () => 1,
+  useSelector: (selector) =>
+    selector({
+      user_settings: {
+        memories: [],
+        memory_groups: [],
+        default_memory_group: "default",
+        memory_mode: 1,
+      },
+      interface_settings: {},
+    }),
 }));
 vi.mock("../../../modals/ModalContext", () => ({
   useModal: () => ({ openModal }),

@@ -1,0 +1,35 @@
+{
+  "id": "chat-ai",
+  "aliases": ["chat ai", "chatai"],
+  "name": "Chat AI",
+  "shortName": "Chat AI",
+  "homeUrl": "https://chat-ai.academiccloud.de/",
+  "assets": {
+    "full": "logo.svg",
+    "small": "logo-small.ico",
+    "mark": "logo-small.ico",
+    "export": "logo.png",
+    "favicon": "favicon.ico"
+  },
+  "theme": {
+    "light": {},
+    "dark": {}
+  },
+  "services": true,
+  "links": {
+    "imprint": "https://gwdg.de/imprint/",
+    "privacy": "https://docs.hpc.gwdg.de/services/chat-ai/data-privacy.de/index.html",
+    "terms": "https://docs.hpc.gwdg.de/services/chat-ai/terms_of_use.de/index.html",
+    "docs": "https://docs.hpc.gwdg.de/services/ai-services/chat-ai/index.html",
+    "models": "https://docs.hpc.gwdg.de/services/chat-ai/models/index.html"
+  },
+  "footer": {
+    "links": {
+      "imprint": {},
+      "privacy": {},
+      "terms": {},
+      "docs": {}
+    },
+    "isoCertified": true
+  }
+}

@@ -39,6 +39,7 @@ describe("fetchClient", () => {
   });
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
     vi.useRealTimers();
   });
 
@@ -52,6 +53,17 @@ describe("fetchClient", () => {
     expect(init.method).toBe("POST");
     expect(JSON.parse(init.body)).toEqual({ model: "m", messages: [] });
     expect(init.headers.Authorization).toBeUndefined();
+  });
+
+  it("sends the configured apiKey as a bearer token", async () => {
+    vi.stubEnv("VITE_API_KEY", "local-dev-key");
+    fetchMock.mockResolvedValue(jsonResponse({ choices: [] }));
+
+    await client().chat.completions.create({ model: "m" });
+
+    const [, init] = fetchMock.mock.calls[0];
+    expect(init.headers.Authorization).toBe("Bearer local-dev-key");
+    expect(init.headers["Content-Type"]).toBe("application/json");
   });
 
   it("parses SSE chunks split across reads and stops at [DONE]", async () => {
