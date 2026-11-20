@@ -192,7 +192,7 @@ export const featureGuides = {
   workspace_saia_fs: {
     titleKey: "feature_guide.workspace_saia_fs.title",
     prompt:
-      "Chat AI can show your SAIA account folder as a filesystem inside a workspace. It only appears when this deployment offers the saia-fs service to your account. Open Create workspace: the Sources rail lists it next to browser storage, this device, Arcanas and MCP servers, and you can mount one of its folders into the workspace.",
+      "Chat AI can show your SAIA account folder as a filesystem inside a workspace. It only appears while this deployment's saia-fs service answers its health check, which Chat AI runs when a workspace's storage opens. Open Create workspace: the Sources rail lists it next to browser storage, this device, Arcanas and MCP servers, and you can mount one of its folders into the workspace.",
     keywords: [
       "saia files",
       "saia filesystem",

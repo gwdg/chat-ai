@@ -186,8 +186,7 @@ export type SourceKind =
   // attached (db/workspaceDb.ts#ensureChatStorageSource).
   | 'chat'
   // The caller's folder on the SAIA filesystem (saia/saia-rag-cli/saia-fs), auto-provisioned per
-  // workspace while the engine lists the `saia-fs` service for the user
-  // (db/workspaceDb.ts#ensureSaiaFsSource).
+  // workspace while the deployment serves it (db/workspaceDb.ts#ensureSaiaFsSource).
   | 'saia-fs'
 
 export type SourceStatus =
@@ -228,7 +227,7 @@ export type ArcanaConfig = { remoteWorkspaceId: string; baseUrl?: string }
 export type AgentFilesConfig = { agentId: string }
 export type ChatStorageConfig = { conversationId: string }
 // The folder belongs to the caller's SAIA account, so the row carries no
-// address of its own: the endpoint is the deployment's `/saia-fs` proxy.
+// address of its own: the endpoint is the deployment's `/saia-fs` path.
 export type SaiaFsConfig = Record<string, never>
 
 export type SourceConfig =

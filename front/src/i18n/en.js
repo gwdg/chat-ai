@@ -448,7 +448,7 @@ export default {
     workspace_saia_fs: {
       title: "Your SAIA files in a workspace",
       step1: "Start a new workspace with Create workspace. Its Sources rail is where a workspace gets its files.",
-      step2: "SAIA Files is your account folder. It is listed only while this deployment offers the saia-fs service to you; open it to pick a folder and add it to the workspace.",
+      step2: "SAIA Files is your account folder. It is listed only while this deployment's saia-fs service answers its health check; open it to pick a folder and add it to the workspace.",
     },
     workspace_edit_storage: {
       title: "Add storage to a workspace",

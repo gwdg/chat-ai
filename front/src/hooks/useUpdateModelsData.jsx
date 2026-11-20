@@ -24,8 +24,8 @@ export function useUpdateModelsData() {
         notifyError("No models available or network error");
         return;
       }
-      // The engine lists its services in the same list (`saia-agent`, `saia-fs`).
-      // They are not chat models, so the selector must not offer them.
+      // `saia-fs` is an MCP server that must stay out of the selector. The
+      // agent service (`saia-agent`) is a chat model and is kept.
       const chatModels = withoutServiceModels(data);
       if (Array.isArray(chatModels) && chatModels.length === 0) {
         notifyError("No models available or network error");

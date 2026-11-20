@@ -399,14 +399,15 @@ export async function ensureArcanaFilesystemSource(
  * The caller's SAIA filesystem, for every workspace.
  *
  * Unlike the Arcana source this cannot be created in a Dexie upgrade or in
- * `createWorkspace`: whether the service exists for this user is answered by the
- * engine's model list, which is an async HTTP call. `WorkspaceStorageManager`
- * reconciles it once `hooks/useSaiaFsAccess` reports the service, so a workspace
- * whose dialog was never opened has no row yet — exactly like the Arcana source
- * before it was first opened, and nothing else depends on the row existing.
+ * `createWorkspace`: whether the service is available is answered by its health
+ * probe, which is an async HTTP call. `WorkspaceStorageManager` reconciles it
+ * once `hooks/useSaiaFsAccess` reports the service, so a workspace whose dialog
+ * was never opened has no row yet — exactly like the Arcana source before it was
+ * first opened, and nothing else depends on the row existing.
  *
- * A row is never removed here. Revoking the grant leaves it in place: it reports
- * its own error, and deleting it would also delete the mounts pointing into it.
+ * A row is never removed here. A service that disappears leaves it in place: it
+ * reports its own error, and deleting it would also delete the mounts pointing
+ * into it.
  */
 export async function ensureSaiaFsSource(
   workspaceId: string,

@@ -458,7 +458,7 @@ export default {
     workspace_saia_fs: {
       title: "Ihre SAIA-Dateien in einem Arbeitsbereich",
       step1: "Erstellen Sie mit „Arbeitsbereich erstellen“ einen neuen Arbeitsbereich. In der Quellen-Leiste erhält er seine Dateien.",
-      step2: "SAIA-Dateien ist Ihr Kontoordner. Er erscheint nur, solange diese Installation den Dienst saia-fs für Sie bereitstellt; öffnen Sie ihn, wählen Sie einen Ordner und fügen Sie ihn dem Arbeitsbereich hinzu.",
+      step2: "SAIA-Dateien ist Ihr Kontoordner. Er erscheint nur, solange der Dienst saia-fs dieser Installation seinen Health-Check beantwortet; öffnen Sie ihn, wählen Sie einen Ordner und fügen Sie ihn dem Arbeitsbereich hinzu.",
     },
     workspace_edit_storage: {
       title: "Speicher zu einem Arbeitsbereich hinzufügen",

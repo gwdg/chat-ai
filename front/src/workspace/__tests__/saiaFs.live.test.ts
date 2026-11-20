@@ -1,4 +1,5 @@
-// Live test against a real saia-fs instance, optionally through `back`'s proxy.
+// Live test against a real saia-fs instance, optionally through the deployment's
+// proxy.
 //
 // The provider unit test beside this file replaces the MCP transport with an
 // in-memory filesystem, so it pins the tool calls but cannot prove that a real
@@ -11,8 +12,8 @@
 //   saia-fs-mcp --user tester --root /tmp/saia-fs --port 8011
 //   SAIA_FS_TEST_URL=http://127.0.0.1:8011/mcp npm run test:live
 //
-// Point `SAIA_FS_TEST_URL` at `<back>/saia-fs/mcp` to exercise the proxy and the
-// identity header as well.
+// Point `SAIA_FS_TEST_URL` at `<backend>/saia-fs/mcp` to exercise the proxy and
+// the identity header as well.
 import { describe, expect, it } from "vitest";
 
 import { readAll, streamOf } from "../bytes";

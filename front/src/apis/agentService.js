@@ -19,8 +19,8 @@ export const AGENT_SERVICE_PATH = "/agents";
 // `/v1/models` lists it only for a user that was granted that group. The model
 // list is therefore the entitlement answer for this user, and
 // `hooks/useAgentServiceAccess.js` reads it before the add-agent dialog offers
-// the service fields. It is not a chat model and is filtered from the selector
-// in `hooks/useUpdateModelsData.jsx`.
+// the service fields. It answers `/chat/completions` like any other model,
+// including tunnel mode, so it also stays in the selector.
 
 export const serviceOpencodeUrl = (agentId) =>
   `${AGENT_SERVICE_PATH}/${encodeURIComponent(agentId)}/opencode`;

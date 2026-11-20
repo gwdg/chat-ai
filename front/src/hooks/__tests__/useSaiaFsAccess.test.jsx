@@ -3,10 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useSaiaFsAccess } from "../useSaiaFsAccess";
 
-const models = vi.hoisted(() => ({ get: vi.fn() }));
+const probe = vi.hoisted(() => ({ check: vi.fn() }));
 
-vi.mock("../../apis/getModelsData", () => ({
-  getModelsData: (...args) => models.get(...args),
+vi.mock("../../apis/saiaFs", () => ({
+  isSaiaFsAvailable: (...args) => probe.check(...args),
 }));
 
 function AccessProbe() {
@@ -14,59 +14,45 @@ function AccessProbe() {
 }
 
 beforeEach(() => {
-  models.get.mockReset();
+  probe.check.mockReset();
 });
 
 describe("useSaiaFsAccess", () => {
   it("starts undecided", () => {
-    models.get.mockReturnValue(new Promise(() => {}));
+    probe.check.mockReturnValue(new Promise(() => {}));
 
     render(<AccessProbe />);
 
     expect(screen.getByText("checking")).toBeInTheDocument();
   });
 
-  it("grants the filesystem when the user's model list contains saia-fs", async () => {
-    models.get.mockResolvedValue([{ id: "qwen3.8-27b" }, { id: "saia-fs" }]);
+  it("grants the filesystem when the health probe confirms it", async () => {
+    probe.check.mockResolvedValue(true);
 
     render(<AccessProbe />);
 
-    expect(await screen.findByText("granted")).toBeInTheDocument();
+    expect(await screen.findByText("available")).toBeInTheDocument();
   });
 
-  it("denies it when the deployment lists models without saia-fs", async () => {
-    // The engine lists a service only for users granted its access group, so a
-    // readable list without it means this account has no folder.
-    models.get.mockResolvedValue([{ id: "qwen3.8-27b" }, { id: "saia-agent" }]);
+  it("leaves it out when the service does not answer", async () => {
+    // The probe folds every failure (no route, no instance, timeout, network)
+    // into false, so the source stays out rather than pointing at nothing.
+    probe.check.mockResolvedValue(false);
 
     render(<AccessProbe />);
 
-    expect(await screen.findByText("denied")).toBeInTheDocument();
+    expect(await screen.findByText("unavailable")).toBeInTheDocument();
   });
 
-  it("does not provision on an unreadable list", async () => {
-    // Unlike the agent service, this fails closed: an empty list or a refused
-    // endpoint cannot say the service is available, and the source must stay out.
-    models.get.mockResolvedValue([]);
+  it("aborts the probe when it unmounts", () => {
+    probe.check.mockReturnValue(new Promise(() => {}));
 
-    render(<AccessProbe />);
+    const { unmount } = render(<AccessProbe />);
+    const { signal } = probe.check.mock.calls[0][0];
 
-    expect(await screen.findByText("unknown")).toBeInTheDocument();
-  });
+    expect(signal.aborted).toBe(false);
+    unmount();
 
-  it("does not provision when the models endpoint refuses", async () => {
-    models.get.mockResolvedValue(new Response(null, { status: 401 }));
-
-    render(<AccessProbe />);
-
-    expect(await screen.findByText("unknown")).toBeInTheDocument();
-  });
-
-  it("settles on unknown when the model request rejects", async () => {
-    models.get.mockRejectedValue(new Error("network down"));
-
-    render(<AccessProbe />);
-
-    expect(await screen.findByText("unknown")).toBeInTheDocument();
+    expect(signal.aborted).toBe(true);
   });
 });

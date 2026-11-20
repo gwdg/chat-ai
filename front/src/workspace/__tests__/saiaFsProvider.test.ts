@@ -11,6 +11,8 @@ const sdk = vi.hoisted(() => ({
   dirs: new Set<string>(),
   calls: [] as { name: string; args: Record<string, any> }[],
   connectError: null as Error | null,
+  connectCalls: 0,
+  sessionError: null as string | null,
 }));
 
 const encoder = new TextEncoder();
@@ -27,6 +29,7 @@ const parentOf = (path: string) =>
 vi.mock("@modelcontextprotocol/sdk/client/index.js", () => ({
   Client: class {
     async connect() {
+      sdk.connectCalls += 1;
       if (sdk.connectError) throw sdk.connectError;
     }
     async listTools() {
@@ -107,6 +110,12 @@ vi.mock("@modelcontextprotocol/sdk/client/index.js", () => ({
             : json({ path, written: true, size: data.length });
         }
         case "exists":
+          if (sdk.sessionError) {
+            return {
+              content: [{ type: "text", text: sdk.sessionError }],
+              isError: true,
+            };
+          }
           return text(sdk.files.has(path) || sdk.dirs.has(path) ? "yes" : "no");
         case "info": {
           const data = sdk.files.get(path);
@@ -161,6 +170,9 @@ const useTools = (...names: string[]) => {
 const connect = async () => {
   const provider = new SaiaFsProvider("source-1");
   await provider.connect();
+  // The handshake ends with one `exists` session check; start the call log after
+  // it so a test's own tool assertions see only the calls it made.
+  sdk.calls = [];
   return provider;
 };
 
@@ -170,6 +182,8 @@ beforeEach(() => {
   sdk.dirs = new Set();
   sdk.calls = [];
   sdk.connectError = null;
+  sdk.connectCalls = 0;
+  sdk.sessionError = null;
 });
 
 describe("SaiaFsProvider", () => {
@@ -346,5 +360,42 @@ describe("SaiaFsProvider", () => {
     const provider = new SaiaFsProvider("source-1");
 
     await expect(provider.connect()).rejects.toThrow(/rejected the request for this user/);
+  });
+
+  it("explains a failed connect when the browser lists the source", async () => {
+    // The workspace keeps a provider whose connect failed, then asks it for the
+    // root. That must report the handshake failure, not "UNSUPPORTED list".
+    sdk.connectError = new TypeError("Failed to fetch");
+
+    const provider = new SaiaFsProvider("source-1", "http://localhost:8081/saia-fs/mcp");
+    await expect(provider.connect()).rejects.toMatchObject({ code: "OFFLINE" });
+
+    await expect(provider.list("/")).rejects.toMatchObject({
+      code: "OFFLINE",
+      message: expect.stringContaining("Failed to fetch"),
+    });
+  });
+
+  it("shares one handshake between concurrent connects", async () => {
+    const provider = new SaiaFsProvider("source-1");
+
+    await Promise.all([provider.connect(), provider.connect()]);
+    await provider.connect();
+
+    expect(sdk.connectCalls).toBe(1);
+  });
+
+  it("turns a failing session check into a reason the source card can show", async () => {
+    // saia-fs answers an unhandled exception (e.g. a missing identity header)
+    // with the bare "Error executing tool exists", which looked like an empty
+    // folder in the browser.
+    sdk.sessionError = "Error executing tool exists";
+    const provider = new SaiaFsProvider("source-1", "http://localhost:8081/saia-fs/mcp");
+
+    await expect(provider.connect()).rejects.toMatchObject({
+      code: "AUTH_EXPIRED",
+      message: expect.stringContaining("x-auth-claim-uid"),
+    });
+    expect(provider.status).toBe("error");
   });
 });

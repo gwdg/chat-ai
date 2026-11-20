@@ -26,9 +26,9 @@ beforeEach(() => {
 });
 
 describe("useUpdateModelsData", () => {
-  it("keeps the chat models and drops the engine's services", async () => {
-    // `/v1/models` lists a service for every user granted its access group, so
-    // `saia-agent` and `saia-fs` arrive in the same list as the chat models.
+  it("keeps the chat models and drops only the filesystem service", async () => {
+    // `saia-agent` answers `/chat/completions`, so it belongs in the selector;
+    // `saia-fs` is an MCP server and never does.
     api.getModelsData.mockResolvedValue([
       { id: "qwen3.8-27b" },
       { id: "saia-agent" },
@@ -41,6 +41,7 @@ describe("useUpdateModelsData", () => {
     await waitFor(() =>
       expect(result.current.map((model) => model.id)).toEqual([
         "qwen3.8-27b",
+        "saia-agent",
         "llama-4",
       ]),
     );
@@ -59,7 +60,7 @@ describe("useUpdateModelsData", () => {
     );
   });
 
-  it("reports a list that holds nothing but services", async () => {
+  it("reports a list that holds nothing but the filesystem service", async () => {
     api.getModelsData.mockResolvedValue([{ id: "saia-fs" }]);
 
     renderHook(() => useUpdateModelsData());

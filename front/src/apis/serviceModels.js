@@ -1,22 +1,22 @@
-// Services that the SAIA engine lists like a model.
+// Entries the SAIA engine may list in `/v1/models` that are not chat models.
 //
-// A service is registered in the engine as a model inside an access group, so
-// `/v1/models` returns it for every user who was granted that group. That list
-// is how the app learns whether a service is available, but a service is not a
-// chat model: `saia-agent` is the OpenCode agent service and `saia-fs` is the
-// account filesystem. Neither belongs in the model selector, and no chat may
-// send a completion to one.
+// `saia-fs` is the account filesystem: an MCP server, not a model. When it was
+// still registered in the engine it appeared in `/v1/models` for every user
+// granted its access group, so it has to stay out of the model selector even if
+// an old deployment still lists it.
 //
-// Read availability from the unfiltered list (`hooks/useAgentServiceAccess`,
-// `hooks/useSaiaFsAccess`) and filter it only where models are offered.
+// `saia-agent` is different: it answers `/chat/completions` like any other
+// model (including the tunnel deployment), so it belongs in the selector and is
+// deliberately not filtered here. `AGENT_SERVICE_MODEL` stays exported because
+// `apis/agentService.js` and `hooks/useAgentServiceAccess` use the id.
+//
+// `saia-fs` availability is a real health probe (`apis/saiaFs.js`), not a model
+// list lookup.
 
 export const AGENT_SERVICE_MODEL = "saia-agent";
 export const SAIA_FS_SERVICE_MODEL = "saia-fs";
 
-export const SERVICE_MODEL_IDS = new Set([
-  AGENT_SERVICE_MODEL,
-  SAIA_FS_SERVICE_MODEL,
-]);
+export const SERVICE_MODEL_IDS = new Set([SAIA_FS_SERVICE_MODEL]);
 
 export const isServiceModel = (model) => SERVICE_MODEL_IDS.has(model?.id);
 

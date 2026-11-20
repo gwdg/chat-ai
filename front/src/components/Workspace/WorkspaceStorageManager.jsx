@@ -17,7 +17,7 @@ import {
   useWorkspaceSources,
 } from "../../db/workspaceDb";
 import { useModal } from "../../modals/ModalContext";
-import { useSaiaFsAccess, SAIA_FS_GRANTED } from "../../hooks/useSaiaFsAccess";
+import { useSaiaFsAccess, SAIA_FS_AVAILABLE } from "../../hooks/useSaiaFsAccess";
 import { addSelectionToWorkspace } from "../../workspace/addSelectionToWorkspace";
 import { addLocalSource, pickDirectory } from "../../workspace/localWorkspace";
 
@@ -31,12 +31,12 @@ export default function WorkspaceStorageManager({ workspaceId, onOpenAddSource }
   const workspaceSources = useWorkspaceSources(workspaceId ?? undefined);
 
   // The SAIA filesystem is per account, not per workspace, so every workspace gets one source
-  // for it — but only while the engine lists the service for this user, which is an async
-  // answer. `useSaiaFsAccess` fails closed: an unreadable model list leaves the source out
-  // instead of adding a row that cannot connect. The row is never removed again, so a revoked
-  // grant keeps its mounts and reports its own error.
+  // for it — but only while the service answers its health probe, which is an async answer.
+  // `useSaiaFsAccess` fails closed: an unreachable or absent service leaves the source out
+  // instead of adding a row that cannot connect. The row is never removed again, so a source
+  // whose service went away keeps its mounts and reports its own error.
   useEffect(() => {
-    if (!workspaceId || saiaFsAccess !== SAIA_FS_GRANTED) return;
+    if (!workspaceId || saiaFsAccess !== SAIA_FS_AVAILABLE) return;
     void ensureSaiaFsSource(workspaceId);
   }, [workspaceId, saiaFsAccess]);
   // "Your Device" lists every folder this browser has been granted, not only the

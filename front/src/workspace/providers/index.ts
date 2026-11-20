@@ -47,8 +47,8 @@ export function createProvider(source: WorkspaceSourceRow): FileProvider {
   } else if (source.kind === "arcana-filesystem") {
     provider = new ArcanaFilesystemProvider(source.id);
   } else if (source.kind === "saia-fs") {
-    // The per-user folder on the SAIA filesystem, reached through back's
-    // /saia-fs MCP proxy (providers/saiaFs.ts).
+    // The per-user folder on the SAIA filesystem, reached through the
+    // deployment's /saia-fs MCP path (providers/saiaFs.ts).
     provider = new SaiaFsProvider(source.id);
   } else {
     provider = new McpProvider(

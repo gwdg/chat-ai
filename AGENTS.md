@@ -1897,6 +1897,38 @@ while editing:
   and `BrandProvider.test.jsx`. A new brand needs `config/branding/<folder>/brand.json` plus its
   images, and a case in `brands.test.js` (id/alias match plus the merged values).
 
+### 4.31 The SAIA filesystem is a service, not a model
+
+`saia-fs` is the per-user MCP filesystem offered as a fourth drive in a workspace's Sources rail.
+It must not be registered in the engine as a model: the engine's `/v1/models` is the chat model
+list, and a filesystem there is offered to every granted user as something to chat with.
+`apis/serviceModels.js` still filters `saia-fs` out of the selector for deployments that list an
+old row, while `saia-agent` is deliberately **kept** — it answers `/chat/completions` like a model,
+including tunnel mode.
+
+Availability is therefore a real probe, not a model-list lookup: `apis/saiaFs.js#isSaiaFsAvailable`
+calls `GET <backend>/saia-fs/health`, and requires HTTP 200 with `{"status":"alive"}`. Every other
+answer — 404 (no route), 503 (no instance), 502 (unreachable), a timeout or a network failure — is
+`unavailable`, because `hooks/useSaiaFsAccess` fails closed and `WorkspaceStorageManager` provisions
+the `saia-fs` source row only for `available`. The probe never throws.
+
+**The browser never addresses the service directly.** `<backend>/saia-fs` is the deployment's own
+path, built only from `backendPath`; there is no config key that points the browser at the service,
+and Chat AI proxies nothing itself (`back` has no `/saia-fs` route). The registry listener is not
+published, so that deployment path has to forward the exchange to the registry and add the caller's
+identity. Where nothing forwards it, the health probe answers 404 and no drive appears — the
+fail-closed behaviour above is the whole fallback, and a stack whose `backendPath` is the engine
+itself (as in `secrets/front-local-conf.json`) shows no drive.
+
+**saia-fs in `--mode saia` needs the caller's identity.** It reads `x-auth-claim-uid` only, and
+answers an unhandled `IdentityError` as the bare `"Error executing tool <name>"` — MCP does not
+forward the exception text, so the folder looked empty. The deployment maps `oidc_claim_uid` to
+that header and the MCP client sends `authHeaders()`, so the backend sees the caller at all.
+`SaiaFsProvider` calls `exists("/")` once after the handshake: a failing session becomes a connect
+error on the source row (shown as the drive's tooltip) instead of a silent empty listing. A provider
+whose connect failed, or that was closed, reports the reason on `list()` — it used to answer
+`UNSUPPORTED "list"`, which said nothing.
+
 ## 5. Conventions
 
 - **Gradual TypeScript.** `.jsx` and `.tsx` coexist. `front/tsconfig.json` is `strict: false`,

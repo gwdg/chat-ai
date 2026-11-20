@@ -2,7 +2,8 @@ import type {
   WorkspaceCapabilities,
   WorkspaceFileEntry,
 } from "../../db/dbTypes";
-import { agentEndpoint } from "../../apis/agentEndpoints";
+import { saiaFsMcpUrl } from "../../apis/saiaFs";
+import { authHeaders } from "../../apis/authHeaders";
 import { READ_ONLY_CAPABILITIES } from "../capabilities";
 import { fromBase64, readAll, streamOf, toBase64 } from "../bytes";
 import { baseName, joinPath, normalizePath } from "../paths";
@@ -10,11 +11,11 @@ import type { DirectoryPage, FileProvider, QuotaInfo } from "./types";
 import { WorkspaceError } from "./types";
 
 /**
- * The SAIA filesystem, reached through `back`'s `/saia-fs` route.
+ * The SAIA filesystem, reached through the deployment's `/saia-fs` route.
  *
- * saia-fs is an MCP server behind the SAIA registry's HTTP listener, which the
- * public proxy does not publish; `back` forwards the MCP exchange and adds the
- * user's identity (`x-auth-claim-uid`). One account folder is shared by every
+ * saia-fs is an MCP server behind the SAIA registry's HTTP listener, which is
+ * not published; the deployment forwards the MCP exchange and adds the user's
+ * identity (`x-auth-claim-uid`). One account folder is shared by every
  * workspace, because the folder belongs to the user, not to a workspace.
  *
  * Its tool names and answers differ from the generic filesystem MCP servers
@@ -24,9 +25,6 @@ import { WorkspaceError } from "./types";
  * are used when the server offers them, so the source still works against an
  * older one — text only, and it says so instead of corrupting a file.
  */
-export const saiaFsMcpUrl = (): string =>
-  `${agentEndpoint().replace(/\/+$/, "")}/saia-fs/mcp`;
-
 const LIST_TOOL = "list";
 const LIST_JSON_TOOL = "list_json";
 const READ_TOOL = "read";
@@ -82,6 +80,8 @@ export class SaiaFsProvider implements FileProvider {
 
   private client: any = null;
   private tools = new Set<string>();
+  private connectPromise: Promise<void> | null = null;
+  private connectError: Error | null = null;
 
   constructor(
     readonly sourceId: string,
@@ -92,7 +92,22 @@ export class SaiaFsProvider implements FileProvider {
     return this.tools.has(tool);
   }
 
-  async connect() {
+  /**
+   * Idempotent: two callers asking at the same time share one MCP handshake,
+   * and a provider that is already connected is not reconnected (a second
+   * `connect` would open another session and leave the first one dangling).
+   */
+  async connect(): Promise<void> {
+    if (this.client) return;
+    if (!this.connectPromise) {
+      this.connectPromise = this.open().finally(() => {
+        this.connectPromise = null;
+      });
+    }
+    return this.connectPromise;
+  }
+
+  private async open(): Promise<void> {
     const [{ Client }, transportModule] = await Promise.all([
       import("@modelcontextprotocol/sdk/client/index.js"),
       import("@modelcontextprotocol/sdk/client/streamableHttp.js"),
@@ -100,6 +115,10 @@ export class SaiaFsProvider implements FileProvider {
     const client = new Client({ name: "chat-ai-workspace", version: "1.0.0" });
     const transport = new transportModule.StreamableHTTPClientTransport(
       new URL(this.endpoint),
+      // The caller's headers go along so the deployment's proxy sees the
+      // request as the same user; it reduces them to the uid it adds upstream.
+      // The service is never called directly.
+      { requestInit: { headers: authHeaders() } },
     );
     try {
       await client.connect(transport);
@@ -110,14 +129,16 @@ export class SaiaFsProvider implements FileProvider {
         for (const tool of page.tools ?? []) tools.push(tool.name);
         cursor = page.nextCursor;
       } while (cursor);
-      this.client = client;
-      this.tools = new Set(tools);
-      if (!this.has(LIST_JSON_TOOL) && !this.has(LIST_TOOL)) {
+      if (!tools.includes(LIST_JSON_TOOL) && !tools.includes(LIST_TOOL)) {
         throw new WorkspaceError(
           "UNSUPPORTED",
           "The SAIA filesystem offers no listing tool",
         );
       }
+      this.client = client;
+      this.tools = new Set(tools);
+      await this.verifySession();
+      this.connectError = null;
       this.capabilities = {
         ...READ_ONLY_CAPABILITIES,
         read: this.has(READ_BASE64_TOOL) || this.has(READ_TOOL),
@@ -136,7 +157,17 @@ export class SaiaFsProvider implements FileProvider {
       this.status = "connected";
     } catch (error) {
       this.status = "error";
-      this.close();
+      this.client = null;
+      this.tools = new Set();
+      this.connectError =
+        error instanceof Error ? error : new Error(String(error));
+      // Close the connection attempt, never `this.client`: this provider had no
+      // working one (connect returns early otherwise).
+      try {
+        client.close?.();
+      } catch {
+        // A transport that never opened must not throw on teardown.
+      }
       if (error instanceof WorkspaceError) throw error;
       throw new WorkspaceError("OFFLINE", explainConnect(error, this.endpoint));
     }
@@ -150,9 +181,50 @@ export class SaiaFsProvider implements FileProvider {
     }
     this.client = null;
     this.tools = new Set();
+    this.connectError = null;
+  }
+
+  /**
+   * MCP reports an unhandled exception inside a tool as the bare
+   * "Error executing tool <name>", so a deployment that loses the user's
+   * identity, or a volume that is not writable, looked like an empty folder with
+   * no explanation. One harmless call after the handshake proves the session can
+   * serve this user, and its failure becomes a connect error that `back`'s
+   * source row shows as the reason the drive is broken.
+   */
+  private async verifySession(): Promise<void> {
+    if (!this.has(EXISTS_TOOL)) return;
+    try {
+      await this.call(EXISTS_TOOL, { path: "/" });
+    } catch (error) {
+      if (error instanceof WorkspaceError && error.code === "AUTH_EXPIRED") {
+        throw error;
+      }
+      const message = error instanceof Error ? error.message : String(error);
+      throw new WorkspaceError(
+        "AUTH_EXPIRED",
+        `The SAIA filesystem refused the session check (${message}). It needs the user's identity header (x-auth-claim-uid), which the SAIA deployment adds for the authenticated caller.`,
+      );
+    }
   }
 
   private async call(tool: string, args: Record<string, unknown>): Promise<string> {
+    if (!this.client) {
+      // The workspace keeps a provider whose connect failed so a source can be
+      // retried, and then calls `list` on it. Reporting the connect failure is
+      // the only diagnosis the user gets - "UNSUPPORTED list" said nothing
+      // about why the handshake never succeeded.
+      await this.connect().catch(() => {});
+    }
+    if (!this.client) {
+      if (this.connectError instanceof WorkspaceError) throw this.connectError;
+      throw new WorkspaceError(
+        "OFFLINE",
+        this.connectError
+          ? explainConnect(this.connectError, this.endpoint)
+          : `The SAIA filesystem is not connected (${this.endpoint})`,
+      );
+    }
     if (!this.has(tool)) throw new WorkspaceError("UNSUPPORTED", tool);
     try {
       const result = await this.client.callTool({ name: tool, arguments: args });
