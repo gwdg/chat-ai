@@ -1294,7 +1294,7 @@ export default function SidebarContent({
         {/* Pinned footer: the user block */}
         <div className="mx-2 my-1.5 border-t border-base-300" />
         <div className="bg-base-100 pb-4">
-          <div className="flex flex-col gap-3 mx-1">
+          <div className="flex flex-col gap-1.5 mx-1">
             {showUsageInSidebar && userData && (
               <SidebarUsageSummary
                 data={userData}
