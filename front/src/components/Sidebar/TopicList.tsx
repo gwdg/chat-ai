@@ -423,25 +423,27 @@ export default function TopicList({
               />
             </button>
 
-            <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center pointer-events-none">
-              {emoji ? (
-                <span
-                  aria-hidden="true"
-                  className="text-sm leading-none"
-                  style={{ color: hex }}
-                >
-                  {emoji}
-                </span>
-              ) : Icon ? (
-                <Icon size={16} style={{ color: hex }} />
-              ) : neutral ? null : (
-                <span
-                  aria-hidden="true"
-                  className="h-2 w-2 rounded-full"
-                  style={{ backgroundColor: withAlpha(hex, isDark ? 0.7 : 0.5) }}
-                />
-              )}
-            </span>
+            {neutral ? null : (
+              <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center pointer-events-none">
+                {emoji ? (
+                  <span
+                    aria-hidden="true"
+                    className="text-sm leading-none"
+                    style={{ color: hex }}
+                  >
+                    {emoji}
+                  </span>
+                ) : Icon ? (
+                  <Icon size={16} style={{ color: hex }} />
+                ) : (
+                  <span
+                    aria-hidden="true"
+                    className="h-2 w-2 rounded-full"
+                    style={{ backgroundColor: withAlpha(hex, isDark ? 0.7 : 0.5) }}
+                  />
+                )}
+              </span>
+            )}
           </span>
 
           <span
@@ -478,6 +480,13 @@ export default function TopicList({
                   className="text-base-content/70"
                 />
               </button>
+            )}
+
+            {topic ? null : (
+              <span
+                aria-hidden="true"
+                className="h-6 w-6 flex-shrink-0"
+              />
             )}
           </span>
         </div>

@@ -277,7 +277,7 @@ describe("TopicList group colours", () => {
     expect(brackets.style.borderRightColor).toBe("rgba(15, 23, 42, 0.06)");
   });
 
-  it("draws no glyph at all for Unsorted Chats, but a topic keeps its icon", () => {
+  it("gives Unsorted Chats no glyph slot at all, so its name can start at the icon", () => {
     const looseChat = { id: "c11", title: "Loose chat", lastModified: 1 };
     render(
       <TopicList
@@ -288,12 +288,16 @@ describe("TopicList group colours", () => {
     );
 
     const slotFor = (name) =>
-      rowFor(name).querySelector("span.h-6.w-6");
-    // A colourless group has no colour to show, so it shows no swatch — and
-    // its slot stays in place so the name does not move.
-    expect(slotFor("Unsorted Chats").children).toHaveLength(0);
+      rowFor(name).firstElementChild.querySelector("span.h-6.w-6");
+    // A colourless group has no colour to show, so it keeps no slot: the name
+    // moves into the space the icon would have taken.
+    expect(slotFor("Unsorted Chats")).toBeNull();
     expect(rowFor("Unsorted Chats").querySelector(".rounded-full")).toBeNull();
-    expect(slotFor("Violet topic").children.length).toBeGreaterThan(0);
+    expect(slotFor("Violet topic")).not.toBeNull();
+    // Its number still sits where a topic's number sits, under the ••• it lacks.
+    expect(
+      rowFor("Unsorted Chats").lastElementChild.querySelector("span.h-6.w-6"),
+    ).not.toBeNull();
   });
 });
 
