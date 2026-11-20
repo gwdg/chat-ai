@@ -210,8 +210,13 @@ export default function WorkspaceRightPanel({
     setActiveTab("preview");
   }, [filePreview?.key]);
 
-  // The chevron (and the close button) return to where the file was opened from.
+  // Back only leaves the Preview tab — the file stays open so the tab is still there to return to.
   const backToOrigin = useCallback(() => {
+    setActiveTab(originTab);
+  }, [originTab]);
+
+  // The X closes the file itself, which is what removes the tab.
+  const closePreview = useCallback(() => {
     closeFilePreview();
     setActiveTab(originTab);
   }, [closeFilePreview, originTab]);
@@ -255,7 +260,7 @@ export default function WorkspaceRightPanel({
         content: (
           <WorkspacePreviewPane
             request={filePreview}
-            onClose={backToOrigin}
+            onClose={closePreview}
             onBack={backToOrigin}
           />
         ),
@@ -270,6 +275,7 @@ export default function WorkspaceRightPanel({
     openFilePreview,
     filePreview,
     backToOrigin,
+    closePreview,
   ]);
 
   if (!ids.length) return null;

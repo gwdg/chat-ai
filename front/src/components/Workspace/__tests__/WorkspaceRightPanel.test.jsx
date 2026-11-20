@@ -123,7 +123,7 @@ describe("WorkspaceRightPanel preview tab", () => {
     );
   });
 
-  it("shows the Preview tab only once a file is opened, and goes back", async () => {
+  it("shows the Preview tab only once a file is opened, and Back leaves it open", async () => {
     renderPanel();
 
     expect(
@@ -141,6 +141,34 @@ describe("WorkspaceRightPanel preview tab", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Back" }));
+
+    // Back is navigation, not closing: the tab stays in the strip, just not selected.
+    expect(screen.getByRole("tab", { name: "Preview" })).toHaveAttribute(
+      "aria-selected",
+      "false",
+    );
+    expect(screen.getByRole("tab", { name: "Files" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+
+    // It can be reopened from the strip, and the file is still there.
+    fireEvent.click(screen.getByRole("tab", { name: "Preview" }));
+    await waitFor(() => {
+      expect(screen.getByText("hello from the files tree")).toBeInTheDocument();
+    });
+  });
+
+  it("removes the Preview tab only when it is closed with the X", async () => {
+    renderPanel();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Files" }));
+    fireEvent.click(screen.getByRole("button", { name: "notes.txt" }));
+    await waitFor(() => {
+      expect(screen.getByText("hello from the files tree")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
 
     expect(
       screen.queryByRole("tab", { name: "Preview" }),
