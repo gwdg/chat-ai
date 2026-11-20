@@ -385,7 +385,7 @@ export default function WorkspaceList({
   };
 
   const header = variant === "all" && (
-    <div className="-mx-2 mb-1 flex min-h-8 items-center gap-1 rounded-lg bg-base-200/70 px-3 py-1">
+    <div className="-ml-2 -mr-1 mb-1 flex min-h-8 items-center gap-1 rounded-lg bg-base-200/70 px-3 py-1">
       <button
         type="button"
         onClick={() => dispatch(toggleTopic("__workspaces__"))}
@@ -400,9 +400,6 @@ export default function WorkspaceList({
         <span className="min-w-0 flex-1 truncate">
           {t("workspace.sidebar_title")}
         </span>
-        <span className="ml-1 font-normal tabular-nums text-base-content/35">
-          {listedWorkspaces.length}
-        </span>
       </button>
       <button
         type="button"
@@ -414,6 +411,9 @@ export default function WorkspaceList({
       >
         <Add size={15} />
       </button>
+      <span className="text-[11px] font-normal tabular-nums text-base-content/35">
+        {listedWorkspaces.length}
+      </span>
     </div>
   );
 
@@ -448,7 +448,7 @@ export default function WorkspaceList({
                 handleWorkspaceDragLeave(event, workspace.id)
               }
               onDrop={(event) => handleWorkspaceDrop(event, workspace.id)}
-              className={`group flex min-h-10 items-center rounded-lg px-1 transition bg-[var(--group-tint)] hover:bg-[var(--group-tint-hover)] ${
+              className={`group flex min-h-10 cursor-pointer items-center rounded-lg px-1 transition bg-[var(--group-tint)] hover:bg-[var(--group-tint-hover)] ${
                 active ? "text-accent" : "text-base-content"
               } ${
                 dragOverWorkspaceId === workspace.id
@@ -485,7 +485,7 @@ export default function WorkspaceList({
                   cancelOpenWorkspace();
                   toggleWorkspaceCollapse(workspace.id, expandable);
                 }}
-                className="flex min-w-0 flex-1 items-center gap-2 self-stretch text-left"
+                className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 self-stretch text-left"
               >
                 <span
                   className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md"
@@ -693,9 +693,6 @@ export default function WorkspaceList({
                     </div>
                     );
                 })}
-                {chats.length > 0 && attachedAgents.length > 0 && (
-                  <div className="my-1 border-t border-base-300/70" />
-                )}
                 {attachedAgents.map((agent) => {
                   const sessionIds = workspaceSessionIds(
                     sessionLinks,

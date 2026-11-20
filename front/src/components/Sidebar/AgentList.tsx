@@ -464,9 +464,6 @@ export default function AgentList({
         <Tooltip text={t("agents.tooltip")} className="min-w-0 flex-1">
           <span className="block truncate">{t("agents.section_title")}</span>
         </Tooltip>
-        <span className="ml-1 font-normal tabular-nums text-base-content/35">
-          {listedAgents.length}
-        </span>
       </button>
       <button
         type="button"
@@ -478,6 +475,9 @@ export default function AgentList({
       >
         <Add size={15} />
       </button>
+      <span className="text-[11px] font-normal tabular-nums text-base-content/35">
+        {listedAgents.length}
+      </span>
     </div>
   );
 

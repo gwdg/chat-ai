@@ -49,7 +49,7 @@ export default function PinnedSection({
 
   return (
     <div className="px-3 pt-3 pb-1" data-guide="pinned-section">
-      <div className="-mx-2 mb-1 flex min-h-8 items-center justify-between rounded-lg bg-base-200/70 px-3 py-1">
+      <div className="-mx-2 mb-1 flex min-h-8 items-center gap-1 rounded-lg bg-base-200/70 px-3 py-1">
         <button
           type="button"
           onClick={() => dispatch(toggleTopic(PINNED_COLLAPSE_ID))}
@@ -62,10 +62,10 @@ export default function PinnedSection({
           />
           <PinFilled size={12} className="shrink-0" />
           <span className="truncate">{t("folders.pinned")}</span>
-          <span className="ml-1 font-normal tabular-nums text-base-content/35">
-            {count}
-          </span>
         </button>
+        <span className="text-[11px] font-normal tabular-nums text-base-content/35">
+          {count}
+        </span>
       </div>
 
       {collapsed ? null : (

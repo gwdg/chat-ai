@@ -1012,13 +1012,11 @@ export default function SidebarContent({
                 : ""
             }`}
           >
-          <div className="-mx-2 mb-1 flex min-h-8 items-center justify-between gap-1 rounded-lg bg-base-200/70 px-3 py-1">
+          <div className="-mx-2 mb-1 flex min-h-8 items-center gap-1 rounded-lg bg-base-200/70 px-3 py-1">
             <button
               type="button"
               onClick={() => dispatch(toggleTopic("__chats__"))}
-              className={`flex min-w-0 cursor-pointer items-center gap-1 rounded-md text-left text-[11px] font-semibold uppercase tracking-wide text-base-content/70 transition hover:text-base-content ${
-                chatsCollapsed && !hasSearch ? "flex-1" : ""
-              }`}
+              className="flex min-w-0 flex-1 cursor-pointer items-center gap-1 rounded-md text-left text-[11px] font-semibold uppercase tracking-wide text-base-content/70 transition hover:text-base-content"
               aria-expanded={!chatsCollapsed}
             >
               <ChevronDown
@@ -1026,22 +1024,9 @@ export default function SidebarContent({
                 className={`shrink-0 transition-transform ${chatsCollapsed ? "-rotate-90" : ""}`}
               />
               <Chat size={12} className="shrink-0" />
-              <span
-                className={`truncate ${
-                  chatsCollapsed && !hasSearch ? "flex-1" : ""
-                }`}
-              >
-                {t("folders.title")}
-              </span>
-              <span className="ml-1 font-normal tabular-nums text-base-content/35">
-                {conversations.length}
-              </span>
+              <span className="truncate">{t("folders.title")}</span>
             </button>
-            {chatsCollapsed && !hasSearch ? (
-              // No actions while folded, but the count keeps the same place
-              // it holds in the other bands, four pixels before their "+".
-              <span aria-hidden="true" className="h-6 w-6 shrink-0" />
-            ) : (
+            {!(chatsCollapsed && !hasSearch) && (
             <div className="flex items-center gap-1">
               <Popover className="relative">
                 <PopoverButton
@@ -1185,6 +1170,9 @@ export default function SidebarContent({
               </button>
             </div>
             )}
+            <span className="text-[11px] font-normal tabular-nums text-base-content/35">
+              {conversations.length}
+            </span>
           </div>
           {(!chatsCollapsed || hasSearch) && (
           <div
@@ -1267,7 +1255,6 @@ export default function SidebarContent({
             <>
               {isFeatureEnabled("workspaces") && (
                 <>
-                  <div className="mx-2 my-1.5 border-t border-base-300" />
                   <WorkspaceList
                     draggingConversationId={draggingConversationId}
                     onChatDragStart={handleWorkspaceChatDragStart}
@@ -1281,11 +1268,9 @@ export default function SidebarContent({
                 <>
                   {showAgents && (
                     <>
-                      <div className="mx-2 my-1.5 border-t border-base-300" />
                       <AgentList />
                     </>
                   )}
-                  <div className="mx-2 my-1.5 border-t border-base-300" />
                   <McpServerList />
                 </>
               )}

@@ -157,6 +157,7 @@ describe("WorkspaceList band shape", () => {
     ) as HTMLElement;
     expect(count).toBeTruthy();
     expect(count.className).toContain("text-[11px]");
+    expect(count.className).toContain("tabular-nums");
     const addIndex = kids.findIndex(
       (el) => el.getAttribute("aria-label") === "New chat in this workspace",
     );
@@ -176,11 +177,31 @@ describe("WorkspaceList band shape", () => {
     const label = row.children[0] as HTMLElement;
     expect(row.className).toContain("min-h-10");
     expect(row.className).toContain("px-1");
+    // The whole band offers the pointer, exactly like a topic band.
+    expect(row.className).toContain("cursor-pointer");
     expect(label.className).toContain("self-stretch");
     expect(label.className).not.toContain("py-1.5");
     expect((label.firstElementChild as HTMLElement).className).toContain(
       "h-6 w-6",
     );
+  });
+
+  it("draws no rule between a workspace's chats and its agents", async () => {
+    mocks.conversations.mockReturnValue([
+      { id: "chat-1", title: "Workspace chat", lastModified: 1 },
+    ]);
+    mocks.chatLinks.mockReturnValue([
+      { workspaceId: "ws-1", conversationId: "chat-1" },
+    ]);
+    renderList(makeStore());
+
+    const row = (await screen.findByText("Teaching")).closest(
+      '[data-guide="workspace-row"]',
+    ) as HTMLElement;
+    expect(screen.getByText("Workspace chat")).toBeInTheDocument();
+    expect(screen.getByText("HPC agent")).toBeInTheDocument();
+    const subtree = row.nextElementSibling as HTMLElement;
+    expect(subtree.querySelector(".border-t")).toBeNull();
   });
 });
 
@@ -765,14 +786,16 @@ describe("WorkspaceList section header", () => {
     expect(icons[0].getAttribute("class")).toContain("transition-transform");
     expect(icons[1].getAttribute("class")).not.toContain("transition-transform");
 
-    // The count closes the button, like the Chats count.
-    const count = toggle.lastElementChild as HTMLElement;
+    // The count closes the band, like the Chats count, so every band's number
+    // sits in one right-hand column.
+    const band = toggle.parentElement as HTMLElement;
+    const count = band.lastElementChild as HTMLElement;
     expect(count).toHaveTextContent("1");
     expect(count.className).toContain("tabular-nums");
 
-    // The trailing cluster keeps the add action as the very last element.
+    // The add action sits between the label and the count.
     const add = screen.getByRole("button", { name: "New workspace" });
-    expect(add.parentElement?.lastElementChild).toBe(add);
+    expect(add.nextElementSibling).toBe(count);
   });
 
   it("stretches the section band to the sidebar's edges", () => {
@@ -781,8 +804,10 @@ describe("WorkspaceList section header", () => {
     const band = container.querySelector(
       '[data-guide="workspace-list"] > div',
     ) as HTMLElement;
-    // It cancels most of the section's inset, leaving a narrow margin.
-    expect(band.className).toContain("-mx-2");
+    // It cancels the section's inset (pl-3 pr-2), leaving the same margin as
+    // the Chats band: 4px on both sides.
+    expect(band.className).toContain("-ml-2");
+    expect(band.className).toContain("-mr-1");
     expect(band.className).toContain("px-3");
     expect(band.className).toContain("rounded-lg");
   });

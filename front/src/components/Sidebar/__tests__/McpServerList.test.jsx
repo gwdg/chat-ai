@@ -174,11 +174,13 @@ describe("McpServerList", () => {
     const toggle = screen.getByRole("button", { name: /^MCP Servers/ });
     // Two icons: the collapse chevron and the section icon, like Pinned.
     expect(toggle.querySelectorAll("svg")).toHaveLength(2);
-    // The count closes the button, exactly like the Chats header.
-    expect(toggle.lastElementChild).toHaveTextContent("1");
-    expect(toggle.lastElementChild.className).toContain("tabular-nums");
-    // The label stretches, so the count lands against the trailing + button
-    // exactly as it does in the Workspaces band.
+    // The count closes the band, exactly like the Chats header, so every
+    // band's number sits in one right-hand column.
+    const band = toggle.parentElement;
+    expect(band.lastElementChild).toHaveTextContent("1");
+    expect(band.lastElementChild.className).toContain("tabular-nums");
+    // The label stretches, so the + lands against the count exactly as it
+    // does in the Workspaces band.
     expect(toggle.querySelector(".flex-1.min-w-0")).not.toBeNull();
     // The + is the Carbon glyph the other bands draw, not the larger Lucide one.
     const add = toggle.parentElement.querySelector("button[aria-label] svg");
