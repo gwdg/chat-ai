@@ -304,6 +304,7 @@ export default function CreateWorkspaceModal({
 
       <WorkspaceStorageManager
         workspaceId={draftId}
+        allowDetach
         onOpenAddSource={(kind) => setAddSourceKind(kind ?? "local")}
       />
 

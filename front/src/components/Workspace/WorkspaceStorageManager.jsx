@@ -24,7 +24,11 @@ import {
   pickDirectory,
 } from "../../workspace/localWorkspace";
 
-export default function WorkspaceStorageManager({ workspaceId, onOpenAddSource }) {
+export default function WorkspaceStorageManager({
+  workspaceId,
+  onOpenAddSource,
+  allowDetach = false,
+}) {
   const { t } = useTranslation();
   const { openModal } = useModal();
   const [target, setTarget] = useState(null);
@@ -224,6 +228,7 @@ export default function WorkspaceStorageManager({ workspaceId, onOpenAddSource }
 
       <WorkspaceStorageTree
         workspaceId={workspaceId}
+        allowDetach={allowDetach}
         className="min-h-[60vh] min-w-0 flex-[2] rounded-xl border border-base-300 bg-base-100 md:min-h-0"
       />
     </div>

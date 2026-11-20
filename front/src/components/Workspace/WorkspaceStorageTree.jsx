@@ -191,6 +191,7 @@ export default function WorkspaceStorageTree({
   className = "",
   showTitle = true,
   onPreview,
+  allowDetach = false,
 }) {
   const { t } = useTranslation();
   const { openModal } = useModal();
@@ -627,34 +628,36 @@ export default function WorkspaceStorageTree({
             <DocumentAdd size={14} />
             {t("workspace.new_file")}
           </button>
-          <button
-            type="button"
-            className="btn btn-ghost btn-xs btn-square ml-auto"
-            onClick={() => void loadRoot()}
-            title={t("workspace.refresh")}
-            aria-label={t("workspace.refresh")}
-          >
-            <Renew size={14} />
-          </button>
-          {selected && (
+          <div className="ml-auto flex items-center gap-1">
+            {allowDetach && selected && (
+              <button
+                type="button"
+                data-guide="workspace-detach"
+                onClick={() => void detachSelection()}
+                disabled={!selected.mount || detaching}
+                title={
+                  selected.mount
+                    ? t("workspace.detach_hint")
+                    : t("workspace.detach_mount_only")
+                }
+                className="btn btn-secondary btn-xs shrink-0 gap-1"
+              >
+                {detaching && (
+                  <span className="loading loading-spinner loading-xs" />
+                )}
+                <span className="truncate">{t("workspace.detach")}</span>
+              </button>
+            )}
             <button
               type="button"
-              data-guide="workspace-detach"
-              onClick={() => void detachSelection()}
-              disabled={!selected.mount || detaching}
-              title={
-                selected.mount
-                  ? t("workspace.detach_hint")
-                  : t("workspace.detach_mount_only")
-              }
-              className="btn btn-secondary btn-xs shrink-0 gap-1"
+              className="btn btn-ghost btn-xs btn-square"
+              onClick={() => void loadRoot()}
+              title={t("workspace.refresh")}
+              aria-label={t("workspace.refresh")}
             >
-              {detaching && (
-                <span className="loading loading-spinner loading-xs" />
-              )}
-              <span className="truncate">{t("workspace.detach")}</span>
+              <Renew size={14} />
             </button>
-          )}
+          </div>
         </div>
         {actionError && (
           <div className="break-words px-3 py-1 text-[10px] text-error">

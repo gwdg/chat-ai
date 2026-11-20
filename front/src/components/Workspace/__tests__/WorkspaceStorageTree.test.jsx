@@ -325,7 +325,7 @@ describe("WorkspaceStorageTree", () => {
   it("selects a file and offers a Detach it cannot use", async () => {
     h.listWorkspaceRoot.mockResolvedValue([entry("/notes.txt", "file")]);
 
-    render(<WorkspaceStorageTree workspaceId="ws-1" />);
+    render(<WorkspaceStorageTree workspaceId="ws-1" allowDetach />);
 
     const file = await screen.findByText("notes.txt");
     expect(
@@ -351,7 +351,7 @@ describe("WorkspaceStorageTree", () => {
       entry("/Phone", "dir", { local: false, mount: mountRow }),
     ]);
 
-    render(<WorkspaceStorageTree workspaceId="ws-1" />);
+    render(<WorkspaceStorageTree workspaceId="ws-1" allowDetach />);
 
     fireEvent.click(await screen.findByText("Phone"));
 
@@ -367,5 +367,20 @@ describe("WorkspaceStorageTree", () => {
         screen.queryByRole("button", { name: "Detach" }),
       ).not.toBeInTheDocument(),
     );
+  });
+
+  it("selects without offering Detach outside the dialogs", async () => {
+    h.listWorkspaceRoot.mockResolvedValue([
+      entry("/notes.txt", "file"),
+    ]);
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" />);
+
+    fireEvent.click(await screen.findByText("notes.txt"));
+
+    expect(rowFor("notes.txt")).toHaveClass("bg-accent/10");
+    expect(
+      screen.queryByRole("button", { name: "Detach" }),
+    ).not.toBeInTheDocument();
   });
 });
