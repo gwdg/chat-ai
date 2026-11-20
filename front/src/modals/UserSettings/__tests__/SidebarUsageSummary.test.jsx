@@ -72,6 +72,13 @@ describe("SidebarUsageSummary", () => {
     expect(chevron()).not.toHaveClass("-rotate-90");
   });
 
+  it("does not underline the card title on hover", () => {
+    render(<SidebarUsageSummary data={flatData} />);
+
+    const title = screen.getByRole("button", { name: "Usage" });
+    expect(title.className).not.toContain("hover:underline");
+  });
+
   it("stays out of the sidebar when the account reports no figures at all", () => {
     const { container } = render(<SidebarUsageSummary data={{}} />);
 

@@ -211,7 +211,7 @@ export default function UsageDetailsCard({
               event.stopPropagation();
               onOpenLabel();
             }}
-            className="min-w-0 flex-1 truncate text-left text-[11px] font-medium text-base-content hover:underline focus-visible:underline focus-visible:outline-none"
+            className="min-w-0 flex-1 truncate text-left text-[11px] font-medium text-base-content focus-visible:underline focus-visible:outline-none"
           >
             {label}
           </button>

@@ -564,6 +564,29 @@ export default function WorkspaceList({
                         type="button"
                         onClick={() => {
                           close();
+                          void setWorkspacePinned(
+                            workspace.id,
+                            workspace.pinned !== true,
+                          );
+                        }}
+                        data-guide="pin-workspace-menu-item"
+                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
+                      >
+                        {workspace.pinned ? (
+                          <PinFilled size={14} />
+                        ) : (
+                          <Pin size={14} />
+                        )}
+                        {t(
+                          workspace.pinned
+                            ? "workspace.unpin_action"
+                            : "workspace.pin_action",
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          close();
                           openModal("workspaceEdit", {
                             workspaceId: workspace.id,
                           });
@@ -589,29 +612,6 @@ export default function WorkspaceList({
                       >
                         <Link size={14} />
                         {t("workspace.attach_agent_session")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          close();
-                          void setWorkspacePinned(
-                            workspace.id,
-                            workspace.pinned !== true,
-                          );
-                        }}
-                        data-guide="pin-workspace-menu-item"
-                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
-                      >
-                        {workspace.pinned ? (
-                          <PinFilled size={14} />
-                        ) : (
-                          <Pin size={14} />
-                        )}
-                        {t(
-                          workspace.pinned
-                            ? "workspace.unpin_action"
-                            : "workspace.pin_action",
-                        )}
                       </button>
                       <button
                         type="button"

@@ -347,17 +347,17 @@ describe("WorkspaceList pinning", () => {
 });
 
 describe("WorkspaceList manage", () => {
-  it("offers Manage, Attach, Pin and Delete, in that order", async () => {
+  it("offers Pin, Manage, Attach and Delete, in that order", async () => {
     renderList(makeStore());
 
     fireEvent.click(
       await screen.findByRole("button", { name: "Workspace options" }),
     );
-    // The editor leads the menu and the destructive entry stays last.
+    // The pin leads the menu and the destructive entry stays last.
     const labels = [
+      "Pin Workspace",
       "Manage Workspace",
       "Attach Agent Session",
-      "Pin Workspace",
       "Delete Workspace",
     ];
     const panel = screen.getByRole("button", { name: labels[0] }).parentElement;

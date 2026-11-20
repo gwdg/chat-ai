@@ -276,6 +276,25 @@ describe("TopicList group colours", () => {
     expect(brackets.style.borderLeftColor).toBe("rgba(15, 23, 42, 0.06)");
     expect(brackets.style.borderRightColor).toBe("rgba(15, 23, 42, 0.06)");
   });
+
+  it("draws no glyph at all for Unsorted Chats, but a topic keeps its icon", () => {
+    const looseChat = { id: "c11", title: "Loose chat", lastModified: 1 };
+    render(
+      <TopicList
+        {...baseProps}
+        topics={[{ id: "t5", name: "Violet topic", color: "violet" }]}
+        unsortedConversations={[looseChat]}
+      />,
+    );
+
+    const slotFor = (name) =>
+      rowFor(name).querySelector("span.h-6.w-6");
+    // A colourless group has no colour to show, so it shows no swatch — and
+    // its slot stays in place so the name does not move.
+    expect(slotFor("Unsorted Chats").children).toHaveLength(0);
+    expect(rowFor("Unsorted Chats").querySelector(".rounded-full")).toBeNull();
+    expect(slotFor("Violet topic").children.length).toBeGreaterThan(0);
+  });
 });
 
 describe("TopicList collapse all", () => {

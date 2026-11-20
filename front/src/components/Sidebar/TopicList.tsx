@@ -324,7 +324,8 @@ export default function TopicList({
     const isActiveTopic = activeTopicId === id;
     const count = conversations.length;
     // Unsorted Chats is the only group without a colour: it must not wear a grey
-    // wash that reads as a section band, so it sits a step from the sidebar itself.
+    // wash that reads as a section band, so it sits a step from the sidebar itself
+    // and draws no colour swatch of its own.
     const neutral = id === UNSORTED_TOPIC_ID;
 
     return (
@@ -433,7 +434,7 @@ export default function TopicList({
                 </span>
               ) : Icon ? (
                 <Icon size={16} style={{ color: hex }} />
-              ) : (
+              ) : neutral ? null : (
                 <span
                   aria-hidden="true"
                   className="h-2 w-2 rounded-full"
