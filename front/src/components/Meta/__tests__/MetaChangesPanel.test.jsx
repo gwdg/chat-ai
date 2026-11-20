@@ -117,7 +117,7 @@ describe("MetaChangesPanel", () => {
 
     expect(screen.queryByRole("tablist")).toBeNull();
     expect(screen.queryAllByRole("tab")).toHaveLength(0);
-    expect(screen.getAllByText("What's new")).toHaveLength(1);
+    expect(screen.getAllByText("What's New")).toHaveLength(1);
   });
 
   it("switches between the changes and files tabs", () => {
@@ -144,7 +144,7 @@ describe("MetaChangesPanel", () => {
     // instead of hiding the last one behind a scroll.
     expect(screen.getByRole("tablist")).toHaveClass("flex-wrap");
     expect(screen.getByRole("tablist")).not.toHaveClass("overflow-x-auto");
-    expect(screen.getByRole("tab", { name: "What's new" })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: "What's New" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
@@ -167,7 +167,7 @@ describe("MetaChangesPanel", () => {
     expect(screen.queryByRole("link", { name: "Chat title" })).toBeNull();
   });
 
-  it("shows the Check now row only on the What's new tab", () => {
+  it("shows the Check now row only on the What's New tab", () => {
     render(
       <MemoryRouter>
         <MetaChangesPanel
@@ -212,7 +212,7 @@ describe("MetaChangesPanel", () => {
     expect(checkRow()).toBeNull();
     expect(screen.queryByRole("button", { name: "Check now" })).toBeNull();
 
-    fireEvent.click(screen.getByRole("tab", { name: "What's new" }));
+    fireEvent.click(screen.getByRole("tab", { name: "What's New" }));
     const restoredRow = checkRow();
     expect(restoredRow).not.toBeNull();
     expect(
@@ -233,7 +233,7 @@ describe("MetaChangesPanel", () => {
     expect(row.contains(button)).toBe(true);
     expect(button.closest('[data-guide="meta-check-now-row"]')).toBe(row);
     expect(button).toHaveClass("btn", "btn-ghost", "btn-xs", "gap-1");
-    expect(screen.getByText("What's new").closest("[data-guide]")).toBeNull();
+    expect(screen.getByText("What's New").closest("[data-guide]")).toBeNull();
     expect(container.querySelector("aside")).toHaveStyle({ width: "240px" });
   });
 
@@ -254,7 +254,7 @@ describe("MetaChangesPanel", () => {
         <MetaChangesPanel userSettings={{}} />
       </MemoryRouter>,
     );
-    const handle = screen.getByRole("button", { name: "Resize What's new" });
+    const handle = screen.getByRole("button", { name: "Resize What's New" });
 
     fireEvent.pointerDown(handle, { clientX: 1200 });
     fireEvent.pointerMove(window, { clientX: 1100 });
@@ -286,7 +286,7 @@ describe("MetaChangesPanel", () => {
     expect(screen.queryByRole("tablist")).toBeNull();
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Expand What's new" }),
+      screen.getByRole("button", { name: "Expand What's New" }),
     );
 
     expect(screen.getByRole("tablist")).toBeInTheDocument();

@@ -1,4 +1,4 @@
-import { Close, Document, Download } from "@carbon/icons-react";
+import { ChevronLeft, Close, Document, Download } from "@carbon/icons-react";
 import { useTranslation } from "react-i18next";
 
 import FilePreviewContent from "../DocumentPanel/FilePreviewContent";
@@ -10,6 +10,7 @@ export default function WorkspacePreviewTab({
   onDownload,
   showPdfHint = false,
   resetKey,
+  onBack,
 }) {
   const { t } = useTranslation();
   const entry = preview.entry;
@@ -28,6 +29,18 @@ export default function WorkspacePreviewTab({
       {/* Same header as the docked file preview a regular chat opens, so a file
           looks the same whether it sits in this tab or beside a chat. */}
       <div className="flex items-center gap-2 border-b border-base-300 px-3 py-2.5">
+        {onBack && (
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm btn-square shrink-0"
+            data-guide="workspace-preview-back"
+            title={t("common.back")}
+            aria-label={t("common.back")}
+            onClick={onBack}
+          >
+            <ChevronLeft size={18} />
+          </button>
+        )}
         <span className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-base-200 text-accent sm:flex">
           <Document size={17} />
         </span>

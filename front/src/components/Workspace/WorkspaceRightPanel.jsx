@@ -1,4 +1,11 @@
-import { useEffect, useLayoutEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import { loadFile } from "../../db";
@@ -76,7 +83,7 @@ const useWidePanel = () => {
  * came from the Files tree (already read) or from a chat attachment (a stored file
  * id the tab resolves itself).
  */
-function WorkspacePreviewPane({ request, onClose }) {
+function WorkspacePreviewPane({ request, onClose, onBack }) {
   const { t } = useTranslation();
   const { notifyError } = useToast();
   const isChatFile = Boolean(request?.fileId);
@@ -86,11 +93,7 @@ function WorkspacePreviewPane({ request, onClose }) {
   );
 
   if (!request) {
-    return (
-      <p className="px-3 py-4 text-[11px] text-base-content/55">
-        {t("workspace.preview_empty")}
-      </p>
-    );
+    return null;
   }
 
   const preview = isChatFile
@@ -133,6 +136,7 @@ function WorkspacePreviewPane({ request, onClose }) {
     <WorkspacePreviewTab
       preview={preview}
       onClose={onClose}
+      onBack={onBack}
       onDownload={download}
       showPdfHint={isChatFile}
       resetKey={request.key ?? request.fileId ?? chatPreview.entry.name}
@@ -173,6 +177,12 @@ export default function WorkspaceRightPanel({
   } = useFilePreview();
   const wide = useWidePanel();
   const [activeTab, setActiveTab] = useState("changes");
+  // The tab a file was opened from, so the chevron can put the user back there.
+  const [originTab, setOriginTab] = useState("changes");
+  const activeTabRef = useRef(activeTab);
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
   const workspaces = useWorkspaceList() ?? [];
 
   const ids = useMemo(
@@ -186,8 +196,22 @@ export default function WorkspaceRightPanel({
 
   // Newest click wins: switch to the Preview tab whenever a file arrives.
   useEffect(() => {
-    if (filePreview?.key) setActiveTab("preview");
+    if (!filePreview?.key) return;
+    const previous = activeTabRef.current;
+    if (previous && previous !== "preview") setOriginTab(previous);
+    setActiveTab("preview");
   }, [filePreview?.key]);
+
+  // The chevron (and the close button) return to where the file was opened from.
+  const backToOrigin = useCallback(() => {
+    closeFilePreview();
+    setActiveTab(originTab);
+  }, [closeFilePreview, originTab]);
+
+  // Without a file there is no Preview tab, so nothing may stay selected on it.
+  useEffect(() => {
+    if (!filePreview && activeTab === "preview") setActiveTab(originTab);
+  }, [filePreview, activeTab, originTab]);
 
   // The panel only hosts the preview while it is actually on screen.
   useLayoutEffect(() => {
@@ -195,8 +219,8 @@ export default function WorkspaceRightPanel({
     return registerPreviewHost();
   }, [ids.length, wide, registerPreviewHost]);
 
-  const tabs = useMemo(
-    () => [
+  const tabs = useMemo(() => {
+    const list = [
       {
         id: "files",
         label: t("workspace.files_tab"),
@@ -210,20 +234,31 @@ export default function WorkspaceRightPanel({
         label: t("meta_chat.agents_tab"),
         content: <WorkspaceAgentsTab workspaceIds={ids} names={names} />,
       },
-      {
+    ];
+    // The tab only exists while there is a file in it.
+    if (filePreview) {
+      list.push({
         id: "preview",
         label: t("workspace.preview_tab"),
         content: (
           <WorkspacePreviewPane
             request={filePreview}
-            onClose={closeFilePreview}
+            onClose={backToOrigin}
+            onBack={backToOrigin}
           />
         ),
         contentClassName: "flex flex-col",
-      },
-    ],
-    [ids, names, t, openFilePreview, filePreview, closeFilePreview],
-  );
+      });
+    }
+    return list;
+  }, [
+    ids,
+    names,
+    t,
+    openFilePreview,
+    filePreview,
+    backToOrigin,
+  ]);
 
   if (!ids.length) return null;
 

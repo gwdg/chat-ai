@@ -89,13 +89,12 @@ describe("WorkspaceRightPanel preview tab", () => {
     localStorage.setItem("chatai.meta.changes-collapsed", "false");
   });
 
-  it("shows a Preview tab that opens the file clicked in the Files tree", async () => {
+  it("shows the Preview tab only once a file is opened, and goes back", async () => {
     renderPanel();
 
-    fireEvent.click(screen.getByRole("tab", { name: "Preview" }));
     expect(
-      screen.getByText(/Click a file in the chat or under Files/),
-    ).toBeInTheDocument();
+      screen.queryByRole("tab", { name: "Preview" }),
+    ).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("tab", { name: "Files" }));
     fireEvent.click(screen.getByRole("button", { name: "notes.txt" }));
@@ -106,6 +105,16 @@ describe("WorkspaceRightPanel preview tab", () => {
     await waitFor(() => {
       expect(screen.getByText("hello from the files tree")).toBeInTheDocument();
     });
+
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+
+    expect(
+      screen.queryByRole("tab", { name: "Preview" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Files" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
   });
 
   it("opens a file clicked in the chat in the same tab", async () => {
