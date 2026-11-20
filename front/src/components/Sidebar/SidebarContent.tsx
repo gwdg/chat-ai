@@ -955,11 +955,11 @@ export default function SidebarContent({
                 : ""
             }`}
           >
-          <div className="-mx-3 mb-1 flex items-center justify-between rounded-none bg-base-200/70 px-3 py-1">
+          <div className="-mx-2 mb-1 flex min-h-8 items-center justify-between rounded-lg bg-base-200/70 px-3 py-1">
             <button
               type="button"
               onClick={() => dispatch(toggleTopic("__chats__"))}
-              className="flex min-w-0 items-center gap-1 rounded-md text-left text-[11px] font-semibold uppercase tracking-wide text-base-content/70 transition hover:text-base-content"
+              className="flex min-w-0 cursor-pointer items-center gap-1 rounded-md text-left text-[11px] font-semibold uppercase tracking-wide text-base-content/70 transition hover:text-base-content"
               aria-expanded={!chatsCollapsed}
             >
               <ChevronDown

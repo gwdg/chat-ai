@@ -177,5 +177,23 @@ describe("McpServerList", () => {
     // The count closes the button, exactly like the Chats header.
     expect(toggle.lastElementChild).toHaveTextContent("1");
     expect(toggle.lastElementChild.className).toContain("tabular-nums");
+    // The whole band is a target, and the header keeps one height when folded.
+    expect(toggle.className).toContain("cursor-pointer");
+    expect(toggle.parentElement.className).toContain("min-h-8");
+  });
+
+  it("shows its empty state as a plain line, like the Agents section", () => {
+    const servers = mocks.servers;
+    mocks.servers = [];
+    try {
+      render(<McpServerList />);
+
+      const line = screen.getByText("No MCP servers configured yet.");
+      expect(line.tagName).toBe("P");
+      expect(line.className).toContain("text-[10px]");
+      expect(line.querySelector("svg")).toBeNull();
+    } finally {
+      mocks.servers = servers;
+    }
   });
 });

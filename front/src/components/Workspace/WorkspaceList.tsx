@@ -377,11 +377,11 @@ export default function WorkspaceList({
   };
 
   const header = variant === "all" && (
-    <div className="-mx-3 mb-1 flex items-center gap-1 bg-base-200/70 px-3 py-1">
+    <div className="-mx-2 mb-1 flex min-h-8 items-center gap-1 rounded-lg bg-base-200/70 px-3 py-1">
       <button
         type="button"
         onClick={() => dispatch(toggleTopic("__workspaces__"))}
-        className="flex min-w-0 flex-1 items-center gap-1 rounded-md text-left text-[11px] font-semibold uppercase tracking-wide text-base-content/70 transition hover:text-base-content"
+        className="flex min-w-0 flex-1 cursor-pointer items-center gap-1 rounded-md text-left text-[11px] font-semibold uppercase tracking-wide text-base-content/70 transition hover:text-base-content"
         aria-expanded={!collapsed}
       >
         <ChevronDown

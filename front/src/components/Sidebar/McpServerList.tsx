@@ -135,11 +135,11 @@ export default function McpServerList() {
 
   return (
     <div className="px-3 pt-3 pb-1">
-      <div className="-mx-3 mb-1 flex items-center gap-1 bg-base-200/70 px-3 py-1">
+      <div className="-mx-2 mb-1 flex min-h-8 items-center gap-1 rounded-lg bg-base-200/70 px-3 py-1">
         <button
           type="button"
           onClick={() => dispatch(toggleTopic("__mcp_servers__"))}
-          className="flex min-w-0 flex-1 items-center gap-1 rounded-md text-left text-[11px] font-semibold uppercase tracking-wide text-base-content/70 transition hover:text-base-content"
+          className="flex min-w-0 flex-1 cursor-pointer items-center gap-1 rounded-md text-left text-[11px] font-semibold uppercase tracking-wide text-base-content/70 transition hover:text-base-content"
           aria-expanded={!collapsed}
         >
           <ChevronDown
@@ -167,14 +167,9 @@ export default function McpServerList() {
       </div>
 
       {collapsed ? null : servers.length === 0 ? (
-        <button
-          type="button"
-          onClick={() => edit()}
-          className="flex w-full items-center gap-1.5 rounded-xl border border-dashed border-base-300 px-3 py-2 text-left text-xs text-base-content/60 transition hover:border-accent/40 hover:bg-base-200/60"
-        >
-          <Server size={14} className="text-accent" />
+        <p className="px-1 py-1 text-[10px] text-base-content/50">
           {t("mcp.empty")}
-        </button>
+        </p>
       ) : (
         <div className="space-y-0.5">
           {servers.map((server) => (

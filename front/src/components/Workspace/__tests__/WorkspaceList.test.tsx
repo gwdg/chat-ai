@@ -701,10 +701,10 @@ describe("WorkspaceList section header", () => {
     const band = container.querySelector(
       '[data-guide="workspace-list"] > div',
     ) as HTMLElement;
-    // It cancels the section's inset and keeps only its own label padding.
-    expect(band.className).toContain("-mx-3");
+    // It cancels most of the section's inset, leaving a narrow margin.
+    expect(band.className).toContain("-mx-2");
     expect(band.className).toContain("px-3");
-    expect(band.className).not.toContain("rounded");
+    expect(band.className).toContain("rounded-lg");
   });
 });
 
