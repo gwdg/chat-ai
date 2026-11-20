@@ -195,7 +195,7 @@ export default function UsageDetailsCard({
   if (!metrics.length) return null;
 
   return (
-    <div className="w-full min-w-0 rounded-xl bg-base-200 px-3 py-2">
+    <div className="w-full min-w-0 rounded-xl bg-base-200/40 px-3 py-2">
       {onOpenLabel ? (
         <div className="flex w-full items-center gap-1">
           <button

@@ -16,6 +16,7 @@ import {
 import { ChevronDown, Info, Server, TriangleAlert } from "lucide-react";
 
 import Tooltip from "../Others/Tooltip";
+import { SECTION_RHYTHM } from "./sectionSpacing";
 
 import { useModal } from "../../modals/ModalContext";
 import { useToast } from "../../hooks/useToast";
@@ -135,7 +136,7 @@ export default function McpServerList() {
   };
 
   return (
-    <div className="px-3 pt-3 pb-1">
+    <div className={`px-3 ${SECTION_RHYTHM}`}>
       <div className="-mx-2 mb-1 flex min-h-8 items-center gap-1 rounded-lg bg-base-200/70 px-3 py-1">
         <button
           type="button"

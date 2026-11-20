@@ -22,6 +22,7 @@ import {
   groupRowTint,
   groupRule,
   neutralRowTint,
+  neutralRule,
   topicColor,
   withAlpha,
 } from "./topicColors";
@@ -119,7 +120,7 @@ function GroupHeading({
     collapseIds.length > 0 &&
     collapseIds.every((id) => collapsedIds.includes(id));
   return (
-    <div className="flex items-center justify-between gap-2 px-2 py-1">
+    <div className="-mt-1 flex items-center justify-between gap-2 px-2 pt-0 pb-1">
       <span className="min-w-0 truncate text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
         {label}
       </span>
@@ -483,7 +484,9 @@ export default function TopicList({
         {!isCollapsed && (
           <div
             className="ml-2 border-x-2 px-2 flex flex-col gap-1"
-            style={{ borderColor: groupRule(hex, isDark) }}
+            style={{
+              borderColor: neutral ? neutralRule(isDark) : groupRule(hex, isDark),
+            }}
           >
             {count > 0 && (
               conversations.map((conv) =>

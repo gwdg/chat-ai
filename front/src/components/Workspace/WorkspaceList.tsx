@@ -27,6 +27,7 @@ import {
   toggleTopic,
 } from "../../Redux/reducers/interfaceSettingsSlice";
 import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
+import { SECTION_RHYTHM } from "../Sidebar/sectionSpacing";
 
 import { useConversationList } from "../../db";
 import {
@@ -863,7 +864,7 @@ export default function WorkspaceList({
   }
 
   return (
-    <div className="pl-3 pr-2 pt-3 pb-1" data-guide="workspace-list">
+    <div className={`pl-3 pr-2 ${SECTION_RHYTHM}`} data-guide="workspace-list">
       {header}
       {body}
     </div>

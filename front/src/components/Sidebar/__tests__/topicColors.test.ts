@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   chatRowTint,
+  groupRule,
   groupRowTint,
   neutralRowTint,
+  neutralRule,
   withAlpha,
 } from "../topicColors";
 
@@ -51,21 +53,34 @@ describe("groupRowTint", () => {
 });
 
 describe("neutralRowTint", () => {
-  it("keeps Unsorted Chats within a step of the sidebar, not at band strength", () => {
+  it("keeps Unsorted Chats on the sidebar's own colour, never at band strength", () => {
     for (const isDark of [false, true]) {
       const rest = alphaOf(neutralRowTint(isDark));
-      expect(rest).toBeLessThanOrEqual(isDark ? 0.04 : 0.02);
+      // Light mode has no wash at all: the row is the sidebar's own white.
+      expect(rest).toBe(isDark ? 0.02 : 0);
+      expect(rest).toBeLessThanOrEqual(0.02);
       // Far below the 6% light / 9% dark a coloured topic rests at.
       expect(rest).toBeLessThan(alphaOf(groupRowTint("#7C3AED", isDark)) / 2);
       const hover = alphaOf(neutralRowTint(isDark, { hover: true }));
       const open = alphaOf(neutralRowTint(isDark, { active: true }));
       expect(rest).toBeLessThan(hover);
       expect(hover).toBeLessThan(open);
+      // Selected is a notch, not a slab: still well under a coloured topic's rest.
+      expect(open).toBeLessThanOrEqual(isDark ? 0.08 : 0.02);
+      expect(open).toBeLessThan(alphaOf(groupRowTint("#7C3AED", isDark)));
+    }
+  });
+
+  it("brackets Unsorted Chats with a trace, not the slate default", () => {
+    for (const isDark of [false, true]) {
+      expect(alphaOf(neutralRule(isDark))).toBeLessThan(
+        alphaOf(groupRule("#7C3AED", isDark)) / 2,
+      );
     }
   });
 
   it("keeps a chat under it below the group's hover and open washes", () => {
-    // The group's rest is only a trace, so an open chat may lead it — but never the
+    // The group has no wash at rest, so an open chat may lead it — but never the
     // washes that mark the group itself as hovered or open.
     for (const isDark of [false, true]) {
       expect(

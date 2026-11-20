@@ -247,23 +247,34 @@ describe("TopicList group colours", () => {
     expect(row.className).toContain("text-accent");
   });
 
-  it("keeps Unsorted Chats a step from the sidebar, not at band strength", () => {
+  it("keeps Unsorted Chats on the sidebar's own colour, never at band strength", () => {
     const looseChat = { id: "c9", title: "Loose chat", lastModified: 1 };
     render(<TopicList {...baseProps} unsortedConversations={[looseChat]} />);
 
     const row = rowFor("Unsorted Chats");
-    // The near-ink trace, not the slate band the section headers wear.
+    // Rest is the sidebar itself — no wash at all, so it cannot read as a band.
     expect(row.style.getPropertyValue("--group-tint")).toBe(
-      "rgba(15, 23, 42, 0.015)",
+      "rgba(15, 23, 42, 0)",
     );
     expect(row.style.getPropertyValue("--group-tint-hover")).toBe(
-      "rgba(15, 23, 42, 0.03)",
+      "rgba(15, 23, 42, 0.008)",
     );
     // Its chats follow the same near-transparent scale, not a slate wash.
     expect(screen.getByTestId("conv-c9")).toHaveAttribute(
       "data-neutral",
       "true",
     );
+  });
+
+  it("draws Unsorted Chats' brackets as a trace instead of the slate default", () => {
+    const looseChat = { id: "c10", title: "Loose chat", lastModified: 1 };
+    render(<TopicList {...baseProps} unsortedConversations={[looseChat]} />);
+
+    const brackets = rowFor("Unsorted Chats").parentElement.querySelector(
+      "div.ml-2.border-x-2",
+    );
+    expect(brackets.style.borderLeftColor).toBe("rgba(15, 23, 42, 0.06)");
+    expect(brackets.style.borderRightColor).toBe("rgba(15, 23, 42, 0.06)");
   });
 });
 
@@ -348,6 +359,22 @@ describe("TopicList grouping headings", () => {
     expect(label.className).toContain("uppercase");
     expect(label.className).toContain("tracking-wider");
     expect(label.className).toContain("text-base-content/45");
+  });
+
+  it("hugs the CHATS band instead of floating under it", () => {
+    render(
+      <TopicList
+        {...baseProps}
+        topics={[{ id: "t7", name: "Named topic", color: "violet" }]}
+      />,
+    );
+
+    const heading = screen.getByText("Topics").parentElement;
+    // No padding of its own on top, and the list's 6px gap is cancelled, so the
+    // label sits 8px under the band rather than 16px.
+    expect(heading.className).toContain("pt-0");
+    expect(heading.className).toContain("-mt-1");
+    expect(heading.className).not.toContain("py-1");
   });
 
   it("folds every date bucket from the by-date heading", () => {

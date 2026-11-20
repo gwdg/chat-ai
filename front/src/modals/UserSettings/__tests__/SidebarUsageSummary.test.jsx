@@ -76,4 +76,14 @@ describe("SidebarUsageSummary", () => {
 
     expect(container).toBeEmptyDOMElement();
   });
+
+  it("sits almost on the sidebar's own colour, not on a grey card", () => {
+    const { container } = render(<SidebarUsageSummary data={flatData} />);
+    const card = container.firstElementChild;
+
+    // A third of a step away from the sidebar, so it marks the block without
+    // reading as another section band (those are bg-base-200/70).
+    expect(card.className).toContain("bg-base-200/40");
+    expect(card.className).not.toMatch(/(^|\s)bg-base-200(\s|$)/);
+  });
 });

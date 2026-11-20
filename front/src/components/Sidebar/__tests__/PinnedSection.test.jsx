@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import PinnedSection from "../PinnedSection";
 import { toggleTopic } from "../../../Redux/reducers/interfaceSettingsSlice";
+import { SECTION_RHYTHM } from "../sectionSpacing";
 
 const mocks = vi.hoisted(() => ({
   collapsed: [],
@@ -68,6 +69,18 @@ describe("PinnedSection", () => {
     expect(band.className).toContain("bg-base-200/70");
     expect(band.className).toContain("px-3");
     expect(toggle.className).toContain("cursor-pointer");
+  });
+
+  it("keeps the same 20px rhythm between bands as every other section", () => {
+    mocks.workspaces = [workspace];
+    renderSection();
+
+    const section = document.querySelector('[data-guide="pinned-section"]');
+    // 12px above the band, 4px under it; the band itself adds its own 4px, so a
+    // folded PINNED band sits exactly as far from CHATS as CHATS sits from
+    // WORKSPACES, and so on down the column.
+    expect(SECTION_RHYTHM).toBe("pt-3 pb-1");
+    expect(section.className).toContain(SECTION_RHYTHM);
   });
 
   it("toggles its own persisted collapse id", () => {
