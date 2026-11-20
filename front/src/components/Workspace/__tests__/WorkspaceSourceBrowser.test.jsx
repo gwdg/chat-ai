@@ -213,6 +213,7 @@ describe("WorkspaceSourceBrowser", () => {
 
     const project = await screen.findByText("Project");
     const row = project.closest(".group");
+    expect(row).toHaveClass(/gap-1\.5/);
     expect(within(row).getByText("device")).toBeInTheDocument();
     await waitFor(() =>
       expect(row.querySelector("[data-quota-bar]")).toHaveStyle({
@@ -304,11 +305,11 @@ describe("WorkspaceSourceBrowser", () => {
     expect(addButton()).toBeDisabled();
     expect(screen.getByLabelText("Planning chat")).not.toBeChecked();
 
-    fireEvent.click(screen.getByLabelText("Select all"));
+    fireEvent.click(screen.getByText("Second chat"));
 
-    expect(screen.getByLabelText("Planning chat")).toBeChecked();
+    expect(screen.getByLabelText("Planning chat")).not.toBeChecked();
     expect(screen.getByLabelText("Second chat")).toBeChecked();
-    expect(addButton()).toHaveTextContent("Add to Workspace (2)");
+    expect(addButton()).toHaveTextContent("Add to Workspace (1)");
   });
 
   it("does not open a chat as a folder when its row is clicked", async () => {
@@ -323,15 +324,17 @@ describe("WorkspaceSourceBrowser", () => {
     expect(mocks.onTargetChange).not.toHaveBeenCalled();
   });
 
-  it("selects every visible row with Select all", async () => {
+  it("keeps the select-all circle out of the toolbar", async () => {
+    mocks.conversations = [
+      { id: "conv-uuid-1", title: "Planning chat" },
+      { id: "conv-uuid-2", title: "Second chat" },
+    ];
     renderBrowser({ target: { drive: "chats" } });
 
     await screen.findByText("Planning chat");
-    fireEvent.click(screen.getByLabelText("Select all"));
-
-    expect(screen.getByLabelText("Planning chat")).toBeChecked();
-    expect(addButton()).toBeEnabled();
-    expect(addButton()).toHaveTextContent("Add to Workspace (1)");
+    expect(screen.queryByLabelText("Select all")).not.toBeInTheDocument();
+    expect(addButton()).toBeDisabled();
+    await act(async () => {});
   });
 
   it("marks a row that is already in the workspace", async () => {
@@ -361,7 +364,7 @@ describe("WorkspaceSourceBrowser", () => {
     expect(mocks.onAddToWorkspace).not.toHaveBeenCalled();
   });
 
-  it("selects only rows that are not already in the workspace with Select all", async () => {
+  it("selects only rows that are not already in the workspace", async () => {
     mocks.conversations = [
       { id: "conv-uuid-1", title: "Planning chat" },
       { id: "conv-uuid-2", title: "Second chat" },
@@ -371,8 +374,7 @@ describe("WorkspaceSourceBrowser", () => {
       isInWorkspace: (selection) => selection.conversationId === "conv-uuid-1",
     });
 
-    await screen.findByText("Planning chat");
-    fireEvent.click(screen.getByLabelText("Select all"));
+    fireEvent.click(await screen.findByText("Second chat"));
 
     expect(screen.getByLabelText("Planning chat")).not.toBeChecked();
     expect(screen.getByLabelText("Second chat")).toBeChecked();

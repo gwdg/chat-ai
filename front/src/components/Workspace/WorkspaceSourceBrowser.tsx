@@ -532,32 +532,12 @@ export default function WorkspaceSourceBrowser({
         ),
     [rows, selectionFor, isInWorkspace],
   );
-  const selectableItems = visibleItems.filter((item) => !item.inWorkspace);
-  const allVisibleSelected =
-    selectableItems.length > 0 &&
-    selectableItems.every((item) =>
-      selected.has(selectionKey(item.selection)),
-    );
-
   const toggleSelection = (selection: SourcesSelection, checked: boolean) => {
     setSelected((current) => {
       const next = new Map(current);
       const key = selectionKey(selection);
       if (checked) next.set(key, selection);
       else next.delete(key);
-      return next;
-    });
-  };
-
-  const toggleVisible = (checked: boolean) => {
-    setSelected((current) => {
-      const next = new Map(current);
-      for (const item of visibleItems) {
-        if (checked && item.inWorkspace) continue;
-        const key = selectionKey(item.selection);
-        if (checked) next.set(key, item.selection);
-        else next.delete(key);
-      }
       return next;
     });
   };
@@ -788,16 +768,6 @@ export default function WorkspaceSourceBrowser({
             {view ? driveName : t("workspace.source_browser.title")}
           </div>
         </div>
-        {view && visibleItems.length > 0 && (
-          <input
-            type="checkbox"
-            className="checkbox checkbox-xs mr-0.5 shrink-0"
-            checked={allVisibleSelected}
-            onChange={(event) => toggleVisible(event.target.checked)}
-            aria-label={t("workspace.source_browser.select_all")}
-            title={t("workspace.source_browser.select_all")}
-          />
-        )}
         <button
           type="button"
           data-guide="workspace-add-to-workspace"
@@ -916,7 +886,7 @@ export default function WorkspaceSourceBrowser({
                     return (
                       <div
                         key={row.id}
-                        className={`group flex min-w-0 items-start gap-1 rounded-xl border px-1.5 py-1.5 transition ${
+                        className={`group flex min-w-0 items-start gap-1.5 rounded-xl border px-1.5 py-1.5 transition ${
                           checked
                             ? "border-accent/50 bg-accent/5"
                             : "border-base-300/60 hover:border-accent/40 hover:bg-base-200/50"
@@ -924,7 +894,7 @@ export default function WorkspaceSourceBrowser({
                       >
                         <input
                           type="checkbox"
-                          className="checkbox checkbox-xs mt-0.5 shrink-0"
+                          className="checkbox checkbox-xs mr-0.5 mt-0.5 shrink-0"
                           checked={checked}
                           disabled={inWorkspace}
                           title={inWorkspace ? inWorkspaceLabel : undefined}
@@ -1014,7 +984,7 @@ export default function WorkspaceSourceBrowser({
                   return (
                     <div
                       key={row.id}
-                      className={`group flex min-w-0 items-center gap-1 rounded-lg border px-1 py-1 transition ${
+                      className={`group flex min-w-0 items-center gap-1.5 rounded-lg border px-1 py-1 transition ${
                         checked
                           ? "border-accent/50 bg-accent/5"
                           : "border-transparent hover:bg-base-200/60"
@@ -1022,7 +992,7 @@ export default function WorkspaceSourceBrowser({
                     >
                       <input
                         type="checkbox"
-                        className="checkbox checkbox-xs shrink-0"
+                        className="checkbox checkbox-xs mr-0.5 shrink-0"
                         checked={checked}
                         disabled={inWorkspace}
                         title={inWorkspace ? inWorkspaceLabel : undefined}
