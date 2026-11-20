@@ -560,6 +560,36 @@ export default function WorkspaceList({
                         type="button"
                         onClick={() => {
                           close();
+                          openModal("workspaceEdit", {
+                            workspaceId: workspace.id,
+                          });
+                        }}
+                        data-guide="workspace-manage"
+                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
+                      >
+                        <Edit size={14} />
+                        {t("workspace.manage_workspace")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          close();
+                          openModal("workspaceAttachAgentSession", {
+                            workspaceId: workspace.id,
+                            agents,
+                            sessionLinks,
+                          });
+                        }}
+                        data-guide="attach-agent-session-menu-item"
+                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
+                      >
+                        <Link size={14} />
+                        {t("workspace.attach_agent_session")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          close();
                           void setWorkspacePinned(
                             workspace.id,
                             workspace.pinned !== true,
@@ -583,38 +613,9 @@ export default function WorkspaceList({
                         type="button"
                         onClick={() => {
                           close();
-                          openModal("workspaceAttachAgentSession", {
-                            workspaceId: workspace.id,
-                            agents,
-                            sessionLinks,
-                          });
-                        }}
-                        data-guide="attach-agent-session-menu-item"
-                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
-                      >
-                        <Link size={14} />
-                        {t("workspace.attach_agent_session")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          close();
-                          openModal("workspaceEdit", {
-                            workspaceId: workspace.id,
-                          });
-                        }}
-                        data-guide="workspace-manage"
-                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
-                      >
-                        <Edit size={14} />
-                        {t("workspace.manage_workspace")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          close();
                           remove(workspace);
                         }}
+                        data-guide="delete-workspace-menu-item"
                         className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-error transition hover:bg-error/10"
                       >
                         <TrashCan size={14} />

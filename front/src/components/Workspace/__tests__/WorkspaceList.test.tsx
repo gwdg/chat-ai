@@ -217,7 +217,7 @@ describe("WorkspaceList pinning", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: "Workspace options" }),
     );
-    fireEvent.click(screen.getByRole("button", { name: "Pin workspace" }));
+    fireEvent.click(screen.getByRole("button", { name: "Pin Workspace" }));
 
     await waitFor(() =>
       expect(mocks.setPinned).toHaveBeenCalledWith("ws-1", true),
@@ -336,6 +336,26 @@ describe("WorkspaceList pinning", () => {
 });
 
 describe("WorkspaceList manage", () => {
+  it("offers Manage, Attach, Pin and Delete, in that order", async () => {
+    renderList(makeStore());
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Workspace options" }),
+    );
+    // The editor leads the menu and the destructive entry stays last.
+    const labels = [
+      "Manage Workspace",
+      "Attach Agent Session",
+      "Pin Workspace",
+      "Delete Workspace",
+    ];
+    const panel = screen.getByRole("button", { name: labels[0] }).parentElement;
+    const inMenuOrder = [...(panel?.querySelectorAll("button") ?? [])].map(
+      (item) => item.textContent?.trim(),
+    );
+    expect(inMenuOrder).toEqual(labels);
+  });
+
   it("opens the workspace editor — name, icon, colour and storage — from its options menu", async () => {
     renderList(makeStore());
 

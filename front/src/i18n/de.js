@@ -2245,7 +2245,7 @@ export default {
     git_log: "Git-Log",
     git_log_empty: "Keine Git-Log-Einträge gefunden.",
     root_empty_hint: "Erstellen Sie einen Ordner oder eine Datei oder hängen Sie einen Quellordner ein.",
-    edit_title: "Arbeitsbereich bearbeiten",
+    edit_title: "Arbeitsbereich verwalten",
     edit_storage: "Speicher bearbeiten",
     manage_workspace: "Arbeitsbereich verwalten",
     edit_storage_hint:
