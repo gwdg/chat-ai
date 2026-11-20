@@ -111,6 +111,8 @@ export default {
     collapse_topic: "Collapse topic",
     expand_all_topics: "Expand all topics",
     collapse_all_topics: "Collapse all topics",
+    expand_all_chats: "Expand all chats",
+    collapse_all_chats: "Collapse all chats",
     empty_topic: "Drag a chat here.",
     search_label: "Search",
     search_action: "Search chats",

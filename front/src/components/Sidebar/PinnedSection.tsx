@@ -49,12 +49,12 @@ export default function PinnedSection({
 
   return (
     <div className="px-3 pt-3 pb-1" data-guide="pinned-section">
-      <div className="mb-1 flex items-center justify-between rounded-lg bg-base-200/70 px-2 py-1">
+      <div className="-mx-2 mb-1 flex min-h-8 items-center justify-between rounded-lg bg-base-200/70 px-3 py-1">
         <button
           type="button"
           onClick={() => dispatch(toggleTopic(PINNED_COLLAPSE_ID))}
           aria-expanded={!collapsed}
-          className="flex min-w-0 flex-1 items-center gap-1 rounded-md text-left text-[11px] font-semibold uppercase tracking-wide text-base-content/70 transition hover:text-base-content"
+          className="flex min-w-0 flex-1 cursor-pointer items-center gap-1 rounded-md text-left text-[11px] font-semibold uppercase tracking-wide text-base-content/70 transition hover:text-base-content"
         >
           <ChevronDown
             size={12}

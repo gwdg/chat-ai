@@ -54,6 +54,22 @@ describe("PinnedSection", () => {
     expect(screen.getByText("4")).toBeInTheDocument();
   });
 
+  it("wears the same band as the chats, workspace and agent sections", () => {
+    mocks.workspaces = [workspace];
+    renderSection();
+
+    const toggle = screen.getByRole("button", { name: /pinned/i });
+    const band = toggle.parentElement;
+    // Same shape as CHATS/WORKSPACES/AGENTS/MCP SERVERS: a full-bleed,
+    // rounded 32px band starting 4px from the sidebar edge.
+    expect(band.className).toContain("-mx-2");
+    expect(band.className).toContain("min-h-8");
+    expect(band.className).toContain("rounded-lg");
+    expect(band.className).toContain("bg-base-200/70");
+    expect(band.className).toContain("px-3");
+    expect(toggle.className).toContain("cursor-pointer");
+  });
+
   it("toggles its own persisted collapse id", () => {
     mocks.agents = [agent];
     renderSection();

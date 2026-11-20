@@ -111,6 +111,8 @@ export default {
     collapse_topic: "Thema einklappen",
     expand_all_topics: "Alle Themen ausklappen",
     collapse_all_topics: "Alle Themen einklappen",
+    expand_all_chats: "Alle Chats ausklappen",
+    collapse_all_chats: "Alle Chats einklappen",
     empty_topic: "Ziehen Sie einen Chat hierher.",
     search_label: "Suche",
     search_action: "Chats durchsuchen",

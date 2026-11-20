@@ -1,6 +1,13 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import TopicList, { PINNED_COLLAPSE_ID, UNSORTED_TOPIC_ID } from "../TopicList";
+import TopicList, {
+  CREATED_TOPIC_ID,
+  DATE_TOPIC_ID,
+  PINNED_COLLAPSE_ID,
+  SIZE_TOPIC_ID,
+  UNSORTED_TOPIC_ID,
+  dateBucketCollapseId,
+} from "../TopicList";
 import {
   collapseTopics,
   expandTopics,
@@ -251,6 +258,93 @@ describe("TopicList collapse all", () => {
 
     expect(
       screen.queryByRole("button", { name: /all topics/ }),
+    ).not.toBeInTheDocument();
+  });
+});
+
+describe("TopicList grouping headings", () => {
+  const chat = { id: "c6", title: "Grouped chat", lastModified: 1 };
+  const dateGroup = { key: "today", conversations: [chat] };
+  const button = (name) => screen.getByRole("button", { name });
+
+  it("wears the same type as the by-date and by-size labels", () => {
+    render(
+      <TopicList
+        {...baseProps}
+        topics={[{ id: "t6", name: "Named topic", color: "violet" }]}
+      />,
+    );
+
+    const label = screen.getByText("Topics");
+    expect(label.className).toContain("text-[10px]");
+    expect(label.className).toContain("font-semibold");
+    expect(label.className).toContain("text-base-content/70");
+    expect(label.className).not.toContain("uppercase");
+    expect(label.className).not.toContain("tracking-wider");
+  });
+
+  it("folds every date bucket from the by-date heading", () => {
+    render(
+      <TopicList {...baseProps} grouping="date" dateGroups={[dateGroup]} />,
+    );
+
+    expect(screen.getByText("All chats by date")).toBeInTheDocument();
+    fireEvent.click(button("Collapse all chats"));
+
+    expect(reduxMocks.dispatch).toHaveBeenCalledWith(
+      collapseTopics([dateBucketCollapseId(DATE_TOPIC_ID, "today")]),
+    );
+  });
+
+  it("folds the creation-date buckets under their own parent id", () => {
+    render(
+      <TopicList
+        {...baseProps}
+        grouping="created"
+        creationDateGroups={[dateGroup]}
+      />,
+    );
+
+    fireEvent.click(button("Collapse all chats"));
+
+    expect(reduxMocks.dispatch).toHaveBeenCalledWith(
+      collapseTopics([dateBucketCollapseId(CREATED_TOPIC_ID, "today")]),
+    );
+  });
+
+  it("expands the buckets again once all of them are folded", () => {
+    reduxMocks.collapsed = [dateBucketCollapseId(DATE_TOPIC_ID, "today")];
+    render(
+      <TopicList {...baseProps} grouping="date" dateGroups={[dateGroup]} />,
+    );
+
+    fireEvent.click(button("Expand all chats"));
+
+    expect(reduxMocks.dispatch).toHaveBeenCalledWith(
+      expandTopics([dateBucketCollapseId(DATE_TOPIC_ID, "today")]),
+    );
+  });
+
+  it("folds the single storage-size list and hides its chats", () => {
+    reduxMocks.collapsed = [SIZE_TOPIC_ID];
+    render(
+      <TopicList {...baseProps} grouping="size" sizeConversations={[chat]} />,
+    );
+
+    expect(screen.getByText("All chats by storage size")).toBeInTheDocument();
+    expect(screen.queryByTestId("conv-c6")).not.toBeInTheDocument();
+    fireEvent.click(button("Expand all chats"));
+
+    expect(reduxMocks.dispatch).toHaveBeenCalledWith(
+      expandTopics([SIZE_TOPIC_ID]),
+    );
+  });
+
+  it("draws no control when a heading has nothing to fold", () => {
+    render(<TopicList {...baseProps} grouping="date" dateGroups={[]} />);
+
+    expect(
+      screen.queryByRole("button", { name: /all chats/ }),
     ).not.toBeInTheDocument();
   });
 });

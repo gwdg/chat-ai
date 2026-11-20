@@ -37,6 +37,8 @@ import {
 export const UNSORTED_TOPIC_ID = "__unsorted__";
 export const DATE_TOPIC_ID = "__by_date__";
 export const CREATED_TOPIC_ID = "__by_created__";
+/** Synthetic id that folds the single flat list of the storage-size grouping. */
+export const SIZE_TOPIC_ID = "__by_size__";
 /** Synthetic collapse id for the pinned section, stored with the topic states. */
 export const PINNED_COLLAPSE_ID = "__pinned__";
 
@@ -51,6 +53,88 @@ type DateGroup = { key: string; conversations: any[] };
 
 export const dateBucketCollapseId = (parentId: string, key: string) =>
   `${parentId}:${key}`;
+
+/**
+ * The trailing fold control of a list heading. Every Chats heading owns one so
+ * `Topics`, `All chats by date`, `… by creation date` and `… by storage size`
+ * fold their lists the same way.
+ */
+function SectionCollapseButton({
+  collapsed,
+  label,
+  onClick,
+  dataGuide,
+}: {
+  collapsed: boolean;
+  label: string;
+  onClick: () => void;
+  dataGuide?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      data-guide={dataGuide}
+      aria-label={label}
+      title={label}
+      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-base-content/60 transition-colors hover:bg-base-300 hover:text-base-content"
+    >
+      {collapsed ? <ExpandAll size={16} /> : <CollapseAll size={16} />}
+    </button>
+  );
+}
+
+/**
+ * A section label above the chats list. `Topics`, `All chats by date`,
+ * `… by creation date` and `… by storage size` all render through this so the
+ * four read the same and fold the same way.
+ */
+function GroupHeading({
+  label,
+  collapseIds,
+  collapsedIds,
+  onToggle,
+  actions,
+  expandLabel,
+  collapseLabel,
+  dataGuide,
+}: {
+  label: string;
+  collapseIds: string[];
+  collapsedIds: string[];
+  onToggle: (ids: string[], allCollapsed: boolean) => void;
+  actions?: ReactNode;
+  expandLabel?: string;
+  collapseLabel?: string;
+  dataGuide?: string;
+}) {
+  const { t } = useTranslation();
+  const allCollapsed =
+    collapseIds.length > 0 &&
+    collapseIds.every((id) => collapsedIds.includes(id));
+  return (
+    <div className="flex items-center justify-between gap-2 px-2 py-1">
+      <span className="min-w-0 truncate text-[10px] font-semibold text-base-content/70">
+        {label}
+      </span>
+      <div className="flex items-center gap-0.5">
+        {actions}
+        {collapseIds.length > 0 && (
+          <SectionCollapseButton
+            collapsed={allCollapsed}
+            label={
+              allCollapsed
+                ? expandLabel ?? t("folders.expand_all_chats")
+                : collapseLabel ?? t("folders.collapse_all_chats")
+            }
+            dataGuide={dataGuide}
+            onClick={() => onToggle(collapseIds, allCollapsed)}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function TopicList({
   topics,
@@ -149,17 +233,20 @@ export default function TopicList({
     return ids;
   }, [pinnedTopics, topics, unsortedConversations]);
 
-  const allTopicsCollapsed =
-    topicCollapseIds.length > 0 &&
-    topicCollapseIds.every((id) => collapsedTopicIds.includes(id));
+  // The grouping headings above the dated and sized lists are the same kind of
+  // label as TOPICS, so they wear the same type and carry the same collapse-all
+  // control. Each ids list is exactly what that heading folds.
+  const bucketCollapseIds = useMemo(() => {
+    const parentId = grouping === "created" ? CREATED_TOPIC_ID : DATE_TOPIC_ID;
+    const groups = grouping === "created" ? creationDateGroups : dateGroups;
+    return groups.map((group) => dateBucketCollapseId(parentId, group.key));
+  }, [dateGroups, creationDateGroups, grouping]);
 
-  const toggleAllTopics = useCallback(() => {
-    dispatch(
-      allTopicsCollapsed
-        ? expandTopics(topicCollapseIds)
-        : collapseTopics(topicCollapseIds),
-    );
-  }, [allTopicsCollapsed, topicCollapseIds]);
+  const sizeCollapseIds = sizeConversations.length > 0 ? [SIZE_TOPIC_ID] : [];
+
+  const toggleGroup = useCallback((ids: string[], allCollapsed: boolean) => {
+    dispatch(allCollapsed ? expandTopics(ids) : collapseTopics(ids));
+  }, []);
 
   const closeTopicMenu = useCallback(() => {
     setMenuTopicId(null);
@@ -420,11 +507,15 @@ export default function TopicList({
     <div className="flex flex-col gap-1.5" data-guide="topic-list">
       {grouping === "topic" && (
         <>
-          <div className="flex items-center justify-between gap-2 px-2 py-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
-              {t("folders.topics_label")}
-            </span>
-            <div className="flex items-center gap-0.5">
+          <GroupHeading
+            label={t("folders.topics_label")}
+            collapseIds={topicCollapseIds}
+            collapsedIds={collapsedTopicIds}
+            onToggle={toggleGroup}
+            expandLabel={t("folders.expand_all_topics")}
+            collapseLabel={t("folders.collapse_all_topics")}
+            dataGuide="collapse-all-topics"
+            actions={
               <button
                 type="button"
                 ref={createButtonRef}
@@ -439,28 +530,8 @@ export default function TopicList({
               >
                 <BookmarkAdd size={16} />
               </button>
-              {topicCollapseIds.length > 0 && (
-                <button
-                  type="button"
-                  onClick={toggleAllTopics}
-                  data-guide="collapse-all-topics"
-                  aria-label={t(
-                    allTopicsCollapsed
-                      ? "folders.expand_all_topics"
-                      : "folders.collapse_all_topics",
-                  )}
-                  title={t(
-                    allTopicsCollapsed
-                      ? "folders.expand_all_topics"
-                      : "folders.collapse_all_topics",
-                  )}
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-base-content/60 transition-colors hover:bg-base-300 hover:text-base-content"
-                >
-                  {allTopicsCollapsed ? <ExpandAll size={16} /> : <CollapseAll size={16} />}
-                </button>
-              )}
-            </div>
-          </div>
+            }
+          />
       {topics.map((topic) => {
         const color = topicColor(topic);
         const emoji =
@@ -488,9 +559,14 @@ export default function TopicList({
 
       {(grouping === "date" || grouping === "created") && (
         <div className="flex flex-col gap-1">
-          <div className="px-2 pt-3 pb-1 text-[10px] font-semibold text-base-content/70">
-            {t(grouping === "created" ? "folders.by_created" : "folders.by_date")}
-          </div>
+          <GroupHeading
+            label={t(
+              grouping === "created" ? "folders.by_created" : "folders.by_date",
+            )}
+            collapseIds={bucketCollapseIds}
+            collapsedIds={collapsedTopicIds}
+            onToggle={toggleGroup}
+          />
           {(() => {
             const isCreated = grouping === "created";
             const parentId = isCreated ? CREATED_TOPIC_ID : DATE_TOPIC_ID;
@@ -553,12 +629,16 @@ export default function TopicList({
 
       {grouping === "size" && (
         <div className="flex flex-col gap-1">
-          <div className="px-2 pt-3 pb-1 text-[10px] font-semibold text-base-content/70">
-            {t("folders.by_size")}
-          </div>
-          {sizeConversations.map((conv) =>
-            renderConversationRow(conv, { showModified: true }),
-          )}
+          <GroupHeading
+            label={t("folders.by_size")}
+            collapseIds={sizeCollapseIds}
+            collapsedIds={collapsedTopicIds}
+            onToggle={toggleGroup}
+          />
+          {!collapsedTopicIds.includes(SIZE_TOPIC_ID) &&
+            sizeConversations.map((conv) =>
+              renderConversationRow(conv, { showModified: true }),
+            )}
         </div>
       )}
 
