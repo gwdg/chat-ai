@@ -945,13 +945,13 @@ export default function SidebarContent({
       </div>
 
       {isFeatureEnabled("meta_chat") && (
-        <div className="px-3 pb-1">
+        <div className="px-1 pb-1">
           <Tooltip text={t("meta_chat.help_tooltip")}>
             <button
               type="button"
               onClick={() => navigate("/meta")}
               data-guide="meta-chat"
-              className={`flex w-full items-center gap-1.5 rounded-lg px-1.5 py-1 text-left text-xs transition ${
+              className={`flex min-h-8 w-full items-center gap-1.5 rounded-lg px-1.5 py-1 text-left text-xs transition ${
                 location.pathname === "/meta"
                   ? "bg-accent/10 text-accent"
                   : "text-base-content/80 hover:bg-base-200 hover:text-base-content"
