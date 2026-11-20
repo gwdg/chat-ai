@@ -59,7 +59,7 @@ describe("WorkspaceAttachButton", () => {
     expect(openModal).toHaveBeenCalledWith("manageData", { localState });
   });
 
-  it("opens the attached workspace directly instead of repeating it in Manage data", async () => {
+  it("opens the workspace editor when exactly one workspace is attached", async () => {
     dbMocks.links = [{ workspaceId: "w1" }];
     renderButton();
     openMenu();
@@ -69,8 +69,11 @@ describe("WorkspaceAttachButton", () => {
     ).toBeInTheDocument();
     fireEvent.click(await screen.findByText("Manage data in Research"));
 
-    expect(navigate).toHaveBeenCalledWith("/workspace/w1");
-    expect(openModal).not.toHaveBeenCalled();
+    // The editor is Create workspace in edit mode: name, icon, colour and the storage rail.
+    expect(openModal).toHaveBeenCalledWith("workspaceEdit", {
+      workspaceId: "w1",
+    });
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it("asks which workspace to open when several are attached", async () => {

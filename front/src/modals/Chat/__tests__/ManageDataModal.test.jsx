@@ -9,6 +9,7 @@ const toastMocks = vi.hoisted(() => ({
   notifyError: vi.fn(),
 }));
 const routerMocks = vi.hoisted(() => ({ navigate: vi.fn() }));
+const modalMocks = vi.hoisted(() => ({ openModal: vi.fn() }));
 
 vi.mock("../../../db/workspaceDb", () => ({
   useChatWorkspaces: () => dbMocks.links,
@@ -23,6 +24,9 @@ vi.mock("../../../hooks/useToast", () => ({
 }));
 vi.mock("react-router-dom", () => ({
   useNavigate: () => routerMocks.navigate,
+}));
+vi.mock("../../ModalContext", () => ({
+  useModal: () => modalMocks,
 }));
 
 const file = (name, path, kind = "file") => ({
@@ -178,6 +182,32 @@ describe("ManageDataModal", () => {
 
     expect(onClose).toHaveBeenCalled();
     expect(routerMocks.navigate).toHaveBeenCalledWith("/workspace/w2");
+  });
+
+  it("opens the workspace editor from an attached workspace row", () => {
+    dbMocks.links = [{ workspaceId: "w1" }, { workspaceId: "w2" }];
+    dbMocks.workspaces = [
+      { id: "w1", name: "Research" },
+      { id: "w2", name: "Teaching" },
+    ];
+    const onClose = vi.fn();
+    render(
+      <ManageDataModal
+        isOpen
+        onClose={onClose}
+        localState={localState}
+        setLocalState={vi.fn()}
+        provider={makeProvider({ "/": [] })}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("manage-data-edit-w1"));
+
+    expect(onClose).toHaveBeenCalled();
+    expect(modalMocks.openModal).toHaveBeenCalledWith("workspaceEdit", {
+      workspaceId: "w1",
+    });
+    expect(routerMocks.navigate).not.toHaveBeenCalled();
   });
 
   it("ignores workspace links whose workspace is gone", () => {

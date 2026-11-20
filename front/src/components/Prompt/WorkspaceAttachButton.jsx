@@ -7,7 +7,6 @@ import {
   useClose,
 } from "@headlessui/react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
 import { Check, ChevronRight } from "lucide-react";
 import { Workspace, DataBase } from "@carbon/icons-react";
 
@@ -45,7 +44,6 @@ function ManageDataRow({ label, onSelect }) {
 
 export default function WorkspaceAttachButton({ localState, setLocalState }) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { openModal } = useModal();
   const conversationId = localState?.id;
   const workspaces = useWorkspaceList();
@@ -98,13 +96,14 @@ export default function WorkspaceAttachButton({ localState, setLocalState }) {
       flush: true,
     }));
 
-  // A workspace owns the files of an attached chat, so a single attachment is opened directly
-  // instead of repeating the workspace in the Manage data view. Several attachments need a choice.
+  // A workspace owns the files of an attached chat, so a single attachment opens the workspace
+  // editor — the same dialog as Create workspace, with its storage rail and its name, icon and
+  // colour. Several attachments need a choice first, so the Manage data view lists them.
   const soleWorkspace =
     attachedWorkspaces.length === 1 ? attachedWorkspaces[0] : null;
   const manageData = () => {
     if (soleWorkspace) {
-      navigate(`/workspace/${soleWorkspace.id}`);
+      openModal("workspaceEdit", { workspaceId: soleWorkspace.id });
       return;
     }
     openModal("manageData", { localState });

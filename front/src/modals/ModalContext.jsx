@@ -208,6 +208,9 @@ export function ModalProvider({ children }) {
       {modalType === "workspaceCreate" && (
         <CreateWorkspaceModal isOpen onClose={closeModal} {...modalProps} />
       )}
+      {modalType === "workspaceEdit" && (
+        <CreateWorkspaceModal isOpen onClose={closeModal} {...modalProps} />
+      )}
       {modalType === "workspaceEditStorage" && (
         <EditWorkspaceStorageModal
           isOpen

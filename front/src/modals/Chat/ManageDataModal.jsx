@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { ChevronRight, Download, Edit, TrashCan, WarningAltFilled, Workspace } from "@carbon/icons-react";
 
 import BaseModal from "../BaseModal";
+import { useModal } from "../ModalContext";
 import CreateEntryModal from "../Workspace/CreateEntryModal";
 import ConfirmActionModal from "../Alert/ConfirmActionModal";
 import WorkspaceRootBrowser from "../../components/Workspace/WorkspaceRootBrowser";
@@ -31,6 +32,7 @@ export default function ManageDataModal({
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { openModal } = useModal();
   const { notifySuccess, notifyError } = useToast();
   const conversationId = localState?.id;
 
@@ -261,24 +263,43 @@ export default function ManageDataModal({
               {t("workspace.manage_data_workspace_hint")}
             </p>
             {attached.map((workspace) => (
-              <button
+              <div
                 key={workspace.id}
-                type="button"
-                onClick={() => {
-                  onClose?.();
-                  navigate(`/workspace/${workspace.id}`);
-                }}
-                className="flex w-full items-center gap-2 rounded-xl border border-base-300 bg-base-100 px-3 py-2 text-left text-sm transition hover:bg-base-200"
+                className="flex items-center gap-1 rounded-xl border border-base-300 bg-base-100 pr-1 transition hover:bg-base-200"
               >
-                <Workspace size={20} className="shrink-0 text-accent" />
-                <span className="min-w-0 flex-1 truncate">
-                  {workspace.name}
-                </span>
-                <span className="shrink-0 text-xs text-accent">
-                  {t("workspace.open_workspace")}
-                </span>
-                <ChevronRight size={14} className="shrink-0 text-base-content/40" />
-              </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose?.();
+                    navigate(`/workspace/${workspace.id}`);
+                  }}
+                  className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left text-sm"
+                >
+                  <Workspace size={20} className="shrink-0 text-accent" />
+                  <span className="min-w-0 flex-1 truncate">
+                    {workspace.name}
+                  </span>
+                  <span className="shrink-0 text-xs text-accent">
+                    {t("workspace.open_workspace")}
+                  </span>
+                  <ChevronRight size={14} className="shrink-0 text-base-content/40" />
+                </button>
+                {/* The workspace editor is the same dialog as Create workspace, so its storage
+                    rail and its name, icon and colour are here too, not only on the page. */}
+                <button
+                  type="button"
+                  data-testid={`manage-data-edit-${workspace.id}`}
+                  onClick={() => {
+                    onClose?.();
+                    openModal("workspaceEdit", { workspaceId: workspace.id });
+                  }}
+                  title={t("workspace.edit_title")}
+                  aria-label={t("workspace.edit_title")}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-base-content/50 transition hover:bg-base-300 hover:text-accent"
+                >
+                  <Edit size={14} />
+                </button>
+              </div>
             ))}
           </div>
         ) : (

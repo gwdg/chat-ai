@@ -452,7 +452,7 @@ export default {
     manage_chat_data: {
       title: "Dateien eines Chats verwalten",
       step1: "Auf Speicher zugreifen ist standardmäßig an und steht oben im Arbeitsbereich-Menü. Schalten Sie es aus, erhält das Modell keine Dateiwerkzeuge; Anhänge werden weiterhin in die Nachricht aufgenommen, sofern möglich.",
-      step2: "Wählen Sie Daten verwalten, um die Dateien hinter diesem Schalter zu sehen. Chats, die einem Arbeitsbereich zugeordnet sind, öffnen diesen, dessen Reiter Dateien das Dateisystem zeigt; Chats ohne Arbeitsbereich durchsuchen die für den Chat in diesem Browser gespeicherten Dateien.",
+      step2: "Wählen Sie Daten verwalten, um die Dateien hinter diesem Schalter zu sehen. Ist der Chat einem Arbeitsbereich zugeordnet, öffnet sich dessen Editor — derselbe Dialog wie „Arbeitsbereich erstellen“, mit Speicherorten, Name, Symbol und Farbe sowie „Änderungen übernehmen“; bei mehreren Arbeitsbereichen werden sie zuerst aufgelistet. Chats ohne Arbeitsbereich durchsuchen die für den Chat in diesem Browser gespeicherten Dateien.",
       step3: "Laden Sie die Dateien des Chats hier hoch, erstellen, benennen Sie sie um, laden Sie sie herunter oder löschen Sie sie.",
     },
     workspace_saia_fs: {
@@ -2431,6 +2431,8 @@ export default {
     name_label: "Name des Arbeitsbereichs",
     name_placeholder: "z. B. Recherche",
     create_workspace: "Arbeitsbereich erstellen",
+    apply_changes: "Änderungen übernehmen",
+    apply_applying: "Wird gespeichert…",
     create_tree_title: "Arbeitsbereich",
     create_add: "Zum Arbeitsbereich hinzufügen",
     create_empty_hint:
@@ -2441,6 +2443,7 @@ export default {
     name_prompt: "Wählen Sie einen Namen für Ihren Arbeitsbereich",
     name_taken: "Ein Arbeitsbereich mit diesem Namen existiert bereits",
     create_error: "Der Arbeitsbereich konnte nicht erstellt werden",
+    update_error: "Der Arbeitsbereich konnte nicht gespeichert werden",
     not_found: "Arbeitsbereich nicht gefunden",
     files_title: "Arbeitsbereich-Dateien",
     storage_browser_private: "Privat für diesen Arbeitsbereich",
