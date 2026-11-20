@@ -14,7 +14,6 @@ vi.mock("../../../agent/mcp", () => ({
 const local = {
   id: "server-1",
   name: "Files",
-  kind: "local",
   url: "http://127.0.0.1:9000/mcp",
 };
 
@@ -71,20 +70,5 @@ describe("McpServerDetailsModal", () => {
     expect(
       screen.getByRole("button", { name: "Try again" }),
     ).toBeInTheDocument();
-  });
-
-  it("explains why a gateway server has no details", () => {
-    render(
-      <McpServerDetailsModal
-        isOpen
-        onClose={vi.fn()}
-        server={{ id: "remote", name: "GWDG", kind: "remote", serverId: "srv-1" }}
-      />,
-    );
-
-    expect(
-      screen.getByText(/cannot be read from the browser/),
-    ).toBeInTheDocument();
-    expect(mocks.describe).not.toHaveBeenCalled();
   });
 });

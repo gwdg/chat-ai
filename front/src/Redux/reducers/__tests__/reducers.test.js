@@ -138,7 +138,6 @@ describe("user settings reducer", () => {
       addMcpServer({
         id: "mcp-1",
         name: "Local files",
-        kind: "local",
         url: "http://localhost:9000/mcp",
       }),
     );
@@ -146,9 +145,8 @@ describe("user settings reducer", () => {
       state,
       addMcpServer({
         id: "mcp-2",
-        name: "GWDG",
-        kind: "remote",
-        serverId: "server-1",
+        name: "Notes",
+        url: "http://localhost:9100/mcp",
       }),
     );
     expect(selectGlobalMcpServers({ user_settings: state })).toHaveLength(2);
@@ -165,6 +163,31 @@ describe("user settings reducer", () => {
 
     state = userSettingsReducer(state, removeMcpServer("mcp-2"));
     expect(selectGlobalMcpServers({ user_settings: state })).toHaveLength(1);
+  });
+
+  it("rejects an MCP server without a URL", () => {
+    let state = init(userSettingsReducer);
+    state = userSettingsReducer(
+      state,
+      addMcpServer({ id: "legacy", name: "Gateway", serverId: "server-1" }),
+    );
+    expect(selectGlobalMcpServers({ user_settings: state })).toEqual([]);
+  });
+
+  it("imports only MCP servers that have an address", () => {
+    let state = init(userSettingsReducer);
+    state = userSettingsReducer(
+      state,
+      importUserSettings({
+        mcp_servers: [
+          { id: "kept", name: "Files", url: "http://localhost:9000/mcp" },
+          { id: "gateway", name: "GWDG", kind: "remote", serverId: "server-1" },
+        ],
+      }),
+    );
+    expect(state.mcp_servers).toEqual([
+      { id: "kept", name: "Files", url: "http://localhost:9000/mcp" },
+    ]);
   });
 
   it("validates memory mode and send shortcut", () => {

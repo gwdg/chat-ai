@@ -11,7 +11,6 @@ const mocks = vi.hoisted(() => ({
     {
       id: "server-1",
       name: "Test server",
-      kind: "local",
       url: "http://127.0.0.1:9000",
     },
   ],

@@ -17,9 +17,7 @@ export interface McpServer {
 export interface GlobalMcpServer {
   id: string;
   name?: string;
-  kind: "local" | "remote";
-  url?: string;
-  serverId?: string;
+  url: string;
   headers?: Record<string, string>;
 }
 
@@ -38,66 +36,34 @@ const selectedIds = (value: unknown): string[] =>
 
 /** Per-chat settings with legacy server entries plus the globally configured selections. */
 export function resolveMcpServers(settings: any, globals: GlobalMcpServer[] = []) {
-  const legacy = Array.isArray(settings?.mcp_servers) ? settings.mcp_servers : [];
+  const legacy = mcpServers(settings);
   const localIds = new Set(selectedIds(settings?.mcp_local_server_ids));
-  const remoteIds = new Set(selectedIds(settings?.mcp_remote_server_ids));
   // Once a chat selects globally configured servers, those definitions win over legacy per-chat
   // entries; this keeps the connection on the address stored in the global settings.
-  const legacyLocal = localIds.size
-    ? []
-    : legacy.filter((server: unknown) => !isRemoteMcpServer(server));
-  const legacyRemote = remoteIds.size
-    ? []
-    : legacy.filter((server: unknown) => isRemoteMcpServer(server));
+  const legacyLocal = localIds.size ? [] : legacy;
   const byId = new Map((globals ?? []).map((server) => [server.id, server]));
-  const local = [...localIds]
+  const selected = [...localIds]
     .map((id) => byId.get(id))
-    .filter((server): server is GlobalMcpServer => server?.kind === "local" && !!server.url)
+    .filter((server): server is GlobalMcpServer => !!server?.url)
     .map((server) => ({
-      url: server.url!,
+      url: server.url,
       name: server.name,
       headers: server.headers,
       enabled: true,
       globalId: server.id,
     }));
-  const remote = [...remoteIds]
-    .map((id) => byId.get(id))
-    .filter(
-      (server): server is GlobalMcpServer =>
-        server?.kind === "remote" && !!server.serverId,
-    )
-    .map((server) => ({
-      id: server.serverId!,
-      name: server.name,
-      headers: server.headers,
-      enabled: true,
-      globalId: server.id,
-    }));
-  const merged: any[] = [...legacyLocal, ...local, ...legacyRemote, ...remote];
+  const merged: any[] = [...legacyLocal, ...selected];
   const seen = new Set<string>();
   return merged.filter((server) => {
-    const key = `${isRemoteMcpServer(server) ? "remote" : "local"}:${server?.url ?? server?.id}`;
-    if (seen.has(key)) return false;
+    const key = normalizeMcpUrl(server?.url ?? "");
+    if (!key || seen.has(key)) return false;
     seen.add(key);
     return true;
   });
 }
 
-export const hasSelectedRemoteMcpServers = (settings: any) =>
-  selectedIds(settings?.mcp_remote_server_ids).length > 0;
-
 export const hasSelectedLocalMcpServers = (settings: any) =>
   selectedIds(settings?.mcp_local_server_ids).length > 0;
-
-/** A gateway server entry: a server id. Older conversations store it as a bare string. */
-export function isRemoteMcpServer(server: unknown): server is { id: string; enabled?: boolean } {
-  return (
-    !!server &&
-    typeof server === "object" &&
-    typeof (server as { id?: unknown }).id === "string" &&
-    typeof (server as { url?: unknown }).url !== "string"
-  );
-}
 
 const LOCAL_HOST = /^(localhost|127(?:\.\d{1,3}){3}|\[?::1\]?|0\.0\.0\.0)(?::\d+)?(?:[/?#]|$)/i;
 const HOST_LABEL = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i;
@@ -130,8 +96,8 @@ export function normalizeMcpUrl(value: unknown): string {
 }
 
 /**
- * The servers in `settings.mcp_servers`. Older conversations hold a gateway server id
- * (a string) there; those are not URLs and are ignored.
+ * The servers in `settings.mcp_servers`. Older conversations held a gateway server id (a
+ * string, or an entry without a URL); those are not addresses and are ignored.
  */
 export function mcpServers(settings: any): McpServer[] {
   const value = settings?.mcp_servers;
@@ -148,14 +114,7 @@ export const activeMcpServers = (settings: any) =>
         .filter((server) => server.url)
     : [];
 
-/** Whether `settings.mcp_servers` holds a gateway server id. */
-export const hasRemoteMcpServerValue = (value: unknown) =>
-  typeof value === "string"
-    ? value.trim().length > 0
-    : Array.isArray(value) &&
-      value.some((server) => isRemoteMcpServer(server) && server.id.trim().length > 0);
-
-/** Whether `settings.mcp_servers` holds a server the agent connects to by URL. */
+/** Whether `settings.mcp_servers` holds a server with a URL. */
 export const hasLocalMcpServerValue = (value: unknown) =>
   Array.isArray(value) &&
   value.some(
@@ -166,24 +125,8 @@ export const hasLocalMcpServerValue = (value: unknown) =>
       (server as { url: string }).url.trim().length > 0,
   );
 
-/** Whether `settings.mcp_servers` holds anything: a gateway id or a server with a URL. */
-export const hasMcpServerValue = (value: unknown) =>
-  hasLocalMcpServerValue(value) || hasRemoteMcpServerValue(value);
-
-/**
- * The MCP tool has two backends: local URLs in the agent (`tools.mcp`) and gateway server ids
- * in the GWDG tools (`tools.mcp_remote`). Old conversations only have `tools.mcp`; treat that
- * as the remote switch too when remote entries are stored.
- */
-export const remoteMcpEnabled = (settings: any) => {
-  const flag = settings?.tools?.mcp_remote;
-  if (typeof flag === "boolean") return flag;
-  return (
-    settings?.tools?.mcp === true &&
-    (hasRemoteMcpServerValue(settings?.mcp_servers) ||
-      hasSelectedRemoteMcpServers(settings))
-  );
-};
+/** Whether `settings.mcp_servers` holds any server. */
+export const hasMcpServerValue = (value: unknown) => hasLocalMcpServerValue(value);
 
 /** The servers without their headers, for sharing and exporting. */
 export const withoutHeaders = (servers: unknown) =>

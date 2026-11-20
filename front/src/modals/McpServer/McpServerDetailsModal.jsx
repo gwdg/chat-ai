@@ -24,10 +24,9 @@ export default function McpServerDetailsModal({ isOpen, onClose, server }) {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const isRemote = server?.kind === "remote";
 
   useEffect(() => {
-    if (!isOpen || !server || isRemote) return;
+    if (!isOpen || !server) return;
     let cancelled = false;
     setDetails(null);
     setError(null);
@@ -51,7 +50,7 @@ export default function McpServerDetailsModal({ isOpen, onClose, server }) {
     return () => {
       cancelled = true;
     };
-  }, [isOpen, server, isRemote, attempt]);
+  }, [isOpen, server, attempt]);
 
   return (
     <BaseModal
@@ -64,23 +63,14 @@ export default function McpServerDetailsModal({ isOpen, onClose, server }) {
       <div className="max-h-[70vh] overflow-y-auto">
         <div className="rounded-xl border border-base-300 bg-base-200/40 p-3">
           <Row label={t("mcp.details_name")}>
-            {server?.name || server?.url || server?.serverId || "—"}
-          </Row>
-          <Row label={t("mcp.details_kind")}>
-            {t(
-              server?.kind === "remote" ? "mcp.kind_remote" : "mcp.kind_local",
-            )}
+            {server?.name || server?.url || "—"}
           </Row>
           <Row label={t("mcp.details_address")}>
-            {server?.kind === "remote" ? server?.serverId : server?.url}
+            {server?.url || "—"}
           </Row>
         </div>
 
-        {isRemote ? (
-          <p className="mt-3 text-xs leading-snug text-base-content/70">
-            {t("mcp.details_remote_unavailable")}
-          </p>
-        ) : loading ? (
+        {loading ? (
           <div className="mt-3 flex items-center gap-2 text-xs text-base-content/70">
             <Loader2 className="h-4 w-4 animate-spin" />
             {t("mcp.details_loading")}

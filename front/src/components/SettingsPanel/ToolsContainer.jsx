@@ -26,7 +26,6 @@ import ArcanaContainer from "./ArcanaContainer";
 import McpServerPicker from "./McpServerPicker";
 import Tooltip from "../Others/Tooltip";
 import { agentGatewayTools, isAgentEnabled, modelSupportsTools } from "../../apis/agentEndpoints";
-import { remoteMcpEnabled } from "../../agent/mcp";
 import { isArcanasEnabled } from "../../utils/modules";
 
 // Tools the agent has no counterpart for
@@ -41,7 +40,6 @@ const AGENT_OPT_IN = new Set([
   "arcana",
   "arcana_tools",
   "mcp",
-  "mcp_remote",
 ]);
 // Tools that only exist in agent mode
 const AGENT_ONLY = new Set([
@@ -71,9 +69,8 @@ export default function ToolsContainer({ localState, setLocalState }) {
   const bulkActionsDisabled = agentMode ? agentWithoutTools : isExternalModel;
   const arcanasEnabled = isArcanasEnabled();
 
-  // One switch for every configured MCP server. It also turns on the gateway-side flag so
-  // previously selected remote servers keep working after the tool is switched off and on.
-  const mcpEnabled = !!toolsState.mcp || remoteMcpEnabled(settings);
+  // One switch for every configured MCP server.
+  const mcpEnabled = !!toolsState.mcp;
 
   // Tool list (labels are translated)
   const TOOL_DEFS = useMemo(
@@ -151,7 +148,6 @@ export default function ToolsContainer({ localState, setLocalState }) {
     const patch = { fetch_url: true };
     TOOL_DEFS.forEach(({ key }) => {
       patch[key] = true;
-      if (key === "mcp") patch.mcp_remote = true;
     });
     const apply = () =>
       setLocalState((prev) => ({
@@ -179,7 +175,6 @@ export default function ToolsContainer({ localState, setLocalState }) {
     const patch = { fetch_url: false };
     TOOL_DEFS.forEach(({ key }) => {
       patch[key] = false;
-      if (key === "mcp") patch.mcp_remote = false;
     });
     setTools(patch);
   };
@@ -205,7 +200,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
     toggleTool("arcana", nextValue);
   };
   const handleToggleMcp = (nextValue) => {
-    setTools({ mcp: nextValue, mcp_remote: nextValue });
+    toggleTool("mcp", nextValue);
   };
 
   const getToolState = (key) => {
@@ -391,7 +386,6 @@ export default function ToolsContainer({ localState, setLocalState }) {
               <McpServerPicker
                 localState={localState}
                 setLocalState={setLocalState}
-                kind="all"
               />
             )
           ) : (

@@ -6,10 +6,7 @@ import {
   getMcpServerStatus,
   hasLocalMcpServerValue,
   hasMcpServerValue,
-  hasRemoteMcpServerValue,
-  isRemoteMcpServer,
   normalizeMcpUrl,
-  remoteMcpEnabled,
   resolveMcpServers,
   testMcpServer,
 } from "../mcp";
@@ -74,44 +71,27 @@ vi.mock("@modelcontextprotocol/sdk/client/streamableHttp.js", () => ({
 }));
 
 const local = { url: "http://localhost:9000/mcp", enabled: true };
-const remote = { id: "server-1", enabled: true };
 
 describe("MCP server entries", () => {
-  it("separates local URLs from remote gateway ids", () => {
-    expect(isRemoteMcpServer(remote)).toBe(true);
-    expect(isRemoteMcpServer(local)).toBe(false);
-    expect(hasRemoteMcpServerValue([remote, local])).toBe(true);
-    expect(hasLocalMcpServerValue([remote, local])).toBe(true);
-    expect(hasRemoteMcpServerValue([local])).toBe(false);
-    expect(hasLocalMcpServerValue([remote])).toBe(false);
-    expect(hasMcpServerValue([remote, local])).toBe(true);
+  it("recognises a server by its URL, not by a gateway id", () => {
+    expect(hasLocalMcpServerValue([local])).toBe(true);
+    expect(hasLocalMcpServerValue([{ id: "gateway-id" }])).toBe(false);
+    expect(hasMcpServerValue([local])).toBe(true);
+    expect(hasMcpServerValue([{ id: "gateway-id" }])).toBe(false);
   });
 
   it("resolves globally configured selections for a chat", () => {
     const globals = [
-      {
-        id: "g-local",
-        name: "Files",
-        kind: "local" as const,
-        url: "http://localhost:9000/mcp",
-      },
-      {
-        id: "g-remote",
-        name: "GWDG",
-        kind: "remote" as const,
-        serverId: "server-1",
-      },
+      { id: "g-files", name: "Files", url: "http://localhost:9000/mcp" },
+      { id: "g-notes", name: "Notes", url: "http://localhost:9100/mcp" },
     ];
     const resolved = resolveMcpServers(
-      {
-        mcp_local_server_ids: ["g-local"],
-        mcp_remote_server_ids: ["g-remote"],
-      },
+      { mcp_local_server_ids: ["g-files", "g-notes"] },
       globals,
     );
     expect(resolved).toEqual([
       expect.objectContaining({ url: "http://localhost:9000/mcp" }),
-      expect.objectContaining({ id: "server-1", name: "GWDG" }),
+      expect.objectContaining({ url: "http://localhost:9100/mcp", name: "Notes" }),
     ]);
   });
 
@@ -125,7 +105,6 @@ describe("MCP server entries", () => {
         {
           id: "g-local",
           name: "Files",
-          kind: "local" as const,
           url: "http://new-host:9000/mcp",
         },
       ],
@@ -136,21 +115,22 @@ describe("MCP server entries", () => {
     );
   });
 
-  it("keeps the enable flags separate", () => {
-    expect(remoteMcpEnabled({ tools: { mcp_remote: true } })).toBe(true);
-    expect(remoteMcpEnabled({ tools: { mcp_remote: false, mcp: true } })).toBe(false);
-    expect(remoteMcpEnabled({ tools: { mcp: true }, mcp_servers: [remote] })).toBe(true);
+  it("drops the same address when it is selected twice", () => {
+    const resolved = resolveMcpServers(
+      {
+        mcp_servers: [{ url: "localhost:9000/mcp", enabled: true }],
+        mcp_local_server_ids: ["g-local"],
+      },
+      [{ id: "g-local", url: "http://localhost:9000/mcp" }],
+    );
+    expect(resolved).toHaveLength(1);
   });
 
-  it("does not treat a local server as a remote gateway server", () => {
-    expect(remoteMcpEnabled({ tools: { mcp: true }, mcp_servers: [local] })).toBe(false);
-  });
-
-  it("activates only local URL servers for the agent", () => {
+  it("activates only URL servers for the agent", () => {
     expect(
       activeMcpServers({
-        tools: { mcp: true, mcp_remote: true },
-        mcp_servers: [remote, local],
+        tools: { mcp: true },
+        mcp_servers: [{ id: "gateway-id", enabled: true }, local],
       }),
     ).toEqual([local]);
   });

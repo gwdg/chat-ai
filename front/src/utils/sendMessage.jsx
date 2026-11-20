@@ -8,7 +8,7 @@ import generateTitle from "../apis/generateTitle";
 import { loadFile, loadFileMeta, saveFile, updateConversation, updateConversationMeta } from "../db";
 import { getFileType, readFileAsBase64, readFileAsText } from "./attachments";
 import { isAgentEnabled, modelSupportsTools } from "../apis/agentEndpoints";
-import { remoteMcpEnabled, resolveMcpServers } from "../agent/mcp";
+import { resolveMcpServers } from "../agent/mcp";
 import { isArcanasEnabled, isChoicesEnabled, isFeedbackEnabled, isToolsEnabled } from "./modules";
 import { confirmMcpNameChange } from "./mcpNameChange";
 import { BINARY_DOCUMENT_TYPES, modelSupportsFileType } from "./modelCapabilities";
@@ -362,7 +362,6 @@ const sendMessage = async ({
     let conversationForAPI = await buildConversationForAPI(localState, {
       forceAudioInput: speechMode,
     });
-    conversationForAPI.settings.mcp_servers = effectiveMcpServers;
     // Prepare system prompt
     let systemPromptAPI = localState.messages[0].role == "system"
       ? localState.messages[0].content[0].text
@@ -395,14 +394,6 @@ const sendMessage = async ({
                   .map(([toolKey]) => ({ type: toolKey }));
         if (conversationForAPI.settings?.arcana?.id && conversationForAPI.settings.arcana.id !== "") {
           conversationForAPI.settings.arcana.limit = 3;
-        }
-        if (
-          !remoteMcpEnabled({
-            ...localState.settings,
-            mcp_servers: effectiveMcpServers,
-          })
-        ) {
-          delete conversationForAPI.settings.mcp_servers;
         }
         if (!arcanasModule || !localState.settings.tools.arcana) {
           delete conversationForAPI.settings.arcana;

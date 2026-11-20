@@ -290,18 +290,12 @@ export default {
     agent_session_delete_summary: "Sitzung {{session}} vom Agenten {{agent}} entfernen",
     workspace_attach_summary: "Arbeitsbereich {{workspace}} mit {{target}} verknüpfen",
     workspace_detach_summary: "Arbeitsbereich {{workspace}} von {{target}} trennen",
-    mcp_add_local_summary:
-      "Lokalen MCP-Server {{name}} zu {{target}} hinzufügen",
-    mcp_add_remote_summary:
-      "Entfernten MCP-Server {{name}} zu {{target}} hinzufügen",
-    mcp_remove_local_summary:
-      "Lokalen MCP-Server {{name}} aus {{target}} entfernen",
-    mcp_remove_remote_summary:
-      "Entfernten MCP-Server {{name}} aus {{target}} entfernen",
-    mcp_update_local_summary:
-      "Lokalen MCP-Server {{name}} in {{target}} aktualisieren",
-    mcp_update_remote_summary:
-      "Entfernten MCP-Server {{name}} in {{target}} aktualisieren",
+    mcp_add_summary:
+      "MCP-Server {{name}} zu {{target}} hinzufügen",
+    mcp_remove_summary:
+      "MCP-Server {{name}} aus {{target}} entfernen",
+    mcp_update_summary:
+      "MCP-Server {{name}} in {{target}} aktualisieren",
     add_memory_summary: "Erinnerung „{{text}}“ hinzufügen",
     add_memory_group_summary: "Erinnerung „{{text}}“ zur Gruppe „{{group}}“ hinzufügen",
     update_memory_summary: "Erinnerung „{{from}}“ in „{{to}}“ ändern",
@@ -672,7 +666,7 @@ export default {
       title: "Einen MCP-Server verbinden",
       step1: "Fügen Sie einen MCP-Server im Bereich MCP-Server der Seitenleiste hinzu.",
       scan: "Oder lassen Sie die App nach lokalen Servern suchen: „Suchen“ prüft auf diesem Rechner alle Ports über 5000 auf einen /mcp-Endpunkt und fügt die Funde hinzu.",
-      step2: "Geben Sie die Server-URL oder Gateway-ID ein und testen Sie die Verbindung.",
+      step2: "Geben Sie die Server-URL ein und testen Sie die Verbindung.",
       details:
         "Doppelklicken Sie auf einen konfigurierten Server oder wählen Sie in seinem Optionsmenü „Details“, um Name, Version, Protokollversion, Fähigkeiten und Werkzeuge zu sehen, die er meldet.",
       step3: "Öffnen Sie die GWDG-Tools, aktivieren Sie MCP-Server und wählen Sie den konfigurierten Server aus.",
@@ -1173,7 +1167,6 @@ export default {
     model_no_tools_warning:
       "Dieses Modell unterstützt keine Werkzeuge. Der Chat läuft ohne Dateizugriff, Websuche oder MCP-Werkzeuge.",
     placeholder_arcana_id: "Arcana-ID",
-    placeholder_mcp_id: "Server-ID",
     placeholder_mcp_url: "http://localhost:3000/mcp",
     placeholder_mcp_auth: "Authorization-Header (optional)",
     mcp_add: "MCP-Server hinzufügen",
@@ -1183,7 +1176,6 @@ export default {
     mcp_test_failed: "MCP-Test fehlgeschlagen: {{error}}",
     mcp_test_invalid_url: "Bitte geben Sie zuerst eine gültige MCP-Server-URL ein.",
     mcp_toggle: "Diesen Server verwenden",
-    mcp_gateway_first: "Ohne Agentenmodus wird nur der erste Server verwendet, als Gateway-Server-ID.",
   },
 
   // Conversation
@@ -1877,18 +1869,12 @@ export default {
     empty: "Noch keine MCP-Server konfiguriert.",
     name_label: "Name",
     name_placeholder: "Mein Dateiserver",
-    kind_label: "Verbindung",
-    kind_local: "Lokal (Streamable HTTP oder SSE)",
-    kind_remote: "GWDG-Gateway",
-    kind_local_short: "Lokal",
-    kind_remote_short: "GWDG",
     url_label: "Server-URL",
-    server_id_label: "Gateway-Server-ID",
     auth_label: "Autorisierung (optional)",
     test: "Verbindung testen",
     remove: "Entfernen",
     options: "MCP-Server-Optionen",
-    tooltip: "MCP-Server stellen dem Assistenten über das Model Context Protocol zusätzliche Werkzeuge und Dateien bereit. Lokale Server laufen auf diesem Gerät; GWDG-Server werden über das Gateway erreicht.",
+    tooltip: "MCP-Server stellen dem Assistenten über das Model Context Protocol zusätzliche Werkzeuge und Dateien bereit. Diese App verbindet sich direkt von diesem Gerät aus mit ihnen.",
     configured: "Konfigurierte MCP-Server",
     invalid_url: "Ungültige MCP-Server-URL. Bearbeiten Sie den Server, um sie zu korrigieren.",
     status_unchecked: "Nicht getestet – zum Testen klicken",
@@ -1899,7 +1885,6 @@ export default {
     details_title: "Details zum MCP-Server",
     details_name: "Konfiguriert als",
     details_server_name: "Servername",
-    details_kind: "Verbindung",
     details_address: "Adresse",
     details_version: "Version",
     details_protocol: "Protokollversion",
@@ -1913,11 +1898,7 @@ export default {
     details_failed: "Die Serverdetails konnten nicht gelesen werden.",
     details_retry: "Erneut versuchen",
     details_none: "Nicht angegeben",
-    details_remote_unavailable:
-      "GWDG-Gateway-Server werden über das Gateway erreicht; Version und Werkzeuge lassen sich daher nicht im Browser lesen.",
     none_configured: "Fügen Sie zuerst einen Server im Bereich MCP-Server hinzu.",
-    group_local: "Lokale MCP-Tools aktivieren",
-    group_remote: "GWDG-MCP-Tools aktivieren",
     scan_title: "Nach lokalen MCP-Servern suchen",
     scan_hint:
       "Prüft auf diesem Gerät alle Ports über 5000 auf einen /mcp-Endpunkt und fügt jeden gefundenen Server hinzu. Funktioniert nur, wenn diese App im Browser auf demselben Rechner geöffnet ist.",

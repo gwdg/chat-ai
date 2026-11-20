@@ -31,9 +31,7 @@ export default function McpServerModal({ isOpen, onClose, server }) {
   const { notifySuccess, notifyError } = useToast();
   const globalServers = useSelector(selectGlobalMcpServers) ?? [];
   const [name, setName] = useState(server?.name ?? "");
-  const [kind, setKind] = useState(server?.kind ?? "local");
   const [url, setUrl] = useState(server?.url ?? "");
-  const [serverId, setServerId] = useState(server?.serverId ?? "");
   const [authorization, setAuthorization] = useState(
     server?.headers?.Authorization ?? "",
   );
@@ -54,26 +52,17 @@ export default function McpServerModal({ isOpen, onClose, server }) {
       );
 
   const save = () => {
-    const target = kind === "local" ? url.trim() : serverId.trim();
-    if (!target) {
-      notifyError(
-        t(
-          kind === "local"
-            ? "settings.mcp_test_invalid_url"
-            : "settings.placeholder_mcp_id",
-        ),
-      );
+    if (!url.trim()) {
+      notifyError(t("settings.mcp_test_invalid_url"));
       return;
     }
-    if (kind === "local" && !normalizeMcpUrl(url)) {
+    if (!normalizeMcpUrl(url)) {
       notifyError(t("settings.mcp_test_invalid_url"));
       return;
     }
     const patch = {
       name: name.trim() || undefined,
-      kind,
-      url: kind === "local" ? url.trim() : undefined,
-      serverId: kind === "remote" ? serverId.trim() : undefined,
+      url: url.trim(),
       ...(Object.keys(headers).length ? { headers } : { headers: undefined }),
     };
     if (server?.id) {
@@ -89,7 +78,7 @@ export default function McpServerModal({ isOpen, onClose, server }) {
     setTesting(true);
     try {
       const result = await testMcpServer({
-        url: kind === "local" ? url.trim() : serverId.trim(),
+        url: url.trim(),
         headers,
       });
       if (result.name) setName(result.name);
@@ -129,7 +118,7 @@ export default function McpServerModal({ isOpen, onClose, server }) {
       // Servers that are already configured stay untouched, also when the scan finds them.
       const known = new Set(
         globalServers
-          .filter((item) => item?.kind === "local" && item.url)
+          .filter((item) => item?.url)
           .map((item) => normalizeMcpUrl(item.url))
           .filter(Boolean),
       );
@@ -144,7 +133,6 @@ export default function McpServerModal({ isOpen, onClose, server }) {
           addMcpServer({
             id: newId(),
             name: t("mcp.scan_server_name", { port: entry.port }),
-            kind: "local",
             url: entryUrl,
           }),
         );
@@ -180,7 +168,7 @@ export default function McpServerModal({ isOpen, onClose, server }) {
       titleKey={server?.id ? "mcp.edit_title" : "mcp.add"}
     >
       <div className="flex flex-col gap-3 pb-2 text-sm">
-        {!server?.id && kind === "local" && (
+        {!server?.id && (
           <div
             data-guide="mcp-scan"
             className="rounded-xl border border-base-300 bg-base-200/40 p-3"
@@ -238,44 +226,16 @@ export default function McpServerModal({ isOpen, onClose, server }) {
         </label>
         <label className="flex flex-col gap-1">
           <span className="text-xs font-medium text-base-content/70">
-            {t("mcp.kind_label")}
+            {t("mcp.url_label")}
           </span>
-          <select
-            value={kind}
-            onChange={(event) => setKind(event.target.value)}
-            className="select select-bordered w-full"
-          >
-            <option value="local">{t("mcp.kind_local")}</option>
-            <option value="remote">{t("mcp.kind_remote")}</option>
-          </select>
+          <input
+            data-guide="mcp-input"
+            value={url}
+            onChange={(event) => setUrl(event.target.value)}
+            placeholder={t("settings.placeholder_mcp_url")}
+            className="input input-bordered w-full"
+          />
         </label>
-        {kind === "local" ? (
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-base-content/70">
-              {t("mcp.url_label")}
-            </span>
-            <input
-              data-guide="mcp-input"
-              value={url}
-              onChange={(event) => setUrl(event.target.value)}
-              placeholder={t("settings.placeholder_mcp_url")}
-              className="input input-bordered w-full"
-            />
-          </label>
-        ) : (
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-base-content/70">
-              {t("mcp.server_id_label")}
-            </span>
-            <input
-              data-guide="mcp-input"
-              value={serverId}
-              onChange={(event) => setServerId(event.target.value)}
-              placeholder={t("settings.placeholder_mcp_id")}
-              className="input input-bordered w-full"
-            />
-          </label>
-        )}
         <label className="flex flex-col gap-1">
           <span className="text-xs font-medium text-base-content/70">
             {t("mcp.auth_label")}
@@ -294,7 +254,7 @@ export default function McpServerModal({ isOpen, onClose, server }) {
             <button
               type="button"
               onClick={test}
-              disabled={testing || !(kind === "local" ? url.trim() : serverId.trim())}
+              disabled={testing || !url.trim()}
               className="btn btn-sm"
             >
               {testing ? (

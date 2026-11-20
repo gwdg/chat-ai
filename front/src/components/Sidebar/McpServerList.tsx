@@ -36,8 +36,7 @@ type McpListStatus = "unchecked" | "checking" | "ready" | "error";
 const seedStatuses = (servers: GlobalMcpServer[]) => {
   const seeded: Record<string, McpListStatus> = {};
   for (const server of servers) {
-    const known =
-      server.kind === "local" ? getMcpServerStatus(server.url ?? "") : undefined;
+    const known = getMcpServerStatus(server.url);
     if (known) seeded[server.id] = known;
   }
   return seeded;
@@ -81,9 +80,7 @@ export default function McpServerList() {
           // Ids come from the Meta chat, URLs from a test or a connection made by the agent.
           const match = detail.id
             ? server.id === detail.id
-            : server.kind === "local" &&
-              !!server.url &&
-              normalizeMcpUrl(server.url) === detail.url;
+            : !!server.url && normalizeMcpUrl(server.url) === detail.url;
           if (match && next[server.id] !== detail.status) {
             next[server.id] = detail.status;
             changed = true;
@@ -105,7 +102,7 @@ export default function McpServerList() {
   };
 
   const test = async (server: GlobalMcpServer) => {
-    if (server.kind !== "local" || statuses[server.id] === "checking") return;
+    if (statuses[server.id] === "checking") return;
     setStatuses((current) => ({ ...current, [server.id]: "checking" }));
     try {
       const result = await testMcpServer({
@@ -195,7 +192,7 @@ export default function McpServerList() {
                       : status === "error"
                         ? "bg-error"
                         : "bg-warning";
-                return server.kind === "local" ? (
+                return (
                   <button
                     type="button"
                     onClick={() => void test(server)}
@@ -207,43 +204,29 @@ export default function McpServerList() {
                   >
                     <span className={`h-2 w-2 rounded-full ${dotClass}`} />
                   </button>
-                ) : (
-                  <span
-                    className="flex h-4 w-4 shrink-0 items-center justify-center"
-                    title={statusLabel}
-                    aria-label={statusLabel}
-                  >
-                    <span className={`h-2 w-2 rounded-full ${dotClass}`} />
-                  </span>
                 );
               })()}
               <button
                 type="button"
                 onClick={() => testSoon(server)}
-                disabled={
-                  server.kind !== "local" ||
-                  statuses[server.id] === "checking"
-                }
+                disabled={statuses[server.id] === "checking"}
                 className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                title={server.kind === "local" ? t("mcp.test") : undefined}
+                title={t("mcp.test")}
               >
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-base-200 text-base-content/55">
                   <Server size={14} />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-xs font-medium">
-                    {server.name ||
-                      (server.kind === "local" ? server.url : server.serverId)}
+                    {server.name || server.url}
                   </span>
-                  <span className="block truncate text-[10px] text-base-content/45">
-                    {t(
-                      server.kind === "local"
-                        ? "mcp.kind_local_short"
-                        : "mcp.kind_remote_short",
-                    )}
-                  </span>
+                  {server.name && (
+                    <span className="block truncate text-[10px] text-base-content/45">
+                      {server.url}
+                    </span>
+                  )}
                 </span>
-                {server.kind === "local" && !normalizeMcpUrl(server.url) && (
+                {!normalizeMcpUrl(server.url) && (
                   <span
                     className="shrink-0 text-warning"
                     title={t("mcp.invalid_url")}

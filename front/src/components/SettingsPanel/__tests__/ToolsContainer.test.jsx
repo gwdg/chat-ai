@@ -39,7 +39,7 @@ const stateWith = (tools) => ({
 describe("ToolsContainer MCP selector", () => {
   it("hides the configured server list while MCP Servers is disabled", () => {
     mcpMocks.servers = [
-      { id: "l1", name: "Files", kind: "local", url: "http://localhost:9000/mcp" },
+      { id: "l1", name: "Files", url: "http://localhost:9000/mcp" },
     ];
     render(<ToolsContainer localState={stateWith({})} setLocalState={vi.fn()} />);
 
@@ -52,8 +52,8 @@ describe("ToolsContainer MCP selector", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("enables both MCP backends from the MCP Servers tool", () => {
-    const localState = stateWith({ mcp: false, mcp_remote: false });
+  it("enables the MCP tool from the MCP Servers switch", () => {
+    const localState = stateWith({ mcp: false });
     const setLocalState = vi.fn((updater) => updater(localState));
     render(<ToolsContainer localState={localState} setLocalState={setLocalState} />);
 
@@ -61,14 +61,14 @@ describe("ToolsContainer MCP selector", () => {
 
     const next = setLocalState.mock.results[0].value;
     expect(next.settings.tools.mcp).toBe(true);
-    expect(next.settings.tools.mcp_remote).toBe(true);
+    expect("mcp_remote" in next.settings.tools).toBe(false);
     expect(document.querySelector('[data-guide="tools-grid"]')).toBeInTheDocument();
   });
 
-  it("lists configured local and remote servers with their kind", () => {
+  it("lists the configured servers by name or address", () => {
     mcpMocks.servers = [
-      { id: "l1", name: "Files", kind: "local", url: "http://localhost:9000/mcp" },
-      { id: "r1", name: "Gateway", kind: "remote", serverId: "server-1" },
+      { id: "l1", name: "Files", url: "http://localhost:9000/mcp" },
+      { id: "l2", url: "http://localhost:9100/mcp" },
     ];
     render(
       <ToolsContainer localState={stateWith({ mcp: true })} setLocalState={vi.fn()} />,
@@ -79,14 +79,12 @@ describe("ToolsContainer MCP selector", () => {
     );
 
     expect(screen.getByText("Files")).toBeInTheDocument();
-    expect(screen.getByText("Gateway")).toBeInTheDocument();
-    expect(screen.getByText("GWDG")).toBeInTheDocument();
-    expect(screen.getByText("Local")).toBeInTheDocument();
+    expect(screen.getByText("http://localhost:9100/mcp")).toBeInTheDocument();
   });
 
-  it("selects a local server for the chat", () => {
+  it("selects a server for the chat", () => {
     mcpMocks.servers = [
-      { id: "l1", name: "Files", kind: "local", url: "http://localhost:9000/mcp" },
+      { id: "l1", name: "Files", url: "http://localhost:9000/mcp" },
     ];
     const localState = stateWith({ mcp: true });
     const setLocalState = vi.fn((updater) => updater(localState));
@@ -104,11 +102,18 @@ describe("ToolsContainer MCP selector", () => {
     expect(next.settings.tools.mcp).toBe(true);
   });
 
-  it("selects a remote server for the chat", () => {
+  it("deselects a server for the chat", () => {
     mcpMocks.servers = [
-      { id: "r1", name: "Gateway", kind: "remote", serverId: "server-1" },
+      { id: "l1", name: "Files", url: "http://localhost:9000/mcp" },
     ];
-    const localState = stateWith({ mcp: true, mcp_remote: true });
+    const localState = {
+      settings: {
+        enable_tools: true,
+        model: { id: "test-model", name: "Test Model" },
+        tools: { mcp: true },
+        mcp_local_server_ids: ["l1"],
+      },
+    };
     const setLocalState = vi.fn((updater) => updater(localState));
     render(<ToolsContainer localState={localState} setLocalState={setLocalState} />);
 
@@ -120,13 +125,12 @@ describe("ToolsContainer MCP selector", () => {
     fireEvent.click(picker.querySelector('input[type="checkbox"]'));
 
     const next = setLocalState.mock.results[0].value;
-    expect(next.settings.mcp_remote_server_ids).toEqual(["r1"]);
-    expect(next.settings.tools.mcp_remote).toBe(true);
+    expect(next.settings.mcp_local_server_ids).toEqual([]);
   });
 
   it("marks the MCP selector as a data-transfer risk", () => {
     mcpMocks.servers = [
-      { id: "l1", name: "Files", kind: "local", url: "http://localhost:9000/mcp" },
+      { id: "l1", name: "Files", url: "http://localhost:9000/mcp" },
     ];
     render(
       <ToolsContainer localState={stateWith({ mcp: true })} setLocalState={vi.fn()} />,
@@ -293,7 +297,6 @@ describe("ToolsContainer bulk actions", () => {
       "arcana_tools",
       "arcana",
       "mcp",
-      "mcp_remote",
     ]) {
       expect(next.settings.tools[key]).toBe(true);
     }
@@ -317,7 +320,6 @@ describe("ToolsContainer bulk actions", () => {
       "arcana_tools",
       "arcana",
       "mcp",
-      "mcp_remote",
     ]) {
       expect(next.settings.tools[key]).toBe(false);
     }

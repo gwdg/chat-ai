@@ -130,11 +130,9 @@ describe("MetaActionCard", () => {
           {
             type: "mcp_server",
             op: "add",
-            serverScope: "local",
             scope: "all",
             conversationId: null,
             url: "localhost:9000",
-            serverId: "",
             enabled: true,
           },
         ]}
@@ -159,7 +157,6 @@ describe("MetaActionCard", () => {
       {
         id: "crm-1",
         name: "crm-mcp",
-        kind: "local",
         url: "http://localhost:9000/mcp",
       },
     ];
@@ -169,13 +166,11 @@ describe("MetaActionCard", () => {
           {
             type: "mcp_server",
             op: "add",
-            serverScope: "local",
             scope: "global",
             conversationId: null,
             entryId: "",
             name: "crm-mcp2",
             url: "http://localhost:9000/mcp",
-            serverId: "",
           },
         ]}
         localState={localState}

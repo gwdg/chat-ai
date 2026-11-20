@@ -18,10 +18,10 @@ describe("conversation defaults", () => {
     expect(settings.tools.mcp).toBeUndefined();
   });
 
-  it("defaults both MCP switches off", () => {
+  it("defaults the MCP switch off", () => {
     const settings = getDefaultSettings();
     expect(settings.tools.mcp).toBe(false);
-    expect(settings.tools.mcp_remote).toBe(false);
+    expect("mcp_remote" in settings.tools).toBe(false);
   });
 
   it("enables access storage by default", () => {

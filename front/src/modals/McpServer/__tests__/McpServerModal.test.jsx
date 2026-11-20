@@ -65,7 +65,16 @@ describe("McpServerModal URL validation", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it("saves a local server with a valid address", () => {
+  it("offers only a server URL, with no gateway option", () => {
+    render(<McpServerModal isOpen onClose={vi.fn()} />);
+
+    expect(screen.getByPlaceholderText("http://localhost:3000/mcp")).toBeTruthy();
+    expect(screen.queryByText("GWDG gateway")).toBeNull();
+    expect(screen.queryByText("Gateway server id")).toBeNull();
+    expect(document.querySelector("select")).toBeNull();
+  });
+
+  it("saves a server with a valid address", () => {
     const onClose = vi.fn();
     render(<McpServerModal isOpen onClose={onClose} />);
 
@@ -90,7 +99,7 @@ describe("McpServerModal local scan", () => {
       <McpServerModal
         isOpen
         onClose={vi.fn()}
-        server={{ id: "existing", kind: "local", url: "localhost:9000/mcp" }}
+        server={{ id: "existing", url: "localhost:9000/mcp" }}
       />,
     );
     expect(screen.queryByText("Scan for local MCP servers")).toBeNull();
@@ -98,7 +107,7 @@ describe("McpServerModal local scan", () => {
 
   it("adds a found server that is not configured yet and skips configured ones", async () => {
     mocks.servers = [
-      { id: "existing", kind: "local", url: "http://localhost:5002/mcp" },
+      { id: "existing", url: "http://localhost:5002/mcp" },
     ];
     mocks.scan.mockImplementation(async ({ onFound }) => {
       onFound({ port: 5001, url: "http://localhost:5001/mcp" });
@@ -117,7 +126,6 @@ describe("McpServerModal local scan", () => {
 
     const payload = mocks.dispatch.mock.calls[0][0].payload;
     expect(payload).toMatchObject({
-      kind: "local",
       url: "http://localhost:5001/mcp",
       name: "Local MCP server (port 5001)",
     });

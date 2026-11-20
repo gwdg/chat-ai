@@ -156,5 +156,27 @@ export const migrations = {
         : {};
     console.log("Migrating redux to v10");
   },
-  // Future migrations here (e.g., 11: (state) => {...})
+  11: (state) => {
+    // MCP servers are browser-connected URLs only. Drop the old GWDG gateway entries and
+    // strip the removed `kind`/`serverId` fields from the ones that stay.
+    state.user_settings = state.user_settings ?? {};
+    state.user_settings.mcp_servers = (
+      Array.isArray(state.user_settings.mcp_servers)
+        ? state.user_settings.mcp_servers
+        : []
+    )
+      .filter(
+        (server) =>
+          server &&
+          typeof server.id === "string" &&
+          typeof server.url === "string" &&
+          server.url.trim(),
+      )
+      .map(({ kind, serverId, ...server }) => ({
+        ...server,
+        url: server.url.trim(),
+      }));
+    console.log("Migrating redux to v11");
+  },
+  // Future migrations here (e.g., 12: (state) => {...})
 };

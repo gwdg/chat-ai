@@ -78,25 +78,19 @@ const readConversationSetting = (settings, key) =>
 
 const readMcpServers = (settings) => {
   const raw = settings?.mcp_servers;
-  if (Array.isArray(raw)) return raw.map((server) => ({ ...server }));
-  if (typeof raw === "string" && raw.trim()) {
-    return [{ id: raw.trim(), enabled: true }];
+  if (Array.isArray(raw)) {
+    return raw
+      .filter((server) => server && typeof server.url === "string")
+      .map((server) => ({ ...server }));
   }
   return [];
 };
 
 const mcpServerMatches = (server, action) => {
   if (!server || typeof server !== "object") return false;
-  if (action.serverScope === "local") {
-    if (typeof server.url !== "string") return false;
-    const url = normalizeMcpUrl(action.url);
-    return !!url && normalizeMcpUrl(server.url) === url;
-  }
-  return (
-    typeof server.id === "string" &&
-    typeof server.url !== "string" &&
-    server.id.trim() === action.serverId
-  );
+  if (typeof server.url !== "string") return false;
+  const url = normalizeMcpUrl(action.url);
+  return !!url && normalizeMcpUrl(server.url) === url;
 };
 
 const withAuthorization = (entry, authorization) => {
@@ -108,7 +102,7 @@ const withAuthorization = (entry, authorization) => {
 };
 
 const applyMcpAction = (servers, action) => {
-  if (action.serverScope === "local" && !normalizeMcpUrl(action.url)) {
+  if (!normalizeMcpUrl(action.url)) {
     throw new Error("Invalid MCP server URL");
   }
   const next = servers.map((server) => ({ ...server }));
@@ -129,10 +123,7 @@ const applyMcpAction = (servers, action) => {
       next[index] = entry;
       return next;
     }
-    const entry =
-      action.serverScope === "local"
-        ? { url: action.url, enabled: action.enabled !== false }
-        : { id: action.serverId, enabled: action.enabled !== false };
+    const entry = { url: action.url, enabled: action.enabled !== false };
     if (action.authorization) entry.headers = { Authorization: action.authorization };
     next.push(entry);
     return next;
@@ -148,28 +139,17 @@ const applyMcpAction = (servers, action) => {
 
 const globalMcpMatches = (server, action, forAdd = false) => {
   if (action.entryId && server.id === action.entryId) return true;
-  if (action.serverScope === "local") {
-    const url = normalizeMcpUrl(action.url);
-    const sameUrl =
-      !!url && server.kind === "local" && normalizeMcpUrl(server.url) === url;
-    if (!sameUrl) return false;
-    if (forAdd && action.name) {
-      return (server.name || "").trim() === action.name.trim();
-    }
-    return true;
+  const url = normalizeMcpUrl(action.url);
+  const sameUrl = !!url && normalizeMcpUrl(server.url) === url;
+  if (!sameUrl) return false;
+  if (forAdd && action.name) {
+    return (server.name || "").trim() === action.name.trim();
   }
-  if (server.kind !== "remote" || server.serverId !== action.serverId) {
-    return false;
-  }
-  return !forAdd || !action.name || (server.name || "").trim() === action.name.trim();
+  return true;
 };
 
 const applyGlobalMcpAction = (servers, action) => {
-  if (
-    action.serverScope === "local" &&
-    (action.op === "add" || action.url) &&
-    !normalizeMcpUrl(action.url)
-  ) {
+  if ((action.op === "add" || action.url) && !normalizeMcpUrl(action.url)) {
     throw new Error("Invalid MCP server URL");
   }
   const next = cloneMcpServers(servers);
@@ -183,15 +163,9 @@ const applyGlobalMcpAction = (servers, action) => {
     return next;
   }
 
-  const entry =
-    index >= 0
-      ? { ...next[index] }
-      : { id: newId(), kind: action.serverScope };
+  const entry = index >= 0 ? { ...next[index] } : { id: newId() };
   if (action.name) entry.name = action.name;
-  if (action.serverScope === "local" && action.url) entry.url = action.url;
-  if (action.serverScope === "remote" && action.serverId) {
-    entry.serverId = action.serverId;
-  }
+  if (action.url) entry.url = action.url;
   if (action.authorization !== undefined) {
     withAuthorization(entry, action.authorization);
   }
@@ -265,22 +239,12 @@ const buildCreateChatPayload = (
   const globalServers = userSettings.mcp_servers || [];
   const localIds = new Set(
     globalServers
-      .filter((server) => server.kind === "local")
-      .map((server) => server.id),
-  );
-  const remoteIds = new Set(
-    globalServers
-      .filter((server) => server.kind === "remote")
+      .filter((server) => typeof server?.url === "string")
       .map((server) => server.id),
   );
   if (Array.isArray(overrides.mcp_local_server_ids)) {
     settings.mcp_local_server_ids = overrides.mcp_local_server_ids.filter(
       (id) => localIds.has(id),
-    );
-  }
-  if (Array.isArray(overrides.mcp_remote_server_ids)) {
-    settings.mcp_remote_server_ids = overrides.mcp_remote_server_ids.filter(
-      (id) => remoteIds.has(id),
     );
   }
 
@@ -609,13 +573,8 @@ export default function MetaActionCard({
           : action.scope === "all"
             ? t("meta_chat.mcp_target_all")
             : titleFor(action.conversationId);
-      const name =
-        action.name ||
-        (action.serverScope === "local" ? action.url : action.serverId);
-      return t(
-        `meta_chat.mcp_${action.op}_${action.serverScope}_summary`,
-        { name, target },
-      );
+      const name = action.name || action.url;
+      return t(`meta_chat.mcp_${action.op}_summary`, { name, target });
     }
     if (action.type === "add_memory") {
       return action.group

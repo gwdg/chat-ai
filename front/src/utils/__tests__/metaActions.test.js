@@ -34,7 +34,6 @@ describe("Meta chat action markers", () => {
     expect(proposals[6]).toMatchObject({
       type: "mcp_server",
       op: "add",
-      serverScope: "local",
       url: "localhost:9000",
     });
     expect(proposals[7]).toMatchObject({ type: "add_memory", text: "remember this" });
@@ -49,17 +48,29 @@ describe("Meta chat action markers", () => {
       {
         type: "mcp_server",
         op: "add",
-        serverScope: "local",
         scope: "global",
         conversationId: null,
         entryId: "",
         name: "Files",
         url: "localhost:9000",
-        serverId: "",
         enabled: undefined,
         authorization: undefined,
       },
     ]);
+  });
+
+  it("drops a legacy gateway server proposal", () => {
+    const proposals = getMetaActionProposals(
+      '[[MCP_SERVER:{"op":"add","server":"remote","target":"all","serverId":"server-1"}]]',
+    );
+    expect(proposals).toEqual([]);
+  });
+
+  it("accepts a server proposal without a kind as a local server", () => {
+    const proposals = getMetaActionProposals(
+      '[[MCP_SERVER:{"op":"add","target":"all","url":"localhost:9000"}]]',
+    );
+    expect(proposals[0]).toMatchObject({ type: "mcp_server", url: "localhost:9000" });
   });
 
   it("parses encryption key assignments and removals", () => {
@@ -205,7 +216,7 @@ describe("Meta chat action markers", () => {
     const text = [
       "Done.",
       '[[RENAME_CHAT:{"id":"c1","title":"New"}]]',
-      '[[MCP_SERVER:{"op":"remove","server":"remote","target":"all","serverId":"server-1"}]]',
+      '[[MCP_SERVER:{"op":"remove","server":"local","target":"all","url":"localhost:9000"}]]',
       '[[PIN_CHAT:{"id":"c1","pinned":true}]]',
       '[[PIN_WORKSPACE:{"id":"w1","pinned":true}]]',
       '[[PIN_AGENT:{"id":"a1","pinned":false}]]',

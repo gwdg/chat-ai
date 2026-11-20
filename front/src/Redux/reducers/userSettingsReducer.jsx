@@ -98,25 +98,19 @@ function importUserSettingsState(state, incoming) {
     };
   });
   if (Array.isArray(incoming.mcp_servers)) {
+    // Only browser-connected servers remain; a legacy gateway entry has no URL and is dropped.
     state.mcp_servers = incoming.mcp_servers
       .filter(
         (server) =>
           server &&
           typeof server.id === "string" &&
-          (server.kind === "local" || server.kind === "remote") &&
-          typeof (server.kind === "local" ? server.url : server.serverId) ===
-            "string" &&
-          String(
-            server.kind === "local" ? server.url : server.serverId,
-          ).trim(),
+          typeof server.url === "string" &&
+          server.url.trim(),
       )
       .map((server) => ({
         id: server.id,
         name: typeof server.name === "string" ? server.name : undefined,
-        kind: server.kind,
-        url: server.kind === "local" ? server.url.trim() : undefined,
-        serverId:
-          server.kind === "remote" ? server.serverId.trim() : undefined,
+        url: server.url.trim(),
         ...(server.headers && typeof server.headers === "object"
           ? { headers: { ...server.headers } }
           : {}),
@@ -502,7 +496,7 @@ const userSettingsSlice = createSlice({
     addMcpServer: (state, action) => {
       if (!Array.isArray(state.mcp_servers)) state.mcp_servers = [];
       const server = action.payload;
-      if (!server?.id || !server?.kind) return;
+      if (!server?.id || typeof server.url !== "string" || !server.url.trim()) return;
       if (state.mcp_servers.some((item) => item.id === server.id)) return;
       state.mcp_servers.push(server);
     },
@@ -566,7 +560,9 @@ export const {
 // Selectors
 export const selectAllMemories = (state) => state.user_settings.memories;
 export const selectGlobalMcpServers = (state) =>
-  state.user_settings.mcp_servers ?? [];
+  (state.user_settings.mcp_servers ?? []).filter(
+    (server) => server && typeof server.url === "string" && server.url.trim(),
+  );
 export const selectMemoryGroups = (state) =>
   state.user_settings.memory_groups ?? [];
 export const selectDefaultMemoryGroup = (state) =>

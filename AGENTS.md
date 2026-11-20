@@ -596,10 +596,10 @@ Mutating chat actions are proposals, never applied by the model. It emits `CREAT
 creates a new conversation with validated settings and text-only initial messages, plus `RENAME_CHAT` /
 `MOVE_CHAT`, `PIN_CHAT`, `PIN_TOPIC`, `PIN_WORKSPACE`, `PIN_AGENT`, `SET_SETTING`, `MCP_SERVER`, and memory markers
 (`utils/metaActions.js`), which `MetaActionCard` renders below the message with a warning icon and
-an explicit Accept button. `MCP_SERVER` adds, updates, or removes per-chat MCP servers (local URL
-entries or remote gateway ids), and with `target: "global"` it changes the sidebar MCP server list
+an explicit Accept button. `MCP_SERVER` adds, updates, or removes per-chat MCP servers by URL, and
+with `target: "global"` it changes the sidebar MCP server list
 in `user_settings.mcp_servers`; the Meta chat reads the entry ids from `get_user_settings`.
-`test_mcp_server` tests a configured local server by id, name, or URL. Stateful "what's new" uses
+`test_mcp_server` tests a configured server by id, name, or URL. Stateful "what's new" uses
 `get_whats_new`, which checks every session and subagent session of every agent (status and
 `time.updated` since the last check), and stores the last check in localStorage
 (`chatai.meta.last-check`). The same report is rendered by `MetaChangesPanel`: the Meta chat shows
@@ -1201,15 +1201,17 @@ The schema is documented in `docs/workspace-manifests.md`.
 
 ### 4.25 MCP servers are configured globally and selected per chat
 
-`user_settings.mcp_servers` holds the global definitions (`{id, name, kind: "local" | "remote",
-url?, serverId?, headers?}`), managed by the sidebar's `McpServerList` and `McpServerModal`
-(including the connection test). Local servers show a status light: amber until tested, red on a
+`user_settings.mcp_servers` holds the global definitions (`{id, name?, url, headers?}`), managed by
+the sidebar's `McpServerList` and `McpServerModal`
+(including the connection test). Every server is reached from the browser by URL; there is no
+gateway kind. Persist migration 11 drops the removed GWDG-gateway entries and strips the old
+`kind`/`serverId` fields. Servers show a status light: amber until tested, red on a
 failed test, green when reachable; clicking the light runs `testMcpServer`. That status is not only
 local state: `agent/mcp.ts#reportMcpServerStatus` records it per normalized URL and announces it as
 `chatai:mcp-status`, and `McpServerList` seeds from it, so a server tested in the settings panel or
 dialog, or connected by a chat turn, is green there instead of amber. Per-chat settings store only the selected ids in
-`mcp_local_server_ids` / `mcp_remote_server_ids`; `agent/mcp.ts#resolveMcpServers` expands them for
-the agent, gateway request and prefetch, and still merges legacy full entries from
+`mcp_local_server_ids`; `agent/mcp.ts#resolveMcpServers` expands them for
+the agent and prefetch, and still merges legacy full entries from
 `settings.mcp_servers`. **A stored URL is normalized in one place: `agent/mcp.ts#open`, and
 `keyOf` uses the same normalized URL as identity.** The settings keep what the user typed, and
 `new URL("localhost:9000/mcp")` parses `localhost:` as the scheme — the settings test normalizes
@@ -1217,9 +1219,8 @@ and says "connected", while every other caller then fails with a bare `TypeError
 A browser fetch also reports a refused connection, a rejected CORS preflight and a mixed-content
 block the same way, so `open` replaces that message with one naming the URL and the three causes;
 the bridge forwards it as the tool result, which is the only way a user can tell them apart. GWDG Tools has one MCP Servers tool that switches every configured
-server on or off; enabling it reveals the selector, which lists every configured server and
-badges it local or GWDG and never shows URL/id/auth fields. `remoteMcpEnabled` also treats selected
-remote ids as a value.
+server on or off; enabling it reveals the selector, which lists every configured server by name or
+URL and never shows URL/id/auth fields.
 
 The add dialog starts with a local scan (`agent/mcpScan.ts`, button
 `data-guide="mcp-scan"`). It probes `GET http://localhost:<port>/mcp` on every port above 5000,
@@ -1580,8 +1581,9 @@ and no stored headers to OpenCode itself (`PUT /api/experimental/mcp/<chatai-ext
 `/connect`), so those tools work without the tab. It needs neither bridge access nor an attached
 workspace, because the servers are registered in the agent's own OpenCode; `AgentPage` therefore
 enables `useAgentMcpInjection` from the flag alone, and the relay narrows itself once a bridge
-starts. The configured `kind` does not decide the route: an entry with an address is dialable by
-OpenCode, while a SAIA-gateway entry carries only a server id and keeps its server-side path.
+starts. Every configured server has a URL, so the address alone makes it dialable; a server with
+stored headers (a token) stays on the relay, because only the browser may hold it, and a URL that
+does not parse cannot be handed over either.
 `useAgentMcpInjection` reconciles the entries for the session that is open now and runs again when
 it changes; the option itself is stored per agent (`bridgeInjectExternal`) like the write/MCP flags,
 so it survives a session switch. A name is `<prefix><server label>-<session id>` (a `-2` counter

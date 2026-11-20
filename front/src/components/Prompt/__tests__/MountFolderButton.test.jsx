@@ -23,7 +23,6 @@ vi.mock("../../../modals/ModalContext", () => ({
 }));
 vi.mock("../../../agent/mcp", () => ({
   hasLocalMcpServerValue: () => false,
-  isRemoteMcpServer: () => false,
   mcpServers: () => [],
 }));
 

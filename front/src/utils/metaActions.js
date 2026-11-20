@@ -62,7 +62,6 @@ const CREATE_CHAT_TOOL_KEYS = new Set([
   "arcana_tools",
   "arcana",
   "mcp",
-  "mcp_remote",
   "workspace_write_access",
   "browser_storage",
   "create_docx",
@@ -79,7 +78,6 @@ const CREATE_CHAT_SETTING_KEYS = new Set([
   "enable_web_search",
   "tools",
   "mcp_local_server_ids",
-  "mcp_remote_server_ids",
 ]);
 
 function normalizeCreateChat(payload) {
@@ -155,10 +153,7 @@ function normalizeCreateChat(payload) {
         }
       }
       if (Object.keys(tools).length) settings.tools = tools;
-    } else if (
-      (key === "mcp_local_server_ids" || key === "mcp_remote_server_ids") &&
-      Array.isArray(value)
-    ) {
+    } else if (key === "mcp_local_server_ids" && Array.isArray(value)) {
       settings[key] = value
         .map((item) => String(item || "").trim())
         .filter(Boolean)
@@ -347,8 +342,9 @@ export function getMetaActionProposals(text) {
     if (type === "MCP_SERVER") {
       const op = String(payload.op || "").trim().toLowerCase();
       if (!["add", "remove", "update"].includes(op)) continue;
-      const serverScope = String(payload.server || "").trim().toLowerCase();
-      if (!["local", "remote"].includes(serverScope)) continue;
+      const serverScope = String(payload.server || "local").trim().toLowerCase();
+      // Only browser-connected servers exist; a legacy "remote" proposal is dropped.
+      if (serverScope !== "local") continue;
 
       const rawTarget =
         payload.target ?? payload.conversationId ?? payload.conversation_id;
@@ -364,26 +360,13 @@ export function getMetaActionProposals(text) {
       const entryId = String(
         payload.entryId ?? payload.entry_id ?? "",
       ).trim();
-      const serverId = String(
-        payload.serverId ??
-          payload.server_id ??
-          (serverScope === "remote" && !entryId ? payload.id : "") ??
-          "",
-      ).trim();
       const name = String(payload.name || "").trim();
       const scope = targetGlobal
         ? "global"
         : targetAll
           ? "all"
           : "conversation";
-      if (serverScope === "local" && !url && !(scope === "global" && entryId)) {
-        continue;
-      }
-      if (
-        serverScope === "remote" &&
-        !serverId &&
-        !(scope === "global" && entryId)
-      ) {
+      if (!url && !(scope === "global" && entryId)) {
         continue;
       }
 
@@ -401,23 +384,20 @@ export function getMetaActionProposals(text) {
       ) {
         continue;
       }
-      if (scope === "global" && op === "update" && !entryId && !url && !serverId) {
+      if (scope === "global" && op === "update" && !entryId && !url) {
         continue;
       }
 
-      const key = serverScope === "local" ? url : serverId;
       proposals.set(
-        `mcp:${scope}:${conversationId || "all"}:${op}:${serverScope}:${entryId || key}`,
+        `mcp:${scope}:${conversationId || "all"}:${op}:${entryId || url}`,
         {
           type: "mcp_server",
           op,
-          serverScope,
           scope,
           conversationId: targetGlobal || targetAll ? null : conversationId,
           entryId,
           name,
           url,
-          serverId,
           enabled,
           authorization,
         },

@@ -22,7 +22,6 @@ import { usableKey } from "../e2ee/registry";
 import {
   listMcpServerTools,
   normalizeMcpUrl,
-  remoteMcpEnabled,
   testMcpServer,
 } from "../agent/mcp";
 import { getAgents } from "../agents/agentStore";
@@ -121,7 +120,7 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
         ? userSettings.mcp_servers
             .map(
               (server) =>
-                `${server.name || server.url || server.serverId} (${server.kind}, id: ${server.id}${server.url ? `, url: ${server.url}` : ""})`,
+                `${server.name || server.url} (id: ${server.id}${server.url ? `, url: ${server.url}` : ""})`,
             )
             .join(", ")
         : "none"
@@ -183,17 +182,15 @@ export function buildConversationSettingsSummary(settings = {}) {
   const arcanaId = settings.arcana?.id || "";
   const mcpServers = Array.isArray(settings.mcp_servers)
     ? settings.mcp_servers
-    : typeof settings.mcp_servers === "string" && settings.mcp_servers.trim()
-      ? [{ id: settings.mcp_servers.trim(), enabled: true }]
-      : [];
+    : [];
   const mcpDescription = mcpServers
     .map((server) => {
+      if (typeof server?.url !== "string") return "";
       const enabled = server?.enabled === false ? "disabled" : "enabled";
       const name = typeof server?.name === "string" && server.name.trim() ? ` "${server.name.trim()}"` : "";
-      if (typeof server?.url === "string") return `local ${server.url}${name} (${enabled})`;
-      if (typeof server?.id === "string") return `remote ${server.id}${name} (${enabled})`;
-      return `unknown ${JSON.stringify(server)}`;
+      return `${server.url}${name} (${enabled})`;
     })
+    .filter(Boolean)
     .join(", ");
 
   return [
@@ -210,7 +207,7 @@ export function buildConversationSettingsSummary(settings = {}) {
     `storage access ${browserStorage ? "enabled" : "disabled"}`,
     `writing in this chat ${browserStorage ? "enabled" : "disabled"}; writing in attached workspaces ${workspaceWrite ? "enabled" : "disabled"}`,
     `arcana ${arcanaId || "none"}`,
-    `MCP local ${tools.mcp ? "enabled" : "disabled"}, remote ${remoteMcpEnabled(settings) ? "enabled" : "disabled"}${mcpDescription ? ` (${mcpDescription})` : ""}`,
+    `MCP ${tools.mcp ? "enabled" : "disabled"}${mcpDescription ? ` (${mcpDescription})` : ""}`,
   ].join("; ");
 }
 
@@ -1332,8 +1329,8 @@ export function createMetaToolRunner({
             item?.url === target,
         );
         if (!server) return "MCP server not found.";
-        if (server.kind !== "local" || !normalizeMcpUrl(server.url)) {
-          return "This MCP server cannot be tested from the browser.";
+        if (!normalizeMcpUrl(server.url)) {
+          return "This MCP server has no browser-reachable URL.";
         }
         try {
           const result = await testMcpServer({
@@ -1361,8 +1358,8 @@ export function createMetaToolRunner({
 
       case "agent_health": {
         const agents = getAgents();
-        const servers = (userSettings.mcp_servers || []).filter(
-          (server) => server.kind === "local" && normalizeMcpUrl(server.url),
+        const servers = (userSettings.mcp_servers || []).filter((server) =>
+          normalizeMcpUrl(server.url),
         );
         const statusLines = agents.length
           ? (await agentStatusLines(agents)).join("\n")
@@ -1401,7 +1398,7 @@ export function createMetaToolRunner({
             item?.url === target,
         );
         if (!server) return "MCP server not found.";
-        if (server.kind !== "local" || !normalizeMcpUrl(server.url)) {
+        if (!normalizeMcpUrl(server.url)) {
           return "This MCP server has no browser-reachable URL.";
         }
         try {
