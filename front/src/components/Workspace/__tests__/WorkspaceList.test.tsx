@@ -689,7 +689,7 @@ describe("WorkspaceList group colours", () => {
     ]);
     for (const strip of strips) {
       expect(strip.style.background).toContain("linear-gradient");
-      expect(strip.style.background).toContain("rgba(124, 58, 237, 0.35)");
+      expect(strip.style.background).toContain("rgba(124, 58, 237, 0.28)");
     }
   });
 

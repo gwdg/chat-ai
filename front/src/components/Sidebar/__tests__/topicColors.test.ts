@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   chatRowTint,
   groupRule,
+  groupRuleGradient,
   groupRowTint,
   neutralRowTint,
   neutralRule,
@@ -10,6 +11,21 @@ import {
 } from "../topicColors";
 
 const alphaOf = (colour: string) => Number(colour.split(", ").pop()?.replace(")", ""));
+
+describe("groupRuleGradient", () => {
+  it("keeps the far stop at 60% of the near one, below the old solid rule", () => {
+    for (const isDark of [false, true]) {
+      const stops = groupRuleGradient("#7C3AED", isDark).match(
+        /rgba\([^)]*\)/g,
+      ) as string[];
+      expect(stops).toHaveLength(2);
+      const [near, far] = stops.map((stop) => alphaOf(stop.replace(")", "")));
+      expect(far / near).toBeCloseTo(0.6, 3);
+      // The rule as a whole is lighter than the solid border it replaced.
+      expect(near).toBeLessThan(alphaOf(groupRule("#7C3AED", isDark)));
+    }
+  });
+});
 
 describe("chatRowTint", () => {
   it("stays weaker than the group's own wash, light and dark", () => {

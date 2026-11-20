@@ -213,7 +213,7 @@ describe("TopicList group colours", () => {
     ]);
     for (const strip of strips) {
       expect(strip.style.background).toContain("linear-gradient");
-      expect(strip.style.background).toContain("rgba(124, 58, 237, 0.35)");
+      expect(strip.style.background).toContain("rgba(124, 58, 237, 0.28)");
     }
   });
 
@@ -225,7 +225,7 @@ describe("TopicList group colours", () => {
       "rgba(124, 58, 237, 0.09)",
     );
     expect(ruleStrips(rulesFor())[1].style.background).toContain(
-      "rgba(124, 58, 237, 0.5)",
+      "rgba(124, 58, 237, 0.4)",
     );
   });
 
@@ -289,7 +289,7 @@ describe("TopicList group colours", () => {
     expect(strips).toHaveLength(2);
     for (const strip of strips) {
       expect(strip.style.background).toBe(
-        "linear-gradient(rgba(15, 23, 42, 0.06), rgba(15, 23, 42, 0))",
+        "linear-gradient(rgba(15, 23, 42, 0.05), rgba(15, 23, 42, 0.03))",
       );
     }
   });

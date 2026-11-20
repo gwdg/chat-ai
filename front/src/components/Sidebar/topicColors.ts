@@ -99,21 +99,24 @@ export function groupRule(hex: string, isDark: boolean) {
 
 /**
  * The same two rules painted as a gradient: the group colour at full rule
- * strength where the first chat starts, almost gone under the last one, so a
- * long list is bracketed by light rather than by a hard bar.
+ * strength where the first chat starts, a little lighter under the last one —
+ * enough to read as light rather than a hard bar, not enough to disappear.
+ * The far stop keeps 60% of the near one, and the whole rule sits a step below
+ * the old solid border so it stays a hint rather than a bar.
  */
 export function groupRuleGradient(hex: string, isDark: boolean) {
-  return `linear-gradient(to bottom, ${groupRule(hex, isDark)}, ${withAlpha(
+  const near = isDark ? 0.4 : 0.28;
+  return `linear-gradient(to bottom, ${withAlpha(
     hex,
-    isDark ? 0.14 : 0.07,
-  )})`;
+    near,
+  )}, ${withAlpha(hex, near * 0.6)})`;
 }
 
-/** The Unsorted Chats trace, fading out the same way. */
+/** The Unsorted Chats trace, easing off the same way. */
 export function neutralRuleGradient(isDark: boolean) {
-  return `linear-gradient(to bottom, ${neutralRule(isDark)}, rgba(${
+  return `linear-gradient(to bottom, rgba(${
     isDark ? "148, 163, 184" : "15, 23, 42"
-  }, 0))`;
+  }, 0.05), rgba(${isDark ? "148, 163, 184" : "15, 23, 42"}, 0.03))`;
 }
 
 /**
