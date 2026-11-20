@@ -1,39 +1,43 @@
 // userMemorySlice.js
 import { createSlice } from "@reduxjs/toolkit";
 
-const initialState = {
-  memories: [],
-  memory_groups: [],
-  default_memory_group: "default",
-  mcp_servers: [],
-  timeout: 300000,
-  memory_mode: 0,
-  suggest_user_prompts: false,
-  html_render_mode: "off",
-  html_load_external: false,
-  html_sanitization: "strict",
-  set_title_once: true,
-  render_typst: false,
-  render_latex: false,
-  render_graphviz: false,
-  render_vega: false,
-  render_chartjs: false,
-  collapse_reasoning_while_streaming: true,
-  document_conversion_mode: "choice",
-  conversation_summaries: true,
-  show_timestamps: false,
-  // Off by default: the sidebar shows chats and workspaces only. The Agents and
-  // MCP server lists are advanced tools and appear when this is switched on.
-  advanced_mode: false,
-  // null = device default (Enter on desktop, Shift+Enter on mobile).
-  send_with_enter: null,
-  // Ask before each call of a user-added MCP server tool; "always" runs them directly and
-  // "never" leaves them out of chat turns. The agent's own file tools are never affected.
-  mcp_tool_policy: "ask",
-  // End-to-end encryption: published model public keys, and model → key bindings.
-  e2ee_keys: [],
-  e2ee_models: {},
-};
+// Every key the store understands, with the built-in defaults. `getDefaultUserSettings()`
+// layers the deployment's `userSettings` from front.json on top of this.
+function baseInitialState() {
+  return {
+    memories: [],
+    memory_groups: [],
+    default_memory_group: "default",
+    mcp_servers: [],
+    timeout: 300000,
+    memory_mode: 0,
+    suggest_user_prompts: false,
+    html_render_mode: "off",
+    html_load_external: false,
+    html_sanitization: "strict",
+    set_title_once: true,
+    render_typst: false,
+    render_latex: false,
+    render_graphviz: false,
+    render_vega: false,
+    render_chartjs: false,
+    collapse_reasoning_while_streaming: true,
+    document_conversion_mode: "choice",
+    conversation_summaries: true,
+    show_timestamps: false,
+    // Off by default: the sidebar shows chats and workspaces only. The Agents and
+    // MCP server lists are advanced tools and appear when this is switched on.
+    advanced_mode: false,
+    // null = device default (Enter on desktop, Shift+Enter on mobile).
+    send_with_enter: null,
+    // Ask before each call of a user-added MCP server tool; "always" runs them directly and
+    // "never" leaves them out of chat turns. The agent's own file tools are never affected.
+    mcp_tool_policy: "ask",
+    // End-to-end encryption: published model public keys, and model → key bindings.
+    e2ee_keys: [],
+    e2ee_models: {},
+  };
+}
 
 const MEMORY_MODES = [0, 1, 2];
 const RENDER_MODES = ["render", "code", "off"];
@@ -207,6 +211,35 @@ function importUserSettingsState(state, incoming) {
   }
   if (incoming.model !== undefined) state.model = incoming.model;
 }
+
+// Deployment defaults from front.json (`userSettings` → VITE_USER_SETTINGS). The value is
+// JSON because it is a whole settings object. An unparseable or non-object value is
+// ignored, so a broken config never prevents the app from starting.
+function readConfiguredUserSettings() {
+  const raw = import.meta.env?.VITE_USER_SETTINGS;
+  if (typeof raw !== "string" || !raw.trim()) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+// The defaults for a profile with no persisted settings yet, and after a reset.
+// Imported user settings still overwrite these on rehydrate, so a deployed default
+// only applies to fresh profiles (or an explicit reset). Validation is shared with
+// the backup import: unknown or malformed fields are ignored.
+export function getDefaultUserSettings() {
+  const state = baseInitialState();
+  const configured = readConfiguredUserSettings();
+  if (configured) importUserSettingsState(state, configured);
+  return state;
+}
+
+const initialState = getDefaultUserSettings();
 
 const userSettingsSlice = createSlice({
   name: "user_settings",

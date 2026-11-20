@@ -253,7 +253,8 @@ inside `db/`. UI strings and i18n keys say topic.
 
 `secrets/front.json` is read **at Vite startup** and hand-mapped into `process.env.VITE_*`:
 `VITE_BACKEND_ENDPOINT`, `VITE_MODELS_ENDPOINT`, `VITE_USERDATA_ENDPOINT`, `VITE_API_KEY`,
-`VITE_DEFAULT_SETTINGS`, `VITE_TITLE_GENERATION_MODEL`, `VITE_MEMORY_GENERATION_MODEL`,
+`VITE_DEFAULT_SETTINGS`, `VITE_USER_SETTINGS`, `VITE_TITLE_GENERATION_MODEL`,
+`VITE_MEMORY_GENERATION_MODEL`,
 `VITE_PROPOSAL_GENERATION_MODEL`, `VITE_ANNOUNCEMENT`, `VITE_USE_OPENAI_SDK`,
 `VITE_E2EE_KEY_URL`, `VITE_OPENCODE_SERVER_URL`, `VITE_OPENCODE_SERVER_USERNAME`,
 `VITE_OPENCODE_SERVER_PASSWORD`, `VITE_AGENT_SERVICE_MODE`, `VITE_AGENT_SERVICE_MODEL`,
@@ -261,6 +262,13 @@ inside `db/`. UI strings and i18n keys say topic.
 config key requires editing `front/vite.config.js` too**, and a config change requires a dev-server
 restart. Read values via `import.meta.env.VITE_*`; they arrive as strings, hence the
 `=== "true"` comparisons.
+
+`userSettings` maps to `VITE_USER_SETTINGS` (JSON) and seeds the Redux `user_settings` store through
+`Redux/reducers/userSettingsReducer.jsx#getDefaultUserSettings()`, which reuses the validation of a
+settings import. redux-persist rehydrates a profile's stored settings over that initial state, so
+these defaults reach a fresh profile (and an explicit reset) only; they never overwrite an existing
+user's choices. `browser_document_conversion` is accepted there as the legacy equivalent of
+`document_conversion_mode`.
 
 `apiKey` is optional and maps to `VITE_API_KEY`. When it is empty the app sends **no** Authorization
 header and the OIDC proxy authenticates the user, as before. When it is set, `apis/authHeaders.js`
@@ -454,9 +462,12 @@ Without the capability the previous behaviour applies: `Prompt.jsx` blocks, and
 `true` = Enter sends, `false` = Shift+Enter sends, `null` = device default. The default is
 resolved by `hooks/useSendWithEnter.ts`: Enter on desktop, Shift+Enter on mobile. `PromptTextArea`
 implements the key handling, and `SendButton` uses the same hook for its shortcut tooltip. Alt with
-Enter always inserts a newline. When adding another user setting, update
-`userSettingsReducer`'s `initialState`, the `getDefaultState()` fallback in `Redux/store/store.jsx`,
-both i18n files, and the export/import path.
+Enter always inserts a newline. When adding another user setting, add it to
+`baseInitialState()` and to the validation in `importUserSettingsState()`
+(`Redux/reducers/userSettingsReducer.jsx`); the reducer's `initialState` and
+`getDefaultState()` in `Redux/store/store.jsx` both derive from `getDefaultUserSettings()`, so a
+separate fallback there is no longer needed. Then add both i18n files, the export/import path, and
+optionally the key to `userSettings` in `secrets/front.json.sample` so a deployment can seed it.
 
 ### 4.15 Sidebar conversation grouping is a persisted interface setting
 
@@ -1945,6 +1956,8 @@ while editing:
 - [ ] Dexie schema change → version bump + `.upgrade()` backfill, existing version blocks untouched
 - [ ] new persisted Redux key → `whitelist` + `getDefaultState()` (+ a migration if the shape changed)
 - [ ] new setting → exposed in the Meta chat context and propose/apply/revert support (§4.16)
+- [ ] new user setting → `baseInitialState()` + `importUserSettingsState()` validation, then
+      optionally `userSettings` in `secrets/front.json.sample` (§4.14)
 - [ ] new `front.json` key → mapped in `vite.config.js`
 - [ ] touched a `VITE_MODULE_*` area → read through `utils/modules.js`, and still correct with the
       module off (check `minimal`, §4.30)
