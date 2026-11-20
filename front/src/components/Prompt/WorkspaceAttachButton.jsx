@@ -1,4 +1,4 @@
-import { Fragment, useMemo } from "react";
+import { Fragment, useMemo, useState } from "react";
 import {
   Popover,
   PopoverButton,
@@ -7,7 +7,7 @@ import {
   useClose,
 } from "@headlessui/react";
 import { useTranslation } from "react-i18next";
-import { Check, ChevronRight } from "lucide-react";
+import { Check, ChevronDown, ChevronRight } from "lucide-react";
 import { Workspace, DataBase } from "@carbon/icons-react";
 
 import Tooltip from "../Others/Tooltip";
@@ -21,24 +21,63 @@ import {
   useWorkspaceList,
 } from "../../db/workspaceDb";
 
-// Inside the popover so `useClose` can dismiss it before navigating or opening the modal.
-function ManageDataRow({ label, onSelect }) {
+/**
+ * "Manage Workspace": one attached workspace opens its editor straight away; several expand a list
+ * of those workspaces in the popover itself, and picking one opens the same editor for it. Lives
+ * inside the popover so `useClose` can dismiss it before the modal takes over the screen.
+ */
+function ManageWorkspaceMenu({ workspaces, label, onEdit }) {
   const close = useClose();
+  const [open, setOpen] = useState(false);
+  const expandable = workspaces.length > 1;
+
+  const edit = (workspaceId) => {
+    close();
+    onEdit(workspaceId);
+  };
 
   return (
-    <button
-      type="button"
-      data-guide="manage-data"
-      onClick={() => {
-        close();
-        onSelect();
-      }}
-      className="flex w-full items-center gap-2 rounded-lg py-1 pl-1 pr-1 text-left text-xs font-medium text-base-content transition hover:bg-base-200"
-    >
-      <DataBase size={16} className="shrink-0 text-accent" />
-      <span className="min-w-0 flex-1 truncate">{label}</span>
-      <ChevronRight size={12} className="shrink-0 text-base-content/40" />
-    </button>
+    <div>
+      <button
+        type="button"
+        data-guide="manage-workspace"
+        aria-expanded={expandable ? open : undefined}
+        onClick={() => {
+          if (expandable) setOpen((value) => !value);
+          else edit(workspaces[0].id);
+        }}
+        className="flex w-full items-center gap-2 rounded-lg py-1 pl-1 pr-1 text-left text-xs font-medium text-base-content transition hover:bg-base-200"
+      >
+        <DataBase size={16} className="shrink-0 text-accent" />
+        <span className="min-w-0 flex-1 truncate">{label}</span>
+        {expandable &&
+          (open ? (
+            <ChevronDown size={12} className="shrink-0 text-base-content/40" />
+          ) : (
+            <ChevronRight size={12} className="shrink-0 text-base-content/40" />
+          ))}
+      </button>
+      {expandable && open && (
+        <div
+          data-guide="manage-workspace-list"
+          className="mt-0.5 flex flex-col gap-0.5"
+        >
+          {workspaces.map((workspace) => (
+            <button
+              key={workspace.id}
+              type="button"
+              data-guide="manage-workspace-option"
+              onClick={() => edit(workspace.id)}
+              className="flex w-full items-center gap-2 rounded-lg py-1 pl-7 pr-1 text-left text-xs text-base-content transition hover:bg-base-200"
+            >
+              <Workspace size={14} className="shrink-0 text-accent" />
+              <span className="min-w-0 flex-1 truncate">{workspace.name}</span>
+              <ChevronRight size={12} className="shrink-0 text-base-content/40" />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -99,21 +138,10 @@ export default function WorkspaceAttachButton({ localState, setLocalState }) {
       flush: true,
     }));
 
-  // A workspace owns the files of an attached chat, so a single attachment opens the workspace
-  // editor — the same dialog as Create workspace, with its storage rail and its name, icon and
-  // colour. Several attachments need a choice first, so the Manage data view lists them.
-  const soleWorkspace =
-    attachedWorkspaces.length === 1 ? attachedWorkspaces[0] : null;
-  const manageData = () => {
-    if (soleWorkspace) {
-      openModal("workspaceEdit", { workspaceId: soleWorkspace.id });
-      return;
-    }
-    openModal("manageData", { localState });
-  };
-  const manageDataLabel = soleWorkspace
-    ? t("workspace.manage_data_in", { name: soleWorkspace.name })
-    : t("workspace.manage_data");
+  // The editor is Create workspace in edit mode: name, icon, colour and the storage rail, which is
+  // where a workspace's files (and this chat's files inside it) are managed.
+  const manageWorkspace = (workspaceId) =>
+    openModal("workspaceEdit", { workspaceId });
 
   const workspaceHint = t("workspace.chat_workspaces_attached_hint", {
     names: attachedWorkspaces.map((workspace) => workspace.name).join(", "),
@@ -197,7 +225,11 @@ export default function WorkspaceAttachButton({ localState, setLocalState }) {
                 </span>
               </label>
             )}
-            <ManageDataRow label={manageDataLabel} onSelect={manageData} />
+            <ManageWorkspaceMenu
+              workspaces={attachedWorkspaces}
+              label={t("workspace.manage_workspace")}
+              onEdit={manageWorkspace}
+            />
           </div>
 
           <div className="mt-3 border-t border-base-300 pt-2">

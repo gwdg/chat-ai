@@ -452,8 +452,7 @@ export default {
     manage_chat_data: {
       title: "Dateien eines Chats verwalten",
       step1: "Auf Speicher zugreifen ist standardmäßig an und steht oben im Arbeitsbereich-Menü, das nur erscheint, solange der Chat zu einem Arbeitsbereich gehört. Schalten Sie es aus, erhält das Modell keine Dateiwerkzeuge; Anhänge werden weiterhin in die Nachricht aufgenommen, sofern möglich. Ein Chat ohne Arbeitsbereich hat dieses Menü nicht — verknüpfen Sie ihn zuerst im Arbeitsbereich.",
-      step2: "Wählen Sie Daten verwalten, um die Dateien hinter diesem Schalter zu verwalten. Ist der Chat einem Arbeitsbereich zugeordnet, öffnet sich dessen Editor — derselbe Dialog wie „Arbeitsbereich erstellen“, mit Speicherorten, Name, Symbol und Farbe sowie „Änderungen übernehmen“; bei mehreren Arbeitsbereichen werden sie zuerst aufgelistet.",
-      step3: "Laden Sie die Dateien des Chats hier hoch, erstellen, benennen Sie sie um, laden Sie sie herunter oder löschen Sie sie.",
+      step2: "Wählen Sie „Arbeitsbereich verwalten“, um die Dateien hinter diesem Schalter zu verwalten. Bei einem verknüpften Arbeitsbereich öffnet sich dessen Editor — derselbe Dialog wie „Arbeitsbereich erstellen“, mit Speicherorten, Name, Symbol und Farbe sowie „Änderungen übernehmen“; bei mehreren öffnet das Pfeilsymbol die Liste der verknüpften Arbeitsbereiche direkt hier, und ein Klick öffnet den Editor des gewählten Arbeitsbereichs.",
     },
     workspace_saia_fs: {
       title: "Ihre SAIA-Dateien in einem Arbeitsbereich",
@@ -2403,10 +2402,6 @@ export default {
     chat_workspaces: "Arbeitsbereich",
     chat_workspaces_attached_hint:
       "Dieser Chat ist mit {{names}} verknüpft und kann alle Dateien dort nutzen.",
-    manage_data: "Daten verwalten",
-    manage_data_in: "Daten in {{name}} verwalten",
-    manage_data_workspace_hint:
-      "Dieser Chat ist mit mehreren Arbeitsbereichen verknüpft. Öffnen Sie einen, um seine Dateien zu verwalten.",
     access_storage: "Auf Speicher zugreifen",
     access_storage_hint:
       "Das Modell darf die Dateien dieses Chats und seiner verknüpften Arbeitsbereiche lesen. In diesem Chat darf es immer schreiben; für einen verknüpften Arbeitsbereich gibt es den Schalter darunter.",
@@ -2414,15 +2409,11 @@ export default {
       "Das Modell erhält keine Dateiwerkzeuge. Anhänge werden weiterhin in die Nachricht aufgenommen, sofern ihr Text lesbar ist.",
     workspace_write_access_hint:
       "Das Modell darf Dateien in den verknüpften Arbeitsbereichen ändern.",
-    chat_files: "Dateien in diesem Chat",
-    chat_files_hint:
-      "Nur in diesem Browser für diesen Chat gespeichert. Das Modell schreibt hier, wenn kein Arbeitsbereich verknüpft ist.",
     settings_title: "Lokaler Agent",
     attach_from_workspace: "Aus Arbeitsbereich anhängen",
     attach_from_workspace_hint:
       "Wählen Sie eine Datei aus einem verknüpften Arbeitsbereich und fügen Sie sie dieser Nachricht hinzu.",
     attach_from_workspace_loading: "Dateien werden geladen…",
-    open_workspace: "Arbeitsbereich öffnen",
     sidebar_title: "Arbeitsbereich",
     new_workspace: "Neuer Arbeitsbereich",
     empty_sidebar_title: "Arbeitsbereich erstellen",

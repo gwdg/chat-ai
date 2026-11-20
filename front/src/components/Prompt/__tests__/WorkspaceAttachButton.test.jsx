@@ -78,7 +78,11 @@ describe("WorkspaceAttachButton", () => {
     expect(
       screen.getByText(/This chat is attached to Research/),
     ).toBeInTheDocument();
-    fireEvent.click(await screen.findByText("Manage data in Research"));
+    const row = document.querySelector('[data-guide="manage-workspace"]');
+    expect(row).toHaveTextContent("Manage Workspace");
+    // Nothing to choose between, so no chevron and no list.
+    expect(row).not.toHaveAttribute("aria-expanded");
+    fireEvent.click(row);
 
     // The editor is Create workspace in edit mode: name, icon, colour and the storage rail.
     expect(openModal).toHaveBeenCalledWith("workspaceEdit", {
@@ -87,15 +91,52 @@ describe("WorkspaceAttachButton", () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
-  it("asks which workspace to open when several are attached", async () => {
+  it("lists the attached workspaces in the popover when several are attached", async () => {
     dbMocks.links = [{ workspaceId: "w1" }, { workspaceId: "w2" }];
     renderButton();
     openMenu();
 
-    fireEvent.click(await screen.findByText("Manage data"));
+    const row = document.querySelector('[data-guide="manage-workspace"]');
+    expect(row).toHaveAttribute("aria-expanded", "false");
+    expect(
+      document.querySelectorAll('[data-guide="manage-workspace-option"]'),
+    ).toHaveLength(0);
+
+    fireEvent.click(row);
+
+    // No second dialog: the choice happens inside this popover, which lists only the attachments.
+    expect(openModal).not.toHaveBeenCalled();
+    expect(row).toHaveAttribute("aria-expanded", "true");
+    const options = [
+      ...document.querySelectorAll('[data-guide="manage-workspace-option"]'),
+    ];
+    expect(options.map((option) => option.textContent)).toEqual([
+      "Research",
+      "Teaching",
+    ]);
+
+    fireEvent.click(options[1]);
 
     expect(navigate).not.toHaveBeenCalled();
-    expect(openModal).toHaveBeenCalledWith("manageData", { localState });
+    expect(openModal).toHaveBeenCalledWith("workspaceEdit", {
+      workspaceId: "w2",
+    });
+  });
+
+  it("collapses the list again when the row is clicked twice", async () => {
+    dbMocks.links = [{ workspaceId: "w1" }, { workspaceId: "w2" }];
+    renderButton();
+    openMenu();
+
+    const row = document.querySelector('[data-guide="manage-workspace"]');
+    fireEvent.click(row);
+    fireEvent.click(row);
+
+    expect(row).toHaveAttribute("aria-expanded", "false");
+    expect(
+      document.querySelectorAll('[data-guide="manage-workspace-option"]'),
+    ).toHaveLength(0);
+    expect(openModal).not.toHaveBeenCalled();
   });
 
   it("puts access storage first and writes it to the conversation", () => {

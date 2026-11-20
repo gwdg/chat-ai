@@ -442,8 +442,7 @@ export default {
     manage_chat_data: {
       title: "Manage the files of a chat",
       step1: "Access storage is on by default and sits at the top of the Workspace menu, which appears while the chat belongs to a workspace. Switch it off to give the model no file tools at all; attachments are still included in the message where possible. A chat without a workspace has no such menu — attach it from the workspace first.",
-      step2: "Choose Manage data to manage the files behind this switch. A chat attached to one workspace opens that workspace's editor — the same dialog as Create workspace, with its storage locations, its name, icon and colour, and Apply Changes; a chat with several workspaces lists them first.",
-      step3: "Upload, create, rename, download and delete the chat's files here.",
+      step2: "Choose Manage Workspace to manage the files behind this switch. One attached workspace opens its editor — the same dialog as Create workspace, with its storage locations, its name, icon and colour, and Apply Changes; with several, the chevron opens the list of attached workspaces right here, and picking one opens that workspace's editor.",
     },
     workspace_saia_fs: {
       title: "Your SAIA files in a workspace",
@@ -2365,10 +2364,6 @@ export default {
     chat_workspaces: "Workspace",
     chat_workspaces_attached_hint:
       "This chat is attached to {{names}} and can use all files there.",
-    manage_data: "Manage data",
-    manage_data_in: "Manage data in {{name}}",
-    manage_data_workspace_hint:
-      "This chat is attached to several workspaces. Open one to manage its files.",
     access_storage: "Access storage",
     access_storage_hint:
       "The model may read the files of this chat and of its attached workspaces. It may always write in this chat; an attached workspace has its own switch below.",
@@ -2376,15 +2371,11 @@ export default {
       "The model gets no file tools. Attachments are still included in the message where their text can be read.",
     workspace_write_access_hint:
       "Let the model change files in the attached workspaces.",
-    chat_files: "Files in this chat",
-    chat_files_hint:
-      "Kept in this browser for this chat only. The model writes here when no workspace is attached.",
     settings_title: "Local agent",
     attach_from_workspace: "Attach from workspace",
     attach_from_workspace_hint:
       "Pick a file from an attached workspace and add it to this message.",
     attach_from_workspace_loading: "Loading files…",
-    open_workspace: "Open workspace",
     sidebar_title: "Workspace",
     new_workspace: "New workspace",
     empty_sidebar_title: "Create a workspace",
