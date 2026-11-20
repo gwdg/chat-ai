@@ -18,7 +18,14 @@ import {
 } from "@carbon/icons-react";
 
 import type { FolderRow } from "../../db/dbTypes";
-import { groupRowTint, groupRule, topicColor, withAlpha } from "./topicColors";
+import {
+  groupRowTint,
+  groupRule,
+  neutralRowTint,
+  neutralRule,
+  topicColor,
+  withAlpha,
+} from "./topicColors";
 import { isTopicIconId, topicIcon } from "./topicIcons";
 
 import { useModal } from "../../modals/ModalContext";
@@ -113,7 +120,7 @@ function GroupHeading({
     collapseIds.length > 0 &&
     collapseIds.every((id) => collapsedIds.includes(id));
   return (
-    <div className="flex items-center justify-between gap-2 px-2 py-1">
+    <div className="flex items-center justify-between gap-2 px-2 pt-0 pb-1">
       <span className="min-w-0 truncate text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
         {label}
       </span>
@@ -316,6 +323,10 @@ export default function TopicList({
       draggingConversationId !== null && dragOverTopicId === id;
     const isActiveTopic = activeTopicId === id;
     const count = conversations.length;
+    // Unsorted Chats is the only group without a colour: it must not wear a grey
+    // wash that reads as a section band, so it sits a step from the sidebar itself
+    // and draws no colour swatch of its own.
+    const neutral = id === UNSORTED_TOPIC_ID;
 
     return (
       <div 
@@ -367,18 +378,25 @@ export default function TopicList({
               onOpenTopic(id);
             }
           }}
-          className={`group flex min-h-10 items-center gap-2 rounded-lg px-1 text-xs transition cursor-pointer bg-[var(--group-tint)] hover:bg-[var(--group-tint-hover)] ${
+          className={`group flex min-h-9 items-center gap-2 rounded-lg px-1 text-xs transition cursor-pointer bg-[var(--group-tint)] hover:bg-[var(--group-tint-hover)] ${
             isActiveTopic ? "text-accent" : "text-base-content"
           } ${isDropTarget ? "ring-2 ring-accent/60" : ""}`}
           style={
             {
-              "--group-tint": groupRowTint(hex, isDark, {
-                active: isActiveTopic,
-              }),
-              "--group-tint-hover": groupRowTint(hex, isDark, {
-                active: isActiveTopic,
-                hover: true,
-              }),
+              "--group-tint": neutral
+                ? neutralRowTint(isDark, { active: isActiveTopic })
+                : groupRowTint(hex, isDark, {
+                    active: isActiveTopic,
+                  }),
+              "--group-tint-hover": neutral
+                ? neutralRowTint(isDark, {
+                    active: isActiveTopic,
+                    hover: true,
+                  })
+                : groupRowTint(hex, isDark, {
+                    active: isActiveTopic,
+                    hover: true,
+                  }),
             } as CSSProperties
           }
         >
@@ -405,25 +423,27 @@ export default function TopicList({
               />
             </button>
 
-            <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center pointer-events-none">
-              {emoji ? (
-                <span
-                  aria-hidden="true"
-                  className="text-sm leading-none"
-                  style={{ color: hex }}
-                >
-                  {emoji}
-                </span>
-              ) : Icon ? (
-                <Icon size={16} style={{ color: hex }} />
-              ) : (
-                <span
-                  aria-hidden="true"
-                  className="h-2 w-2 rounded-full"
-                  style={{ backgroundColor: withAlpha(hex, isDark ? 0.7 : 0.5) }}
-                />
-              )}
-            </span>
+            {neutral ? null : (
+              <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center pointer-events-none">
+                {emoji ? (
+                  <span
+                    aria-hidden="true"
+                    className="text-sm leading-none"
+                    style={{ color: hex }}
+                  >
+                    {emoji}
+                  </span>
+                ) : Icon ? (
+                  <Icon size={16} style={{ color: hex }} />
+                ) : (
+                  <span
+                    aria-hidden="true"
+                    className="h-2 w-2 rounded-full"
+                    style={{ backgroundColor: withAlpha(hex, isDark ? 0.7 : 0.5) }}
+                  />
+                )}
+              </span>
+            )}
           </span>
 
           <span
@@ -461,17 +481,30 @@ export default function TopicList({
                 />
               </button>
             )}
+
+            {topic ? null : (
+              <span
+                aria-hidden="true"
+                className="h-6 w-6 flex-shrink-0"
+              />
+            )}
           </span>
         </div>
 
         {!isCollapsed && (
           <div
             className="ml-2 border-x-2 px-2 flex flex-col gap-1"
-            style={{ borderColor: groupRule(hex, isDark) }}
+            style={{
+              borderColor: neutral ? neutralRule(isDark) : groupRule(hex, isDark),
+            }}
           >
             {count > 0 && (
               conversations.map((conv) =>
-                renderConversationRow(conv, { accentHex: hex, flush: true }),
+                renderConversationRow(conv, {
+                  accentHex: hex,
+                  flush: true,
+                  neutral,
+                }),
               )
             ) }
           </div>

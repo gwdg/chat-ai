@@ -2226,15 +2226,15 @@ export default {
     git_log: "Git log",
     git_log_empty: "No Git log entries found.",
     root_empty_hint: "Create a folder or file, or mount a folder from a source.",
-    edit_title: "Edit workspace",
+    edit_title: "Manage Workspace",
     edit_storage: "Edit storage",
     manage_workspace: "Manage Workspace",
     edit_storage_hint:
       "Storage locations of {{name}}. Every change is applied immediately.",
     edit_storage_hint_no_name: "Every change is applied immediately.",
     workspace_options: "Workspace options",
-    pin_action: "Pin workspace",
-    unpin_action: "Unpin workspace",
+    pin_action: "Pin Workspace",
+    unpin_action: "Unpin Workspace",
     workspace_root: "Workspace Root",
     tab_preview: "Preview",
     tab_agents: "Agents",
@@ -2347,7 +2347,7 @@ export default {
     attach_agent: "Attach agent",
     attach_agent_hint:
       "Attach an agent to this workspace. The agent can then use it as a bridge workspace.",
-    attach_agent_session: "Attach agent session",
+    attach_agent_session: "Attach Agent Session",
     attach_agent_session_hint:
       "Pick the sessions of this agent that belong to this workspace. Other workspaces keep their own list.",
     attach_agent_session_picker_hint:
@@ -2413,6 +2413,10 @@ export default {
     update_error: "Could not save the workspace",
     not_found: "Workspace not found",
     files_title: "Workspace files",
+    detach: "Detach",
+    detach_hint: "Detach this folder from the workspace",
+    detach_mount_only:
+      "Only a folder mounted into this workspace can be detached",
     kind: "Workspace",
     chat_count_one: "{{count}} chat",
     chat_count_other: "{{count}} chats",
@@ -2430,7 +2434,7 @@ export default {
     clone_repository: "Clone repository",
     mcp_transport_streamable_http: "Streamable HTTP",
     mcp_transport_sse: "SSE",
-    delete_workspace: "Delete workspace",
+    delete_workspace: "Delete Workspace",
     delete_confirm:
       "Delete this workspace? Its source list and transfer history are removed. Device files stay on this device; Arcana files stay in their collection.",
     delete_error: "Could not delete the workspace",

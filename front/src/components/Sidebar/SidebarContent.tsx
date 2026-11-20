@@ -83,7 +83,8 @@ import {
 } from "./chatDrop";
 import { dropAgentSessionOnWorkspace } from "./sessionDrop";
 import { rememberSidebarScroll, restoreSidebarScroll } from "./sidebarScroll";
-import { chatRowTint, topicColor } from "./topicColors";
+import { chatRowTint, neutralRowTint, topicColor } from "./topicColors";
+import { SECTION_BOTTOM, SECTION_TOP } from "./sectionSpacing";
 import PinnedSection from "./PinnedSection";
 import { showAdvancedSidebarSections } from "./sidebarVisibility";
 import SidebarUserCard from "./SidebarUserCard";
@@ -627,7 +628,8 @@ export default function SidebarContent({
   const handleSelectConversation = (id) => {
     if (id === currentConversationId) return;
     setSelectedConversationId(id); // update selected now for nicer user interaction
-    navigate(`/chat/${id}`);
+    // A chat that lives in a workspace opens its Files panel too; a plain chat has no panel.
+    navigate(`/chat/${id}`, { state: { openWorkspacePanel: true } });
     if (!isDesktop) {
       onClose();
     }
@@ -749,10 +751,19 @@ export default function SidebarContent({
     // edge between them; nowhere else has rules to sit between.
     const flush = options.flush === true;
     const accentStyle = accentHex
-      ? {
-          "--chat-tint": chatRowTint(accentHex, isDark, { active: true }),
-          "--chat-tint-hover": chatRowTint(accentHex, isDark, { hover: true }),
-        }
+      ? options.neutral
+        ? {
+            // Chats under Unsorted Chats follow that group's near-transparent scale.
+            "--chat-tint": neutralRowTint(isDark, { active: true, chat: true }),
+            "--chat-tint-hover": neutralRowTint(isDark, {
+              hover: true,
+              chat: true,
+            }),
+          }
+        : {
+            "--chat-tint": chatRowTint(accentHex, isDark, { active: true }),
+            "--chat-tint-hover": chatRowTint(accentHex, isDark, { hover: true }),
+          }
       : undefined;
     const showDates =
       !showCreated &&
@@ -934,13 +945,13 @@ export default function SidebarContent({
       </div>
 
       {isFeatureEnabled("meta_chat") && (
-        <div className="px-3 pb-1">
+        <div className="px-1 pb-1">
           <Tooltip text={t("meta_chat.help_tooltip")}>
             <button
               type="button"
               onClick={() => navigate("/meta")}
               data-guide="meta-chat"
-              className={`flex w-full items-center gap-1.5 rounded-lg px-1.5 py-1 text-left text-xs transition ${
+              className={`flex min-h-8 w-full items-center gap-1.5 rounded-lg py-1 pl-4 pr-1.5 text-left text-xs transition ${
                 location.pathname === "/meta"
                   ? "bg-accent/10 text-accent"
                   : "text-base-content/80 hover:bg-base-200 hover:text-base-content"
@@ -955,7 +966,7 @@ export default function SidebarContent({
         </div>
       )}
 
-      <div className="flex items-center justify-between gap-1 px-3 pb-2">
+      <div className="flex items-center justify-between gap-1 px-3 pb-0">
         <NewChatButton
           topicId={localState?.folderId}
           variant={"sidebar"}
@@ -1006,7 +1017,9 @@ export default function SidebarContent({
             </PinnedSection>
           )}
           <div
-            className={`sticky top-0 z-20 bg-base-100 px-3 pt-2 pb-1 ${
+            className={`sticky top-0 z-20 bg-base-100 px-3 ${SECTION_TOP} ${
+              chatsCollapsed && !hasSearch ? SECTION_BOTTOM : "pb-0"
+            } ${
               chatsHeaderElevated
                 ? "shadow-[0_2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.5)]"
                 : ""

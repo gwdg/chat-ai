@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
+import { useLocation, useNavigate } from "react-router";
 
 import { loadFile } from "../../db";
 import { useFilePreview } from "../../context/FilePreviewContext";
@@ -15,7 +16,6 @@ import { useToast } from "../../hooks/useToast";
 import { downloadBlob } from "../../utils/download";
 import MetaChangesPanel from "../Meta/MetaChangesPanel";
 import { useWorkspaceList } from "../../db/workspaceDb";
-import WorkspaceAgentPanel from "./WorkspaceAgentPanel";
 import WorkspacePreviewTab from "./WorkspacePreviewTab";
 import WorkspaceStorageTree from "./WorkspaceStorageTree";
 
@@ -23,7 +23,7 @@ const sectionHeading =
   "mb-1 truncate px-1 text-[10px] font-semibold uppercase tracking-wider text-base-content/45";
 
 /**
- * The workspace's right-hand column: What's new, Files, Agents, Preview.
+ * The workspace's right-hand column: What's new, Files, Preview.
  *
  * A workspace page and a chat attached to that workspace render this same
  * component, so the column is identical in both places. A chat may belong to
@@ -42,8 +42,7 @@ function WorkspaceFilesTab({ workspaceIds, names, onPreview }) {
     );
   }
   // Several workspaces share this tab, so each tree gets its name as a grey uppercase heading and
-  // a hairline above it — the same heading the Agents tab uses, and the only thing that tells the
-  // sections apart.
+  // a hairline above it — the only thing that tells the sections apart.
   return (
     <div className="flex min-h-0 flex-col gap-3 overflow-y-auto">
       {workspaceIds.map((workspaceId, index) => (
@@ -152,24 +151,6 @@ function WorkspacePreviewPane({ request, onClose, onBack }) {
   );
 }
 
-function WorkspaceAgentsTab({ workspaceIds, names }) {
-  if (workspaceIds.length === 1) {
-    return (
-      <WorkspaceAgentPanel workspaceId={workspaceIds[0]} framed={false} />
-    );
-  }
-  return (
-    <div className="flex flex-col gap-3">
-      {workspaceIds.map((workspaceId) => (
-        <section key={workspaceId} className="min-w-0">
-          <h3 className={sectionHeading}>{names.get(workspaceId) ?? ""}</h3>
-          <WorkspaceAgentPanel workspaceId={workspaceId} framed={false} />
-        </section>
-      ))}
-    </div>
-  );
-}
-
 export default function WorkspaceRightPanel({
   workspaceIds,
   userSettings,
@@ -177,6 +158,8 @@ export default function WorkspaceRightPanel({
   scopeKey,
 }) {
   const { t } = useTranslation();
+  const location = useLocation();
+  const navigate = useNavigate();
   const {
     preview: filePreview,
     openFilePreview,
@@ -184,14 +167,41 @@ export default function WorkspaceRightPanel({
     registerPreviewHost,
   } = useFilePreview();
   const wide = useWidePanel();
-  const [activeTab, setActiveTab] = useState("changes");
+  // Entering a workspace, or one of its chats, lands on the Files tab: that is what
+  // the workspace is for. What's New stays one click away in the strip.
+  const [activeTab, setActiveTab] = useState("files");
   // The tab a file was opened from, so the chevron can put the user back there.
-  const [originTab, setOriginTab] = useState("changes");
+  const [originTab, setOriginTab] = useState("files");
+  // A click in the sidebar asks for the panel, not just the files: the intent rides
+  // on the router state of the selection that brought the user here.
+  const openOnArrive = Boolean(location.state?.openWorkspacePanel);
+  const [expandSignal, setExpandSignal] = useState(openOnArrive ? 1 : 0);
+  const arrivalRef = useRef(location.key);
   const activeTabRef = useRef(activeTab);
   useEffect(() => {
     activeTabRef.current = activeTab;
   }, [activeTab]);
   const workspaces = useWorkspaceList() ?? [];
+
+  // Moving to another chat keeps this component mounted, so a later arrival has to put
+  // the panel back on Files and unfold it on its own; the mount above already did.
+  useEffect(() => {
+    if (arrivalRef.current === location.key || !openOnArrive) return;
+    arrivalRef.current = location.key;
+    setActiveTab("files");
+    setOriginTab("files");
+    setExpandSignal((value) => value + 1);
+  }, [location.key, openOnArrive]);
+
+  // The intent is spent on the arrival it rode in with: a reload or a Back must not
+  // unfold the panel again over a rail the user folded themselves.
+  useEffect(() => {
+    if (!openOnArrive) return;
+    navigate(`${location.pathname}${location.search}`, {
+      replace: true,
+      state: { ...(location.state ?? {}), openWorkspacePanel: false },
+    });
+  }, [location.key, openOnArrive, navigate]);
 
   const ids = useMemo(
     () => [...new Set((workspaceIds ?? []).filter(Boolean))],
@@ -246,11 +256,6 @@ export default function WorkspaceRightPanel({
         ),
         contentClassName: ids.length === 1 ? "flex flex-col" : undefined,
       },
-      {
-        id: "agents",
-        label: t("meta_chat.agents_tab"),
-        content: <WorkspaceAgentsTab workspaceIds={ids} names={names} />,
-      },
     ];
     // The tab only exists while there is a file in it.
     if (filePreview) {
@@ -289,6 +294,7 @@ export default function WorkspaceRightPanel({
       activeTab={activeTab}
       onActiveTabChange={setActiveTab}
       revealSignal={filePreview?.key ?? 0}
+      expandSignal={expandSignal}
     />
   );
 }

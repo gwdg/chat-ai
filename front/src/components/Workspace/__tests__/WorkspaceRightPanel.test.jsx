@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, useLocation } from "react-router";
 
 import { FilePreviewProvider, useFilePreview } from "../../../context/FilePreviewContext";
 import WorkspaceRightPanel from "../WorkspaceRightPanel";
@@ -51,10 +51,6 @@ vi.mock("../WorkspaceStorageTree", () => ({
   ),
 }));
 
-vi.mock("../WorkspaceAgentPanel", () => ({
-  default: () => <div data-testid="agent-panel" />,
-}));
-
 function OpenChatFile() {
   const { toggleFilePreview } = useFilePreview();
   return (
@@ -67,9 +63,9 @@ function OpenChatFile() {
   );
 }
 
-const renderPanel = (workspaceIds = ["ws-1"]) =>
+const renderPanel = (workspaceIds = ["ws-1"], entries) =>
   render(
-    <MemoryRouter>
+    <MemoryRouter {...(entries ? { initialEntries: entries } : {})}>
       <FilePreviewProvider>
         <OpenChatFile />
         <WorkspaceRightPanel
@@ -99,6 +95,12 @@ describe("WorkspaceRightPanel preview tab", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Files" }));
 
     expect(screen.queryAllByTestId("files-workspace-heading")).toHaveLength(0);
+  });
+
+  it("shows no Agents tab", () => {
+    renderPanel();
+
+    expect(screen.queryByRole("tab", { name: "Agents" })).toBeNull();
   });
 
   it("heads each workspace's files and rules a line between them", () => {
@@ -190,5 +192,99 @@ describe("WorkspaceRightPanel preview tab", () => {
     await waitFor(() => {
       expect(screen.getByText("from the chat")).toBeInTheDocument();
     });
+  });
+});
+
+describe("WorkspaceRightPanel opening tab", () => {
+  const narrowWindow = () => {
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: 1024,
+    });
+    localStorage.removeItem("chatai.meta.changes-collapsed");
+  };
+
+  beforeEach(() => {
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: 1440,
+    });
+    localStorage.clear();
+    localStorage.setItem("chatai.meta.changes-collapsed", "false");
+    workspaceMocks.rows = [{ id: "ws-1", name: "One" }];
+  });
+
+  it("lands on the Files tab instead of What's New", () => {
+    renderPanel();
+
+    expect(screen.getByRole("tab", { name: "Files" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByRole("tab", { name: "What's New" })).toHaveAttribute(
+      "aria-selected",
+      "false",
+    );
+    expect(screen.getByRole("button", { name: "notes.txt" })).toBeInTheDocument();
+  });
+
+  it("unfolds the rail when the arrival asked for the panel", () => {
+    narrowWindow();
+    renderPanel(
+      ["ws-1"],
+      [{ pathname: "/workspace/ws-1", state: { openWorkspacePanel: true } }],
+    );
+
+    expect(screen.getByRole("tablist")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Files" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    // Unfolding is part of the arrival, not a change of the stored preference.
+    expect(localStorage.getItem("chatai.meta.changes-collapsed")).toBeNull();
+  });
+
+  it("keeps the user's rail on a plain arrival", () => {
+    narrowWindow();
+    renderPanel(["ws-1"], [{ pathname: "/workspace/ws-1" }]);
+
+    expect(screen.queryByRole("tablist")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Expand What's New" }),
+    ).toBeInTheDocument();
+  });
+
+  it("spends the intent on its own arrival, so a reload keeps the rail", async () => {
+    const StateProbe = () => (
+      <span data-testid="router-state">
+        {JSON.stringify(useLocation().state?.openWorkspacePanel)}
+      </span>
+    );
+    narrowWindow();
+    render(
+      <MemoryRouter
+        initialEntries={[
+          { pathname: "/workspace/ws-1", state: { openWorkspacePanel: true } },
+        ]}
+      >
+        <FilePreviewProvider>
+          <WorkspaceRightPanel
+            workspaceIds={["ws-1"]}
+            userSettings={{}}
+            scope={null}
+            scopeKey="ws-1"
+          />
+          <StateProbe />
+        </FilePreviewProvider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("tablist")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByTestId("router-state")).toHaveTextContent("false"),
+    );
+    expect(screen.getByRole("tablist")).toBeInTheDocument();
   });
 });

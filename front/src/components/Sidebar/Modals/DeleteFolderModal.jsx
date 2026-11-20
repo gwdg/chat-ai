@@ -7,10 +7,13 @@ export default function DeleteFolderModal({
   onClose,
   folderId,
   folderName,
+  onDeleted,
 }) {
   const handleDelete = async () => {
     if (!folderId) return;
     await deleteFolder(folderId);
+    // A page that opened this dialog may have to leave the topic it just deleted.
+    onDeleted?.();
     onClose();
   };
 

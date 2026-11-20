@@ -19,6 +19,7 @@ import {
 } from "@carbon/icons-react";
 
 import Tooltip from "../Others/Tooltip";
+import { SECTION_RHYTHM } from "./sectionSpacing";
 import { useModal } from "../../modals/ModalContext";
 import { useToast } from "../../hooks/useToast";
 import {
@@ -885,7 +886,7 @@ export default function AgentList({
   }
 
   return (
-    <div className="px-3 pt-3 pb-1" data-guide="agents-list">
+    <div className={`px-3 ${SECTION_RHYTHM}`} data-guide="agents-list">
       {header}
       {body}
     </div>

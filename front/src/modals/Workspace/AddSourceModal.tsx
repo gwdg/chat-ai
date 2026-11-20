@@ -14,7 +14,10 @@ import { cloneIntoWorkspace } from "../../workspace/cloneIntoWorkspace";
 import type { CloneIntoWorkspaceProgress } from "../../workspace/cloneIntoWorkspace";
 import { folderName } from "../../workspace/folders";
 import { parsePublicGitUrl } from "../../workspace/importProject";
-import { addLocalSource, pickDirectory } from "../../workspace/localWorkspace";
+import {
+  addLocalSourceToWorkspace,
+  pickDirectory,
+} from "../../workspace/localWorkspace";
 import { baseName } from "../../workspace/paths";
 import { formatBytes } from "../../utils/formatBytes";
 
@@ -155,12 +158,13 @@ export default function AddSourceModal({
   }) => {
     let id: string;
     if (payload.kind === "local" && payload.handle) {
-      id = await addLocalSource({
+      const added = await addLocalSourceToWorkspace({
         workspaceId,
         handle: payload.handle,
         label: payload.label,
         readOnly,
       });
+      id = added.sourceId;
     } else {
       id = newId();
       await addSource({

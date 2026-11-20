@@ -11,6 +11,7 @@ import { useAgents } from "../../agents/agentStore";
 import { isAgentsEnabled } from "../../utils/modules";
 import { useWorkspaceList } from "../../db/workspaceDb";
 import { PINNED_COLLAPSE_ID } from "./TopicList";
+import { SECTION_RHYTHM } from "./sectionSpacing";
 
 /**
  * Top-level sidebar section for pinned chats, topics, workspaces and agents.
@@ -48,7 +49,7 @@ export default function PinnedSection({
   const collapsed = collapsedTopicIds.includes(PINNED_COLLAPSE_ID);
 
   return (
-    <div className="px-3 pt-3 pb-1" data-guide="pinned-section">
+    <div className={`px-3 ${SECTION_RHYTHM}`} data-guide="pinned-section">
       <div className="-mx-2 mb-1 flex min-h-8 items-center gap-1 rounded-lg bg-base-200/70 px-3 py-1">
         <button
           type="button"

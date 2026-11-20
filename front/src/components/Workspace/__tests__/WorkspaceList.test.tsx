@@ -132,9 +132,20 @@ beforeEach(() => {
   mocks.openModal.mockReset();
 });
 
-const LocationProbe = () => (
-  <span data-testid="location">{useLocation().pathname}</span>
-);
+const LocationProbe = () => {
+  const location = useLocation();
+  return (
+    <span data-testid="location" data-state={JSON.stringify(location.state)}>
+      {location.pathname}
+    </span>
+  );
+};
+
+const asksForRightPanel = () =>
+  expect(screen.getByTestId("location")).toHaveAttribute(
+    "data-state",
+    expect.stringContaining('"openWorkspacePanel":true'),
+  );
 
 describe("WorkspaceList band shape", () => {
   it("shows the chat count between the name and the row controls", async () => {
@@ -180,7 +191,7 @@ describe("WorkspaceList band shape", () => {
     expect(toggle.getAttribute("aria-label")).toBe(
       "Attached chats, agents and sessions",
     );
-    expect(row.className).toContain("min-h-10");
+    expect(row.className).toContain("min-h-9");
     expect(row.className).toContain("px-1");
     // The whole band offers the pointer, exactly like a topic band.
     expect(row.className).toContain("cursor-pointer");
@@ -208,6 +219,19 @@ describe("WorkspaceList band shape", () => {
     const subtree = row.nextElementSibling as HTMLElement;
     expect(subtree.querySelector(".border-t")).toBeNull();
   });
+
+  it("draws the workspace icon as a bare glyph, the way a topic does", async () => {
+    renderList(makeStore());
+
+    const row = (await screen.findByText("Teaching")).closest(
+      '[data-guide="workspace-row"]',
+    ) as HTMLElement;
+    const tile = row.querySelector("span.h-6.w-6") as HTMLElement;
+    // The row already carries the workspace colour: the icon adds no box of its own.
+    expect(tile.getAttribute("style") ?? "").not.toContain("background");
+    expect(tile.className).not.toContain("rounded-md");
+    expect(tile.querySelector("svg")).not.toBeNull();
+  });
 });
 
 describe("WorkspaceList pinning", () => {
@@ -217,7 +241,7 @@ describe("WorkspaceList pinning", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: "Workspace options" }),
     );
-    fireEvent.click(screen.getByRole("button", { name: "Pin workspace" }));
+    fireEvent.click(screen.getByRole("button", { name: "Pin Workspace" }));
 
     await waitFor(() =>
       expect(mocks.setPinned).toHaveBeenCalledWith("ws-1", true),
@@ -336,6 +360,26 @@ describe("WorkspaceList pinning", () => {
 });
 
 describe("WorkspaceList manage", () => {
+  it("offers Pin, Manage, Attach and Delete, in that order", async () => {
+    renderList(makeStore());
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Workspace options" }),
+    );
+    // The pin leads the menu and the destructive entry stays last.
+    const labels = [
+      "Pin Workspace",
+      "Manage Workspace",
+      "Attach Agent Session",
+      "Delete Workspace",
+    ];
+    const panel = screen.getByRole("button", { name: labels[0] }).parentElement;
+    const inMenuOrder = [...(panel?.querySelectorAll("button") ?? [])].map(
+      (item) => item.textContent?.trim(),
+    );
+    expect(inMenuOrder).toEqual(labels);
+  });
+
   it("opens the workspace editor — name, icon, colour and storage — from its options menu", async () => {
     renderList(makeStore());
 
@@ -602,6 +646,7 @@ describe("WorkspaceList chat rows", () => {
       await screen.findByRole("button", { name: "Workspace chat" }),
     );
     expect(screen.getByTestId("location")).toHaveTextContent("/chat/chat-1");
+    asksForRightPanel();
 
     fireEvent.click(screen.getByRole("button", { name: "Detach chat" }));
     await waitFor(() =>
@@ -621,12 +666,12 @@ describe("WorkspaceList group colours", () => {
 
     await screen.findByText("Teaching");
     const row = rowFor();
-    // #7C3AED: 8% behind the name in light mode.
+    // #7C3AED: 6% behind the name in light mode.
     expect(row.style.getPropertyValue("--group-tint")).toBe(
-      "rgba(124, 58, 237, 0.08)",
+      "rgba(124, 58, 237, 0.06)",
     );
     expect(row.style.getPropertyValue("--group-tint-hover")).toBe(
-      "rgba(124, 58, 237, 0.12)",
+      "rgba(124, 58, 237, 0.09)",
     );
     // The name row carries no vertical rules; only the rows below are bracketed.
     expect(row.className).not.toContain("border-l-2");
@@ -978,6 +1023,7 @@ describe("WorkspaceList double click", () => {
       expect(screen.getByTestId("location")).toHaveTextContent(
         "/workspace/ws-1",
       );
+      asksForRightPanel();
     } finally {
       vi.useRealTimers();
     }

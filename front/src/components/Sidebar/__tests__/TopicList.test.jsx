@@ -37,6 +37,7 @@ const renderConversationRow = (conv, options = {}) => (
     data-leading-dash={options.leadingDash === true ? "true" : "false"}
     data-accent={options.accentHex ?? ""}
     data-flush={options.flush === true ? "true" : "false"}
+    data-neutral={options.neutral === true ? "true" : "false"}
   >
     {conv.title}
   </div>
@@ -187,12 +188,12 @@ describe("TopicList group colours", () => {
 
     const row = rowFor("Violet topic");
     expect(row).toHaveAttribute("role", "button");
-    // #7C3AED: 8% behind the name in light mode.
+    // #7C3AED: 6% behind the name in light mode.
     expect(row.style.getPropertyValue("--group-tint")).toBe(
-      "rgba(124, 58, 237, 0.08)",
+      "rgba(124, 58, 237, 0.06)",
     );
     expect(row.style.getPropertyValue("--group-tint-hover")).toBe(
-      "rgba(124, 58, 237, 0.12)",
+      "rgba(124, 58, 237, 0.09)",
     );
     // The name row carries no vertical rules; only the chats below it are bracketed.
     expect(row.className).not.toContain("border-l-2");
@@ -209,7 +210,7 @@ describe("TopicList group colours", () => {
 
     const row = rowFor("Violet topic");
     expect(row.style.getPropertyValue("--group-tint")).toBe(
-      "rgba(124, 58, 237, 0.12)",
+      "rgba(124, 58, 237, 0.09)",
     );
     expect(rulesFor().style.borderRightColor).toBe(
       "rgba(124, 58, 237, 0.5)",
@@ -244,6 +245,59 @@ describe("TopicList group colours", () => {
       "rgba(124, 58, 237, 0.16)",
     );
     expect(row.className).toContain("text-accent");
+  });
+
+  it("keeps Unsorted Chats on the sidebar's own colour, never at band strength", () => {
+    const looseChat = { id: "c9", title: "Loose chat", lastModified: 1 };
+    render(<TopicList {...baseProps} unsortedConversations={[looseChat]} />);
+
+    const row = rowFor("Unsorted Chats");
+    // Rest is the sidebar itself — no wash at all, so it cannot read as a band.
+    expect(row.style.getPropertyValue("--group-tint")).toBe(
+      "rgba(15, 23, 42, 0)",
+    );
+    expect(row.style.getPropertyValue("--group-tint-hover")).toBe(
+      "rgba(15, 23, 42, 0.008)",
+    );
+    // Its chats follow the same near-transparent scale, not a slate wash.
+    expect(screen.getByTestId("conv-c9")).toHaveAttribute(
+      "data-neutral",
+      "true",
+    );
+  });
+
+  it("draws Unsorted Chats' brackets as a trace instead of the slate default", () => {
+    const looseChat = { id: "c10", title: "Loose chat", lastModified: 1 };
+    render(<TopicList {...baseProps} unsortedConversations={[looseChat]} />);
+
+    const brackets = rowFor("Unsorted Chats").parentElement.querySelector(
+      "div.ml-2.border-x-2",
+    );
+    expect(brackets.style.borderLeftColor).toBe("rgba(15, 23, 42, 0.06)");
+    expect(brackets.style.borderRightColor).toBe("rgba(15, 23, 42, 0.06)");
+  });
+
+  it("gives Unsorted Chats no glyph slot at all, so its name can start at the icon", () => {
+    const looseChat = { id: "c11", title: "Loose chat", lastModified: 1 };
+    render(
+      <TopicList
+        {...baseProps}
+        topics={[{ id: "t5", name: "Violet topic", color: "violet" }]}
+        unsortedConversations={[looseChat]}
+      />,
+    );
+
+    const slotFor = (name) =>
+      rowFor(name).firstElementChild.querySelector("span.h-6.w-6");
+    // A colourless group has no colour to show, so it keeps no slot: the name
+    // moves into the space the icon would have taken.
+    expect(slotFor("Unsorted Chats")).toBeNull();
+    expect(rowFor("Unsorted Chats").querySelector(".rounded-full")).toBeNull();
+    expect(slotFor("Violet topic")).not.toBeNull();
+    // Its number still sits where a topic's number sits, under the ••• it lacks.
+    expect(
+      rowFor("Unsorted Chats").lastElementChild.querySelector("span.h-6.w-6"),
+    ).not.toBeNull();
   });
 });
 
@@ -328,6 +382,21 @@ describe("TopicList grouping headings", () => {
     expect(label.className).toContain("uppercase");
     expect(label.className).toContain("tracking-wider");
     expect(label.className).toContain("text-base-content/45");
+  });
+
+  it("sits tight under the CHATS band instead of floating below it", () => {
+    render(
+      <TopicList
+        {...baseProps}
+        topics={[{ id: "t7", name: "Named topic", color: "violet" }]}
+      />,
+    );
+
+    const heading = screen.getByText("Topics").parentElement;
+    // No padding of its own on top: the band's own 4px margin and the list's gap
+    // are the whole distance, so the label sits ~8px under the band, not 16px.
+    expect(heading.className).toContain("pt-0");
+    expect(heading.className).not.toContain("py-1");
   });
 
   it("folds every date bucket from the by-date heading", () => {
@@ -444,7 +513,7 @@ describe("TopicList row controls", () => {
     );
     expect(tail.className).not.toContain("gap-");
     // The band is the same 40px box as a workspace band.
-    expect(row.className).toContain("min-h-10");
+    expect(row.className).toContain("min-h-9");
     expect(row.className).toContain("px-1");
     expect(row.className).not.toContain("py-2");
   });

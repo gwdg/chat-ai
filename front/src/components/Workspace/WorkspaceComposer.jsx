@@ -60,7 +60,11 @@ export default function WorkspaceComposer({
       try {
         await createAttachedChat(workspaceId, conversation);
         navigate(`/chat/${conversation.id}`, {
-          state: { pendingPrompt: text, pendingAttachments: attachments },
+          state: {
+            pendingPrompt: text,
+            pendingAttachments: attachments,
+            openWorkspacePanel: true,
+          },
         });
       } catch (error) {
         sendingRef.current = false;

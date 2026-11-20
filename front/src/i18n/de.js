@@ -2254,7 +2254,7 @@ export default {
     git_log: "Git-Log",
     git_log_empty: "Keine Git-Log-Einträge gefunden.",
     root_empty_hint: "Erstellen Sie einen Ordner oder eine Datei oder hängen Sie einen Quellordner ein.",
-    edit_title: "Arbeitsbereich bearbeiten",
+    edit_title: "Arbeitsbereich verwalten",
     edit_storage: "Speicher bearbeiten",
     manage_workspace: "Arbeitsbereich verwalten",
     edit_storage_hint:
@@ -2452,6 +2452,10 @@ export default {
     update_error: "Der Arbeitsbereich konnte nicht gespeichert werden",
     not_found: "Arbeitsbereich nicht gefunden",
     files_title: "Arbeitsbereich-Dateien",
+    detach: "Abtrennen",
+    detach_hint: "Diesen Ordner vom Arbeitsbereich trennen",
+    detach_mount_only:
+      "Nur ein in den Arbeitsbereich eingebundener Ordner kann abgetrennt werden",
     storage_browser_private: "Privat für diesen Arbeitsbereich",
     repositories: "Repositories",
     repositories_count_one: "{{count}} Repository",

@@ -89,10 +89,15 @@ export default function MetaChangesPanel({
   activeTab: controlledTab,
   onActiveTabChange,
   revealSignal = 0,
+  expandSignal = 0,
 }) {
   const { t, i18n } = useTranslation();
   const [state, setState] = useState(() => readStored(scopeKey));
-  const [collapsed, setCollapsed] = useState(readCollapsed);
+  // A caller that arrives with an expand signal (a click that opened a workspace or
+  // one of its chats) starts unfolded, without waiting a frame in the rail.
+  const [collapsed, setCollapsed] = useState(() =>
+    expandSignal > 0 ? false : readCollapsed(),
+  );
   const [width, setWidth] = useState(readWidth);
   const [innerTab, setInnerTab] = useState("changes");
   const activeTab = controlledTab ?? innerTab;
@@ -118,6 +123,10 @@ export default function MetaChangesPanel({
   useEffect(() => {
     if (revealSignal) setCollapsed(false);
   }, [revealSignal]);
+
+  useEffect(() => {
+    if (expandSignal) setCollapsed(false);
+  }, [expandSignal]);
 
   useEffect(() => {
     if (typeof window.matchMedia !== "function") return undefined;

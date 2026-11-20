@@ -194,28 +194,41 @@ export default function UsageDetailsCard({
   const canExpand = metrics.length > 0;
   if (!metrics.length) return null;
 
+  // The whole block is the profile's way in; only the arrow is not, so it stops
+  // its own clicks. The label stays a real button for the keyboard.
   return (
-    <div className="w-full min-w-0 rounded-xl bg-base-200 px-3 py-2">
+    <div
+      className={`w-full min-w-0 rounded-xl bg-base-200/40 px-3 py-2 ${
+        onOpenLabel ? "cursor-pointer" : ""
+      }`}
+      onClick={onOpenLabel ?? undefined}
+    >
       {onOpenLabel ? (
         <div className="flex w-full items-center gap-1">
           <button
             type="button"
-            onClick={onOpenLabel}
-            className="min-w-0 flex-1 truncate text-left text-[11px] font-medium text-base-content hover:underline focus-visible:underline focus-visible:outline-none"
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpenLabel();
+            }}
+            className="min-w-0 flex-1 truncate text-left text-[11px] font-medium text-base-content focus-visible:underline focus-visible:outline-none"
           >
             {label}
           </button>
           {canExpand && (
             <button
               type="button"
-              onClick={() => setIsOpen((open) => !open)}
+              onClick={(event) => {
+                event.stopPropagation();
+                setIsOpen((open) => !open);
+              }}
               aria-expanded={isOpen}
               aria-label={t("user_settings.usage.expand")}
               title={t("user_settings.usage.expand")}
               className="shrink-0 rounded p-0.5 hover:bg-base-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
             >
               <ChevronDown
-                className={`h-3.5 w-3.5 text-base-content/50 transition-transform ${isOpen ? "" : "-rotate-90"}`}
+                className={`h-3.5 w-3.5 text-base-content/50 transition-transform ${isOpen ? "" : "rotate-180"}`}
                 aria-hidden="true"
               />
             </button>
@@ -233,7 +246,7 @@ export default function UsageDetailsCard({
           </span>
           {canExpand && (
             <ChevronDown
-              className={`h-3.5 w-3.5 shrink-0 text-base-content/50 transition-transform ${isOpen ? "" : "-rotate-90"}`}
+              className={`h-3.5 w-3.5 shrink-0 text-base-content/50 transition-transform ${isOpen ? "" : "rotate-180"}`}
               aria-hidden="true"
             />
           )}

@@ -27,6 +27,7 @@ import {
   toggleTopic,
 } from "../../Redux/reducers/interfaceSettingsSlice";
 import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
+import { SECTION_RHYTHM } from "../Sidebar/sectionSpacing";
 
 import { useConversationList } from "../../db";
 import {
@@ -63,7 +64,6 @@ import {
   groupRowTint,
   groupRule,
   topicColor,
-  withAlpha,
 } from "../Sidebar/topicColors";
 import {
   isChatDrag,
@@ -285,7 +285,7 @@ export default function WorkspaceList({
         workspaceId,
         getDefaultConversation(userSettings),
       );
-      navigate(`/chat/${id}`);
+      navigate(`/chat/${id}`, { state: { openWorkspacePanel: true } });
       onNavigate?.();
     } catch (error) {
       notifyError(error instanceof Error ? error.message : String(error));
@@ -448,7 +448,7 @@ export default function WorkspaceList({
                 handleWorkspaceDragLeave(event, workspace.id)
               }
               onDrop={(event) => handleWorkspaceDrop(event, workspace.id)}
-              className={`group flex min-h-10 cursor-pointer items-center rounded-lg px-1 transition bg-[var(--group-tint)] hover:bg-[var(--group-tint-hover)] ${
+              className={`group flex min-h-9 cursor-pointer items-center rounded-lg px-1 transition bg-[var(--group-tint)] hover:bg-[var(--group-tint-hover)] ${
                 active ? "text-accent" : "text-base-content"
               } ${
                 dragOverWorkspaceId === workspace.id
@@ -498,7 +498,10 @@ export default function WorkspaceList({
                     return;
                   }
                   scheduleOpenWorkspace(() => {
-                    navigate(`/workspace/${workspace.id}`);
+                    // Opening a workspace also unfolds its right-hand Files panel.
+                    navigate(`/workspace/${workspace.id}`, {
+                      state: { openWorkspacePanel: true },
+                    });
                     onNavigate?.();
                   });
                 }}
@@ -509,14 +512,8 @@ export default function WorkspaceList({
                 className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 self-stretch text-left"
               >
                 <span
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md"
-                  style={{
-                    color: workspaceColor.hex,
-                    backgroundColor: withAlpha(
-                      workspaceColor.hex,
-                      active ? 0.2 : 0.12,
-                    ),
-                  }}
+                  className="flex h-6 w-6 shrink-0 items-center justify-center"
+                  style={{ color: workspaceColor.hex }}
                 >
                   <WorkspaceIcon size={15} />
                 </span>
@@ -583,6 +580,20 @@ export default function WorkspaceList({
                         type="button"
                         onClick={() => {
                           close();
+                          openModal("workspaceEdit", {
+                            workspaceId: workspace.id,
+                          });
+                        }}
+                        data-guide="workspace-manage"
+                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
+                      >
+                        <Edit size={14} />
+                        {t("workspace.manage_workspace")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          close();
                           openModal("workspaceAttachAgentSession", {
                             workspaceId: workspace.id,
                             agents,
@@ -599,22 +610,9 @@ export default function WorkspaceList({
                         type="button"
                         onClick={() => {
                           close();
-                          openModal("workspaceEdit", {
-                            workspaceId: workspace.id,
-                          });
-                        }}
-                        data-guide="workspace-manage"
-                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
-                      >
-                        <Edit size={14} />
-                        {t("workspace.manage_workspace")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          close();
                           remove(workspace);
                         }}
+                        data-guide="delete-workspace-menu-item"
                         className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-error transition hover:bg-error/10"
                       >
                         <TrashCan size={14} />
@@ -670,7 +668,9 @@ export default function WorkspaceList({
                       <button
                         type="button"
                         onClick={() => {
-                          navigate(`/chat/${chat.id}`);
+                          navigate(`/chat/${chat.id}`, {
+                            state: { openWorkspacePanel: true },
+                          });
                           onNavigate?.();
                         }}
                         aria-current={chatActive ? "page" : undefined}
@@ -857,7 +857,7 @@ export default function WorkspaceList({
   }
 
   return (
-    <div className="pl-3 pr-2 pt-3 pb-1" data-guide="workspace-list">
+    <div className={`pl-3 pr-2 ${SECTION_RHYTHM}`} data-guide="workspace-list">
       {header}
       {body}
     </div>
