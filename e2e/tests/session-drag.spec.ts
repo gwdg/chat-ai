@@ -84,7 +84,7 @@ async function workspaceIdFromUrl(page: Page): Promise<string> {
 
 async function createWorkspace(page: Page, name: string): Promise<void> {
   await page.getByRole("button", { name: "New workspace" }).click();
-  await page.getByPlaceholder("e.g. Research").fill(name);
+  await page.getByRole("dialog").getByLabel("Workspace name").fill(name);
   await page
     .getByRole("button", { name: "Create workspace", exact: true })
     .click();
@@ -100,7 +100,9 @@ test.describe("agent sessions in the sidebar", () => {
         localStorage.setItem("chatai.agents", JSON.stringify([agent]));
         // The Agents section is hidden until advanced mode is on. Seed the
         // persisted Redux slice instead of walking the profile modal: the test
-        // is about the sidebar, and every setting keeps its default.
+        // is about the sidebar, and every setting keeps its default. The seed
+        // is deliberately one version behind, so the migration chain has to
+        // carry `advanced_mode` through instead of resetting the store.
         localStorage.setItem(
           "persist:root",
           JSON.stringify({

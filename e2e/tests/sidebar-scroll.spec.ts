@@ -98,7 +98,10 @@ test.describe("sidebar list scroll", () => {
     await seedTopics(page);
 
     await page.getByRole("button", { name: "New workspace" }).click();
-    await page.getByPlaceholder("e.g. Research").fill("Scroll workspace");
+    await page
+      .getByRole("dialog")
+      .getByLabel("Workspace name")
+      .fill("Scroll workspace");
     await page
       .getByRole("button", { name: "Create workspace", exact: true })
       .click();

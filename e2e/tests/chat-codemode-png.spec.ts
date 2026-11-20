@@ -42,19 +42,25 @@ test.describe("codemode", () => {
       {
         user: "The user creates a workspace named “Codemode workspace” in the sidebar.",
         system:
-          "The workspace page opens with its storage list and root folder. A workspace gives the agent file storage and write access.",
+          "The workspace page opens as its chat home, with the file tree in the right-hand panel. A workspace gives the agent file storage and write access.",
         shows:
-          "the workspace page for Codemode workspace with a storage list and a file browser",
+          "the workspace page for Codemode workspace with a chat home and a right-hand panel whose Files tab holds the file browser",
       },
       async () => {
         await openSidebar(page);
         await page.getByRole("button", { name: "New workspace" }).click();
-        await page.getByPlaceholder("e.g. Research").fill(WORKSPACE);
+        await page
+          .getByRole("dialog")
+          .getByLabel("Workspace name")
+          .fill(WORKSPACE);
         await page
           .getByRole("button", { name: "Create workspace", exact: true })
           .click();
         await expect(page).toHaveURL(/\/workspace\/[^/]+$/);
-        await expect(page.getByText("Available storage")).toBeVisible();
+        await page.getByRole("tab", { name: "Files" }).click();
+        await expect(
+          page.locator('[data-guide="workspace-files"]'),
+        ).toBeVisible();
       },
     );
 

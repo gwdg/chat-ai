@@ -1,5 +1,16 @@
 import { expect, openApp, openSidebar, test } from "./fixtures";
 
+const WORKSPACE_NAME = "Deterministic workspace";
+
+/**
+ * Create-workspace flow.
+ *
+ * The dialog itself owns the storage browser (the Sources rail and the
+ * Workspace Root browser); the page it opens is the workspace's chat home, with
+ * the file tree, the agent choices and the what's-new report in the right-hand
+ * panel. The scenario therefore checks both halves: the dialog before creating,
+ * and the panel afterwards.
+ */
 test.describe("workspace", () => {
   test("creates a workspace and opens its file browser", async ({
     page,
@@ -25,12 +36,21 @@ test.describe("workspace", () => {
       {
         user: "The user clicks New workspace.",
         system:
-          "A small form asks for a workspace name, pre-filled with a placeholder example.",
-        shows: "a create workspace form with an input for the workspace name",
+          "The create-workspace dialog opens: a name field, and below it the storage browser with a Sources rail on the left and the workspace root on the right.",
+        shows:
+          "a create workspace dialog with a workspace name field and its storage browser",
       },
       async () => {
         await page.getByRole("button", { name: "New workspace" }).click();
-        await expect(page.getByPlaceholder("e.g. Research")).toBeVisible();
+
+        const create = page.getByRole("dialog");
+        await expect(create.getByLabel("Workspace name")).toBeVisible();
+        await expect(
+          create.locator('[data-guide="workspace-sources"]'),
+        ).toBeVisible();
+        await expect(
+          create.locator('[data-guide="workspace-files"]'),
+        ).toBeVisible();
       },
     );
 
@@ -39,93 +59,62 @@ test.describe("workspace", () => {
       {
         user: "The user names it “Deterministic workspace” and confirms.",
         system:
-          "The workspace page opens with the workspace name at the top, a combined Sources card on the left, and the Workspace Root card on the right with Workspace Root, Preview and Agents tabs.",
+          "The workspace page opens as that workspace's chat home. Its right-hand panel offers the what's-new report, the Files tree and the Agents choices.",
         shows:
-          "the workspace page for Deterministic workspace with agent choices, a combined Sources card, and a Workspace Root file browser",
+          "the workspace page for Deterministic workspace with an empty chat list, a prompt box, and a right-hand panel with What's New, Files and Agents tabs",
       },
       async () => {
         await page
-          .getByPlaceholder("e.g. Research")
-          .fill("Deterministic workspace");
-        await page
-          .getByRole("button", { name: "Create workspace", exact: true })
-          .click();
+          .getByRole("dialog")
+          .getByLabel("Workspace name")
+          .fill(WORKSPACE_NAME);
+        await page.getByTestId("create-workspace-create").click();
 
         await expect(page).toHaveURL(/\/workspace\/[^/]+$/);
         await expect(
-          page.getByText("Deterministic workspace", { exact: true }).first(),
+          page.getByRole("heading", { name: WORKSPACE_NAME }),
+        ).toBeVisible();
+        await expect(
+          page.getByText("No chats in this workspace yet"),
         ).toBeVisible();
 
-        const rootPane = page.locator('[data-guide="workspace-root-pane"]');
-        const agentsTab = rootPane.getByRole("tab", { name: "Agents" });
+        // The storage no longer has a card of its own on the page: it is the
+        // Files tab of the shared right-hand panel.
+        await expect(
+          page.locator('[data-guide="meta-tab-strip"]'),
+        ).toBeVisible();
+        const filesTab = page.getByRole("tab", { name: "Files" });
+        const agentsTab = page.getByRole("tab", { name: "Agents" });
+        await expect(filesTab).toBeVisible();
         await expect(agentsTab).toBeVisible();
+        // The Preview tab only exists while it holds a file.
+        await expect(page.locator('[data-guide="meta-tab-preview"]')).toHaveCount(
+          0,
+        );
+        // The agent choices live in the panel, not in the page header.
         await expect(
           page.locator('header [data-guide="workspace-agent"]'),
         ).toHaveCount(0);
+
+        await filesTab.click();
+        await expect(
+          page.locator('[data-guide="workspace-storage-tree"]'),
+        ).toBeVisible();
+        await expect(
+          page.locator('[data-guide="workspace-files"]'),
+        ).toBeVisible();
+        await expect(
+          page.locator('[data-guide="workspace-upload"]'),
+        ).toBeVisible();
+
         await agentsTab.click();
-        const agentStrip = page.locator('[data-guide="workspace-agent"]');
-        await expect(agentStrip).toBeVisible();
+        const agentPanel = page.locator('[data-guide="workspace-agent"]');
+        await expect(agentPanel).toBeVisible();
         for (const guide of ["browser", "opencode", "remote"]) {
           await expect(
-            agentStrip.locator(`[data-guide="workspace-agent-${guide}"]`),
+            agentPanel.locator(`[data-guide="workspace-agent-${guide}"]`),
           ).toBeVisible();
         }
-        await rootPane.getByRole("tab", { name: "Workspace Root" }).click();
-
-        const leftColumn = page.locator(
-          '[data-guide="workspace-left-column"]',
-        );
-        for (const guide of ["device", "chats", "arcanas"]) {
-          await expect(
-            leftColumn.locator(`[data-guide="workspace-source-${guide}"]`),
-          ).toBeVisible();
-        }
-        await expect(page.getByText("Available storage")).toHaveCount(0);
-
-        const sourcePane = page.locator(
-          '[data-guide="workspace-source-pane"]',
-        );
-        await expect(sourcePane).toBeVisible();
-        await expect(
-          leftColumn.locator('[data-guide="workspace-source-pane"]'),
-        ).toHaveCount(1);
-        await expect(
-          sourcePane.getByText(/Pick a source on the left/),
-        ).toBeVisible();
-
-        await expect(rootPane).toBeVisible();
-        const cardRelations = await page.evaluate(() => {
-          const sources = document.querySelector(
-            '[data-guide="workspace-left-column"]',
-          );
-          const root = document.querySelector(
-            '[data-guide="workspace-root-pane"]',
-          );
-          return {
-            sameParent:
-              !!sources && !!root && sources.parentElement === root.parentElement,
-            rootInsideSources:
-              sources?.querySelector('[data-guide="workspace-root-pane"]') !==
-              null,
-            sourcesInsideRoot:
-              root?.querySelector('[data-guide="workspace-left-column"]') !==
-              null,
-          };
-        });
-        expect(cardRelations).toEqual({
-          sameParent: true,
-          rootInsideSources: false,
-          sourcesInsideRoot: false,
-        });
-        await expect(
-          rootPane.getByText("Workspace Root", { exact: true }),
-        ).toHaveCount(1);
-        await expect(
-          rootPane.getByText("Workspace Root", { exact: true }),
-        ).toBeVisible();
-        await expect(
-          rootPane.locator('[data-guide="workspace-files"]'),
-        ).toBeVisible();
       },
     );
 
@@ -135,13 +124,12 @@ test.describe("workspace", () => {
         user: "The user reopens the sidebar.",
         system:
           "The new workspace is listed alongside the chats, so it can be opened again later.",
-        shows:
-          "the sidebar listing the workspace Deterministic workspace",
+        shows: "the sidebar listing the workspace Deterministic workspace",
       },
       async () => {
         await openSidebar(page);
         await expect(
-          page.getByText("Deterministic workspace", { exact: true }).first(),
+          page.getByText(WORKSPACE_NAME, { exact: true }).first(),
         ).toBeVisible();
       },
     );
