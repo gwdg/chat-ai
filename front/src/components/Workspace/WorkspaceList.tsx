@@ -62,7 +62,7 @@ import { pinnedStateId } from "../Sidebar/pinnedState";
 import {
   chatRowTint,
   groupRowTint,
-  groupRule,
+  groupRuleGradient,
   topicColor,
 } from "../Sidebar/topicColors";
 import {
@@ -625,11 +625,27 @@ export default function WorkspaceList({
             </div>
             {expanded && expandable && (
               <div
-                className="ml-2 flex flex-col gap-1 border-x-2 px-2"
-                style={{
-                  borderColor: groupRule(workspaceColor.hex, isDark),
-                }}
+                data-guide="workspace-chats"
+                className="relative ml-2 mr-1 flex flex-col gap-1 px-2"
               >
+                <span
+                  aria-hidden="true"
+                  data-guide="group-rule"
+                  data-side="left"
+                  className="pointer-events-none absolute inset-y-0 left-0 w-0.5"
+                  style={{
+                    background: groupRuleGradient(workspaceColor.hex, isDark),
+                  }}
+                />
+                <span
+                  aria-hidden="true"
+                  data-guide="group-rule"
+                  data-side="right"
+                  className="pointer-events-none absolute inset-y-0 right-0 w-0.5"
+                  style={{
+                    background: groupRuleGradient(workspaceColor.hex, isDark),
+                  }}
+                />
                 {chats.map((chat) => {
                   const chatActive = location.pathname === `/chat/${chat.id}`;
                   const chatDragging = draggingConversationId === chat.id;

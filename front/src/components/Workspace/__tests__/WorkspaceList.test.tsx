@@ -619,8 +619,9 @@ describe("WorkspaceList chat rows", () => {
     // workspace list used to sit at `ml-8` with `gap-0.5`, which made every
     // row 24 pixels narrower.
     expect(list.className).toContain("ml-2");
+    expect(list.className).toContain("mr-1");
     expect(list.className).toContain("gap-1");
-    expect(list.className).toContain("border-x-2");
+    expect(list.className).not.toContain("border-x-2");
     expect(list.className).toContain("px-2");
     expect(list.className).not.toContain("ml-8");
     expect(list.className).not.toContain("gap-0.5");
@@ -659,7 +660,7 @@ describe("WorkspaceList group colours", () => {
   const rowFor = () =>
     screen.getByText("Teaching").closest("[style]") as HTMLElement;
   const rulesFor = () =>
-    screen.getByText("HPC agent").closest("[style]") as HTMLElement;
+    screen.getByText("HPC agent").closest('[data-guide="workspace-chats"]') as HTMLElement;
 
   it("washes the workspace name in its colour and brackets its chats on both sides", async () => {
     renderList(makeStore());
@@ -678,9 +679,18 @@ describe("WorkspaceList group colours", () => {
     expect(row.className).not.toContain("border-r-2");
 
     const rules = rulesFor();
-    expect(rules.className).toContain("border-x-2");
-    expect(rules.style.borderLeftColor).toBe("rgba(124, 58, 237, 0.35)");
-    expect(rules.style.borderRightColor).toBe("rgba(124, 58, 237, 0.35)");
+    // Bracketed left and right by a rule that fades down the list.
+    const strips = [
+      ...rules.querySelectorAll('[data-guide="group-rule"]'),
+    ] as HTMLElement[];
+    expect(strips.map((strip) => strip.dataset.side)).toEqual([
+      "left",
+      "right",
+    ]);
+    for (const strip of strips) {
+      expect(strip.style.background).toContain("linear-gradient");
+      expect(strip.style.background).toContain("rgba(124, 58, 237, 0.35)");
+    }
   });
 
   it("marks the open workspace with a stronger wash and an accent name", async () => {

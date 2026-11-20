@@ -98,6 +98,25 @@ export function groupRule(hex: string, isDark: boolean) {
 }
 
 /**
+ * The same two rules painted as a gradient: the group colour at full rule
+ * strength where the first chat starts, almost gone under the last one, so a
+ * long list is bracketed by light rather than by a hard bar.
+ */
+export function groupRuleGradient(hex: string, isDark: boolean) {
+  return `linear-gradient(to bottom, ${groupRule(hex, isDark)}, ${withAlpha(
+    hex,
+    isDark ? 0.14 : 0.07,
+  )})`;
+}
+
+/** The Unsorted Chats trace, fading out the same way. */
+export function neutralRuleGradient(isDark: boolean) {
+  return `linear-gradient(to bottom, ${neutralRule(isDark)}, rgba(${
+    isDark ? "148, 163, 184" : "15, 23, 42"
+  }, 0))`;
+}
+
+/**
  * Background of the Unsorted Chats group — the one group with no colour of its own.
  * Slate at a topic's strength reads as one of the grey section bands (CHATS,
  * WORKSPACES, AGENTS), so this row is the sidebar's own colour at rest, and the

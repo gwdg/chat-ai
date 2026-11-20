@@ -182,6 +182,9 @@ describe("TopicList group colours", () => {
   };
   const rowFor = (name) => screen.getByText(name).closest("[style]");
   const rulesFor = () => screen.getByTestId("conv-c2").parentElement;
+  const ruleStrips = (container) => [
+    ...container.querySelectorAll('[data-guide="group-rule"]'),
+  ];
 
   it("washes the group name in its colour and brackets its chats on both sides", () => {
     render(<TopicList {...props} variant="pinned" />);
@@ -200,9 +203,18 @@ describe("TopicList group colours", () => {
     expect(row.className).not.toContain("border-r-2");
 
     const rules = rulesFor();
-    expect(rules.className).toContain("border-x-2");
-    expect(rules.style.borderLeftColor).toBe("rgba(124, 58, 237, 0.35)");
-    expect(rules.style.borderRightColor).toBe("rgba(124, 58, 237, 0.35)");
+    // Bracketed left and right by a rule that fades down the list, not a solid bar.
+    expect(rules.className).not.toContain("border-x-2");
+    expect(rules.className).toContain("mr-1");
+    const strips = ruleStrips(rules);
+    expect(strips.map((strip) => strip.dataset.side)).toEqual([
+      "left",
+      "right",
+    ]);
+    for (const strip of strips) {
+      expect(strip.style.background).toContain("linear-gradient");
+      expect(strip.style.background).toContain("rgba(124, 58, 237, 0.35)");
+    }
   });
 
   it("strengthens the wash and the rules in dark mode", () => {
@@ -212,7 +224,7 @@ describe("TopicList group colours", () => {
     expect(row.style.getPropertyValue("--group-tint")).toBe(
       "rgba(124, 58, 237, 0.09)",
     );
-    expect(rulesFor().style.borderRightColor).toBe(
+    expect(ruleStrips(rulesFor())[1].style.background).toContain(
       "rgba(124, 58, 237, 0.5)",
     );
   });
@@ -271,10 +283,15 @@ describe("TopicList group colours", () => {
     render(<TopicList {...baseProps} unsortedConversations={[looseChat]} />);
 
     const brackets = rowFor("Unsorted Chats").parentElement.querySelector(
-      "div.ml-2.border-x-2",
+      '[data-guide="topic-chats"]',
     );
-    expect(brackets.style.borderLeftColor).toBe("rgba(15, 23, 42, 0.06)");
-    expect(brackets.style.borderRightColor).toBe("rgba(15, 23, 42, 0.06)");
+    const strips = ruleStrips(brackets);
+    expect(strips).toHaveLength(2);
+    for (const strip of strips) {
+      expect(strip.style.background).toBe(
+        "linear-gradient(rgba(15, 23, 42, 0.06), rgba(15, 23, 42, 0))",
+      );
+    }
   });
 
   it("gives Unsorted Chats no glyph slot at all, so its name can start at the icon", () => {

@@ -20,9 +20,9 @@ import {
 import type { FolderRow } from "../../db/dbTypes";
 import {
   groupRowTint,
-  groupRule,
+  groupRuleGradient,
   neutralRowTint,
-  neutralRule,
+  neutralRuleGradient,
   topicColor,
   withAlpha,
 } from "./topicColors";
@@ -493,11 +493,31 @@ export default function TopicList({
 
         {!isCollapsed && (
           <div
-            className="ml-2 border-x-2 px-2 flex flex-col gap-1"
-            style={{
-              borderColor: neutral ? neutralRule(isDark) : groupRule(hex, isDark),
-            }}
+            data-guide="topic-chats"
+            className="relative ml-2 mr-1 flex flex-col gap-1 px-2"
           >
+            <span
+              aria-hidden="true"
+              data-guide="group-rule"
+              data-side="left"
+              className="pointer-events-none absolute inset-y-0 left-0 w-0.5"
+              style={{
+                background: neutral
+                  ? neutralRuleGradient(isDark)
+                  : groupRuleGradient(hex, isDark),
+              }}
+            />
+            <span
+              aria-hidden="true"
+              data-guide="group-rule"
+              data-side="right"
+              className="pointer-events-none absolute inset-y-0 right-0 w-0.5"
+              style={{
+                background: neutral
+                  ? neutralRuleGradient(isDark)
+                  : groupRuleGradient(hex, isDark),
+              }}
+            />
             {count > 0 && (
               conversations.map((conv) =>
                 renderConversationRow(conv, {
