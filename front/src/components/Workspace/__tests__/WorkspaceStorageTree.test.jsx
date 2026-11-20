@@ -570,4 +570,31 @@ describe("WorkspaceStorageTree", () => {
       "false",
     );
   });
+
+  it("drops the wash when the empty part of the list is clicked", async () => {
+    h.listWorkspaceRoot.mockResolvedValue([
+      entry("/notes.txt", "file"),
+      entry("/Docs", "dir"),
+    ]);
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" />);
+    fireEvent.click(await screen.findByText("notes.txt"));
+    expect(rowFor("notes.txt")).toHaveClass("bg-accent/10");
+
+    fireEvent.click(document.querySelector('[data-guide="workspace-files"]'));
+
+    expect(rowFor("notes.txt")).not.toHaveClass("bg-accent/10");
+  });
+
+  it("keeps the wash when the click lands on the row itself", async () => {
+    h.listWorkspaceRoot.mockResolvedValue([entry("/notes.txt", "file")]);
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" />);
+    fireEvent.click(await screen.findByText("notes.txt"));
+
+    fireEvent.click(document.querySelector('[data-guide="workspace-files"]'));
+    fireEvent.click(screen.getByText("notes.txt"));
+
+    expect(rowFor("notes.txt")).toHaveClass("bg-accent/10");
+  });
 });

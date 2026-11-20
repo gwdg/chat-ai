@@ -149,6 +149,7 @@ function StorageRow({ node, depth, api }) {
   return (
     <div>
       <div
+        data-guide="workspace-row"
         className={`group flex items-center gap-1 rounded pr-1 text-[11px] ${
           isSelected ? "bg-accent/10" : "hover:bg-base-200/70"
         }`}
@@ -797,6 +798,12 @@ export default function WorkspaceStorageTree({
         <div
           data-guide="workspace-files"
           className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-1 py-1"
+          onClick={(event) => {
+            // A click on the empty part of the list drops the wash; a click inside a
+            // row is that row's business.
+            if (event.target.closest('[data-guide="workspace-row"]')) return;
+            if (selected) setSelected(null);
+          }}
         >
           {showLoading && (
             <div className="px-2 py-1 text-[10px] text-base-content/40">
