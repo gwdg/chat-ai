@@ -23,10 +23,20 @@ describe("sidebar Help/Meta chat row", () => {
     expect(row).toMatch(/className={`flex min-h-8 w-full/);
   });
 
+  it("starts its glyph where the New Chat plus starts", () => {
+    const row = metaRow();
+
+    expect(row).toContain("pl-4 pr-1.5");
+    expect(source).toContain(
+      'className="flex items-center justify-between gap-1 px-3 pb-0"',
+    );
+  });
+
   it("keeps its own style", () => {
     const row = metaRow();
 
-    expect(row).toContain("rounded-lg px-1.5 py-1 text-left text-xs");
+    expect(row).toContain("gap-1.5 rounded-lg py-1");
+    expect(row).toContain("text-left text-xs");
     expect(row).toContain("hover:bg-base-200 hover:text-base-content");
     expect(row).toContain("<ChattyLogo");
   });

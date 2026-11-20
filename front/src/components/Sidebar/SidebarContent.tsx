@@ -951,7 +951,7 @@ export default function SidebarContent({
               type="button"
               onClick={() => navigate("/meta")}
               data-guide="meta-chat"
-              className={`flex min-h-8 w-full items-center gap-1.5 rounded-lg px-1.5 py-1 text-left text-xs transition ${
+              className={`flex min-h-8 w-full items-center gap-1.5 rounded-lg py-1 pl-4 pr-1.5 text-left text-xs transition ${
                 location.pathname === "/meta"
                   ? "bg-accent/10 text-accent"
                   : "text-base-content/80 hover:bg-base-200 hover:text-base-content"
@@ -966,7 +966,7 @@ export default function SidebarContent({
         </div>
       )}
 
-      <div className="flex items-center justify-between gap-1 px-3 pb-2">
+      <div className="flex items-center justify-between gap-1 px-3 pb-0">
         <NewChatButton
           topicId={localState?.folderId}
           variant={"sidebar"}
