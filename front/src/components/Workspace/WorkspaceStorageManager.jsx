@@ -1,11 +1,15 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import WorkspaceSourceBrowser from "./WorkspaceSourceBrowser";
 import WorkspaceSourcesPanel from "./WorkspaceSourcesPanel";
 import WorkspaceStorageTree from "./WorkspaceStorageTree";
 import {
+  detachWorkspaceChat,
+  removeWorkspaceMount,
   useDeviceLocalSources,
+  useWorkspaceChats,
+  useWorkspaceMounts,
   useWorkspaceSources,
 } from "../../db/workspaceDb";
 import { useModal } from "../../modals/ModalContext";
@@ -29,6 +33,45 @@ export default function WorkspaceStorageManager({ workspaceId, onOpenAddSource }
       ...deviceSources.filter((source) => !ids.has(source.id)),
     ];
   }, [workspaceSources, deviceSources]);
+
+  const mounts = useWorkspaceMounts(workspaceId ?? undefined);
+  const workspaceChats = useWorkspaceChats(workspaceId ?? undefined);
+
+  // An item is "in the workspace" when this workspace holds a mount for exactly
+  // that folder — a folder mounted in another workspace is still addable here.
+  const isInWorkspace = useCallback(
+    (selection) => {
+      if (!workspaceId) return false;
+      if (selection.sourceKind === "chat") {
+        return workspaceChats.some(
+          (chat) => chat.conversationId === selection.conversationId,
+        );
+      }
+      return mounts.some(
+        (mount) =>
+          mount.sourceId === selection.sourceId &&
+          mount.sourcePath === selection.path,
+      );
+    },
+    [workspaceId, mounts, workspaceChats],
+  );
+
+  // Unmounting only drops the workspace's link: the source row (and the browser's
+  // permission for the folder) stays, so the folder remains under Your Device.
+  const unmountSelection = async (selection) => {
+    if (!workspaceId || selection.length === 0) return;
+    for (const item of selection) {
+      if (item.sourceKind === "chat" && item.conversationId) {
+        await detachWorkspaceChat(workspaceId, item.conversationId);
+        continue;
+      }
+      const mount = mounts.find(
+        (row) =>
+          row.sourceId === item.sourceId && row.sourcePath === item.path,
+      );
+      if (mount) await removeWorkspaceMount(workspaceId, mount.id);
+    }
+  };
 
   const addSelection = async (selection) => {
     if (!workspaceId || selection.length === 0) return;
@@ -111,6 +154,8 @@ export default function WorkspaceStorageManager({ workspaceId, onOpenAddSource }
             target={target}
             onTargetChange={setTarget}
             onAddToWorkspace={addSelection}
+            onUnmountSelection={unmountSelection}
+            isInWorkspace={isInWorkspace}
             busy={adding}
             onAddDeviceFolder={() => openAdd("local")}
             onMountDeviceFolder={mountDroppedFolder}

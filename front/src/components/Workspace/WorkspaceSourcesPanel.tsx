@@ -12,6 +12,7 @@ import {
 import { useConversationList } from "../../db";
 import type { WorkspaceSourceRow } from "../../db/dbTypes";
 import Tooltip from "../Others/Tooltip";
+import { sourcesProblem } from "../../workspace/sourceStatus";
 import type { QuotaInfo } from "../../workspace/providers/types";
 import { formatBytes } from "../../utils/formatBytes";
 import {
@@ -137,30 +138,7 @@ export default function WorkspaceSourcesPanel({
 
   // A source that failed to connect (or lost its permission) cannot be browsed
   // right now, so its drive card carries a red exclamation with the reason.
-  const brokenReason = (rows: WorkspaceSourceRow[]) => {
-    const bad = rows.find(
-      (row) => row.status === "error" || row.status === "needs-permission",
-    );
-    if (!bad) return undefined;
-    const detail = bad.error?.trim();
-    if (detail && /failed to fetch|networkerror|load failed|network error/i.test(detail)) {
-      return t("workspace.source_browser.source_unreachable", {
-        name: bad.label,
-      });
-    }
-    if (bad.status === "needs-permission") {
-      const base = t("workspace.source_browser.source_needs_permission", {
-        name: bad.label,
-      });
-      return detail ? `${base} ${detail}` : base;
-    }
-    return detail
-      ? t("workspace.source_browser.source_error_detail", {
-          name: bad.label,
-          detail,
-        })
-      : t("workspace.source_browser.source_broken", { name: bad.label });
-  };
+  const brokenReason = (rows: WorkspaceSourceRow[]) => sourcesProblem(rows, t);
   const chatSources = sources.filter((source) => source.kind === "chat");
 
   return (

@@ -2397,6 +2397,10 @@ export default {
       mcp: "MCP",
       add_to_workspace: "Zum Arbeitsbereich hinzufügen",
       add_to_workspace_count: "Zum Arbeitsbereich hinzufügen ({{count}})",
+      unmount: "Aushängen",
+      unmount_count: "Aushängen ({{count}})",
+      unmount_hint:
+        "Aus dem Arbeitsbereich entfernen — der Ordner selbst bleibt auf diesem Gerät.",
       selected_one: "{{count}} ausgewählt",
       selected_many: "{{count}} ausgewählt",
       empty: "Hier ist noch nichts",

@@ -2365,6 +2365,10 @@ export default {
       mcp: "MCP",
       add_to_workspace: "Add to Workspace",
       add_to_workspace_count: "Add to Workspace ({{count}})",
+      unmount: "Unmount",
+      unmount_count: "Unmount ({{count}})",
+      unmount_hint:
+        "Remove from the workspace — the folder itself stays on your device.",
       selected_one: "{{count}} selected",
       selected_many: "{{count}} selected",
       empty: "Nothing here yet",
