@@ -87,7 +87,6 @@ export default function WorkspaceStorageManager({ workspaceId, onOpenAddSource }
             activeTarget={target}
             onOpenTarget={setTarget}
             onAddSource={() => openAdd()}
-            onAddDeviceFolder={() => openAdd("local")}
           />
         </aside>
         <div

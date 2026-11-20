@@ -239,6 +239,23 @@ describe("WorkspaceSourceBrowser", () => {
     expect(addButton()).toBeDisabled();
   });
 
+  it("locks the rows inside a read-only source", async () => {
+    mocks.sources = [{ ...localSource, readOnly: true }, arcanaSource];
+    mocks.providers = new Map([
+      ["local-1", localProvider],
+      ["arcana-1", arcanaProvider],
+    ]);
+    renderBrowser({ target: { drive: "device" } });
+
+    fireEvent.click(await screen.findByText("Project"));
+    await screen.findByText("docs");
+
+    const docsRow = screen.getByText("docs").closest(".group");
+    expect(within(docsRow).getByLabelText("Read-only")).toBeInTheDocument();
+    const notesRow = screen.getByText("notes.txt").closest(".group");
+    expect(within(notesRow).getByLabelText("Read-only")).toBeInTheDocument();
+  });
+
   it("drills into a source and adds the selected folder to the workspace", async () => {
     renderBrowser({ target: { drive: "device" } });
 

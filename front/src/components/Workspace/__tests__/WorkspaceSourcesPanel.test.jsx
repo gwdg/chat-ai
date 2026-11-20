@@ -14,7 +14,6 @@ const mocks = vi.hoisted(() => ({
   conversations: [],
   onOpenTarget: vi.fn(),
   onAddSource: vi.fn(),
-  onAddDeviceFolder: vi.fn(),
 }));
 
 vi.mock("../../../workspace/useWorkspaceProviders", () => ({
@@ -112,7 +111,6 @@ const renderPanel = (props = {}) =>
       sources={mocks.sources}
       onOpenTarget={mocks.onOpenTarget}
       onAddSource={mocks.onAddSource}
-      onAddDeviceFolder={mocks.onAddDeviceFolder}
       {...props}
     />,
   );
@@ -129,7 +127,6 @@ beforeEach(() => {
   mocks.conversations = [{ id: "conv-uuid-1", title: "Planning chat" }];
   mocks.onOpenTarget.mockReset();
   mocks.onAddSource.mockReset();
-  mocks.onAddDeviceFolder.mockReset();
   localProvider.quota.mockReset();
   localProvider.quota.mockResolvedValue({
     usage: 512 * 1024,
@@ -329,15 +326,8 @@ describe("WorkspaceSourcesPanel", () => {
     await act(async () => {});
   });
 
-  it("fires the add-folder row", async () => {
+  it("offers no add-folder row under the drives", async () => {
     renderPanel();
-    fireEvent.click(drive("workspace-sources-add-device-folder"));
-    expect(mocks.onAddDeviceFolder).toHaveBeenCalledTimes(1);
-    await act(async () => {});
-  });
-
-  it("omits the add-folder row without a handler", async () => {
-    renderPanel({ onAddDeviceFolder: undefined });
     expect(drive("workspace-sources-add-device-folder")).toBeNull();
     await act(async () => {});
   });

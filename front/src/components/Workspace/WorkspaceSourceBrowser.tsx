@@ -300,6 +300,24 @@ export default function WorkspaceSourceBrowser({
   const targetSourceId =
     target && target.drive === "device" ? target.sourceId : undefined;
 
+  // Everything listed inside a read-only source is read-only too, so those
+  // rows carry the same lock the workspace tree shows.
+  const viewReadOnly = useMemo(() => {
+    if (!view) return false;
+    if (view.drive === "device") {
+      return view.level === "source"
+        ? localById.get(view.sourceId)?.readOnly === true
+        : false;
+    }
+    if (view.drive === "mcp") {
+      return view.level === "drives"
+        ? false
+        : mcpById.get(view.sourceId)?.readOnly === true;
+    }
+    if (view.drive === "arcanas") return arcanaSource?.readOnly === true;
+    return false;
+  }, [view, localById, mcpById, arcanaSource]);
+
   useEffect(() => {
     setPath("/");
     setSelected(new Map());
@@ -1023,6 +1041,15 @@ export default function WorkspaceSourceBrowser({
                         <span className="min-w-0 flex-1 truncate text-[11px] text-base-content">
                           {row.name}
                         </span>
+                        {viewReadOnly && (
+                          <span
+                            className="shrink-0 text-warning"
+                            title={t("workspace.mount_read_only")}
+                            aria-label={t("workspace.mount_read_only")}
+                          >
+                            <Locked size={11} />
+                          </span>
+                        )}
                         <span className="shrink-0 rounded-full border border-base-300 px-1.5 py-px text-[9px] font-medium tracking-wide text-base-content/55">
                           {badgeForEntry()}
                         </span>

@@ -7,6 +7,7 @@ import {
   DocumentAdd,
   Folder,
   FolderAdd,
+  Locked,
   Renew,
   TrashCan,
   Upload,
@@ -91,6 +92,7 @@ function StorageRow({ node, depth, api, reloadParent }) {
 
   const badge = api.badgeFor(node);
   const label = api.labelFor(node);
+  const readOnly = api.isReadOnly?.(node) ?? false;
   const deletable =
     node.context === null && node.entry.local === true && !node.entry.mount;
   const childDepth = depth + 1;
@@ -133,6 +135,15 @@ function StorageRow({ node, depth, api, reloadParent }) {
           {badge && (
             <span className="shrink-0 rounded-full border border-base-300 px-1.5 py-px text-[9px] font-medium tracking-wide text-base-content/55">
               {badge}
+            </span>
+          )}
+          {readOnly && (
+            <span
+              className="shrink-0 text-warning"
+              title={t("workspace.mount_read_only")}
+              aria-label={t("workspace.mount_read_only")}
+            >
+              <Locked size={11} />
             </span>
           )}
         </button>
@@ -333,6 +344,22 @@ export default function WorkspaceStorageTree({
       .sort((a, b) => b.path.length - a.path.length)[0];
   }, []);
 
+  // A row is read-only when its own entry says so, when the mount it sits under
+  // is read-only, or when its source was switched to read-only. The tree only
+  // reports that state; the toggle lives on the source card in the dialog.
+  const readOnlyFor = useCallback(
+    (node) => {
+      if (node.entry?.readOnly === true) return true;
+      const mount =
+        node.context?.mount ??
+        node.entry?.mount ??
+        (node.entry?.path ? mountForPath(node.entry.path) : undefined);
+      if (mount?.readOnly === true) return true;
+      return mount ? sourceForMount(mount)?.readOnly === true : false;
+    },
+    [mountForPath, sourceForMount],
+  );
+
   const badgeFor = useCallback(
     (node) => {
       if (node.context) {
@@ -508,6 +535,7 @@ export default function WorkspaceStorageTree({
     labelFor,
     loadChildren,
     selectTarget,
+    isReadOnly: readOnlyFor,
     onDelete: rootProvider ? requestDelete : undefined,
   };
 

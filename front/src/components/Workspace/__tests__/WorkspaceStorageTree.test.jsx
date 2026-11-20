@@ -213,4 +213,53 @@ describe("WorkspaceStorageTree", () => {
       within(rowFor("Phone")).queryByRole("button", { name: "Delete" }),
     ).toBeNull();
   });
+
+  it("locks a row that sits under a read-only mount", async () => {
+    const readOnlyMount = { ...mountRow, readOnly: true };
+    h.sources = [{ id: "dev-1", kind: "local", label: "Phone", readOnly: false }];
+    h.mounts = [readOnlyMount];
+    h.providers = new Map([["dev-1", { status: "connected" }]]);
+    h.listWorkspaceRoot.mockResolvedValue([
+      entry("/Phone", "dir", { local: false, mount: readOnlyMount }),
+    ]);
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" />);
+
+    await screen.findByText("Phone");
+    expect(
+      within(rowFor("Phone")).getByLabelText("Read-only"),
+    ).toBeInTheDocument();
+  });
+
+  it("locks every row of a read-only source", async () => {
+    const provider = {
+      status: "connected",
+      connect: vi.fn(async () => {}),
+      list: vi.fn(async () => ({
+        entries: [
+          {
+            sourceId: "dev-1",
+            path: "/Photos/a.jpg",
+            name: "a.jpg",
+            kind: "file",
+          },
+        ],
+      })),
+    };
+    h.sources = [{ id: "dev-1", kind: "local", label: "Phone", readOnly: true }];
+    h.mounts = [mountRow];
+    h.providers = new Map([["dev-1", provider]]);
+    h.listWorkspaceRoot.mockResolvedValue([
+      entry("/Phone", "dir", { local: false, mount: mountRow }),
+    ]);
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" />);
+
+    fireEvent.click(await screen.findByText("Phone"));
+
+    await screen.findByText("a.jpg");
+    expect(
+      within(rowFor("a.jpg")).getByLabelText("Read-only"),
+    ).toBeInTheDocument();
+  });
 });

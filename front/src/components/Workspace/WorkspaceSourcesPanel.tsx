@@ -92,14 +92,12 @@ export default function WorkspaceSourcesPanel({
   activeTarget = null,
   onOpenTarget,
   onAddSource,
-  onAddDeviceFolder,
   className = "",
 }: {
   sources: WorkspaceSourceRow[];
   activeTarget?: SourceTarget | null;
   onOpenTarget: (target: SourceTarget) => void;
   onAddSource: () => void;
-  onAddDeviceFolder?: () => void;
   className?: string;
 }) {
   const { t } = useTranslation();
@@ -219,19 +217,6 @@ export default function WorkspaceSourcesPanel({
           />
         )}
 
-        {onAddDeviceFolder && (
-          <button
-            type="button"
-            data-guide="workspace-sources-add-device-folder"
-            onClick={onAddDeviceFolder}
-            className="flex w-full min-w-0 items-center gap-2 rounded-lg border border-dashed border-base-300 px-2 py-1.5 text-left text-[11px] font-medium text-base-content/70 transition hover:border-accent/40 hover:bg-base-200/60"
-          >
-            <Plus size={14} className="shrink-0" />
-            <span className="min-w-0 truncate">
-              {t("workspace.source_browser.add_device_folder")}
-            </span>
-          </button>
-        )}
       </div>
     </section>
   );
