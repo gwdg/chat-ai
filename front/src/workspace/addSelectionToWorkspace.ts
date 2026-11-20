@@ -1,6 +1,7 @@
 import type { WorkspaceFileEntry, WorkspaceSourceRow } from "../db/dbTypes";
 import {
   addWorkspaceMount,
+  adoptLocalSource,
   attachWorkspaceChat,
   listWorkspaceMounts,
   listWorkspaceSources,
@@ -66,9 +67,11 @@ export async function addSelectionToWorkspace(
   } catch {
     // Without the mount list, collisions are only tracked within this batch.
   }
-  let sources: Promise<WorkspaceSourceRow[]> | null = null;
-  const loadSources = () =>
-    (sources ??= listWorkspaceSources([workspaceId]));
+  let sources: WorkspaceSourceRow[] | null = null;
+  const loadSources = async () => {
+    sources ??= await listWorkspaceSources([workspaceId]);
+    return sources;
+  };
   let rootProvider: FileProvider | null = null;
   const getRootProvider = () => {
     rootProvider ??= createWorkspaceRootProvider(workspaceId);
@@ -117,41 +120,57 @@ export async function addSelectionToWorkspace(
     return createProvider(source);
   };
 
+  // A folder that was mounted in another workspace arrives here as a device-wide
+  // entry: give this workspace its own source row for the same folder first, so
+  // the mount (and any file copy) reads from a source this workspace owns.
+  const ownSelection = async (
+    selection: WorkspaceSelection,
+  ): Promise<WorkspaceSelection> => {
+    if (selection.sourceKind !== "local") return selection;
+    const known = await loadSources();
+    if (known.some((row) => row.id === selection.sourceId)) return selection;
+    const adoptedId = await adoptLocalSource(workspaceId, selection.sourceId);
+    if (adoptedId === selection.sourceId) return selection;
+    sources = null;
+    return { ...selection, sourceId: adoptedId };
+  };
+
   for (const item of selection) {
     try {
-      if (item.kind === "dir" && isChatRoot(item)) {
-        await attachWorkspaceChat(workspaceId, item.conversationId!);
+      const entry = await ownSelection(item);
+      if (entry.kind === "dir" && isChatRoot(entry)) {
+        await attachWorkspaceChat(workspaceId, entry.conversationId!);
         mounted += 1;
       } else if (
-        item.kind === "dir" &&
-        (item.sourceKind === "local" ||
-          item.sourceKind === "arcana-filesystem" ||
-          item.sourceKind === "arcana" ||
-          item.sourceKind === "mcp")
+        entry.kind === "dir" &&
+        (entry.sourceKind === "local" ||
+          entry.sourceKind === "arcana-filesystem" ||
+          entry.sourceKind === "arcana" ||
+          entry.sourceKind === "mcp")
       ) {
         await addWorkspaceMount({
           workspaceId,
-          sourceId: item.sourceId,
-          sourcePath: item.path,
-          path: uniqueMountPath(item),
+          sourceId: entry.sourceId,
+          sourcePath: entry.path,
+          path: uniqueMountPath(entry),
         });
         mounted += 1;
       } else {
-        const from = await providerFor(item);
+        const from = await providerFor(entry);
         await connectIfNeeded(from);
         const to = getRootProvider();
         await connectIfNeeded(to);
-        const entry: WorkspaceFileEntry = {
+        const copyEntry: WorkspaceFileEntry = {
           sourceId: from.sourceId,
-          path: item.path,
-          name: item.name,
-          kind: item.kind,
+          path: entry.path,
+          name: entry.name,
+          kind: entry.kind,
         };
         await runTransfer({
           workspaceId,
           from,
           to,
-          entry,
+          entry: copyEntry,
           targetDir: "/",
           strategy: "copy",
         });

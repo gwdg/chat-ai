@@ -57,7 +57,7 @@ export async function addLocalSource({
     workspaceId,
     kind: "local",
     label,
-    config: { handleKey: "" },
+    config: { handleKey: "", folderName: handle.name },
     capabilities: defaultCapabilities("local"),
     status: "offline",
     readOnly,

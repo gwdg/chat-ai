@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import WorkspaceSourceBrowser from "./WorkspaceSourceBrowser";
 import WorkspaceSourcesPanel from "./WorkspaceSourcesPanel";
 import WorkspaceStorageTree from "./WorkspaceStorageTree";
-import { useWorkspaceSources } from "../../db/workspaceDb";
+import {
+  useDeviceLocalSources,
+  useWorkspaceSources,
+} from "../../db/workspaceDb";
 import { useModal } from "../../modals/ModalContext";
 import { addSelectionToWorkspace } from "../../workspace/addSelectionToWorkspace";
 import { addLocalSource, pickDirectory } from "../../workspace/localWorkspace";
@@ -15,7 +18,17 @@ export default function WorkspaceStorageManager({ workspaceId, onOpenAddSource }
   const [target, setTarget] = useState(null);
   const [adding, setAdding] = useState(false);
   const [addProgress, setAddProgress] = useState(null);
-  const sources = useWorkspaceSources(workspaceId ?? undefined);
+  const workspaceSources = useWorkspaceSources(workspaceId ?? undefined);
+  // "Your Device" lists every folder this browser has been granted, not only the
+  // ones already mounted in this workspace.
+  const deviceSources = useDeviceLocalSources(workspaceId ?? undefined);
+  const sources = useMemo(() => {
+    const ids = new Set(workspaceSources.map((source) => source.id));
+    return [
+      ...workspaceSources,
+      ...deviceSources.filter((source) => !ids.has(source.id)),
+    ];
+  }, [workspaceSources, deviceSources]);
 
   const addSelection = async (selection) => {
     if (!workspaceId || selection.length === 0) return;

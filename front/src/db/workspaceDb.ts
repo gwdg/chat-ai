@@ -1,4 +1,5 @@
 import { useLiveQuery } from "dexie-react-hooks";
+import { useEffect, useState } from "react";
 import i18n from "../i18n";
 import { isArcanasEnabled } from "../utils/modules";
 
@@ -529,6 +530,147 @@ export function useWorkspaceSources(workspaceId?: string): WorkspaceSourceRow[] 
       [] as WorkspaceSourceRow[],
     ) ?? []
   );
+}
+
+const localFolderName = (source: WorkspaceSourceRow): string => {
+  const named = (source.config as { folderName?: unknown } | undefined)
+    ?.folderName;
+  const name = typeof named === "string" ? named.trim() : "";
+  return name || source.label;
+};
+
+const sameLocalFolder = async (
+  left: WorkspaceSourceRow,
+  right: WorkspaceSourceRow,
+  handles: Map<string, FileSystemDirectoryHandle | undefined>,
+): Promise<boolean> => {
+  if (left.id === right.id) return true;
+  if (localFolderName(left) !== localFolderName(right)) return false;
+  const leftHandle = handles.get(left.id);
+  const rightHandle = handles.get(right.id);
+  if (!leftHandle || !rightHandle) return true;
+  if (!leftHandle.isSameEntry) return true;
+  try {
+    return await leftHandle.isSameEntry(rightHandle);
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * One row per local folder: the same folder mounted in several workspaces is one
+ * entry, while two different folders that happen to share a name stay apart.
+ */
+export async function distinctLocalSources(
+  rows: WorkspaceSourceRow[],
+  preferredWorkspaceId?: string,
+): Promise<WorkspaceSourceRow[]> {
+  const handles = new Map<string, FileSystemDirectoryHandle | undefined>();
+  for (const row of rows) handles.set(row.id, await getSourceHandle(row.id));
+  return groupLocalSources(rows, handles, preferredWorkspaceId);
+}
+
+/** The dedupe step of `distinctLocalSources`, with the handles already loaded. */
+export async function groupLocalSources(
+  rows: WorkspaceSourceRow[],
+  handles: Map<string, FileSystemDirectoryHandle | undefined>,
+  preferredWorkspaceId?: string,
+): Promise<WorkspaceSourceRow[]> {
+  const ordered = [...rows].sort((left, right) => {
+    const leftPreferred = left.workspaceId === preferredWorkspaceId ? 1 : 0;
+    const rightPreferred = right.workspaceId === preferredWorkspaceId ? 1 : 0;
+    if (leftPreferred !== rightPreferred) return rightPreferred - leftPreferred;
+    return right.lastModified - left.lastModified;
+  });
+  const distinct: WorkspaceSourceRow[] = [];
+  for (const row of ordered) {
+    let duplicate = false;
+    for (const kept of distinct) {
+      if (await sameLocalFolder(kept, row, handles)) {
+        duplicate = true;
+        break;
+      }
+    }
+    if (!duplicate) distinct.push(row);
+  }
+  return distinct;
+}
+
+/** Every local folder this browser has been granted, across all workspaces. */
+export async function listDeviceLocalSources(): Promise<WorkspaceSourceRow[]> {
+  const rows = await db.workspace_sources
+    .where("kind")
+    .equals("local")
+    .toArray();
+  const deviceId = getDeviceId();
+  return rows.filter((row) => !row.deviceId || row.deviceId === deviceId);
+}
+
+/**
+ * Gives the workspace its own source row for a local folder that was mounted
+ * elsewhere, reusing the row when the folder is already there.
+ */
+export async function adoptLocalSource(
+  workspaceId: string,
+  sourceId: string,
+): Promise<string> {
+  const source = await db.workspace_sources.get(sourceId);
+  if (!source) throw new Error(`Source not found: ${sourceId}`);
+  if (source.workspaceId === workspaceId) return source.id;
+  if (source.kind !== "local") return source.id;
+  const siblings = await db.workspace_sources
+    .where("workspaceId")
+    .equals(workspaceId)
+    .toArray();
+  const handle = await getSourceHandle(sourceId);
+  for (const sibling of siblings) {
+    if (sibling.kind !== "local") continue;
+    const handles = new Map([
+      [sibling.id, await getSourceHandle(sibling.id)],
+      [source.id, handle],
+    ]);
+    if (await sameLocalFolder(sibling, source, handles)) return sibling.id;
+  }
+  return addSource({
+    workspaceId,
+    kind: "local",
+    label: source.label,
+    config: {
+      ...(source.config as Record<string, unknown>),
+    } as WorkspaceSourceRow["config"],
+    capabilities: source.capabilities,
+    readOnly: source.readOnly === true,
+    status: "offline",
+    handle: handle ?? undefined,
+  });
+}
+
+/**
+ * The device-wide folder list for the storage rail: every folder ever mounted on
+ * this device, one row per folder, favouring the caller's own workspace.
+ */
+export function useDeviceLocalSources(
+  preferredWorkspaceId?: string,
+): WorkspaceSourceRow[] {
+  const rows =
+    useLiveQuery(
+      () => db.workspace_sources.where("kind").equals("local").toArray(),
+      [],
+      [] as WorkspaceSourceRow[],
+    ) ?? [];
+  const [distinct, setDistinct] = useState<WorkspaceSourceRow[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    const deviceId = getDeviceId();
+    const mine = rows.filter((row) => !row.deviceId || row.deviceId === deviceId);
+    void distinctLocalSources(mine, preferredWorkspaceId).then((list) => {
+      if (!cancelled) setDistinct(list);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [rows, preferredWorkspaceId]);
+  return distinct;
 }
 
 export type AddSourceInput = {

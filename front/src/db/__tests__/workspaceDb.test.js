@@ -7,6 +7,7 @@ import {
   addFileReference,
   addSource,
   addWorkspaceMount,
+  adoptLocalSource,
   attachWorkspaceChat,
   attachWorkspaceAgent,
   attachWorkspaceAgentSession,
@@ -16,12 +17,15 @@ import {
   detachWorkspaceChat,
   detachWorkspaceAgent,
   detachWorkspaceAgentSession,
+  distinctLocalSources,
+  groupLocalSources,
   ensureBrowserSource,
   ensureChatStorageSource,
   getChatWorkspaceId,
   getSourceHandle,
   getWorkspace,
   getWorkspaceAgentSessionIds,
+  listDeviceLocalSources,
   listWorkspaceSummaries,
   hasWorkspaceAgentSessionLink,
   removeOrphanWorkspaceAgents,
@@ -170,6 +174,104 @@ describe("workspace database", () => {
 
     await removeSource(browserId);
     expect(await db.workspace_sources.get(browserId)).toBeUndefined();
+  });
+
+  it("gives another workspace its own row for a device folder", async () => {
+    const first = await createWorkspace("First");
+    const second = await createWorkspace("Second");
+    const handle = { kind: "directory", name: "Notes" };
+    const sourceId = await addSource({
+      workspaceId: first,
+      kind: "local",
+      label: "Notes",
+      config: { handleKey: "", folderName: "Notes" },
+      handle,
+    });
+
+    const adopted = await adoptLocalSource(second, sourceId);
+    expect(adopted).not.toBe(sourceId);
+    const row = await db.workspace_sources.get(adopted);
+    expect(row?.workspaceId).toBe(second);
+    expect(row?.kind).toBe("local");
+    expect(row?.config).toMatchObject({ folderName: "Notes" });
+    expect(await getSourceHandle(adopted)).toBeTruthy();
+
+    expect(await adoptLocalSource(second, sourceId)).toBe(adopted);
+    expect(await adoptLocalSource(first, sourceId)).toBe(sourceId);
+  });
+
+  it("lists one device row per folder, not one per workspace", async () => {
+    const first = await createWorkspace("First");
+    const second = await createWorkspace("Second");
+    const putLocal = (workspaceId, id) =>
+      db.workspace_sources.put({
+        id,
+        workspaceId,
+        kind: "local",
+        label: "Docs",
+        deviceId: getDeviceId(),
+        config: { handleKey: "", folderName: "Docs" },
+        capabilities: {},
+        readOnly: false,
+        status: "offline",
+        createdAt: 1,
+        lastModified: 1,
+      });
+    const inFirst = "local-first";
+    const inSecond = "local-second";
+    const sameNameOtherFolder = "local-other";
+    await putLocal(first, inFirst);
+    await putLocal(second, inSecond);
+    await putLocal(second, sameNameOtherFolder);
+
+    const shared = {
+      kind: "directory",
+      name: "Docs",
+      key: "docs-1",
+      isSameEntry: async (candidate) => candidate?.key === "docs-1",
+    };
+    const other = {
+      kind: "directory",
+      name: "Docs",
+      key: "docs-2",
+      isSameEntry: async (candidate) => candidate?.key === "docs-2",
+    };
+    const handles = new Map([
+      [inFirst, shared],
+      [inSecond, shared],
+      [sameNameOtherFolder, other],
+    ]);
+
+    const rows = await listDeviceLocalSources();
+    expect(rows.map((row) => row.id)).toEqual(
+      expect.arrayContaining([inFirst, inSecond, sameNameOtherFolder]),
+    );
+
+    const distinct = await groupLocalSources(rows, handles, second);
+    const ids = distinct.map((row) => row.id);
+    expect(ids).toContain(inSecond);
+    expect(ids).toContain(sameNameOtherFolder);
+    expect(ids).not.toContain(inFirst);
+  });
+
+  it("still lists a folder once when its handles cannot be compared", async () => {
+    const first = await createWorkspace("First");
+    const second = await createWorkspace("Second");
+    const rows = [
+      { id: "a", workspaceId: first, label: "Docs", config: { folderName: "Docs" } },
+      { id: "b", workspaceId: second, label: "Docs", config: { folderName: "Docs" } },
+    ].map((row) => ({
+      ...row,
+      kind: "local",
+      capabilities: {},
+      status: "offline",
+      createdAt: 1,
+      lastModified: 1,
+    }));
+
+    const distinct = await groupLocalSources(rows, new Map(), second);
+    expect(distinct).toHaveLength(1);
+    expect(distinct[0].id).toBe("b");
   });
 
   it("mounts source folders and attaches chats to workspaces", async () => {

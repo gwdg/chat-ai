@@ -210,7 +210,11 @@ export type WorkspaceCapabilities = {
 }
 
 export type BrowserConfig = { storage: 'opfs' | 'indexeddb' }
-export type LocalConfig = { handleKey: string }
+export type LocalConfig = {
+  handleKey: string
+  /** The picked folder's own name, so one folder can be recognised across workspaces. */
+  folderName?: string
+}
 export type McpConfig = {
   endpoint: string
   transport: 'streamable-http' | 'sse'
