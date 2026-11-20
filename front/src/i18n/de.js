@@ -2020,7 +2020,7 @@ export default {
       unavailable: "Agenten-Brücke nicht verfügbar",
       unavailable_detail: "Kein Brücken-Endpunkt unter {{url}} (HTTP {{status}}).",
       disabled_by_server:
-        "Der Backend-Dienst lehnt Brücken-Sitzungen ab, weil kein Brücken-Geheimnis konfiguriert ist (HTTP 503). Setzen Sie bridgeSharedSecret in back.json (oder BRIDGE_SHARED_SECRET) und denselben Wert als bridgeKey in front.json und starten Sie beide Dienste neu.",
+        "Ein älterer Backend-Dienst lehnt Brücken-Sitzungen ab, wenn kein gemeinsames Geheimnis konfiguriert ist (HTTP 503). Aktualisieren Sie ihn, oder setzen Sie bridgeSharedSecret in back.json (oder BRIDGE_SHARED_SECRET) und denselben Wert als bridgeKey in front.json und starten Sie beide Dienste neu.",
       key_rejected:
         "Der Backend-Dienst hat den Brücken-Schlüssel abgelehnt (HTTP 401). bridgeKey in front.json muss zu bridgeSharedSecret in back.json (oder BRIDGE_SHARED_SECRET) passen.",
       unreachable:
@@ -2055,6 +2055,10 @@ export default {
       inject_none: "Es ist kein MCP-Server ohne Passwort konfiguriert.",
       inject_error:
         "Die MCP-Server konnten nicht zu OpenCode hinzugefügt werden: {{message}}",
+      wrapped_summary:
+        "MCP-Server mit gespeichertem Token als natives stdio: {{count}}",
+      wrapped_failed:
+        "Der stdio-Proxy für {{servers}} konnte nicht starten, daher bleiben sie an der Brücke",
       session_scope:
         "Beide Wege gelten nur für die gerade geöffnete Sitzung: Die Einträge tragen ihre Kennung, und jeder anderen Sitzung dieses Agenten wird der Zugriff verweigert.",
       rescope_failed:

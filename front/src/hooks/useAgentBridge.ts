@@ -4,10 +4,20 @@ import { useSelector } from "react-redux";
 
 import {
   callMcpServerTool,
+  callMcpServerToolResult,
   listMcpServerTools,
   normalizeMcpUrl,
 } from "../agent/mcp";
 import type { Vfs } from "../agent/vfs";
+import {
+  mcpServerStatus,
+  mcpServerStatusError,
+  sweepStaleWrappedEntries,
+  waitForMcpStatus,
+  wrappedMcpNames,
+  wrappedMcpServers,
+} from "../agents/agentMcpInjection";
+import { bridgeKeyFor, bridgeKeyScope } from "../agents/bridgeKey";
 import { AGENT_SERVICE_PATH } from "../apis/agentService";
 import { agentTunnelEnabled, tunnelRequest } from "../apis/agentTunnel";
 import {
@@ -68,6 +78,13 @@ type BridgeInput = {
    * them and serves only the ones that could not be injected.
    */
   excludedMcpUrls?: string[];
+  /**
+   * The "inject external MCP tools" option (`bridgeInjectExternal`). A server with a stored
+   * token cannot be injected as a `remote` entry — that would copy the secret — so it becomes a
+   * native stdio proxy instead, when the bridge can spawn one. Without the option it stays on
+   * the relay, exactly as before.
+   */
+  wrapMcp?: boolean;
   mounts: WorkspaceMountRow[];
   providers: Map<string, FileProvider>;
   rootProvider: BrowserProvider | null;
@@ -89,6 +106,15 @@ const BRIDGE_ENDPOINT = String(import.meta.env.VITE_BRIDGE_PATH || "").replace(
   /\/+$/,
   "",
 );
+/**
+ * The deployment's shared secret for `POST /bridge/sessions`.
+ *
+ * Optional and unrelated to the per-chat key (`agents/bridgeKey.js`): this one is a
+ * deployment-wide gate that ships in the bundle, the other is generated per chat and never
+ * leaves this browser. A host with `BRIDGE_SHARED_SECRET`/`bridgeSharedSecret` set needs this
+ * header; a host without one accepts the request and relies on the per-chat key to pair the
+ * two legs.
+ */
 const BRIDGE_KEY = String(import.meta.env.VITE_BRIDGE_KEY || "").trim();
 
 /**
@@ -223,6 +249,17 @@ export const BRIDGE_ENTRY_PREFIX = "chatai-bridge-";
 export const bridgeMcpName = (sessionId: string) =>
   `${BRIDGE_ENTRY_PREFIX}${sessionId}`;
 
+/** One stdio proxy registered for a configured MCP server that carries a header. */
+export type WrappedMcpEntry = {
+  /** The OpenCode entry name (`chatai-auth-<server>-<session>`). */
+  name: string;
+  /** The configured server it proxies, as the browser resolves it. */
+  server: { id: string; name: string; url: string };
+};
+
+/** A wrapped proxy that could not be started; the server stays on the relay. */
+export type WrappedMcpFailure = WrappedMcpEntry & { error: string };
+
 /**
  * Remove the bridge entries of sessions that are no longer open.
  *
@@ -254,6 +291,7 @@ export function useAgentBridge({
   writable,
   mcp,
   excludedMcpUrls,
+  wrapMcp,
   mounts,
   providers,
   rootProvider,
@@ -274,12 +312,29 @@ export function useAgentBridge({
   // below, which moves it when the user opens another session; the bridge session itself (the
   // socket, the workspace pairing) keeps running, so this is not a restart.
   const [entryName, setEntryName] = useState("");
+  // The proxies registered for MCP servers whose token stays in the browser. Reported to the
+  // page so their entry names take part in the per-session scope, and to the popover so the
+  // relay count does not claim servers that now run as native stdio servers.
+  const [wrappedEntries, setWrappedEntries] = useState<WrappedMcpEntry[]>([]);
+  const [wrappedFailed, setWrappedFailed] = useState<WrappedMcpFailure[]>([]);
+  const wrappedEntriesRef = useRef<WrappedMcpEntry[]>([]);
+  wrappedEntriesRef.current = wrappedEntries;
   const sessionIdRef = useRef<string>("");
   const nameRef = useRef<string>("");
+  const wrappedNamesRef = useRef<string[]>([]);
+  // The per-chat key the running bridge session was created with. Resolved when the session
+  // starts, not on render: the page renders this hook before the agent has been read from
+  // localStorage, and a key generated for an empty agent id could never be found again.
+  // It is not regenerated on a session switch either — the host remembers the key of the
+  // session it minted, so the entries re-registered afterwards must present that same one.
+  const chatKeyRef = useRef<{ scope: string; key: string } | null>(null);
   const configRef = useRef<Record<string, unknown> | null>(null);
   const aliveRef = useRef(false);
   const registerEntryRef = useRef<
     ((sessionId: string, previous?: string) => Promise<void>) | null
+  >(null);
+  const registerWrappedRef = useRef<
+    ((sessionId: string) => Promise<void>) | null
   >(null);
 
   notifyRef.current = notifyError;
@@ -299,11 +354,48 @@ export function useAgentBridge({
       .map((url) => normalizeMcpUrl(url))
       .filter(Boolean),
   );
-  const relayMcpServers = () =>
-    mcpServers.filter(
-      (server: any) =>
-        !excludedMcpUrlsRef.current.has(normalizeMcpUrl(server?.url)),
+  // The server a wrapped proxy belongs to. Registered proxies are looked up first, because
+  // `relayMcpServers` deliberately hides them: OpenCode offers their tools through their own
+  // stdio entry, so listing them on the relay too would duplicate every tool. The headers come
+  // from the current settings, not from what was registered, so an edited token takes effect on
+  // the next call — that is the whole point of keeping the secret in the page.
+  const wrappedServer = (key: unknown) => {
+    const wanted = String(key ?? "");
+    const entry = wrappedEntriesRef.current.find(
+      (item) => item.server.id === wanted || item.server.name === wanted,
     );
+    if (!entry) return null;
+    const configured = mcpServers.find((server: any) => {
+      const url = normalizeMcpUrl(server?.url);
+      if (entry.server.id && server?.id) return server.id === entry.server.id;
+      return !!url && url === entry.server.url;
+    });
+    if (!configured) return null;
+    return {
+      ...configured,
+      id: entry.server.id,
+      name: configured.name || entry.server.name,
+      url: entry.server.url,
+      headers: configured.headers,
+    };
+  };
+  const relayMcpServers = () => {
+    const wrappedIds = new Set(
+      wrappedEntriesRef.current.map((entry) => entry.server.id),
+    );
+    const wrappedUrls = new Set(
+      wrappedEntriesRef.current
+        .map((entry) => normalizeMcpUrl(entry.server.url))
+        .filter(Boolean),
+    );
+    return mcpServers.filter((server: any) => {
+      const url = normalizeMcpUrl(server?.url);
+      if (excludedMcpUrlsRef.current.has(url)) return false;
+      if (server?.id && wrappedIds.has(server.id)) return false;
+      if (url && wrappedUrls.has(url)) return false;
+      return true;
+    });
+  };
 
   useEffect(() => {
     if (!agent?.id || !workspaceId) {
@@ -322,6 +414,13 @@ export function useAgentBridge({
     let session: any = null;
     let sessionDeleted = false;
     let wasHidden = false;
+    // The stdio proxies for MCP servers whose token must stay in the browser. Built in
+    // `start()` once the session and its sidecar command are known; registering them waits
+    // for the browser leg, because their first `tools/list` has to reach this page.
+    let wrappedCandidates: any[] = [];
+    let wrappedEnvironment: Record<string, string> | null = null;
+    let wrappedCommand: string[] | null = null;
+    let wrappedStarted = false;
     const originalTitle = document.title;
     const tunneled = bridgeUsesTunnel(agent);
 
@@ -361,6 +460,18 @@ export function useAgentBridge({
     /** How the browser answers a tool call; set by whichever leg started. */
     let sendResult: (payload: unknown) => void = () => {};
 
+    /**
+     * Register the wrapped MCP proxies once the browser leg is up.
+     *
+     * Their first `tools/list` has to reach this page, and OpenCode asks for it right after it
+     * spawns the process, so registering before the leg exists would leave them without tools.
+     */
+    const startWrapped = () => {
+      if (wrappedStarted || cancelled) return;
+      wrappedStarted = true;
+      void registerWrappedRef.current?.(sessionIdRef.current);
+    };
+
     const deleteSession = () => {
       const created = session;
       if (sessionDeleted || !created?.id || !created?.token) return;
@@ -389,6 +500,7 @@ export function useAgentBridge({
         if (cancelled) return;
         setStatus("online");
         setError("");
+        startWrapped();
       };
       socket.onmessage = (event) => {
         let message: any;
@@ -472,6 +584,7 @@ export function useAgentBridge({
         if (cancelled) return;
         setStatus("online");
         setError("");
+        startWrapped();
         if (message?.type === "tool_call") void handleToolCall(message);
       }
     };
@@ -559,11 +672,19 @@ export function useAgentBridge({
             name: server.name || server.id,
           }));
         } else if (name === "mcp_list_tools") {
-          if (!mcp) throw new Error("Local MCP access is disabled for this agent.");
-          const server = relayMcpServers().find(
-            (item: any) =>
-              item.id === args.server || item.name === args.server,
-          );
+          // A registered stdio proxy is allowed even with the MCP switch off: it was only
+          // created because the server needed one, and its calls reach the browser through the
+          // same two messages as the relay's.
+          const explicit = wrappedServer(args.server);
+          if (!mcp && !explicit) {
+            throw new Error("Local MCP access is disabled for this agent.");
+          }
+          const server =
+            explicit ||
+            relayMcpServers().find(
+              (item: any) =>
+                item.id === args.server || item.name === args.server,
+            );
           if (!server) throw new Error(`Unknown MCP server: ${args.server}`);
           result = await listMcpServerTools({
             url: server.url,
@@ -571,21 +692,36 @@ export function useAgentBridge({
             enabled: true,
           });
         } else if (name === "mcp_call") {
-          if (!mcp) throw new Error("Local MCP access is disabled for this agent.");
-          const server = relayMcpServers().find(
-            (item: any) =>
-              item.id === args.server || item.name === args.server,
-          );
+          const explicit = wrappedServer(args.server);
+          if (!mcp && !explicit) {
+            throw new Error("Local MCP access is disabled for this agent.");
+          }
+          const server =
+            explicit ||
+            relayMcpServers().find(
+              (item: any) =>
+                item.id === args.server || item.name === args.server,
+            );
           if (!server) throw new Error(`Unknown MCP server: ${args.server}`);
-          result = await callMcpServerTool(
-            {
-              url: server.url,
-              headers: server.headers,
-              enabled: true,
-            },
-            String(args.tool ?? ""),
-            (args.arguments as Record<string, unknown>) ?? {},
-          );
+          const options = {
+            url: server.url,
+            headers: server.headers,
+            enabled: true,
+          };
+          // The wrapped proxy stands in for OpenCode's own connection to this server, so it
+          // gets the upstream result unchanged (`content`, `isError`); the relay keeps the
+          // flattened text its sidecar turns into one block.
+          result = explicit
+            ? await callMcpServerToolResult(
+                options,
+                String(args.tool ?? ""),
+                (args.arguments as Record<string, unknown>) ?? {},
+              )
+            : await callMcpServerTool(
+                options,
+                String(args.tool ?? ""),
+                (args.arguments as Record<string, unknown>) ?? {},
+              );
         } else {
           throw new Error(`Unknown bridge tool: ${name}`);
         }
@@ -627,11 +763,112 @@ export function useAgentBridge({
     };
     registerEntryRef.current = registerEntry;
 
+    /**
+     * Register one stdio proxy per MCP server that carries a header.
+     *
+     * A stored token may not leave the browser, so such a server cannot become a `remote`
+     * entry. Instead OpenCode spawns the same bridge sidecar once per server in single-server
+     * mode (`CHAT_AI_BRIDGE_SERVER`), and that proxy asks this page for the upstream's tools and
+     * runs its calls — the header is applied here, on the Chat AI side.
+     *
+     * The entry name carries the session (`agents/agentMcpScope.js` scopes it), so this runs
+     * again on a session switch. A proxy that cannot start is removed again and reported; the
+     * server then stays on the relay, which is also what happens with no sidecar command at all
+     * (the HTTP `mcpUrl` fallback cannot express stdio).
+     */
+    const registerWrappedEntries = async (sid: string) => {
+      if (!aliveRef.current || !sid) return;
+      const desired =
+        wrappedEnvironment && wrappedCommand
+          ? wrappedMcpNames(wrappedCandidates, sid)
+          : wrappedMcpNames([], sid);
+      await sweepStaleWrappedEntries(agent, new Set(desired.keys()));
+      // Tracked as each proxy connects, not after the loop: a teardown that interrupts the
+      // registration still has to remove what was already added.
+      wrappedNamesRef.current = [];
+      const existing = await listOpencodeMcpServers(agent).catch(() => []);
+      const byName = new Map(
+        (Array.isArray(existing) ? existing : []).map((item: any) => [
+          item?.name,
+          item,
+        ]),
+      );
+      const connected: WrappedMcpEntry[] = [];
+      const failed: WrappedMcpFailure[] = [];
+      for (const [name, server] of desired) {
+        if (cancelled || !aliveRef.current) return;
+        const entry: WrappedMcpEntry = {
+          name,
+          server: { id: server.id, name: server.name, url: server.url },
+        };
+        try {
+          const known = byName.get(name);
+          if (!known) {
+            await addOpencodeMcpServer(agent, name, {
+              type: "local",
+              command: wrappedCommand,
+              // Same reason as the bridge entry: the per-session permission rules can only
+              // deny a tool of its own, and Code Mode would hide the servers behind `execute`.
+              codemode: false,
+              environment: {
+                ...wrappedEnvironment,
+                CHAT_AI_BRIDGE_SERVER: String(server.id),
+                CHAT_AI_BRIDGE_SERVER_NAME: String(server.name || server.id),
+              },
+            });
+            await connectOpencodeMcpServer(agent, name);
+          } else if (mcpServerStatus(known) !== "connected") {
+            await connectOpencodeMcpServer(agent, name);
+          }
+          const status =
+            mcpServerStatus(known) === "connected"
+              ? known
+              : await waitForMcpStatus(agent, name, {
+                  attempts: 6,
+                  delay: 500,
+                  isCancelled: () => cancelled,
+                });
+          if (mcpServerStatus(status) === "connected") {
+            connected.push(entry);
+            wrappedNamesRef.current.push(name);
+            continue;
+          }
+          await removeOpencodeMcpServer(agent, name).catch(() => {});
+          failed.push({
+            ...entry,
+            error:
+              mcpServerStatusError(status) ||
+              (mcpServerStatus(status) === "pending"
+                ? "Connection timed out"
+                : "Could not connect"),
+          });
+        } catch (reason) {
+          await removeOpencodeMcpServer(agent, name).catch(() => {});
+          failed.push({
+            ...entry,
+            error: reason instanceof Error ? reason.message : String(reason),
+          });
+        }
+      }
+      if (aliveRef.current) {
+        setWrappedEntries(connected);
+        setWrappedFailed(failed);
+      }
+    };
+    registerWrappedRef.current = registerWrappedEntries;
+
     const start = async () => {
       setStatus("connecting");
       setError("");
       setUnavailable(false);
       try {
+        // One key per chat, from the frontend's own storage (`agents/bridgeKey.js`). A
+        // restart of this effect reuses it; a different agent or session gets its own.
+        const scope = bridgeKeyScope(agent.id, sessionIdRef.current);
+        if (!chatKeyRef.current || chatKeyRef.current.scope !== scope) {
+          chatKeyRef.current = { scope, key: bridgeKeyFor(scope) };
+        }
+        const chatKey = chatKeyRef.current.key;
         const sessionUrl = `${bridgeBase(agent)}/bridge/sessions`;
         const response = await callBridge(sessionUrl, {
           method: "POST",
@@ -641,6 +878,9 @@ export function useAgentBridge({
             workspaceId,
             writable,
             mcp,
+            // The host remembers this for the session and only lets an agent socket attach
+            // that presents it; the same value goes into every stdio entry below.
+            key: chatKey,
           },
         });
         if (response.status === 404 || response.status === 405) {
@@ -681,7 +921,20 @@ export function useAgentBridge({
               CHAT_AI_BRIDGE_URL: session.agentWsUrl,
               CHAT_AI_BRIDGE_TOKEN: session.agentToken,
               CHAT_AI_BRIDGE_SCOPES: scopes,
+              // The agent leg must prove it belongs to this chat's session.
+              CHAT_AI_BRIDGE_KEY: chatKey,
             },
+          };
+          // The authenticated servers need this same sidecar command. They follow the
+          // injection option, not the relay switch: a native stdio proxy is OpenCode
+          // connecting a server itself, it just keeps the header in this page.
+          wrappedCommand = sidecarCommand;
+          wrappedCandidates = wrapMcp ? wrappedMcpServers(mcpServers) : [];
+          wrappedEnvironment = {
+            CHAT_AI_BRIDGE_URL: session.agentWsUrl,
+            CHAT_AI_BRIDGE_TOKEN: session.agentToken,
+            CHAT_AI_BRIDGE_SCOPES: "mcp",
+            CHAT_AI_BRIDGE_KEY: chatKey,
           };
         } else {
           configRef.current = {
@@ -764,6 +1017,7 @@ export function useAgentBridge({
       aliveRef.current = false;
       configRef.current = null;
       registerEntryRef.current = null;
+      registerWrappedRef.current = null;
       window.removeEventListener("beforeunload", beforeUnload);
       document.removeEventListener("visibilitychange", onVisibility);
       document.title = originalTitle;
@@ -776,7 +1030,14 @@ export function useAgentBridge({
         void removeOpencodeMcpServer(agent, nameRef.current).catch(() => {});
         nameRef.current = "";
       }
+      // Wrapped proxies belong to this bridge session and its agent token, so they go with it.
+      for (const name of wrappedNamesRef.current) {
+        void removeOpencodeMcpServer(agent, name).catch(() => {});
+      }
+      wrappedNamesRef.current = [];
       setEntryName("");
+      setWrappedEntries([]);
+      setWrappedFailed([]);
       deleteSession();
     };
     // Deliberately not `[agent]` or `[sessionId]`: a session switch only re-registers the MCP
@@ -791,6 +1052,7 @@ export function useAgentBridge({
     workspaceId,
     writable,
     mcp,
+    wrapMcp,
     mcpServers,
   ]);
 
@@ -807,15 +1069,27 @@ export function useAgentBridge({
     if (!target || !entryName || entryName === target) return;
     const register = registerEntryRef.current;
     if (!register) return;
-    void register(sessionId as string, entryName).catch((reason) => {
-      notifyRef.current(
-        tRef.current("agents.bridge.rescope_failed", {
-          message: reason instanceof Error ? reason.message : String(reason),
-        }),
-      );
-    });
+    void register(sessionId as string, entryName)
+      // The wrapped proxies are named after the session too, so they move with the bridge
+      // entry. Their tools are only usable by the session that owns the entry.
+      .then(() => registerWrappedRef.current?.(sessionId as string))
+      .catch((reason) => {
+        notifyRef.current(
+          tRef.current("agents.bridge.rescope_failed", {
+            message: reason instanceof Error ? reason.message : String(reason),
+          }),
+        );
+      });
     // `entryName` belongs in the dependencies: the move sets it, and the guard above then stops.
   }, [agent?.id, sessionId, entryName]);
 
-  return { status, error, tabAway, unavailable, entryName };
+  return {
+    status,
+    error,
+    tabAway,
+    unavailable,
+    entryName,
+    wrappedEntries,
+    wrappedFailed,
+  };
 }

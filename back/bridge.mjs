@@ -9,6 +9,7 @@ import {
 
 const SESSION_TTL_MS = 15 * 60 * 1000;
 const MAX_SESSIONS = 32;
+const MAX_AGENT_SOCKETS = 32;
 const RATE_LIMIT = 10;
 const RATE_WINDOW_MS = 60 * 1000;
 const SWEEP_INTERVAL_MS = 60 * 1000;
@@ -41,7 +42,7 @@ export const registerBridge = ({
 
   if (!sharedSecret && !anonymousAllowed) {
     console.warn(
-      "[bridge] BRIDGE_SHARED_SECRET is not set; bridge session creation is disabled (503). Set it in the environment or as bridgeSharedSecret in back.json, and put the same value in front.json as bridgeKey.",
+      "[bridge] No BRIDGE_SHARED_SECRET: session creation is open to any client that can reach this port, and the per-chat key the browser generates is what pairs the two legs. Set BRIDGE_SHARED_SECRET (or bridgeSharedSecret in back.json) and the same value as bridgeKey in front.json to gate creation by a deployment secret.",
     );
   } else if (anonymousAllowed) {
     console.warn(
@@ -72,7 +73,8 @@ export const registerBridge = ({
   const destroySession = (session) => {
     if (!session) return;
     session.socket?.close();
-    session.agentSocket?.close();
+    for (const socket of session.agentSockets) socket.close();
+    session.agentSockets.clear();
     for (const [requestId, pending] of session.pending) {
       clearTimeout(pending.timer);
       pending.resolve({
@@ -296,10 +298,7 @@ export const registerBridge = ({
       return res.status(429).json({ error: "too many bridge sessions" });
     }
 
-    if (!anonymousAllowed) {
-      if (!sharedSecret) {
-        return res.status(503).json({ error: "bridge disabled" });
-      }
+    if (!anonymousAllowed && sharedSecret) {
       if (!safeEqual(String(req.headers["x-bridge-key"] ?? ""), sharedSecret)) {
         return res.status(401).json({ error: "bridge key rejected" });
       }
@@ -318,16 +317,25 @@ export const registerBridge = ({
     const id = randomUUID();
     const token = randomBytes(24).toString("base64url");
     const agentToken = randomBytes(24).toString("base64url");
+    // The per-chat key the browser generated for this session (`agents/bridgeKey.js`). It is
+    // kept here and required again on the agent leg, which is what pairs the sidecar OpenCode
+    // spawns with the page that asked for it — even with no deployment secret configured.
+    const sessionKey = String(req.body?.key ?? "").trim().slice(0, 200);
     const session = {
       id,
       token,
       agentToken,
+      key: sessionKey,
       agentId: String(req.body?.agentId ?? ""),
       workspaceId,
       writable: req.body?.writable === true,
       mcp: req.body?.mcp === true,
       socket: null,
-      agentSocket: null,
+      // One socket per MCP client that attaches: the workspace sidecar and one
+      // authenticated-server proxy per wrapped server. They share `pending`,
+      // because every request id is unique and each answer goes back to the
+      // socket that asked.
+      agentSockets: new Set(),
       pending: new Map(),
       createdAt: Date.now(),
       expiresAt: Date.now() + sessionTtlMs,
@@ -471,6 +479,16 @@ export const registerBridge = ({
       rejectUpgrade(socket);
       return;
     }
+    // A session created with a per-chat key accepts only an agent socket that presents it.
+    // The browser's own leg is not checked this way: it created the session.
+    if (
+      isAgent &&
+      session.key &&
+      !safeEqual(String(request.headers["x-bridge-key"] ?? ""), session.key)
+    ) {
+      rejectUpgrade(socket);
+      return;
+    }
     touchSession(session);
     bridgeWss.handleUpgrade(request, socket, head, (ws) => {
       if (isAgent) {
@@ -520,10 +538,16 @@ export const registerBridge = ({
   };
 
   const attachAgentSocket = (ws, session) => {
-    if (session.agentSocket && session.agentSocket !== ws) {
-      session.agentSocket.close();
+    // Several MCP clients may attach to one bridge session at once: the workspace sidecar,
+    // plus one stdio proxy per MCP server whose token must stay in the browser. They all
+    // authorise with the same agent token and share `pending`; a request id is unique, so an
+    // answer can never reach the wrong socket. A new socket therefore joins instead of
+    // replacing the others.
+    if (session.agentSockets.size >= MAX_AGENT_SOCKETS) {
+      ws.close(1013, "too many agent sockets");
+      return;
     }
-    session.agentSocket = ws;
+    session.agentSockets.add(ws);
     ws.send(JSON.stringify({ type: "ready" }));
     ws.on("message", async (data) => {
       touchSession(session);
@@ -551,7 +575,7 @@ export const registerBridge = ({
       );
     });
     ws.on("close", () => {
-      if (session.agentSocket === ws) session.agentSocket = null;
+      session.agentSockets.delete(ws);
     });
   };
 

@@ -127,6 +127,55 @@ describe("AgentWorkspaceButton", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("counts a wrapped server once and names its stdio proxy", async () => {
+    // A server with a stored token runs as a native stdio proxy, so it is not relayed too.
+    // Counting it in both columns would claim the same server twice.
+    mocks.links = [{ workspaceId: "ws-1" }];
+    await openPanel(
+      { bridgeInjectExternal: true, bridgeMcp: true },
+      {
+        mcpInjection: {
+          status: "ready",
+          injected: [{ url: "http://search.test/mcp" }],
+          fallback: [],
+          relayed: [
+            { name: "Authorized", url: "http://auth.test/mcp" },
+            { name: "Plain", url: "http://plain.test/mcp" },
+          ],
+          error: "",
+        },
+        wrappedMcp: [
+          {
+            name: "chatai-auth-authorized-ses_a",
+            server: {
+              id: "auth",
+              name: "Authorized",
+              url: "http://auth.test/mcp",
+            },
+          },
+        ],
+        wrappedMcpFailed: [
+          {
+            name: "chatai-auth-broken-ses_a",
+            server: { id: "broken", name: "Broken", url: "http://broken.test/mcp" },
+            error: "Could not connect",
+          },
+        ],
+      },
+    );
+
+    expect(
+      screen.getByText("Direct in OpenCode: 1 · via bridge: 1"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/MCP servers with a stored token, as native stdio: 1/),
+    ).toBeInTheDocument();
+    // A proxy that could not start leaves its server on the relay, which must be visible.
+    expect(
+      screen.getByText(/The stdio proxy for Broken could not start/),
+    ).toBeInTheDocument();
+  });
+
   it("says when the relay a server waits for is switched off", async () => {
     // "via bridge: 0" with servers configured must not read as a broken bridge: the relay row
     // is simply off, and that is what the note points at.

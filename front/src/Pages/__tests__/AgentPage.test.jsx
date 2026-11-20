@@ -6,7 +6,15 @@ const mocks = vi.hoisted(() => ({
   updateAgent: vi.fn(),
   workspaces: [],
   links: [],
-  bridge: { status: "off", error: "", unavailable: false },
+  // `wrappedEntries` is read for the session scope, so the default has to be the real shape
+  // rather than a bare status.
+  bridge: {
+    status: "off",
+    error: "",
+    unavailable: false,
+    entryName: "",
+    wrappedEntries: [],
+  },
   bridgeCalls: [],
   injection: { status: "off", injected: [], fallback: [], error: "" },
   injectionCalls: [],
@@ -94,7 +102,15 @@ beforeEach(() => {
   mocks.updateAgent.mockReset();
   mocks.workspaces = [workspace];
   mocks.links = [];
-  mocks.bridge = { status: "off", error: "", unavailable: false };
+  // `wrappedEntries` is read for the session scope, so the default has to be the real shape
+  // rather than a bare status.
+  mocks.bridge = {
+    status: "off",
+    error: "",
+    unavailable: false,
+    entryName: "",
+    wrappedEntries: [],
+  };
   mocks.bridgeCalls = [];
   mocks.injection = { status: "off", injected: [], fallback: [], error: "" };
   mocks.injectionCalls = [];

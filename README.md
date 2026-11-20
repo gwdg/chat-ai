@@ -195,7 +195,7 @@ docker compose -f saia/saia-engine/local-testing/compose.yml up -d --build
 cd front && CONFIG_LOCATION=../secrets/front-local-conf.json npm run dev
 ```
 
-The file ships with the local test settings: the fixed dev key from the stack's `.env.example`, `bridge/deepseek-v4.1-flash-1017` as the default and title/memory/proposal model, the fake OIDC claims for the profile, and all UI modules switched on. That id is a real GWDG model reached through the bridge, so it needs `GWDG_ENABLED=true` and a valid `GWDG_API_KEY` in `local-testing/.env`, and its public id is `bridge/` + the GWDG id. Without a GWDG key the stack lists only the local mocks (`bridge/local-echo-1`, `bridge/local-slow-1`), which answer every prompt with `local-echo-1 says: …`; point the four model entries at a model the selector actually lists then. The browser only ever calls the agent service at `/agents` on the app's own origin, so to use one from the dev server start it with `AGENT_SERVICE_DEV_PROXY` pointing at it (for example `AGENT_SERVICE_DEV_PROXY=http://127.0.0.1:8090 CONFIG_LOCATION=../secrets/front-local-conf.json npm run dev`); without that variable the path stays same-origin and there is no service behind it. `back`-only features — MCP, Arcana Tools and the OpenCode bridge on `/bridge/*` — still have no route in this mode, and document conversion still needs the engine's docling-serve backend (the browser-side conversion in Chat preferences works without it). The agent bridge does work with a service-managed agent from the SAIA agent service, which lives in its own repository: it uses `/agents/<id>/bridge` on the app origin, which the dev server proxies when `AGENT_SERVICE_DEV_PROXY` is set. For a direct (non-service) agent the workspace popover reports "Agent bridge not available" with the 404 from `<backendPath>/bridge/sessions` instead of a broken bridge, and its access switch is disabled.
+The file ships with the local test settings: the fixed dev key from the stack's `.env.example`, `bridge/deepseek-v4.1-flash-1017` as the default and title/memory/proposal model, the fake OIDC claims for the profile, and all UI modules switched on. That id is a real GWDG model reached through the bridge, so it needs `GWDG_ENABLED=true` and a valid `GWDG_API_KEY` in `local-testing/.env`, and its public id is `bridge/` + the GWDG id. Without a GWDG key the stack lists only the local mocks (`bridge/local-echo-1`, `bridge/local-slow-1`), which answer every prompt with `local-echo-1 says: …`; point the four model entries at a model the selector actually lists then. The browser only ever calls the agent service at `/agents` on the app's own origin, so to use one from the dev server start it with `AGENT_SERVICE_DEV_PROXY` pointing at it (for example `AGENT_SERVICE_DEV_PROXY=http://127.0.0.1:8090 CONFIG_LOCATION=../secrets/front-local-conf.json npm run dev`); without that variable the path stays same-origin and there is no service behind it. `back`-only features — MCP, Arcana Tools and the OpenCode bridge on `/bridge/*` — still have no route in this mode, and document conversion still needs the engine's docling-serve backend (the browser-side conversion in Chat preferences works without it). The agent bridge does work with a service-managed agent from the SAIA agent service, which lives in its own repository: it uses `/agents/<id>/bridge` on the app origin, which the dev server proxies when `AGENT_SERVICE_DEV_PROXY` is set. For a direct (non-service) agent the workspace popover reports "Agent bridge not available" with the 404 from `<backendPath>/bridge/sessions` instead of a broken bridge, and its access switch is disabled; set `bridgePath` to a `back` instance (for example `http://127.0.0.1:8081`) to serve `/bridge/*` from there while models keep coming from the engine.
 
 The Agents sidebar is wired to the agent service, not to a fixed `opencodeServerUrl`. The browser always calls it at `/agents` on the app's own origin. A deployment relies on the SAIA gateway routing `/agents/*` to the service; the Vite dev server has no gateway, so it forwards that path only when `AGENT_SERVICE_DEV_PROXY` names the service (there is no default port). Start it before adding an agent:
 
@@ -468,20 +468,25 @@ The variant is chosen from the `description` field of the **first** model in the
 
 ## The Agent Bridge
 
-`back` serves the OpenCode bridge on `/bridge/*`. It is no longer open to anyone who can reach the
-port:
+`back` serves the OpenCode bridge on `/bridge/*`:
 
-- `POST /bridge/sessions` needs `BRIDGE_SHARED_SECRET` in `back`'s environment and a matching
-  `x-bridge-key` header. The browser takes that value from `VITE_BRIDGE_KEY` at build time, so it is
-  public — it stops a client that reaches the backend directly from opening a session, while the
-  OIDC gateway stays the real trust boundary. With the variable unset the route answers 503 instead
-  of minting credentials; `BRIDGE_ALLOW_ANON=1` restores anonymous sessions for local testing only.
-- Both may come from the config files instead of the environment, which is what a native checkout
-  started with `npm run start` needs: `bridgeSharedSecret` in `back.json` and the same value as
-  `bridgeKey` in `front.json`. The environment variable wins when it is set, and `front.json` is a
-  build input, so changing `bridgeKey` needs a rebuild (or a dev-server restart). Leaving
-  `bridgeKey` empty sends no header at all, which `back` rejects with 401 as soon as it has a
-  secret.
+- The page generates a random **per-chat key** (32 bytes base64url, one per agent + session, kept in
+  the frontend's `localStorage`) and sends it as `key` in the `POST /bridge/sessions` body. The
+  host remembers it and only lets an agent socket attach that presents it again as an
+  `x-bridge-key` header; the same value goes into the environment of every stdio MCP entry the
+  page registers (`CHAT_AI_BRIDGE_KEY`). That pairs the sidecar OpenCode spawns with the page that
+  asked for it, even when no deployment secret is configured.
+- `BRIDGE_SHARED_SECRET` (or `bridgeSharedSecret` in `back.json`) is an **optional** deployment-wide
+  gate on session creation: when it is set, the request's `x-bridge-key` header must match it. The
+  browser takes that value from `VITE_BRIDGE_KEY` at build time, so it is public — it stops a client
+  that reaches the backend directly from opening a session, while the OIDC gateway stays the real
+  trust boundary. Without it the route mints a session for any client that can reach the port;
+  `BRIDGE_ALLOW_ANON=1` is kept for the old anonymous behaviour. A wrong value answers 401.
+- The deployment secret may come from the config files instead of the environment, which is what a
+  native checkout started with `npm run start` needs: `bridgeSharedSecret` in `back.json` and the
+  same value as `bridgeKey` in `front.json`. The environment variable wins when it is set, and
+  `front.json` is a build input, so changing `bridgeKey` needs a rebuild (or a dev-server restart).
+  Leaving both unset is a working bridge, not an error.
 - Sessions expire after `BRIDGE_SESSION_TTL_MS` (default 15 minutes), are capped at
   `BRIDGE_MAX_SESSIONS` (32), and one client IP may create ten per minute.
 - Tokens travel in the WebSocket subprotocol (browser) and an `Authorization` header (sidecar), not

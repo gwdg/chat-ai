@@ -140,6 +140,9 @@ export default function AgentPage() {
     writable: agent?.bridgeWritable === true,
     mcp: agent?.bridgeMcp === true,
     excludedMcpUrls: injectedMcpUrls,
+    // The same option that injects the password-free servers: an authenticated one becomes a
+    // stdio proxy, because a `remote` entry would carry its token onto the agent host.
+    wrapMcp: agent?.bridgeInjectExternal === true,
     mounts,
     providers,
     rootProvider,
@@ -148,8 +151,11 @@ export default function AgentPage() {
     () => [
       ...mcpInjection.injected.map((server) => server.entryName),
       ...(bridge.entryName ? [bridge.entryName] : []),
+      // The stdio proxies are named after the session too, so they take part in the same
+      // deny-everywhere-else rules as the bridge and injected entries.
+      ...bridge.wrappedEntries.map((entry) => entry.name),
     ],
-    [mcpInjection.injected, bridge.entryName],
+    [mcpInjection.injected, bridge.entryName, bridge.wrappedEntries],
   );
   // Denies both routes to every other session of this agent. Runs on its own, so neither hook
   // has to know about the permission rules that make its entries session-private.
@@ -214,6 +220,8 @@ export default function AgentPage() {
                 bridgeFailure={bridgeFailure}
                 bridgeUnavailable={bridge.unavailable}
                 mcpInjection={mcpInjection}
+                wrappedMcp={bridge.wrappedEntries}
+                wrappedMcpFailed={bridge.wrappedFailed}
               />
             ) : (
               <div className="flex flex-1 items-center justify-center text-sm text-base-content/60">

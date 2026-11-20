@@ -172,6 +172,8 @@ export default function AgentConversation({
   bridgeFailure = "",
   bridgeUnavailable = false,
   mcpInjection = null,
+  wrappedMcp = [],
+  wrappedMcpFailed = [],
 }) {
   const { t, i18n } = useTranslation();
   const [searchParams] = useSearchParams();
@@ -2141,6 +2143,8 @@ export default function AgentConversation({
               bridgeFailure={bridgeFailure}
               bridgeUnavailable={bridgeUnavailable}
               mcpInjection={mcpInjection}
+              wrappedMcp={wrappedMcp}
+              wrappedMcpFailed={wrappedMcpFailed}
             />
             <button
               type="button"

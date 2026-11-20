@@ -13,6 +13,16 @@ import { normalizeMcpUrl } from "../agent/mcp";
 export const INJECTED_MCP_PREFIX = "chatai-ext-";
 
 /**
+ * Natively registered stdio proxies for MCP servers that carry a header.
+ *
+ * Those servers cannot be injected as `remote` entries — that would copy the token onto the
+ * agent host — so each one is registered as a `local` server that runs the bridge sidecar in
+ * single-server proxy mode. The token is applied by the browser when a tool is called; the
+ * agent only ever sees the upstream's tools.
+ */
+export const WRAPPED_MCP_PREFIX = "chatai-auth-";
+
+/**
  * OpenCode's `/api/mcp` reports `{status: {status, error?}}`; older releases used a plain
  * string. Both are read here so no caller has to print `[object Object]`.
  */
@@ -93,15 +103,8 @@ const slugify = (value) =>
     .replace(/^-+|-+$/g, "")
     .slice(0, 32);
 
-/**
- * The OpenCode name of an injected server.
- *
- * `<prefix><server>-<session>`: the server part identifies the entry for a human, and the
- * trailing session id is what `agents/agentMcpScope.js` reads to decide which session may use
- * it. The session id is required — an entry without one would belong to every session of the
- * agent — and the name follows a rename, since the old entry is removed on the next run.
- */
-export function injectedMcpName(server, sessionId, index = 1) {
+/** The human-readable part of an entry name: the server's name, else its host. */
+const entryLabel = (server) => {
   const url = normalizeMcpUrl(server?.url) || String(server?.url ?? "");
   let host = "";
   try {
@@ -109,11 +112,23 @@ export function injectedMcpName(server, sessionId, index = 1) {
   } catch {
     host = "";
   }
-  const label = slugify(server?.name) || slugify(host) || "server";
-  // The counter sits before the session id, which must stay the end of the name: that is what
-  // `agentMcpScope.js` reads to decide the owner.
+  return slugify(server?.name) || slugify(host) || "server";
+};
+
+/**
+ * `<prefix><server>-<session>`, keeping two same-named servers apart with a counter.
+ *
+ * The counter sits before the session id, which must stay the end of the name: that is what
+ * `agents/agentMcpScope.js` reads to decide the owner of an entry.
+ */
+const entryName = (prefix, server, sessionId, index = 1) => {
   const counter = index > 1 ? `-${index}` : "";
-  return `${INJECTED_MCP_PREFIX}${label}${counter}-${sessionId}`;
+  return `${prefix}${entryLabel(server)}${counter}-${sessionId}`;
+};
+
+/** The OpenCode name of an injected server. */
+export function injectedMcpName(server, sessionId, index = 1) {
+  return entryName(INJECTED_MCP_PREFIX, server, sessionId, index);
 }
 
 /**
@@ -122,20 +137,85 @@ export function injectedMcpName(server, sessionId, index = 1) {
  * The order of the settings array decides which one keeps the plain name, so the same input
  * always produces the same mapping and a later run recognises its own entries.
  */
-export function injectedMcpNames(servers = [], sessionId) {
+function namedEntries(prefix, servers = [], sessionId) {
   const used = new Set();
   const names = new Map();
   for (const server of servers) {
     let index = 1;
-    let name = injectedMcpName(server, sessionId, index);
+    let name = entryName(prefix, server, sessionId, index);
     while (used.has(name)) {
       index += 1;
-      name = injectedMcpName(server, sessionId, index);
+      name = entryName(prefix, server, sessionId, index);
     }
     used.add(name);
     names.set(name, server);
   }
   return names;
+}
+
+export function injectedMcpNames(servers = [], sessionId) {
+  return namedEntries(INJECTED_MCP_PREFIX, servers, sessionId);
+}
+
+/**
+ * The configured MCP servers whose token has to stay in the browser.
+ *
+ * A stored header is the reason such a server cannot be handed to OpenCode as a `remote`
+ * entry. They are wrapped instead: one stdio proxy per server, registered under the session
+ * that is open. A URL that does not parse cannot be proxied either, and a duplicate address is
+ * already covered by another entry.
+ */
+export function wrappedMcpServers(servers = []) {
+  const seen = new Set();
+  const result = [];
+  for (const server of Array.isArray(servers) ? servers : []) {
+    if (!hasHeaders(server)) continue;
+    const url = normalizeMcpUrl(server.url);
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    result.push({
+      // The id, not the URL, is what the proxy sends back: the browser resolves it against the
+      // current settings, so editing the address or the token needs no re-registration.
+      id:
+        typeof server.id === "string" && server.id.trim()
+          ? server.id
+          : url,
+      name: server.name || url,
+      url,
+      headers: { ...server.headers },
+    });
+  }
+  return result;
+}
+
+export function wrappedMcpName(server, sessionId, index = 1) {
+  return entryName(WRAPPED_MCP_PREFIX, server, sessionId, index);
+}
+
+export function wrappedMcpNames(servers = [], sessionId) {
+  return namedEntries(WRAPPED_MCP_PREFIX, servers, sessionId);
+}
+
+/**
+ * Remove wrapped proxies that no longer belong to the open session.
+ *
+ * The registry is agent-wide, so an entry of a closed tab or an older session would otherwise
+ * stay forever. `keep` is the set the current run is about to register.
+ */
+export async function sweepStaleWrappedEntries(agent, keep = new Set()) {
+  const servers = await listOpencodeMcpServers(agent).catch(() => []);
+  const stale = (Array.isArray(servers) ? servers : [])
+    .map((server) => server?.name)
+    .filter(
+      (name) =>
+        typeof name === "string" &&
+        name.startsWith(WRAPPED_MCP_PREFIX) &&
+        !keep.has(name),
+    );
+  for (const name of stale) {
+    await removeOpencodeMcpServer(agent, name).catch(() => {});
+  }
+  return stale;
 }
 
 const isInjectedName = (name) =>
@@ -151,7 +231,7 @@ const defaultWait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * result after the last attempt is returned as it is, and the caller removes it: leaving an
  * unconfirmed entry would keep the server in both routes.
  */
-async function waitForMcpStatus(agent, name, options = {}) {
+export async function waitForMcpStatus(agent, name, options = {}) {
   const attempts =
     Number.isFinite(options.attempts) && options.attempts > 0
       ? options.attempts

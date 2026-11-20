@@ -39,6 +39,8 @@ export default function AgentWorkspaceButton({
   bridgeFailure = "",
   bridgeUnavailable = false,
   mcpInjection = null,
+  wrappedMcp = [],
+  wrappedMcpFailed = [],
 }) {
   const { t } = useTranslation();
   const workspaces = useWorkspaceList();
@@ -57,7 +59,13 @@ export default function AgentWorkspaceButton({
   const injectStatus = mcpInjection?.status || "off";
   const injectInjected = mcpInjection?.injected || [];
   const injectFallback = mcpInjection?.fallback || [];
-  const injectRelayed = mcpInjection?.relayed || [];
+  // A server with a stored token is not relayed when its stdio proxy is running: OpenCode
+  // offers its tools through that entry instead. Counting it as relayed would claim the same
+  // server twice.
+  const wrappedUrls = new Set((wrappedMcp || []).map((entry) => entry.server?.url));
+  const injectRelayed = (mcpInjection?.relayed || []).filter(
+    (server) => !wrappedUrls.has(server.url),
+  );
   const injectError = mcpInjection?.error || "";
   // The relay only runs with the bridge, so a count alone would claim servers this session
   // never sees: the line below names the switch instead.
@@ -357,6 +365,34 @@ export default function AgentWorkspaceButton({
                         )}
                     </>
                   ) : null}
+                </div>
+              )}
+              {(wrappedMcp.length > 0 || wrappedMcpFailed.length > 0) && (
+                <div className="text-[10px] leading-snug">
+                  {wrappedMcp.length > 0 && (
+                    <span className="block text-base-content/60">
+                      {t("agents.bridge.wrapped_summary", {
+                        count: wrappedMcp.length,
+                      })}
+                    </span>
+                  )}
+                  {wrappedMcpFailed.length > 0 && (
+                    <span
+                      className="block truncate text-warning"
+                      title={wrappedMcpFailed
+                        .map(
+                          (entry) =>
+                            `${entry.server?.name || entry.name}: ${entry.error}`,
+                        )
+                        .join("\n")}
+                    >
+                      {t("agents.bridge.wrapped_failed", {
+                        servers: wrappedMcpFailed
+                          .map((entry) => entry.server?.name || entry.name)
+                          .join(", "),
+                      })}
+                    </span>
+                  )}
                 </div>
               )}
             </div>

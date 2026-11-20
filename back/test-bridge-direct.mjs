@@ -35,6 +35,8 @@ import { registerBridge } from "./bridge.mjs";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SIDECAR = join(HERE, "bridge-sidecar.mjs");
 const SECRET = "test-bridge-secret";
+/** The per-chat key the app generates and puts into the stdio entry's environment. */
+const SESSION_KEY = "chat-key-1";
 
 const LIVE_URL = String(process.env.DIRECT_OPENCODE_URL || "http://127.0.0.1:9000").replace(
   /\/+$/,
@@ -75,7 +77,13 @@ const createSession = async (base, body = {}) => {
   const response = await fetch(`${base}/bridge/sessions`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-bridge-key": SECRET },
-    body: JSON.stringify({ workspaceId: "workspace-1", ...body }),
+    body: JSON.stringify({
+      workspaceId: "workspace-1",
+      // The per-chat key the page generates: the sidecar presents it on the agent leg, so the
+      // host can tell the process it was spawned for from any other socket.
+      key: SESSION_KEY,
+      ...body,
+    }),
   });
   assert.equal(response.status, 200, "the bridge must mint a session");
   return response.json();
@@ -113,7 +121,11 @@ const startMcpServer = async () => {
     }
     if (method === "tools/call") {
       const args = params?.arguments ?? {};
-      calls.push({ name: params?.name, arguments: args });
+      calls.push({
+        name: params?.name,
+        arguments: args,
+        headers: req.headers,
+      });
       return ok({
         content: [{ type: "text", text: `echo:${String(args.text ?? "")}` }],
         isError: false,
@@ -224,7 +236,19 @@ const makeWorkspace = (files = {}) => {
  * The browser leg: the same socket the app opens (`bridge.v1` + `bridge-token.<token>`
  * subprotocols) and the same answers `useAgentBridge#handleToolCall` sends back.
  */
-const connectBrowser = async (session, { workspace, mcpServers = [], writable = true } = {}) => {
+const connectBrowser = async (
+  session,
+  {
+    workspace,
+    mcpServers = [],
+    writable = true,
+    // Mirrors `useAgentBridge#handleToolCall`: `mcp` is the session's MCP switch, and a
+    // wrapped server (one whose stdio proxy is registered) is answered even with it off,
+    // because its entry only exists because the token had to stay here.
+    mcpEnabled = true,
+    wrappedIds = [],
+  } = {},
+) => {
   const calls = [];
   const socket = new WebSocket(session.wsUrl, [
     "bridge.v1",
@@ -238,7 +262,13 @@ const connectBrowser = async (session, { workspace, mcpServers = [], writable = 
   const callMcpTool = async (server, tool, args) => {
     const response = await fetch(server.url, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        // The app applies a wrapped server's stored header here, in the browser: this is the
+        // only place the token is allowed to exist.
+        ...(server.headers ?? {}),
+      },
       body: JSON.stringify({
         jsonrpc: "2.0",
         id: 1,
@@ -284,22 +314,26 @@ const connectBrowser = async (session, { workspace, mcpServers = [], writable = 
           id: server.id,
           name: server.name || server.id,
         }));
-      } else if (name === "mcp_list_tools") {
+      } else if (name === "mcp_list_tools" || name === "mcp_call") {
         const server = mcpServers.find(
           (item) => item.id === args.server || item.name === args.server,
         );
         if (!server) throw new Error(`Unknown MCP server: ${args.server}`);
-        result = await fetch(server.url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
-        }).then((response) => response.json().then((body) => body.result?.tools ?? []));
-      } else if (name === "mcp_call") {
-        const server = mcpServers.find(
-          (item) => item.id === args.server || item.name === args.server,
-        );
-        if (!server) throw new Error(`Unknown MCP server: ${args.server}`);
-        result = await callMcpTool(server, String(args.tool ?? ""), args.arguments ?? {});
+        const wrapped = wrappedIds.includes(server.id);
+        if (!mcpEnabled && !wrapped) {
+          throw new Error("Local MCP access is disabled for this agent.");
+        }
+        if (name === "mcp_list_tools") {
+          result = await fetch(server.url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+          }).then((response) => response.json().then((body) => body.result?.tools ?? []));
+        } else {
+          // A wrapped server's answer goes back unchanged, exactly like
+          // `callMcpServerToolResult`, so its content reaches the model as the upstream sent it.
+          result = await callMcpTool(server, String(args.tool ?? ""), args.arguments ?? {});
+        }
       } else {
         throw new Error(`Unknown bridge tool: ${name}`);
       }
@@ -337,14 +371,25 @@ const connectBrowser = async (session, { workspace, mcpServers = [], writable = 
   };
 };
 
-/** The stdio MCP server OpenCode spawns: `bridge-sidecar.mjs` with the app's env. */
-const startSidecar = async (session, { scopes = "workspace,write,mcp" } = {}) => {
+/**
+ * The stdio MCP server OpenCode spawns: `bridge-sidecar.mjs` with the app's env.
+ *
+ * `server`/`name` switch it into single-server proxy mode, which is what the app registers for
+ * an MCP server that carries a stored header (`chatai-auth-…`).
+ */
+const startSidecar = async (
+  session,
+  { scopes = "workspace,write,mcp", server = "", name = "" } = {},
+) => {
   const child = spawn(process.execPath, [SIDECAR], {
     env: {
       ...process.env,
       CHAT_AI_BRIDGE_URL: session.agentWsUrl,
       CHAT_AI_BRIDGE_TOKEN: session.agentToken,
       CHAT_AI_BRIDGE_SCOPES: scopes,
+      CHAT_AI_BRIDGE_KEY: SESSION_KEY,
+      ...(server ? { CHAT_AI_BRIDGE_SERVER: server } : {}),
+      ...(name ? { CHAT_AI_BRIDGE_SERVER_NAME: name } : {}),
     },
     stdio: ["pipe", "pipe", "pipe"],
   });
@@ -554,7 +599,11 @@ test("the MCP relay reaches a configured server through the browser", async () =
     assert.equal(called.result.isError, false);
     assert.equal(JSON.parse(called.result.content[0].text).content[0].text, "echo:bridge");
     // The MCP server itself saw the call: the relay is not simulated either.
-    assert.deepEqual(mcp.calls, [{ name: "echo", arguments: { text: "bridge" } }]);
+    assert.equal(mcp.calls.length, 1);
+    assert.deepEqual(
+      { name: mcp.calls[0].name, arguments: mcp.calls[0].arguments },
+      { name: "echo", arguments: { text: "bridge" } },
+    );
 
     const unknown = await sidecar.rpc("tools/call", {
       name: "mcp_call",
@@ -564,6 +613,142 @@ test("the MCP relay reaches a configured server through the browser", async () =
     assert.match(unknown.result.content[0].text, /Unknown MCP server/);
   } finally {
     await sidecar?.stop();
+    await browser?.close();
+    await mcp.close();
+    await bridge.close();
+  }
+});
+
+test("several MCP clients share one bridge session", async () => {
+  const bridge = await startBridge();
+  const mcp = await startMcpServer();
+  const workspace = makeWorkspace({ "/notes.md": "hello" });
+  const servers = [{ id: "mcp-1", name: "Test MCP", url: mcp.url }];
+  let browser;
+  let sidecar;
+  let proxy;
+  try {
+    const session = await bridgeSession(bridge.base, { writable: true, mcp: true });
+    browser = await connectBrowser(session, { workspace, mcpServers: servers });
+
+    // The workspace sidecar and a wrapped server's proxy are two MCP clients on one bridge
+    // session. Both must stay attached: registering the second must not evict the first, or
+    // the workspace tools would vanish whenever an authenticated server was wrapped.
+    sidecar = await startSidecar(session);
+    proxy = await startSidecar(session, {
+      server: "mcp-1",
+      name: "Test MCP",
+      scopes: "mcp",
+    });
+
+    const workspaceTools = (await sidecar.rpc("tools/list", {})).result.tools.map(
+      (tool) => tool.name,
+    );
+    assert.ok(workspaceTools.includes("workspace_read"));
+    assert.ok(workspaceTools.includes("mcp_call"));
+
+    const proxyTools = (await proxy.rpc("tools/list", {})).result.tools.map(
+      (tool) => tool.name,
+    );
+    assert.deepEqual(proxyTools, ["echo"], "the proxy serves only the upstream's tools");
+
+    // Both directions still work after the second client attached.
+    const read = await sidecar.rpc("tools/call", {
+      name: "workspace_read",
+      arguments: { path: "/notes.md" },
+    });
+    assert.equal(JSON.parse(read.result.content[0].text).content, "hello");
+    const called = await proxy.rpc("tools/call", {
+      name: "echo",
+      arguments: { text: "parallel" },
+    });
+    assert.equal(called.result.content[0].text, "echo:parallel");
+  } finally {
+    await proxy?.stop();
+    await sidecar?.stop();
+    await browser?.close();
+    await mcp.close();
+    await bridge.close();
+  }
+});
+
+test("an authenticated MCP server runs as a stdio proxy and keeps its token in the browser", async () => {
+  const bridge = await startBridge();
+  const mcp = await startMcpServer();
+  const workspace = makeWorkspace();
+  // The header is the whole reason for the proxy: OpenCode never receives it, the browser
+  // applies it on the way to the upstream.
+  const servers = [
+    {
+      id: "mcp-auth",
+      name: "Authenticated MCP",
+      url: mcp.url,
+      headers: { authorization: "Bearer s3cret" },
+    },
+    // A server without a header is not wrapped, so it still obeys the MCP switch.
+    { id: "mcp-plain", name: "Plain MCP", url: mcp.url },
+  ];
+  let browser;
+  let proxy;
+  try {
+    // `mcp: false` on purpose: a wrapped server is answered even with the switch off, because
+    // its stdio entry was only created because the token had to stay here.
+    const session = await bridgeSession(bridge.base, { writable: true, mcp: false });
+    browser = await connectBrowser(session, {
+      workspace,
+      mcpServers: servers,
+      mcpEnabled: false,
+      wrappedIds: ["mcp-auth"],
+    });
+    proxy = await startSidecar(session, {
+      server: "mcp-auth",
+      name: "Authenticated MCP",
+      scopes: "mcp",
+    });
+
+    const listed = await proxy.rpc("tools/list", {});
+    assert.deepEqual(
+      listed.result.tools.map((tool) => tool.name),
+      ["echo"],
+      "the proxy forwards the upstream's tool list",
+    );
+
+    const called = await proxy.rpc("tools/call", {
+      name: "echo",
+      arguments: { text: "wrapped" },
+    });
+    // The upstream's own MCP result, not the relay's flattened text.
+    assert.deepEqual(called.result.content, [{ type: "text", text: "echo:wrapped" }]);
+    assert.equal(called.result.isError, false);
+    // The token reached the server from the browser, and the server saw it.
+    assert.equal(mcp.calls.length, 1);
+    assert.equal(mcp.calls[0].headers.authorization, "Bearer s3cret");
+
+    // A proxy is one server, not the bridge: it advertises no workspace, write or relay tools.
+    const names = listed.result.tools.map((tool) => tool.name);
+    for (const hidden of ["workspace_list", "workspace_read", "mcp_call", "mcp_list_servers"]) {
+      assert.ok(!names.includes(hidden), `${hidden} must not be advertised by the proxy`);
+    }
+    // Resources and prompts are answered with empty lists, which is what a client expects.
+    assert.deepEqual((await proxy.rpc("resources/list", {})).result, { resources: [] });
+    assert.deepEqual((await proxy.rpc("prompts/list", {})).result, { prompts: [] });
+
+    // The relay gate still holds for a server that was not wrapped.
+    const relay = await startSidecar(session, { scopes: "mcp" });
+    try {
+      const denied = await relay.rpc("tools/call", {
+        name: "mcp_call",
+        arguments: { server: "mcp-plain", tool: "echo", arguments: { text: "denied" } },
+      });
+      // The browser refused before the upstream was contacted: the MCP switch is off.
+      assert.equal(denied.result.isError, true);
+      assert.match(denied.result.content[0].text, /MCP access is disabled/);
+    } finally {
+      await relay.stop();
+    }
+    assert.equal(mcp.calls.length, 1, "a denied relay call never reaches the upstream");
+  } finally {
+    await proxy?.stop();
     await browser?.close();
     await mcp.close();
     await bridge.close();

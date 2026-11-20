@@ -1593,9 +1593,14 @@ and every call times out. Do not move the registry there without shared state.
 
 Routes (both hosts): `POST .../bridge/sessions` creates a session and returns browser/agent tokens,
 URLs and (agent service only) `sidecarCommand`, `WS .../bridge/ws` attaches the browser,
-`WS .../bridge/agent` attaches the sidecar,
+`WS .../bridge/agent` attaches an MCP client — the workspace sidecar or one wrapped proxy —
 `POST .../bridge/mcp/:id` is the fallback MCP endpoint, and `DELETE .../bridge/sessions/:id` tears it
-down. The agent service additionally serves the browser leg over HTTP for a tunneled deployment
+down. **Several agent sockets may attach to one session** (`session.agentSockets` in `back/bridge.mjs`
+and `agent_sockets` in the agent service, cap 32): every wrapped server owns one process, and a new
+socket joins instead of replacing the others. They share the one browser leg and the one `pending`
+map, because every request id is unique, so an answer always reaches the socket that asked. Replacing
+the socket would otherwise disconnect the workspace sidecar as soon as a second server was wrapped.
+The agent service additionally serves the browser leg over HTTP for a tunneled deployment
 (`GET .../bridge/poll/:id` and `POST .../bridge/reply/:id`, §4.26): the first poll answers
 `{"type":"ready"}`, each later poll holds for `POLL_HOLD` (20 s) and answers `{"type":"idle"}`, and
 both take the browser token as `?token=` because a completion carries no header. A call the agent
@@ -1667,13 +1672,17 @@ and no stored headers to OpenCode itself (`PUT /api/experimental/mcp/<chatai-ext
 `/connect`), so those tools work without the tab. It needs neither bridge access nor an attached
 workspace, because the servers are registered in the agent's own OpenCode; `AgentPage` therefore
 enables `useAgentMcpInjection` from the flag alone, and the relay narrows itself once a bridge
-starts. Every configured server has a URL, so the address alone makes it dialable; a server with
-stored headers (a token) stays on the relay, because only the browser may hold it, and a URL that
-does not parse cannot be handed over either. The popover's status line counts that split
-explicitly: "Direct in OpenCode" is what OpenCode took and "via bridge" is what is left for the
-relay (`relayedMcpServers`), **not** the injections that failed — `via bridge: 0` therefore means
-nothing is left to relay, usually because every server was injected. A non-zero relay count next
-to a switched-off `bridgeMcp` is called out as a warning, because `mcp_list_servers` only exists in
+starts. Every configured server has a URL, so the address alone makes it dialable; a URL that does
+not parse cannot be handed over either. A server with stored headers (a token) is **never** handed
+over as a `remote` entry — that would copy the secret onto the agent host. When the option is on
+and the bridge can spawn a stdio command, such a server becomes a `chatai-auth-…` local entry
+instead (see below); otherwise it stays on the relay, which is what every pre-existing setup does.
+The popover's status line counts that split explicitly: "Direct in OpenCode" is what OpenCode took
+and "via bridge" is what is left for the relay (`relayedMcpServers`), **not** the injections that
+failed — `via bridge: 0` therefore means nothing is left to relay, usually because every server was
+injected. A wrapped server is subtracted from the relayed count (`wrappedMcp`), because its tools
+reach the model through its own stdio entry. A non-zero relay count next to a switched-off
+`bridgeMcp` is called out as a warning, because `mcp_list_servers` only exists in
 a bridge session that was started with the MCP scope; a read-only bridge (its tool list is
 `workspace_list`/`workspace_stat`/`workspace_read` with no write or MCP tools) means both switches
 were off when it started.
@@ -1693,9 +1702,34 @@ turning bridge access off leaves them alone, because they need no tab. Leaving t
 remove them either, for the same reason. OpenCode's `/experimental/mcp` API is runtime-only, so
 nothing survives an OpenCode restart and the page reconciles again on its next mount.
 
-Both routes are scoped to the session by `agents/agentMcpScope.js`, because OpenCode's MCP registry
-is instance-wide and a session's own `permissions` are the only per-session lever. The bridge entry
-is `chatai-bridge-<session id>`, an injected one ends with its session id, and only one bridge entry
+An authenticated server is **wrapped**, not injected:
+`agents/agentMcpInjection.js#wrappedMcpServers` selects every configured server with a non-empty
+`headers` object and a parseable URL, `wrappedMcpNames` names each
+`chatai-auth-<server>[-<n>]-<session id>` (counter before the session id, like the injected
+entries), and `useAgentBridge#registerWrappedEntries` registers one `local` entry per server. Its
+command is the same sidecar as the bridge, with `CHAT_AI_BRIDGE_SERVER=<configured server id>` and
+`CHAT_AI_BRIDGE_SERVER_NAME=<label>` added to the usual `CHAT_AI_BRIDGE_URL` / `_TOKEN` /
+`_SCOPES`. In that single-server mode the sidecar advertises no workspace, write or relay tools:
+`tools/list` asks the browser for that upstream's tools (`mcp_list_tools`) and `tools/call` runs
+one (`mcp_call`), and the browser answers with the upstream's own MCP result
+(`callMcpServerToolResult`, `content`/`isError`) so an image or structured block is not flattened.
+The secret never reaches the agent: the entry carries an id, and the browser resolves the current
+URL and headers from `user_settings.mcp_servers` at call time, so editing a token takes effect
+without re-registering. Wrapping follows `bridgeInjectExternal` (the hook's `wrapMcp`), not the MCP
+relay switch: a wrapped call is answered with `mcp: false` too (`wrappedServer` in
+`handleToolCall`), because the proxy is OpenCode dialling the server itself. Wrapping needs the
+bridge session, so only an attached workspace with access on and a stdio `sidecarCommand` wraps
+anything; with the HTTP `mcpUrl` fallback the server stays on the relay. The proxies are registered
+only once the browser leg is up (socket `onopen` or the first poll), because their first
+`tools/list` has to reach the page, and the sidecar retries a `BRIDGE_OFFLINE` answer 20 × 250 ms
+for that first list. `sweepStaleWrappedEntries` removes the `chatai-auth-*` entries of other
+sessions on every run, and a proxy that cannot start is removed again and reported
+(`wrappedMcpFailed`) so its server stays on the relay.
+
+Every entry this app registers is scoped to the session by `agents/agentMcpScope.js`, because
+OpenCode's MCP registry is instance-wide and a session's own `permissions` are the only
+per-session lever. The bridge entry is `chatai-bridge-<session id>`, an injected one ends with its
+session id, a wrapped one is `chatai-auth-<server>-<session id>`, and only one bridge entry
 exists: `sweepStaleBridgeEntries` deletes the rest on every registration, and a session switch
 removes the previous entry and registers the new name without restarting the socket. The scope then
 patches every session of the agent (`PATCH /api/session/{id}` with `permissions`) to deny
@@ -1708,20 +1742,28 @@ changes, on mount and on `chatai:agent-session(s)-changed`. Two gaps are accepte
 after a run (an agent-spawned subagent) has no rules until the next one, and the instant between a
 session switch and the re-registration still has the previous entry usable by its own session.
 
-`back`'s own bridge is authenticated and bounded. `POST /bridge/sessions` requires the `x-bridge-key`
-header to equal `BRIDGE_SHARED_SECRET`, and the route answers 503 when that variable is unset rather
-than minting tokens for whoever can reach the port; `BRIDGE_ALLOW_ANON=1` restores the old anonymous
-behaviour and exists for local testing only. The browser's key comes from `VITE_BRIDGE_KEY` at build
-time, so it ships in the bundle: it keeps a client that reaches the backend directly from opening a
-session, and the OIDC gateway remains the real boundary. Both sides can be configured from the
-config files instead of the environment — `bridgeSharedSecret` in `back.json` (env wins) and
-`bridgeKey` in `front.json`, mapped by `vite.config.js` to `VITE_BRIDGE_KEY` — which is the only way
-a native `npm run start` checkout has a working bridge. The two must match: an empty `bridgeKey`
-sends no header, so a `back` with a secret answers 401, and a `back` without one answers 503. Both
-are reported in the agent's workspace popover and the toast by name (`agents.bridge.disabled_by_server`
-/ `agents.bridge.key_rejected`), not as a generic start failure, because the status alone never says
-what to fix. A session expires after
-`BRIDGE_SESSION_TTL_MS` (default 15 minutes) and is refreshed by tool calls and socket traffic, at
+`back`'s own bridge is authenticated and bounded. `POST /bridge/sessions` accepts an optional
+`x-bridge-key` header; when `BRIDGE_SHARED_SECRET`/`bridgeSharedSecret` is configured it must equal
+it, and without one the route mints a session for any client that can reach the port (the OIDC
+gateway remains the real boundary). The browser's value for that header comes from
+`VITE_BRIDGE_KEY` at build time, so it ships in the bundle and is a deployment-wide gate only —
+both sides can be configured from the config files instead of the environment
+(`bridgeSharedSecret` in `back.json`, env wins; `bridgeKey` in `front.json`, mapped by
+`vite.config.js`). A mismatch is `401` and is reported by name (`agents.bridge.key_rejected`), not
+as a generic start failure; an older `back` still answers `503` without a secret, which the popover
+reports as `agents.bridge.disabled_by_server`.
+
+The leg pairing does not depend on that secret. The page generates a random **per-chat key**
+(`agents/bridgeKey.js`: 32 bytes base64url, one per agent + session, kept in
+`localStorage["chatai.bridge.keys"]`, bounded to 200 entries), sends it as `key` in the
+`/bridge/sessions` body, and puts it into the environment of every stdio MCP entry it registers
+(`CHAT_AI_BRIDGE_KEY`, both the bridge sidecar and each authenticated server's proxy). Both hosts
+store it on the session and close an agent socket that does not present it again as an
+`x-bridge-key` header (the body, not a header, because the model tunnel forwards no headers). The
+session's own token still gates the browser leg. A session created without a key (an older app)
+accepts a socket without one, so the two sides can be deployed in either order. A session expires
+after `BRIDGE_SESSION_TTL_MS` (default 15 minutes) and is refreshed by tool calls and socket
+traffic, at
 most `BRIDGE_MAX_SESSIONS` (32) exist at once, and one client IP may create ten per minute. Neither
 WebSocket carries its token in the URL any more — the browser sends it as the `bridge-token.<token>`
 subprotocol, the sidecar as an `Authorization: Bearer` header — so proxy and access logs no longer

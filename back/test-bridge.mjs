@@ -84,7 +84,7 @@ const preflightAllowOrigins = async (base, origin) =>
     request.end();
   });
 
-const expectUpgradeRejected = (url) =>
+const expectUpgradeRejected = (url, extraHeaders = {}) =>
   new Promise((resolve, reject) => {
     const target = new URL(url);
     const request = http.request({
@@ -96,6 +96,7 @@ const expectUpgradeRejected = (url) =>
         Upgrade: "websocket",
         "Sec-WebSocket-Version": "13",
         "Sec-WebSocket-Key": "dGhlIHNhbXBsZSBub25jZQ==",
+        ...extraHeaders,
       },
     });
     request.once("upgrade", (_response, socket) => {
@@ -112,12 +113,16 @@ const expectUpgradeRejected = (url) =>
   });
 
 
-test("session creation is disabled when no secret is configured", async () => {
+test("session creation is open without a secret, and the per-chat key pairs the legs", async () => {
   const bridge = await startBridge();
   try {
     const response = await createSession(bridge.base);
-    assert.equal(response.status, 503);
-    assert.deepEqual(await response.json(), { error: "bridge disabled" });
+    // `back` no longer refuses to mint a session just because the deployment configured no
+    // shared secret; the random per-chat key below is what pairs the two legs.
+    assert.equal(response.status, 200);
+    const session = await response.json();
+    assert.ok(session.token);
+    assert.ok(session.agentToken);
   } finally {
     await bridge.close();
   }
@@ -313,6 +318,44 @@ test("the browser token subprotocol upgrades and echoes bridge.v1", async () => 
     socket.close();
     await once(socket, "close");
     assert.deepEqual(errors, []);
+  } finally {
+    await bridge.close();
+  }
+});
+
+test("the agent leg must present the per-chat key the session was created with", async () => {
+  const bridge = await startBridge();
+  try {
+    const created = await fetch(`${bridge.base}/bridge/sessions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ workspaceId: "workspace-1", key: "chat-key" }),
+    });
+    assert.equal(created.status, 200);
+    const session = await created.json();
+
+    // The token alone is not enough: the page generated this key for the chat and put it into
+    // the stdio entry's environment, so a socket that only knows the URL cannot attach.
+    await expectUpgradeRejected(session.agentWsUrl, {
+      Authorization: `Bearer ${session.agentToken}`,
+    });
+    await expectUpgradeRejected(session.agentWsUrl, {
+      Authorization: `Bearer ${session.agentToken}`,
+      "x-bridge-key": "another-chat",
+    });
+
+    const socket = new WebSocket(session.agentWsUrl, {
+      headers: {
+        Authorization: `Bearer ${session.agentToken}`,
+        "x-bridge-key": "chat-key",
+      },
+    });
+    const ready = once(socket, "message");
+    await once(socket, "open");
+    const [message] = await ready;
+    assert.deepEqual(JSON.parse(String(message)), { type: "ready" });
+    socket.close();
+    await once(socket, "close");
   } finally {
     await bridge.close();
   }

@@ -31,6 +31,11 @@ vi.mock("../../agent/mcp", () => ({
     );
   }),
   callMcpServerTool: vi.fn(async () => ""),
+  // The wrapped proxy's path: the upstream's own MCP result, forwarded unchanged.
+  callMcpServerToolResult: vi.fn(async () => ({
+    content: [{ type: "text", text: "echo:wrapped" }],
+    isError: false,
+  })),
 }));
 vi.mock("../../apis/agentTunnel", () => ({
   // The tunnel is a deployment setting; the hook must pick the HTTP browser leg
@@ -43,6 +48,7 @@ import {
   addOpencodeMcpServer,
   removeOpencodeMcpServer,
 } from "../../apis/opencodeAgents";
+import { callMcpServerTool, callMcpServerToolResult } from "../../agent/mcp";
 import {
   bridgeBaseFor,
   bridgeUsesTunnel,
@@ -59,6 +65,7 @@ const props = {
   workspaceId: "ws-1",
   writable: false,
   mcp: false,
+  wrapMcp: false,
   mounts: [],
   providers: new Map(),
   rootProvider: null,
@@ -98,6 +105,7 @@ class FakeWebSocket {
   url: string;
   protocols: string[];
   readyState = 0;
+  sent: string[] = [];
   onopen: (() => void) | null = null;
   onmessage: ((event: { data: string }) => void) | null = null;
   onclose: (() => void) | null = null;
@@ -113,7 +121,9 @@ class FakeWebSocket {
     FakeWebSocket.instances.push(this);
   }
 
-  send() {}
+  send(data: string) {
+    this.sent.push(data);
+  }
   close() {}
 }
 
@@ -130,6 +140,13 @@ afterEach(() => {
   // make the next one think OpenCode still holds them.
   mocks.listMcp.mockReset();
   mocks.listMcp.mockResolvedValue([]);
+  // A test that models OpenCode's registry replaces these; resetting keeps that model from
+  // leaking into the next case.
+  vi.mocked(addOpencodeMcpServer).mockReset();
+  vi.mocked(addOpencodeMcpServer).mockResolvedValue(undefined);
+  vi.mocked(removeOpencodeMcpServer).mockClear();
+  vi.mocked(callMcpServerTool).mockClear();
+  vi.mocked(callMcpServerToolResult).mockClear();
   // `mockClear`, not `mockReset`: Testing Library's cleanup unmounts after this
   // hook, and the deleted tunnel session still calls the last implementation.
   mocks.tunnelRequest.mockClear();
@@ -665,6 +682,73 @@ describe("useAgentBridge", () => {
     });
   });
 
+  it("creates the session with a per-chat key and puts it into every stdio entry", async () => {
+    // The key is generated in this page, kept in localStorage per chat, remembered by the
+    // host and presented by the sidecar on the agent leg. It is not the deployment's
+    // `bridgeKey`, which is a separate, optional header.
+    window.localStorage.clear();
+    vi.mocked(addOpencodeMcpServer).mockClear();
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        ...sessionResponse,
+        sidecarCommand: ["node", "/srv/agent-service/bridge-sidecar.mjs"],
+      }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("WebSocket", FakeWebSocket);
+
+    renderHook(() => useAgentBridge({ ...props, agent: serviceAgent }));
+
+    await waitFor(() => expect(addOpencodeMcpServer).toHaveBeenCalled());
+
+    const init = fetchMock.mock.calls[0][1] as any;
+    const body = JSON.parse(init.body);
+    expect(body.key).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    // No deployment secret is configured here, so nothing else travels as a header.
+    expect(init.headers).not.toHaveProperty("x-bridge-key");
+
+    const environment = (vi.mocked(addOpencodeMcpServer).mock.calls[0][2] as any)
+      .environment;
+    expect(environment.CHAT_AI_BRIDGE_KEY).toBe(body.key);
+
+    // Per chat: the key is stored against the agent and the session that is open.
+    const stored = JSON.parse(
+      window.localStorage.getItem("chatai.bridge.keys") || "{}",
+    );
+    expect(stored["local-1:ses_alpha"]).toBe(body.key);
+  });
+
+  it("waits for the agent before it stores a key, so the chat can find it again", async () => {
+    // `AgentPage` renders this hook before localStorage has answered, so `agent` is briefly
+    // missing. A key generated then belongs to no chat and would be thrown away on reload.
+    window.localStorage.clear();
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ ...sessionResponse, sidecarCommand: ["node", "/srv/s.mjs"] }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("WebSocket", FakeWebSocket);
+
+    const { rerender } = renderHook((input) => useAgentBridge(input), {
+      initialProps: { ...props, agent: undefined as any },
+    });
+    // Idle while the agent is unknown, and nothing written under an empty scope.
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem("chatai.bridge.keys")).toBeNull();
+
+    rerender({ ...props, agent: serviceAgent });
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const body = JSON.parse((fetchMock.mock.calls[0][1] as any).body);
+    const stored = JSON.parse(
+      window.localStorage.getItem("chatai.bridge.keys") || "{}",
+    );
+    expect(stored["local-1:ses_alpha"]).toBe(body.key);
+  });
+
   it("registers a service agent's sidecar as a local MCP entry", async () => {
     vi.mocked(addOpencodeMcpServer).mockClear();
     vi.stubGlobal(
@@ -695,6 +779,212 @@ describe("useAgentBridge", () => {
         CHAT_AI_BRIDGE_URL: sessionResponse.agentWsUrl,
         CHAT_AI_BRIDGE_TOKEN: "agent-token",
       }),
+    });
+  });
+
+  describe("authenticated MCP servers", () => {
+    const authServer = {
+      id: "auth",
+      name: "Authorized",
+      url: "http://auth.test/mcp",
+      headers: { Authorization: "Bearer s3cret" },
+    };
+    const plainServer = {
+      id: "plain",
+      name: "Plain",
+      url: "http://plain.test/mcp",
+    };
+    const sidecarSession = {
+      ...sessionResponse,
+      sidecarCommand: ["node", "/srv/agent-service/bridge-sidecar.mjs"],
+    };
+
+    /** A sidecar command in the session response, which is what a wrapped proxy needs. */
+    const startWithSidecar = () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => ({
+          ok: true,
+          status: 200,
+          json: async () => sidecarSession,
+        })),
+      );
+      vi.stubGlobal("WebSocket", FakeWebSocket);
+    };
+
+    /** OpenCode's registry, keyed by entry name; connecting an entry makes it `connected`. */
+    const fakeRegistry = () => {
+      const entries = new Map<string, any>();
+      mocks.listMcp.mockImplementation(async () => [...entries.values()]);
+      vi.mocked(addOpencodeMcpServer).mockImplementation(async (
+        _agent: unknown,
+        name: unknown,
+        config: any,
+      ) => {
+        entries.set(String(name), {
+          name: String(name),
+          config,
+          status: { status: "connected" },
+        });
+      });
+      return entries;
+    };
+
+    it("registers a proxy per authenticated server once the browser leg is up", async () => {
+      // A stored token may not leave the browser, so OpenCode gets a local entry that runs the
+      // bridge sidecar in single-server mode instead of a remote entry with headers.
+      mocks.settings = { mcp_servers: [authServer, plainServer] };
+      startWithSidecar();
+      const entries = fakeRegistry();
+      vi.mocked(addOpencodeMcpServer).mockClear();
+
+      const { result } = renderHook(() =>
+        useAgentBridge({ ...props, mcp: true, wrapMcp: true, agent: serviceAgent }),
+      );
+
+      await waitFor(() => expect(FakeWebSocket.instances.length).toBe(1));
+      FakeWebSocket.instances[0].onopen?.();
+
+      await waitFor(() =>
+        expect(result.current.wrappedEntries.map((entry: any) => entry.name)).toEqual([
+          "chatai-auth-authorized-ses_alpha",
+        ]),
+      );
+      // Only the server with a header is wrapped; the plain one stays on the relay (or on
+      // OpenCode's own injection), so one entry is registered for the bridge plus one proxy.
+      const names = vi.mocked(addOpencodeMcpServer).mock.calls.map(([, name]) => name);
+      expect(names).toEqual([
+        "chatai-bridge-ses_alpha",
+        "chatai-auth-authorized-ses_alpha",
+      ]);
+      const proxyConfig = entries.get("chatai-auth-authorized-ses_alpha")?.config;
+      expect(proxyConfig).toMatchObject({
+        type: "local",
+        command: ["node", "/srv/agent-service/bridge-sidecar.mjs"],
+        codemode: false,
+        environment: expect.objectContaining({
+          // The server's id, not its address or header: the browser resolves the current
+          // settings when a tool is called.
+          CHAT_AI_BRIDGE_SERVER: "auth",
+          CHAT_AI_BRIDGE_SERVER_NAME: "Authorized",
+          CHAT_AI_BRIDGE_SCOPES: "mcp",
+          CHAT_AI_BRIDGE_URL: sessionResponse.agentWsUrl,
+          CHAT_AI_BRIDGE_TOKEN: "agent-token",
+        }),
+      });
+      // The secret itself is nowhere in what OpenCode stores.
+      expect(JSON.stringify(proxyConfig)).not.toContain("s3cret");
+    });
+
+    it("answers a wrapped server's call with the upstream result even with MCP off", async () => {
+      // The proxy exists because of the token, not because the relay is on: it is OpenCode
+      // dialling the server itself, so its calls must work with `mcp: false`, and its answer
+      // is the upstream's own MCP result (`content`, `isError`).
+      mocks.settings = { mcp_servers: [authServer] };
+      startWithSidecar();
+      const entries = fakeRegistry();
+      vi.mocked(addOpencodeMcpServer).mockClear();
+
+      const { result } = renderHook(() =>
+        useAgentBridge({ ...props, mcp: false, wrapMcp: true, agent: serviceAgent }),
+      );
+
+      await waitFor(() => expect(FakeWebSocket.instances.length).toBe(1));
+      const socket = FakeWebSocket.instances[0];
+      socket.onopen?.();
+      await waitFor(() => expect(result.current.wrappedEntries).toHaveLength(1));
+      expect(entries.has("chatai-auth-authorized-ses_alpha")).toBe(true);
+
+      socket.onmessage?.({
+        data: JSON.stringify({
+          type: "tool_call",
+          requestId: "call-wrapped",
+          name: "mcp_call",
+          arguments: { server: "auth", tool: "echo", arguments: { text: "hi" } },
+        }),
+      });
+
+      await waitFor(() => {
+        const reply = socket.sent
+          .map((raw) => JSON.parse(raw))
+          .find((message) => message.requestId === "call-wrapped");
+        expect(reply).toMatchObject({
+          type: "tool_result",
+          ok: true,
+          result: { content: [{ type: "text", text: "echo:wrapped" }], isError: false },
+        });
+      });
+      // The raw MCP result, not the relay's flattened text.
+      expect(callMcpServerToolResult).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: "http://auth.test/mcp",
+          headers: authServer.headers,
+        }),
+        "echo",
+        { text: "hi" },
+      );
+      expect(callMcpServerTool).not.toHaveBeenCalled();
+    });
+
+    it("leaves an authenticated server on the relay when no stdio command exists", async () => {
+      // The HTTP `mcpUrl` fallback cannot express a per-server stdio entry, so wrapping is
+      // skipped and the server keeps working through the relay instead.
+      mocks.settings = { mcp_servers: [authServer] };
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => ({ ok: true, status: 200, json: async () => sessionResponse })),
+      );
+      vi.stubGlobal("WebSocket", FakeWebSocket);
+      fakeRegistry();
+      vi.mocked(addOpencodeMcpServer).mockClear();
+
+      const { result } = renderHook(() =>
+        useAgentBridge({ ...props, mcp: true, wrapMcp: true, agent: serviceAgent }),
+      );
+
+      await waitFor(() => expect(FakeWebSocket.instances.length).toBe(1));
+      FakeWebSocket.instances[0].onopen?.();
+
+      await waitFor(() => expect(result.current.entryName).toBe("chatai-bridge-ses_alpha"));
+      // Give the (skipped) wrapped registration a chance to run before asserting.
+      await new Promise((resolve) => window.setTimeout(resolve, 0));
+      expect(
+        vi
+          .mocked(addOpencodeMcpServer)
+          .mock.calls.map(([, name]) => name)
+          .filter((name) => String(name).startsWith("chatai-auth-")),
+      ).toEqual([]);
+      expect(result.current.wrappedEntries).toEqual([]);
+    });
+
+    it("sweeps a proxy left behind by the session that was open before", async () => {
+      mocks.settings = { mcp_servers: [authServer] };
+      startWithSidecar();
+      const entries = fakeRegistry();
+      entries.set("chatai-auth-authorized-ses_previous", {
+        name: "chatai-auth-authorized-ses_previous",
+        status: { status: "connected" },
+      });
+      vi.mocked(addOpencodeMcpServer).mockClear();
+
+      const { result } = renderHook(() =>
+        useAgentBridge({ ...props, mcp: true, wrapMcp: true, agent: serviceAgent }),
+      );
+
+      await waitFor(() => expect(FakeWebSocket.instances.length).toBe(1));
+      FakeWebSocket.instances[0].onopen?.();
+
+      await waitFor(() =>
+        expect(removeOpencodeMcpServer).toHaveBeenCalledWith(
+          expect.anything(),
+          "chatai-auth-authorized-ses_previous",
+        ),
+      );
+      await waitFor(() =>
+        expect(result.current.wrappedEntries.map((entry: any) => entry.name)).toEqual([
+          "chatai-auth-authorized-ses_alpha",
+        ]),
+      );
     });
   });
 

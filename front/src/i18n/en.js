@@ -1995,7 +1995,7 @@ export default {
       unavailable: "Agent bridge not available",
       unavailable_detail: "No bridge endpoint at {{url}} (HTTP {{status}}).",
       disabled_by_server:
-        "The back service refuses bridge sessions because it has no bridge secret (HTTP 503). Set bridgeSharedSecret in back.json (or BRIDGE_SHARED_SECRET) and the same value as bridgeKey in front.json, then restart both services.",
+        "An older back service refuses bridge sessions when it has no shared secret (HTTP 503). Update it, or set bridgeSharedSecret in back.json (or BRIDGE_SHARED_SECRET) and the same value as bridgeKey in front.json, then restart both services.",
       key_rejected:
         "The back service rejected the bridge key (HTTP 401). bridgeKey in front.json must match bridgeSharedSecret in back.json (or BRIDGE_SHARED_SECRET).",
       unreachable:
@@ -2029,6 +2029,10 @@ export default {
         "The MCP tools switch above is off, so {{count}} servers are not relayed in this session.",
       inject_none: "No MCP server without a password is configured.",
       inject_error: "Could not add the MCP servers to OpenCode: {{message}}",
+      wrapped_summary:
+        "MCP servers with a stored token, as native stdio: {{count}}",
+      wrapped_failed:
+        "The stdio proxy for {{servers}} could not start, so they stay on the bridge relay",
       session_scope:
         "Both routes are limited to the session that is open: the entries carry its id and every other session of this agent is denied, including its subagents' siblings.",
       rescope_failed:

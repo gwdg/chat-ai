@@ -399,6 +399,26 @@ export async function callMcpServerTool(
   return result?.isError ? `MCP error: ${text}` : text;
 }
 
+/**
+ * The upstream's own MCP answer (`content`, `isError`), for a caller that has to forward it
+ * unchanged.
+ *
+ * The bridge's single-server proxy uses this: OpenCode spawned a stdio server for one
+ * configured MCP server, so what the model sees should be that server's result — an image or a
+ * structured block included — instead of the flattened text the chat path needs.
+ */
+export async function callMcpServerToolResult(
+  server: McpServer,
+  toolName: string,
+  args: unknown,
+) {
+  const { client } = await connect(server);
+  return client.callTool({
+    name: toolName,
+    arguments: (args as Record<string, unknown>) ?? {},
+  });
+}
+
 export interface McpTools {
   tools: AgentTool<any>[];
 }

@@ -145,9 +145,11 @@ OpenCode ──MCP stdio──▶ bridge_sidecar.py ──WS agent leg──▶ 
   stays the fallback when no command is returned.
 - **Contract.** The environment is identical to `back/bridge-sidecar.mjs`:
   `CHAT_AI_BRIDGE_URL`, `CHAT_AI_BRIDGE_TOKEN`, `CHAT_AI_BRIDGE_SCOPES`
-  (`workspace`, plus `write`/`mcp`). The tool list comes from
-  `bridge_tools.py#tool_definitions(writable, mcp)`, the same function the HTTP
-  fallback uses, so the two transports cannot offer different tools.
+  (`workspace`, plus `write`/`mcp`) and `CHAT_AI_BRIDGE_KEY` (the browser's
+  random per-chat key, presented as the `x-bridge-key` header on the agent leg).
+  The tool list comes from `bridge_tools.py#tool_definitions(writable, mcp)`, the
+  same function the HTTP fallback uses, so the two transports cannot offer
+  different tools.
 - **stdout is the protocol.** Diagnostics go to stderr; a stray `print` corrupts
   the JSON-RPC stream. `tests/test_bridge_sidecar.py` runs the file as a
   subprocess and pins this, the tool list, the offline answer and that it starts
@@ -218,18 +220,22 @@ data still leaves the browser only as the answer to an explicit read:
 
 ### 4.4 Servers OpenCode reaches itself
 
-The bridge is the only route for a server that needs a header or that only the
-browser can reach. A server the OpenCode host can dial itself is better served
-natively, because its tools then survive a closed tab:
+A server the OpenCode host can dial itself is better served natively, because its
+tools then survive a closed tab. Two cases share that option:
 
-- **Option.** "Inject external MCP tools" in the agent's workspace popover
-  (`bridgeInjectExternal`, stored per agent like the write and MCP switches).
-  It needs neither bridge access nor an attached workspace: the servers are
-  registered in the agent's own OpenCode, so the option stays usable while the
-  bridge is off, and the relay narrows itself once a bridge starts.
-  `useAgentMcpInjection` registers every configured server that has an HTTP URL
-  and no stored headers through `PUT /api/experimental/mcp/<chatai-ext-…>` and
-  `POST …/connect`, and polls `GET /api/mcp` for the result.
+- **No header.** "Inject external MCP tools" in the agent's workspace popover
+  (`bridgeInjectExternal`, stored per agent like the write and MCP switches)
+  registers the server as a `remote` entry. It needs neither bridge access nor an
+  attached workspace: the servers are registered in the agent's own OpenCode, so
+  the option stays usable while the bridge is off, and the relay narrows itself
+  once a bridge starts. `useAgentMcpInjection` registers every configured server
+  that has an HTTP URL and no stored headers through
+  `PUT /api/experimental/mcp/<chatai-ext-…>` and `POST …/connect`, and polls
+  `GET /api/mcp` for the result.
+- **With a header.** A token may not leave the browser, so such a server is never
+  a `remote` entry. It is wrapped as one stdio proxy per server (§4.5) when the
+  same option is on and the bridge can spawn a sidecar; otherwise it stays on the
+  relay, exactly as before.
 - **One session owns an entry.** OpenCode's MCP registry belongs to the instance,
   so an entry added there is offered to every session of the agent. The entry is
   therefore named after the session (`chatai-ext-<server>-<session id>`, and
@@ -258,7 +264,64 @@ natively, because its tools then survive a closed tab:
   vanish with the OpenCode process and are reconciled on the next page load.
   A `localhost` URL means the OpenCode host, not the user's machine.
 
-### 4.5 Verifying a direct agent end to end
+### 4.5 Authenticated servers: one stdio proxy each
+
+A server with a stored header (`authorization`, an API key) must not be handed to
+OpenCode as a `remote` entry, because that copies the secret onto the agent
+host. The bridge session is already a path from that host back into the page, so
+each such server gets its own `local` MCP entry that runs the sidecar in
+**single-server proxy** mode:
+
+```
+OpenCode ──MCP stdio──▶ sidecar (CHAT_AI_BRIDGE_SERVER=<id>) ──agent leg──▶ host
+                                                                  └──browser leg──▶ page ──header──▶ upstream MCP
+```
+
+- **Registration.** `agents/agentMcpInjection.js#wrappedMcpServers` selects every
+  configured server with a non-empty `headers` object and a parseable URL.
+  `useAgentBridge#registerWrappedEntries` registers one entry per server through
+  the same experimental MCP routes, named
+  `chatai-auth-<server>[-<counter>]-<session id>` so `agentMcpScope` scopes it to
+  the session like the other entries. It runs when the browser leg is up (socket
+  `onopen` or the first poll), because the proxy's first `tools/list` has to reach
+  the page, and again on a session switch.
+- **Environment.** The entry reuses the bridge's `CHAT_AI_BRIDGE_URL`,
+  `CHAT_AI_BRIDGE_TOKEN`, `CHAT_AI_BRIDGE_SCOPES` and `CHAT_AI_BRIDGE_KEY`, plus
+  `CHAT_AI_BRIDGE_SERVER=<configured server id>` and
+  `CHAT_AI_BRIDGE_SERVER_NAME=<label>`. Both sidecars read the same contract:
+  `back/bridge-sidecar.mjs` and `agent-service/…/bridge_sidecar.py`.
+- **Proxy mode.** With `CHAT_AI_BRIDGE_SERVER` set, the sidecar advertises no
+  workspace, write or relay tools. `tools/list` forwards `mcp_list_tools` and
+  `tools/call` forwards `mcp_call` for that one server id, so the model sees the
+  upstream's own tools. A `BRIDGE_OFFLINE` answer is retried for 20 × 250 ms,
+  which covers the moment between OpenCode spawning the process and the page's
+  socket opening.
+- **The secret stays here.** The entry carries the server's configured **id**;
+  the browser resolves the current URL and headers from
+  `user_settings.mcp_servers` when a tool is called, so editing a token takes
+  effect on the next call without re-registering. The proxy's `tools/call` answer
+  is the upstream's raw MCP result (`callMcpServerToolResult`: `content`,
+  `isError`), not the relay's flattened text, so images and structured blocks
+  survive.
+- **Only with a sidecar.** Wrapping needs the bridge session, so it requires
+  bridge access, an attached workspace and a stdio `sidecarCommand`. With the
+  HTTP `mcpUrl` fallback (a direct agent with no
+  `opencodeBridgeSidecarCommand`) the server stays on the relay, as it always
+  did. A proxy that cannot connect is removed again and reported
+  (`wrappedMcpFailed`), which also leaves its server on the relay.
+- **Several MCP clients per session.** The workspace sidecar and every proxy
+  attach to one bridge session as separate agent sockets (`agentSockets` in
+  `back/bridge.mjs`, `agent_sockets` in the service, cap 32). They share the one
+  browser leg and the one `pending` map: request ids are unique, so an answer
+  reaches the socket that asked, and a second attach never evicts the first.
+- **Relay and wrapping are exclusive per server.** A wrapped server is answered
+  even when the relay switch (`bridgeMcp`) is off — the proxy is OpenCode
+  dialling the server itself — and the popover subtracts it from the "via
+  bridge" count. `sweepStaleWrappedEntries` deletes `chatai-auth-*` entries of
+  sessions that are no longer open; `bridgeInjectExternal` off removes them, and
+  bridge access off removes them with the session they belonged to.
+
+### 4.6 Verifying a direct agent end to end
 
 `back/test-bridge-direct.mjs` (`npm run test:bridge-direct` in `back/`) is the
 direct-agent counterpart of `back/test-bridge.mjs`. It runs the real
@@ -266,8 +329,12 @@ direct-agent counterpart of `back/test-bridge.mjs`. It runs the real
 a browser leg that answers exactly like `useAgentBridge#handleToolCall` (an
 in-memory workspace tree for `workspace_*`, a real HTTP MCP server for `mcp_*`),
 and asserts the sidecar's tool list, reads, writes, resource listing and the
-`BRIDGE_OFFLINE` answer when the browser is gone. No model and no network are
-needed for that part.
+`BRIDGE_OFFLINE` answer when the browser is gone. Two cases cover §4.5: several
+stdio clients attach to one session (the workspace sidecar plus a proxy, both
+still working), and an authenticated server runs as a proxy whose entry carries
+only the configured id while the browser applies the header — the fake MCP server
+records what it received, so a leaked or missing token fails the test. No model
+and no network are needed for that part.
 
 The last test is opt-in and drives a live server:
 
@@ -287,7 +354,9 @@ reached the model. It skips itself without a password.
   (`http://localhost:10000/public/v1`) and answers 404 for `/bridge/sessions`, and
   where `localhost:8081` is `back`. OpenCode itself is never the host: it answers
   405, because it has no bridge route at all. A `401` means `bridgeKey` (front) and
-  `bridgeSharedSecret` (back) disagree, `503` means `back` has no secret.
+  `bridgeSharedSecret` (back) disagree, but both are optional: without a deployment
+  secret the session is minted and the random per-chat key pairs the legs. Only an
+  older `back` answers `503` (`agents.bridge.disabled_by_server`).
 - **The sidecar path is the agent host's, not the app's.** A `local` MCP entry's
   `command` is resolved by the process that runs OpenCode, so a direct server in
   another container or on another machine cannot see `back/bridge-sidecar.mjs`
@@ -370,14 +439,17 @@ leg's status is visible.
 | `front/src/hooks/useAgentBridge.ts` | session lifecycle, `sidecarCommandFor`/`wantsSidecar`, `bridgeBaseFor`, failure messages |
 | `front/src/apis/opencodeAgents.js` | `addOpencodeMcpServer` / `connectOpencodeMcpServer` / `removeOpencodeMcpServer`, tunneled `rawRequest` |
 | `front/src/apis/agentTunnel.js` | carries an `/agents` call in a `saia-agent` completion |
-| `back/bridge-sidecar.mjs` | stdio MCP sidecar for **direct** agents (WebSocket + Bearer) |
+| `back/bridge-sidecar.mjs` | stdio MCP sidecar for **direct** agents (WebSocket + Bearer); `CHAT_AI_BRIDGE_SERVER` switches it to the single-server proxy mode of §4.5 |
+| `front/src/hooks/useAgentMcpInjection.js` | reconciles `chatai-ext-*` (no header) per session and keeps the relay count |
+| `front/src/agents/agentMcpInjection.js` | which servers are injectable / wrapped / relayed, and the `chatai-ext-*` / `chatai-auth-*` entry names |
+| `front/src/agents/agentMcpScope.js` | session-scoped `permissions` rules for every `chatai-*` entry |
 | `back/bridge.mjs` | `/bridge/*` for direct agents |
 | `back/bridge-resources.mjs` | MCP resources for both JS hosts (sidecar + `mcpUrl`) |
-| `back/test-bridge-direct.mjs` | end-to-end test for a direct agent (§4.5), with an opt-in live leg |
+| `back/test-bridge-direct.mjs` | end-to-end test for a direct agent (§4.6), with an opt-in live leg |
 | `agent-service/src/saia_agent_service/bridge.py` | `/agents/<id>/bridge/*`, `_agent_base`, `_sidecar_command`, both legs |
 | `agent-service/src/saia_agent_service/bridge_tools.py` | the one tool list both transports offer |
 | `agent-service/src/saia_agent_service/bridge_resources.py` | MCP resources for both Python transports (§4.3) |
-| `agent-service/src/saia_agent_service/bridge_sidecar.py` | the stdio MCP server a service-managed agent spawns |
+| `agent-service/src/saia_agent_service/bridge_sidecar.py` | the stdio MCP server a service-managed agent spawns, proxy mode included |
 | `agent-service/tests/test_bridge_sidecar.py` | runs that file as a subprocess (tools, resources, offline, no `PYTHONPATH`) |
 | `agent-service/src/saia_agent_service/tunnel.py` | replays a carried request, restores the outer `scheme`/`server` |
 | `backends.example.yml` (`agent-service`) | backend kinds that decide which address is reachable |

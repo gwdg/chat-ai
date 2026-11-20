@@ -16,12 +16,17 @@ vi.mock("../../apis/opencodeAgents", () => ({
 
 import {
   INJECTED_MCP_PREFIX,
+  WRAPPED_MCP_PREFIX,
   injectableMcpServers,
   injectExternalMcpServers,
   injectedMcpName,
   injectedMcpNames,
   relayedMcpServers,
   removeInjectedMcpServers,
+  sweepStaleWrappedEntries,
+  wrappedMcpName,
+  wrappedMcpNames,
+  wrappedMcpServers,
 } from "../agentMcpInjection";
 
 const agent = { id: "agent-1", name: "Example agent" };
@@ -276,5 +281,116 @@ describe("agent MCP injection", () => {
 
     expect(removed).toHaveLength(2);
     expect(mocks.remove.mock.calls.map(([, name]) => name)).toEqual(removed);
+  });
+});
+
+describe("authenticated MCP servers as stdio proxies", () => {
+  // The token is the reason for wrapping: it may stay in the browser, so OpenCode gets a local
+  // entry that asks this page to run the call instead of a `remote` entry with headers.
+  const authenticated = [
+    {
+      id: "auth",
+      name: "Authorized",
+      url: "http://auth.test/mcp",
+      headers: { Authorization: "Bearer secret" },
+    },
+    {
+      id: "twin",
+      name: "Twin",
+      url: "http://twin.test/mcp",
+      headers: { "x-api-key": "k" },
+    },
+  ];
+
+  it("wraps exactly the servers that carry a header", () => {
+    const wrapped = wrappedMcpServers([
+      ...authenticated,
+      { id: "plain", name: "Plain", url: "http://plain.test/mcp" },
+      { id: "gateway", name: "GWDG", serverId: "gw-1" },
+      // A header with no keys is not a credential, and a URL that does not parse cannot be
+      // proxied either.
+      { id: "empty", name: "Empty", url: "http://empty.test/mcp", headers: {} },
+      { id: "broken", name: "Broken", url: ":::", headers: { "x-api-key": "k" } },
+    ]);
+
+    expect(wrapped.map((server) => server.id)).toEqual(["auth", "twin"]);
+    // The id travels to the agent, not the address or the header: the browser resolves it
+    // against the current settings, so an edited token needs no re-registration.
+    expect(wrapped[0]).toEqual({
+      id: "auth",
+      name: "Authorized",
+      url: "http://auth.test/mcp",
+      headers: { Authorization: "Bearer secret" },
+    });
+  });
+
+  it("does not wrap the same address twice", () => {
+    expect(
+      wrappedMcpServers([
+        { id: "one", url: "http://same.test/mcp", headers: { a: "1" } },
+        { id: "two", url: "http://same.test/mcp", headers: { a: "2" } },
+      ]).map((server) => server.id),
+    ).toEqual(["one"]);
+  });
+
+  it("names the entry after the server and ends it with the session id", () => {
+    const name = wrappedMcpName(
+      { name: "Authorized", url: "http://auth.test/mcp" },
+      sessionId,
+    );
+
+    expect(name).toBe(`${WRAPPED_MCP_PREFIX}authorized-${sessionId}`);
+    // The session scope reads the trailing id; a name that ended anywhere else would be
+    // offered to every session of the agent again.
+    expect(name.endsWith(sessionId)).toBe(true);
+
+    const names = wrappedMcpNames(authenticated, sessionId);
+    expect([...names.keys()]).toEqual([
+      `${WRAPPED_MCP_PREFIX}authorized-${sessionId}`,
+      `${WRAPPED_MCP_PREFIX}twin-${sessionId}`,
+    ]);
+  });
+
+  it("keeps two same-named proxies apart with a counter before the session", () => {
+    const names = wrappedMcpNames(
+      [
+        { id: "one", name: "Same", url: "http://one.test/mcp" },
+        { id: "two", name: "Same", url: "http://two.test/mcp" },
+      ],
+      sessionId,
+    );
+
+    expect([...names.keys()]).toEqual([
+      `${WRAPPED_MCP_PREFIX}same-${sessionId}`,
+      `${WRAPPED_MCP_PREFIX}same-2-${sessionId}`,
+    ]);
+  });
+
+  it("sweeps the proxies of sessions that are no longer open and leaves the rest", async () => {
+    mocks.list.mockResolvedValue([
+      { name: `${WRAPPED_MCP_PREFIX}authorized-ses_previous` },
+      { name: `${INJECTED_MCP_PREFIX}up-ses_previous` },
+      { name: "chatai-bridge-ses_previous" },
+      { name: "manual" },
+    ]);
+
+    const keep = new Set([`${WRAPPED_MCP_PREFIX}authorized-${sessionId}`]);
+    const removed = await sweepStaleWrappedEntries(agent, keep);
+
+    expect(removed).toEqual([`${WRAPPED_MCP_PREFIX}authorized-ses_previous`]);
+    // Only our own proxies: injected entries and the bridge entry have their own sweep.
+    expect(mocks.remove).toHaveBeenCalledTimes(1);
+    expect(mocks.remove).toHaveBeenCalledWith(
+      agent,
+      `${WRAPPED_MCP_PREFIX}authorized-ses_previous`,
+    );
+  });
+
+  it("a sweep of the session's own proxies removes nothing", async () => {
+    const name = `${WRAPPED_MCP_PREFIX}authorized-${sessionId}`;
+    mocks.list.mockResolvedValue([{ name }]);
+
+    expect(await sweepStaleWrappedEntries(agent, new Set([name]))).toEqual([]);
+    expect(mocks.remove).not.toHaveBeenCalled();
   });
 });
