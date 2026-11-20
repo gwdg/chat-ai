@@ -967,7 +967,7 @@ export default function SidebarContent({
             </PinnedSection>
           )}
           <div
-            className={`sticky top-0 z-20 bg-base-100 px-3 pt-2 pb-2 ${
+            className={`sticky top-0 z-20 bg-base-100 px-3 pt-2 pb-1 ${
               chatsHeaderElevated
                 ? "shadow-[0_2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.5)]"
                 : ""
@@ -1192,7 +1192,7 @@ export default function SidebarContent({
 
           {/* Conversations, grouped by topic */}
           {(!chatsCollapsed || hasSearch) && (
-          <div className="pl-3 pr-2 pt-2 pb-1 space-y-1">
+          <div className="pl-3 pr-2 pb-1 space-y-1">
             {hasSearch ? (
               <div className="space-y-1">
                 {noSearchResults ? (

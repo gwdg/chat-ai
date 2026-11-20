@@ -105,6 +105,7 @@ export default {
       lastMonth: "Letzter Monat",
       older: "Älter",
     },
+    topics_label: "Themen",
     create_button: "Neues Thema",
     expand_topic: "Thema ausklappen",
     collapse_topic: "Thema einklappen",

@@ -417,44 +417,50 @@ export default function TopicList({
   }
 
   return (
-    <div className="flex flex-col gap-1.5 pt-1" data-guide="topic-list">
+    <div className="flex flex-col gap-1.5" data-guide="topic-list">
       {grouping === "topic" && (
         <>
-          <div className={`group flex items-center gap-2 rounded-2xl px-1 py-2 text-xs transition cursor-pointer border border-transparent text-base-content hover:bg-base-200`}>
-      <button
-        type="button"
-        ref={createButtonRef}
-        onClick={() => {
-          const rect = createButtonRef.current?.getBoundingClientRect();
-          onCreateTopic({ x: rect?.right ?? 0, y: rect?.top ?? 0 });
-        }}
-        data-guide="create-topic"
-        className="flex-1 min-w-0 flex items-center text-xs text-secondary dark:text-primary font-semibold cursor-pointer"
-      >
-        <BookmarkAdd size={18} className="flex-shrink-0" />
-          <span className="truncate px-2">{t("folders.create_button")}</span>
-      </button>
-      {topicCollapseIds.length > 0 && (
-        <button
-          type="button"
-          onClick={toggleAllTopics}
-          data-guide="collapse-all-topics"
-          aria-label={t(
-            allTopicsCollapsed
-              ? "folders.expand_all_topics"
-              : "folders.collapse_all_topics",
-          )}
-          title={t(
-            allTopicsCollapsed
-              ? "folders.expand_all_topics"
-              : "folders.collapse_all_topics",
-          )}
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-base-content/60 transition-colors hover:bg-base-300 hover:text-base-content group-hover:text-base-content/80"
-        >
-          {allTopicsCollapsed ? <ExpandAll size={16} /> : <CollapseAll size={16} />}
-        </button>
-      )}
-      </div>
+          <div className="flex items-center justify-between gap-2 px-2 py-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
+              {t("folders.topics_label")}
+            </span>
+            <div className="flex items-center gap-0.5">
+              <button
+                type="button"
+                ref={createButtonRef}
+                onClick={() => {
+                  const rect = createButtonRef.current?.getBoundingClientRect();
+                  onCreateTopic({ x: rect?.right ?? 0, y: rect?.top ?? 0 });
+                }}
+                data-guide="create-topic"
+                aria-label={t("folders.create_button")}
+                title={t("folders.create_button")}
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-secondary transition-colors hover:bg-base-300 dark:text-primary"
+              >
+                <BookmarkAdd size={16} />
+              </button>
+              {topicCollapseIds.length > 0 && (
+                <button
+                  type="button"
+                  onClick={toggleAllTopics}
+                  data-guide="collapse-all-topics"
+                  aria-label={t(
+                    allTopicsCollapsed
+                      ? "folders.expand_all_topics"
+                      : "folders.collapse_all_topics",
+                  )}
+                  title={t(
+                    allTopicsCollapsed
+                      ? "folders.expand_all_topics"
+                      : "folders.collapse_all_topics",
+                  )}
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-base-content/60 transition-colors hover:bg-base-300 hover:text-base-content"
+                >
+                  {allTopicsCollapsed ? <ExpandAll size={16} /> : <CollapseAll size={16} />}
+                </button>
+              )}
+            </div>
+          </div>
       {topics.map((topic) => {
         const color = topicColor(topic);
         const emoji =
