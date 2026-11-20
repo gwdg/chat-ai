@@ -2414,7 +2414,7 @@ export default {
     attach_from_workspace_hint:
       "Wählen Sie eine Datei aus einem verknüpften Arbeitsbereich und fügen Sie sie dieser Nachricht hinzu.",
     attach_from_workspace_loading: "Dateien werden geladen…",
-    sidebar_title: "Arbeitsbereich",
+    sidebar_title: "Arbeitsbereiche",
     new_workspace: "Neuer Arbeitsbereich",
     empty_sidebar_title: "Arbeitsbereich erstellen",
     create_title: "Arbeitsbereich erstellen",

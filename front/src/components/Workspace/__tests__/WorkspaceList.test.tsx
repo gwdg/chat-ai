@@ -673,22 +673,38 @@ describe("WorkspaceList chat drag & drop", () => {
 });
 
 describe("WorkspaceList section header", () => {
-  it("puts the section icon first and the collapse control last", () => {
+  it("mirrors the Chats header: chevron, icon, name, count", () => {
     renderList(makeStore());
 
-    const toggle = screen.getByRole("button", { name: "Workspace" });
+    const toggle = screen.getByRole("button", { name: /^Workspaces/ });
+    expect(toggle).toHaveTextContent("Workspaces");
     const icons = toggle.querySelectorAll("svg");
-    // Two icons: the section icon leading, the collapse chevron trailing.
+    // Same order as the Chats header: the collapse chevron leads, the section
+    // icon follows.
     expect(icons).toHaveLength(2);
-    expect(icons[0].getAttribute("class")).not.toContain(
-      "transition-transform",
-    );
-    expect(icons[1].getAttribute("class")).toContain("transition-transform");
-    expect(toggle.lastElementChild).toBe(icons[1]);
+    expect(icons[0].getAttribute("class")).toContain("transition-transform");
+    expect(icons[1].getAttribute("class")).not.toContain("transition-transform");
+
+    // The count closes the button, like the Chats count.
+    const count = toggle.lastElementChild as HTMLElement;
+    expect(count).toHaveTextContent("1");
+    expect(count.className).toContain("tabular-nums");
 
     // The trailing cluster keeps the add action as the very last element.
     const add = screen.getByRole("button", { name: "New workspace" });
     expect(add.parentElement?.lastElementChild).toBe(add);
+  });
+
+  it("stretches the section band to the sidebar's edges", () => {
+    const { container } = renderList(makeStore());
+
+    const band = container.querySelector(
+      '[data-guide="workspace-list"] > div',
+    ) as HTMLElement;
+    // It cancels the section's inset and keeps only its own label padding.
+    expect(band.className).toContain("-mx-3");
+    expect(band.className).toContain("px-3");
+    expect(band.className).not.toContain("rounded");
   });
 });
 

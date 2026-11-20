@@ -2376,7 +2376,7 @@ export default {
     attach_from_workspace_hint:
       "Pick a file from an attached workspace and add it to this message.",
     attach_from_workspace_loading: "Loading files…",
-    sidebar_title: "Workspace",
+    sidebar_title: "Workspaces",
     new_workspace: "New workspace",
     empty_sidebar_title: "Create a workspace",
     create_title: "Create workspace",

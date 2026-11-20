@@ -135,7 +135,7 @@ export default function McpServerList() {
 
   return (
     <div className="px-3 pt-3 pb-1">
-      <div className="mb-1 flex items-center gap-1 rounded-lg bg-base-200/70 px-2 py-1">
+      <div className="-mx-3 mb-1 flex items-center gap-1 bg-base-200/70 px-3 py-1">
         <button
           type="button"
           onClick={() => dispatch(toggleTopic("__mcp_servers__"))}
@@ -150,6 +150,9 @@ export default function McpServerList() {
           <Tooltip text={t("mcp.tooltip")}>
             <span className="truncate">{t("mcp.section_title")}</span>
           </Tooltip>
+          <span className="ml-1 font-normal tabular-nums text-base-content/35">
+            {servers.length}
+          </span>
         </button>
         <button
           type="button"

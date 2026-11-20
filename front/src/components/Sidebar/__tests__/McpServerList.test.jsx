@@ -168,14 +168,14 @@ describe("McpServerList", () => {
     });
   });
 
-  it("marks the section with an icon beside the collapse control", () => {
+  it("marks the section with an icon, its count and the collapse control", () => {
     render(<McpServerList />);
 
+    const toggle = screen.getByRole("button", { name: /^MCP Servers/ });
     // Two icons: the collapse chevron and the section icon, like Pinned.
-    expect(
-      screen
-        .getByRole("button", { name: "MCP Servers" })
-        .querySelectorAll("svg"),
-    ).toHaveLength(2);
+    expect(toggle.querySelectorAll("svg")).toHaveLength(2);
+    // The count closes the button, exactly like the Chats header.
+    expect(toggle.lastElementChild).toHaveTextContent("1");
+    expect(toggle.lastElementChild.className).toContain("tabular-nums");
   });
 });

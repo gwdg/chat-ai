@@ -955,7 +955,7 @@ export default function SidebarContent({
                 : ""
             }`}
           >
-          <div className="mb-1 flex items-center justify-between rounded-lg bg-base-200/70 px-2 py-1">
+          <div className="-mx-3 mb-1 flex items-center justify-between rounded-none bg-base-200/70 px-3 py-1">
             <button
               type="button"
               onClick={() => dispatch(toggleTopic("__chats__"))}
