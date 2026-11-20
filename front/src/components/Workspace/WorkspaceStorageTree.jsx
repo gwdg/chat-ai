@@ -14,6 +14,7 @@ import {
 
 import { useConversationList } from "../../db";
 import {
+  removeWorkspaceMount,
   useWorkspaceChats,
   useWorkspaceMounts,
   useWorkspaceSources,
@@ -59,7 +60,7 @@ function StorageRow({ node, depth, api }) {
   const [error, setError] = useState("");
 
   const isDir = node.entry.kind === "dir";
-  const isTarget = api.targetKey === nodeKey(node);
+  const isSelected = api.selectedKey === nodeKey(node);
 
   const loadChildren = useCallback(async () => {
     setLoading(true);
@@ -80,6 +81,7 @@ function StorageRow({ node, depth, api }) {
   }, [loadChildren]);
 
   const toggle = () => {
+    api.selectNode?.(node);
     if (!isDir) {
       api.openFile?.(node);
       return;
@@ -102,7 +104,7 @@ function StorageRow({ node, depth, api }) {
     <div>
       <div
         className={`group flex items-center gap-1 rounded pr-1 text-[11px] ${
-          isTarget ? "bg-base-200" : "hover:bg-base-200/70"
+          isSelected ? "bg-accent/10" : "hover:bg-base-200/70"
         }`}
         style={{ paddingLeft: 4 + depth * 10 }}
       >
@@ -209,6 +211,8 @@ export default function WorkspaceStorageTree({
   const [rootRevision, setRootRevision] = useState(0);
   const [actionError, setActionError] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [selected, setSelected] = useState(null);
+  const [detaching, setDetaching] = useState(false);
   const requestRef = useRef(0);
   const previewSeqRef = useRef(0);
 
@@ -272,6 +276,7 @@ export default function WorkspaceStorageTree({
 
   useEffect(() => {
     setRootEntries(null);
+    setSelected(null);
   }, [workspaceId]);
 
   useEffect(() => {
@@ -440,6 +445,32 @@ export default function WorkspaceStorageTree({
     });
   }, []);
 
+  // Every row can be selected, whether or not it is an upload target: the
+  // selection is what the Detach button acts on.
+  const selectNode = useCallback((node) => {
+    setActionError("");
+    // Only a row that is itself mounted into the workspace can be detached —
+    // a file inside a mounted folder belongs to that folder's source.
+    const mount = node.entry?.mount ?? null;
+    setSelected({ key: nodeKey(node), mount: mount ?? null });
+  }, []);
+
+  const detachSelection = async () => {
+    const mount = selected?.mount;
+    if (!workspaceId || !mount || detaching) return;
+    setDetaching(true);
+    setActionError("");
+    try {
+      await removeWorkspaceMount(workspaceId, mount.id);
+      setSelected(null);
+      setTarget(rootTarget());
+    } catch (reason) {
+      setActionError(errorMessage(reason));
+    } finally {
+      setDetaching(false);
+    }
+  };
+
   const targetProvider = () => {
     if (target.provider) return target.provider;
     if (target.mount) {
@@ -538,11 +569,12 @@ export default function WorkspaceStorageTree({
   };
 
   const api = {
-    targetKey: target.key,
+    selectedKey: selected?.key ?? null,
     badgeFor,
     labelFor,
     loadChildren,
     selectTarget,
+    selectNode,
     openFile,
     isReadOnly: readOnlyFor,
   };
@@ -604,6 +636,25 @@ export default function WorkspaceStorageTree({
           >
             <Renew size={14} />
           </button>
+          {selected && (
+            <button
+              type="button"
+              data-guide="workspace-detach"
+              onClick={() => void detachSelection()}
+              disabled={!selected.mount || detaching}
+              title={
+                selected.mount
+                  ? t("workspace.detach_hint")
+                  : t("workspace.detach_mount_only")
+              }
+              className="btn btn-secondary btn-xs shrink-0 gap-1"
+            >
+              {detaching && (
+                <span className="loading loading-spinner loading-xs" />
+              )}
+              <span className="truncate">{t("workspace.detach")}</span>
+            </button>
+          )}
         </div>
         {actionError && (
           <div className="break-words px-3 py-1 text-[10px] text-error">

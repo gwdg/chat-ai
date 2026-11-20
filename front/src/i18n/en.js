@@ -2404,6 +2404,10 @@ export default {
     update_error: "Could not save the workspace",
     not_found: "Workspace not found",
     files_title: "Workspace files",
+    detach: "Detach",
+    detach_hint: "Detach this folder from the workspace",
+    detach_mount_only:
+      "Only a folder mounted into this workspace can be detached",
     kind: "Workspace",
     chat_count_one: "{{count}} chat",
     chat_count_other: "{{count}} chats",

@@ -29,6 +29,7 @@ const h = vi.hoisted(() => ({
   },
   openModal: vi.fn(),
   confirmAction: vi.fn((options, onConfirm) => onConfirm()),
+  removeMount: vi.fn(),
   listWorkspaceRoot: vi.fn(),
 }));
 
@@ -36,6 +37,7 @@ vi.mock("../../../db/workspaceDb", () => ({
   useWorkspaceSources: () => h.sources,
   useWorkspaceMounts: () => h.mounts,
   useWorkspaceChats: () => [],
+  removeWorkspaceMount: (...args) => h.removeMount(...args),
 }));
 
 vi.mock("../../../db", () => ({
@@ -95,6 +97,8 @@ beforeEach(() => {
   h.listWorkspaceRoot.mockReset();
   h.openModal.mockClear();
   h.confirmAction.mockClear();
+  h.removeMount.mockReset();
+  h.removeMount.mockResolvedValue(undefined);
   h.rootProvider.remove.mockClear();
   h.rootProvider.connect.mockClear();
 });
@@ -315,6 +319,53 @@ describe("WorkspaceStorageTree", () => {
           entry: expect.objectContaining({ name: "notes.txt" }),
         }),
       ),
+    );
+  });
+
+  it("selects a file and offers a Detach it cannot use", async () => {
+    h.listWorkspaceRoot.mockResolvedValue([entry("/notes.txt", "file")]);
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" />);
+
+    const file = await screen.findByText("notes.txt");
+    expect(
+      screen.queryByRole("button", { name: "Detach" }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(file);
+
+    expect(rowFor("notes.txt")).toHaveClass("bg-accent/10");
+    expect(screen.getByRole("button", { name: "Detach" })).toBeDisabled();
+  });
+
+  it("detaches the selected mount from the workspace", async () => {
+    const provider = {
+      status: "connected",
+      connect: vi.fn(async () => {}),
+      list: vi.fn(async () => ({ entries: [] })),
+    };
+    h.sources = [{ id: "dev-1", kind: "local", label: "Phone", readOnly: false }];
+    h.mounts = [mountRow];
+    h.providers = new Map([["dev-1", provider]]);
+    h.listWorkspaceRoot.mockResolvedValue([
+      entry("/Phone", "dir", { local: false, mount: mountRow }),
+    ]);
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" />);
+
+    fireEvent.click(await screen.findByText("Phone"));
+
+    const detach = await screen.findByRole("button", { name: "Detach" });
+    expect(detach).toBeEnabled();
+    fireEvent.click(detach);
+
+    await waitFor(() =>
+      expect(h.removeMount).toHaveBeenCalledWith("ws-1", "mount-1"),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "Detach" }),
+      ).not.toBeInTheDocument(),
     );
   });
 });
