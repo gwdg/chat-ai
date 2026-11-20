@@ -692,6 +692,42 @@ export default function WorkspaceSourceBrowser({
   const deviceEmpty =
     deviceRoot && !loading && !error && rows.length === 0;
 
+  // The same pills the workspace tree shows, so a folder reads "device" here and in the tree.
+  const badgeForSource = useCallback(
+    (source?: WorkspaceSourceRow) => {
+      switch (source?.kind) {
+        case "local":
+          return t("workspace.storage_badge_device");
+        case "arcana":
+        case "arcana-filesystem":
+          return t("workspace.storage_badge_arcana");
+        case "mcp":
+          return t("workspace.storage_badge_mcp");
+        case "agent":
+          return t("workspace.storage_badge_agent");
+        default:
+          return t("workspace.storage_badge_browser");
+      }
+    },
+    [t],
+  );
+
+  const badgeForEntry = useCallback(
+    () => {
+      if (view?.drive === "chats") return t("workspace.storage_badge_browser");
+      if (view?.drive === "mcp") return t("workspace.storage_badge_mcp");
+      if (view?.drive === "arcanas") return t("workspace.storage_badge_arcana");
+      const source =
+        view && view.level === "source"
+          ? localById.get(view.sourceId)
+          : undefined;
+      return source
+        ? badgeForSource(source)
+        : t("workspace.storage_badge_device");
+    },
+    [badgeForSource, localById, t, view],
+  );
+
   // A dropped folder arrives as a FileSystemDirectoryHandle in Chromium; anything else (a file, or
   // a browser without getAsFileSystemHandle) cannot be mounted and says so.
   const dropFolder = useCallback(
@@ -911,8 +947,8 @@ export default function WorkspaceSourceBrowser({
                             <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-base-content">
                               {row.name}
                             </span>
-                            <span className="shrink-0 rounded bg-base-200 px-1 py-0.5 text-[8px] font-semibold uppercase tracking-wide text-base-content/50">
-                              {t("workspace.kind_" + source.kind)}
+                            <span className="shrink-0 rounded-full border border-base-300 px-1.5 py-px text-[9px] font-medium tracking-wide text-base-content/55">
+                              {badgeForSource(source)}
                             </span>
                           </span>
                           <QuotaMeter quota={quota} label={usageLabel(quota)} />
@@ -1016,6 +1052,9 @@ export default function WorkspaceSourceBrowser({
                         )}
                         <span className="min-w-0 flex-1 truncate text-[11px] text-base-content">
                           {row.name}
+                        </span>
+                        <span className="shrink-0 rounded-full border border-base-300 px-1.5 py-px text-[9px] font-medium tracking-wide text-base-content/55">
+                          {badgeForEntry()}
                         </span>
                         {row.kind === "file" && typeof row.size === "number" && (
                           <span className="shrink-0 text-[10px] text-base-content/40">

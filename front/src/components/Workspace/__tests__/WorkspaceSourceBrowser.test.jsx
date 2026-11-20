@@ -213,7 +213,7 @@ describe("WorkspaceSourceBrowser", () => {
 
     const project = await screen.findByText("Project");
     const row = project.closest(".group");
-    expect(within(row).getByText("Local folder")).toBeInTheDocument();
+    expect(within(row).getByText("device")).toBeInTheDocument();
     await waitFor(() =>
       expect(row.querySelector("[data-quota-bar]")).toHaveStyle({
         width: "25%",
@@ -468,8 +468,8 @@ describe("WorkspaceSourceBrowser", () => {
     ]);
     renderBrowser({ target: { drive: "mcp" } });
 
-    expect(await screen.findByText("MCP")).toBeInTheDocument();
-    expect(screen.getByText("Docs server")).toBeInTheDocument();
+    const mcpRow = (await screen.findByText("Docs server")).closest(".group");
+    expect(within(mcpRow).getByText("MCP")).toBeInTheDocument();
     expect(screen.queryByText("Project")).not.toBeInTheDocument();
     expect(mcpProvider.list).not.toHaveBeenCalled();
 
@@ -609,6 +609,23 @@ describe("device empty state", () => {
 
     await screen.findByText("Project");
     expect(guide("workspace-sources-add-device-folder")).toBeTruthy();
+    await act(async () => {});
+  });
+
+  it("pills device files and browser chats like the workspace tree", async () => {
+    renderBrowser({ target: { drive: "device", sourceId: "local-1" } });
+
+    const folder = (await screen.findByText("docs")).closest(".group");
+    expect(within(folder).getByText("device")).toBeInTheDocument();
+    const file = screen.getByText("notes.txt").closest(".group");
+    expect(within(file).getByText("device")).toBeInTheDocument();
+  });
+
+  it("pills chat rows and their files as browser storage", async () => {
+    renderBrowser({ target: { drive: "chats" } });
+
+    const chat = (await screen.findByText("Planning chat")).closest(".group");
+    expect(within(chat).getByText("browser")).toBeInTheDocument();
     await act(async () => {});
   });
 
