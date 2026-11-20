@@ -19,14 +19,12 @@ export default function BrandChatWarning() {
   if (!clean) return null;
 
   return (
-    <div className="flex justify-between pb-2">
-      <div className="w-full h-full min-h-10 sticky select-none bg-base-300 m-1 py-1.5 px-3 rounded-lg flex gap-2 items-center shadow-sm dark:shadow-dark">
-        <TriangleAlert className="h-[18px] min-w-[18px] text-accent" />
-        <div
-          className="text-base-content text-sm [&_p]:mb-1 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_a]:text-accent [&_a:hover]:underline"
-          dangerouslySetInnerHTML={{ __html: clean }}
-        />
-      </div>
+    <div className="mx-auto w-full max-w-3xl select-none rounded-lg border border-base-300 bg-base-100 px-3 py-2 flex gap-2 items-center shadow-sm dark:shadow-dark">
+      <TriangleAlert className="h-[18px] min-w-[18px] text-accent" />
+      <div
+        className="text-base-content text-sm [&_p]:mb-1 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_a]:text-accent [&_a:hover]:underline"
+        dangerouslySetInnerHTML={{ __html: clean }}
+      />
     </div>
   );
 }

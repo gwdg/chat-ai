@@ -20,7 +20,6 @@ import ChatAgentSidebar from "../components/Workspace/ChatAgentSidebar";
 import AgentFilePreviewPanel from "../components/Agent/AgentFilePreviewPanel";
 import ChatFilePreviewPanel from "../components/Conversation/ChatFilePreviewPanel";
 import PersonaChatBanner from "../components/Conversation/PersonaChatBanner";
-import HallucinationWarning from "../components/Conversation/HallucinationWarning";
 import TourManager from "../components/SettingsPanel/TourManager";
 import { useEffect, useState } from "react";
 import {
@@ -171,12 +170,7 @@ export default function ChatPage() {
         <div className="flex min-h-0 min-w-0 flex-1 gap-2">
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             {localState?.persona && (
-              <>
-                <div className="mx-auto w-full md:max-w-[85vw] xl:max-w-[1300px]">
-                  <HallucinationWarning />
-                </div>
-                <PersonaChatBanner persona={localState.persona} />
-              </>
+              <PersonaChatBanner persona={localState.persona} />
             )}
             <div className="min-h-0 flex-1">
               <Conversation
