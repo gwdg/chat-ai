@@ -7,6 +7,8 @@ import WorkspaceStorageTree from "./WorkspaceStorageTree";
 import {
   detachWorkspaceChat,
   removeWorkspaceMount,
+  useAllWorkspaceChats,
+  useAllWorkspaceMounts,
   useDeviceLocalSources,
   useWorkspaceChats,
   useWorkspaceMounts,
@@ -36,6 +38,8 @@ export default function WorkspaceStorageManager({ workspaceId, onOpenAddSource }
 
   const mounts = useWorkspaceMounts(workspaceId ?? undefined);
   const workspaceChats = useWorkspaceChats(workspaceId ?? undefined);
+  const everyMount = useAllWorkspaceMounts();
+  const everyChat = useAllWorkspaceChats();
 
   // An item is "in the workspace" when this workspace holds a mount for exactly
   // that folder — a folder mounted in another workspace is still addable here.
@@ -56,20 +60,46 @@ export default function WorkspaceStorageManager({ workspaceId, onOpenAddSource }
     [workspaceId, mounts, workspaceChats],
   );
 
+  // A mount covers everything under its source path, so selecting a file inside a
+  // mounted folder unmounts the folder that brought it in.
+  const mountCovers = (mount, item) =>
+    mount.sourceId === item.sourceId &&
+    (mount.sourcePath === "/" ||
+      mount.sourcePath === item.path ||
+      item.path.startsWith(`${mount.sourcePath}/`));
+
+  // Your Device lists folders from every workspace, so Unmount has to see every
+  // mount — a folder mounted in another workspace is still mounted.
+  const isMounted = useCallback(
+    (selection) => {
+      if (selection.sourceKind === "chat") {
+        return everyChat.some(
+          (chat) => chat.conversationId === selection.conversationId,
+        );
+      }
+      return everyMount.some((mount) => mountCovers(mount, selection));
+    },
+    [everyMount, everyChat],
+  );
+
   // Unmounting only drops the workspace's link: the source row (and the browser's
   // permission for the folder) stays, so the folder remains under Your Device.
   const unmountSelection = async (selection) => {
-    if (!workspaceId || selection.length === 0) return;
+    if (selection.length === 0) return;
     for (const item of selection) {
       if (item.sourceKind === "chat" && item.conversationId) {
-        await detachWorkspaceChat(workspaceId, item.conversationId);
+        for (const chat of everyChat) {
+          if (chat.conversationId === item.conversationId) {
+            await detachWorkspaceChat(chat.workspaceId, chat.conversationId);
+          }
+        }
         continue;
       }
-      const mount = mounts.find(
-        (row) =>
-          row.sourceId === item.sourceId && row.sourcePath === item.path,
-      );
-      if (mount) await removeWorkspaceMount(workspaceId, mount.id);
+      for (const mount of everyMount) {
+        if (mountCovers(mount, item)) {
+          await removeWorkspaceMount(mount.workspaceId, mount.id);
+        }
+      }
     }
   };
 
@@ -156,6 +186,7 @@ export default function WorkspaceStorageManager({ workspaceId, onOpenAddSource }
             onAddToWorkspace={addSelection}
             onUnmountSelection={unmountSelection}
             isInWorkspace={isInWorkspace}
+            isMounted={isMounted}
             busy={adding}
             onAddDeviceFolder={() => openAdd("local")}
             onMountDeviceFolder={mountDroppedFolder}

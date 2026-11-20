@@ -244,6 +244,7 @@ export default function WorkspaceSourceBrowser({
   onMountDeviceFolder,
   onPickDeviceFolder,
   isInWorkspace,
+  isMounted,
   embedded = false,
   className = "",
 }: {
@@ -259,6 +260,8 @@ export default function WorkspaceSourceBrowser({
   onMountDeviceFolder?: (handle: FileSystemDirectoryHandle) => Promise<void> | void;
   onPickDeviceFolder?: () => Promise<string | void> | string | void;
   isInWorkspace?: (selection: SourcesSelection) => boolean;
+  /** Whether any workspace mounts this item; defaults to `isInWorkspace`. */
+  isMounted?: (selection: SourcesSelection) => boolean;
   embedded?: boolean;
   className?: string;
 }) {
@@ -660,10 +663,10 @@ export default function WorkspaceSourceBrowser({
     () => selectedList.filter((item) => !(isInWorkspace?.(item) ?? false)),
     [selectedList, isInWorkspace],
   );
-  const mountedSelected = useMemo(
-    () => selectedList.filter((item) => isInWorkspace?.(item) ?? false),
-    [selectedList, isInWorkspace],
-  );
+  const mountedSelected = useMemo(() => {
+    const mounted = isMounted ?? isInWorkspace;
+    return selectedList.filter((item) => mounted?.(item) ?? false);
+  }, [selectedList, isMounted, isInWorkspace]);
   const forget = (items: SourcesSelection[]) =>
     setSelected((current) => {
       const next = new Map(current);
@@ -827,7 +830,7 @@ export default function WorkspaceSourceBrowser({
             onClick={() => void unmountSelection()}
             disabled={mountedSelected.length === 0 || pending}
             title={t("workspace.source_browser.unmount_hint")}
-            className="btn btn-ghost btn-xs shrink-0 gap-1 text-error hover:bg-error/10"
+            className="btn btn-ghost btn-xs shrink-0 gap-1 text-base-content/70 hover:bg-base-200"
           >
             {unmounting && (
               <span className="loading loading-spinner loading-xs" />

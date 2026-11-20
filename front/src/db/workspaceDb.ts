@@ -847,6 +847,28 @@ export function useWorkspaceMounts(workspaceId?: string): WorkspaceMountRow[] {
   );
 }
 
+/** Every mount in the database, across workspaces — for unmounting from the device pane. */
+export function useAllWorkspaceMounts(): WorkspaceMountRow[] {
+  return (
+    useLiveQuery(
+      () => db.workspace_mounts.toArray(),
+      [],
+      [] as WorkspaceMountRow[],
+    ) ?? []
+  );
+}
+
+/** Every chat link in the database, across workspaces. */
+export function useAllWorkspaceChats(): WorkspaceChatRow[] {
+  return (
+    useLiveQuery(
+      () => db.workspace_chats.toArray(),
+      [],
+      [] as WorkspaceChatRow[],
+    ) ?? []
+  );
+}
+
 export async function attachWorkspaceChat(
   workspaceId: string,
   conversationId: string,

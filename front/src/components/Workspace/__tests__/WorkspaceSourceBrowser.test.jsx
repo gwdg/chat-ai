@@ -438,6 +438,7 @@ describe("WorkspaceSourceBrowser", () => {
     expect(addButton()).toBeDisabled();
     expect(unmountButton()).toBeEnabled();
     expect(unmountButton()).toHaveTextContent("Unmount (1)");
+    expect(unmountButton()).not.toHaveClass("text-error");
     expect(mocks.onAddToWorkspace).not.toHaveBeenCalled();
 
     fireEvent.click(unmountButton());
@@ -452,6 +453,28 @@ describe("WorkspaceSourceBrowser", () => {
     );
     await waitFor(() =>
       expect(screen.getByLabelText("Planning chat")).not.toBeChecked(),
+    );
+  });
+
+  it("arms Unmount for a folder mounted by another workspace", async () => {
+    renderBrowser({
+      target: { drive: "device" },
+      isInWorkspace: () => false,
+      isMounted: () => true,
+    });
+
+    fireEvent.click(await screen.findByLabelText("Project"));
+
+    // Still addable to this workspace, but the folder is mounted elsewhere.
+    expect(addButton()).toHaveTextContent("Add to Workspace (1)");
+    expect(unmountButton()).toBeEnabled();
+    expect(unmountButton()).toHaveTextContent("Unmount (1)");
+
+    fireEvent.click(unmountButton());
+    await waitFor(() =>
+      expect(mocks.onUnmountSelection).toHaveBeenCalledWith([
+        expect.objectContaining({ sourceId: "local-1", path: "/" }),
+      ]),
     );
   });
 
