@@ -26,6 +26,7 @@ import { joinPath } from "../../workspace/paths";
 import { readProviderPreview } from "../../workspace/filePreview";
 import { uploadLocalFiles } from "../../workspace/upload";
 import { useWorkspaceProviders } from "../../workspace/useWorkspaceProviders";
+import { WORKSPACE_FILES_CHANGED_EVENT } from "../../workspace/filesChanged";
 import {
   createWorkspaceRootProvider,
   emptyStream,
@@ -79,6 +80,22 @@ function StorageRow({ node, depth, api }) {
   const reload = useCallback(async () => {
     await loadChildren();
   }, [loadChildren]);
+
+  // A refresh has to reach every open folder, not just the root: a row keeps its
+  // own children, so nothing above it can replace them.
+  const revisionRef = useRef(api.revision ?? 0);
+  useEffect(() => {
+    const revision = api.revision ?? 0;
+    if (revisionRef.current === revision) return;
+    revisionRef.current = revision;
+    if (open) {
+      void loadChildren();
+      return;
+    }
+    // Collapsed rows drop what they had, so the next expand lists fresh.
+    setChildren(null);
+    setError("");
+  }, [api.revision, open, loadChildren]);
 
   const toggle = () => {
     api.selectNode?.(node);
@@ -217,6 +234,13 @@ export default function WorkspaceStorageTree({
   const requestRef = useRef(0);
   const previewSeqRef = useRef(0);
 
+  // One signal for "list everything again": the root here, and every open row
+  // through `api.revision`.
+  const bumpRevision = useCallback(
+    () => setRootRevision((value) => value + 1),
+    [],
+  );
+
   const mountsRef = useRef(mounts);
   mountsRef.current = mounts;
   const sourcesRef = useRef(sources);
@@ -283,6 +307,27 @@ export default function WorkspaceStorageTree({
   useEffect(() => {
     void loadRoot();
   }, [loadRoot, workspaceId, rootRevision, mountsKey, sourcesKey]);
+
+  // The agent's own writes are announced by the workspace VFS: the tree follows
+  // them, coalescing a burst of files into one re-list.
+  useEffect(() => {
+    if (!workspaceId || typeof window === "undefined") return undefined;
+    let timer = null;
+    const onChange = (event) => {
+      const changedId = event?.detail?.workspaceId;
+      if (!changedId || changedId !== workspaceId) return;
+      if (timer !== null) return;
+      timer = window.setTimeout(() => {
+        timer = null;
+        setRootRevision((value) => value + 1);
+      }, 200);
+    };
+    window.addEventListener(WORKSPACE_FILES_CHANGED_EVENT, onChange);
+    return () => {
+      window.removeEventListener(WORKSPACE_FILES_CHANGED_EVENT, onChange);
+      if (timer !== null) window.clearTimeout(timer);
+    };
+  }, [workspaceId]);
 
   const rootTarget = useCallback(
     () => ({
@@ -566,6 +611,7 @@ export default function WorkspaceStorageTree({
 
   const api = {
     selectedKey: selected?.key ?? null,
+    revision: rootRevision,
     badgeFor,
     labelFor,
     loadChildren,
@@ -646,7 +692,7 @@ export default function WorkspaceStorageTree({
             <button
               type="button"
               className="btn btn-ghost btn-xs btn-square"
-              onClick={() => void loadRoot()}
+              onClick={bumpRevision}
               title={t("workspace.refresh")}
               aria-label={t("workspace.refresh")}
             >

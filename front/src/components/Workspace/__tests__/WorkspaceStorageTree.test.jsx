@@ -381,4 +381,79 @@ describe("WorkspaceStorageTree", () => {
       screen.queryByRole("button", { name: "Detach" }),
     ).not.toBeInTheDocument();
   });
+
+  // The tree used to refresh only "/" — every expanded folder kept the children it
+  // had listed once, so a file the agent created inside it never showed up until the
+  // sidebar was collapsed and rebuilt.
+  it("refreshes the children of every open folder, not only the root", async () => {
+    let docs = [entry("/Docs/one.md")];
+    h.listWorkspaceRoot.mockImplementation(async ({ path }) => {
+      if (path === "/") return [entry("/Docs", "dir")];
+      if (path === "/Docs") return docs;
+      return [];
+    });
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" />);
+
+    fireEvent.click(await screen.findByText("Docs"));
+    expect(await screen.findByText("one.md")).toBeInTheDocument();
+
+    docs = [...docs, entry("/Docs/two.md")];
+    fireEvent.click(screen.getByRole("button", { name: /refresh/i }));
+
+    expect(await screen.findByText("two.md")).toBeInTheDocument();
+    expect(screen.getByText("one.md")).toBeInTheDocument();
+  });
+
+  it("lists a collapsed folder fresh after a refresh", async () => {
+    let docs = [entry("/Docs/one.md")];
+    h.listWorkspaceRoot.mockImplementation(async ({ path }) => {
+      if (path === "/") return [entry("/Docs", "dir")];
+      if (path === "/Docs") return docs;
+      return [];
+    });
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" />);
+
+    fireEvent.click(await screen.findByText("Docs"));
+    expect(await screen.findByText("one.md")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Docs"));
+    expect(screen.queryByText("one.md")).not.toBeInTheDocument();
+
+    docs = [...docs, entry("/Docs/two.md")];
+    fireEvent.click(screen.getByRole("button", { name: /refresh/i }));
+    fireEvent.click(screen.getByText("Docs"));
+
+    expect(await screen.findByText("two.md")).toBeInTheDocument();
+  });
+
+  it("follows the agent's own writes for this workspace", async () => {
+    let docs = [entry("/Docs/one.md")];
+    h.listWorkspaceRoot.mockImplementation(async ({ path }) => {
+      if (path === "/") return [entry("/Docs", "dir")];
+      if (path === "/Docs") return docs;
+      return [];
+    });
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" />);
+    fireEvent.click(await screen.findByText("Docs"));
+    expect(await screen.findByText("one.md")).toBeInTheDocument();
+
+    docs = [...docs, entry("/Docs/two.md")];
+    fireEvent(
+      window,
+      new CustomEvent("chatai:workspace-files-changed", {
+        detail: { workspaceId: "another-workspace" },
+      }),
+    );
+    expect(screen.queryByText("two.md")).not.toBeInTheDocument();
+
+    fireEvent(
+      window,
+      new CustomEvent("chatai:workspace-files-changed", {
+        detail: { workspaceId: "ws-1" },
+      }),
+    );
+    expect(await screen.findByText("two.md")).toBeInTheDocument();
+  });
 });

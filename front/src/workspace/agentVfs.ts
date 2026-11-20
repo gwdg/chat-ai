@@ -5,6 +5,7 @@ import type { BrowserProvider } from "./providers/browser";
 import type { FileProvider } from "./providers/types";
 import { joinPath, normalizePath } from "./paths";
 import { streamOf, toBytes } from "./bytes";
+import { notifyWorkspaceFilesChanged } from "./filesChanged";
 
 type MountBinding = {
   mount: WorkspaceMountRow;
@@ -35,6 +36,11 @@ export class WorkspaceAgentVfs implements Vfs {
     private readonly root: BrowserProvider,
     private readonly mounts: MountBinding[],
   ) {}
+
+  /** The sidebar tree listens for this: a write here is a row that has to appear. */
+  private changed() {
+    notifyWorkspaceFilesChanged(this.workspaceId);
+  }
 
   private binding(path: string): { binding: MountBinding; inner: string } | null {
     const normalized = normalizePath(path);
@@ -104,12 +110,14 @@ export class WorkspaceAgentVfs implements Vfs {
       await routed.binding.provider.write(routed.inner, streamOf(data), {
         overwrite: true,
       });
+      this.changed();
       return;
     }
     if (this.root.capabilities.write === false) {
       throw new Error(READ_ONLY_MESSAGE);
     }
     await this.root.write(normalized, streamOf(data), { overwrite: true });
+    this.changed();
   }
 
   async mkdir(path: string): Promise<void> {
@@ -122,12 +130,14 @@ export class WorkspaceAgentVfs implements Vfs {
     if (routed) {
       assertWritable(routed.binding);
       await routed.binding.provider.mkdir(routed.inner);
+      this.changed();
       return;
     }
     if (this.root.capabilities.write === false) {
       throw new Error(READ_ONLY_MESSAGE);
     }
     await this.root.mkdir(normalized);
+    this.changed();
   }
 
   async readdir(path: string): Promise<Entry[]> {
@@ -190,12 +200,14 @@ export class WorkspaceAgentVfs implements Vfs {
         throw new Error(`Cannot remove the mount point ${normalized}`);
       }
       await routed.binding.provider.remove(routed.inner, { recursive: true });
+      this.changed();
       return;
     }
     if (this.root.capabilities.write === false) {
       throw new Error(READ_ONLY_MESSAGE);
     }
     await this.root.remove(normalized, { recursive: true });
+    this.changed();
   }
 
   async stamp(path: string): Promise<string | null> {

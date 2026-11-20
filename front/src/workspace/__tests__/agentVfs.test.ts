@@ -294,4 +294,60 @@ describe("WorkspaceAgentVfs", () => {
       { name: "root.txt", dir: false },
     ]);
   });
+
+  // The sidebar keeps its own copy of every folder it has listed, so a write the
+  // agent makes has to be announced or the row never appears.
+  it("announces every write, mkdir and remove for its workspace", async () => {
+    const { root } = makeRoot();
+    const mounted = makeMountProvider();
+    const vfs = new WorkspaceAgentVfs(
+      emptyConversation,
+      "workspace-1",
+      root,
+      [{ mount: mount(false), provider: mounted.provider }],
+    );
+    const seen: string[] = [];
+    const listen = (event: Event) => {
+      seen.push((event as CustomEvent).detail?.workspaceId ?? "none");
+    };
+    window.addEventListener("chatai:workspace-files-changed", listen);
+    try {
+      await vfs.writeFile("/mnt/a.txt", "hello");
+      await vfs.mkdir("/mnt/new");
+      await vfs.remove("/mnt/a.txt");
+      await vfs.writeFile("/root-new.txt", "hello");
+    } finally {
+      window.removeEventListener("chatai:workspace-files-changed", listen);
+    }
+    expect(seen).toEqual([
+      "workspace-1",
+      "workspace-1",
+      "workspace-1",
+      "workspace-1",
+    ]);
+  });
+
+  it("stays quiet for conversation uploads, which are not workspace rows", async () => {
+    const { root } = makeRoot();
+    const uploads: string[] = [];
+    const conversation: Vfs = {
+      ...emptyConversation,
+      writeFile: async (path) => {
+        uploads.push(path);
+      },
+    };
+    const vfs = new WorkspaceAgentVfs(conversation, "workspace-1", root, []);
+    let fired = 0;
+    const listen = () => {
+      fired += 1;
+    };
+    window.addEventListener("chatai:workspace-files-changed", listen);
+    try {
+      await vfs.writeFile("/uploads/file.txt", "hello");
+    } finally {
+      window.removeEventListener("chatai:workspace-files-changed", listen);
+    }
+    expect(uploads).toEqual(["/uploads/file.txt"]);
+    expect(fired).toBe(0);
+  });
 });
