@@ -1026,6 +1026,9 @@ export default function SidebarContent({
               <Chat size={12} className="shrink-0" />
               <span className="truncate">{t("folders.title")}</span>
             </button>
+            <span className="text-[11px] font-normal tabular-nums text-base-content/35">
+              {conversations.length}
+            </span>
             {!(chatsCollapsed && !hasSearch) && (
             <div className="flex items-center gap-1">
               <Popover className="relative">
@@ -1170,9 +1173,6 @@ export default function SidebarContent({
               </button>
             </div>
             )}
-            <span className="text-[11px] font-normal tabular-nums text-base-content/35">
-              {conversations.length}
-            </span>
           </div>
           {(!chatsCollapsed || hasSearch) && (
           <div

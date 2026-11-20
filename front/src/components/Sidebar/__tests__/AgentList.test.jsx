@@ -627,11 +627,14 @@ describe("AgentList", () => {
     const toggle = screen.getByRole("button", { name: /^Agents/ });
     // Two icons: the collapse chevron and the section icon, like Pinned.
     expect(toggle.querySelectorAll("svg")).toHaveLength(2);
-    // The count closes the band, exactly like the Chats header, so every
-    // band's number sits in one right-hand column.
+    // The count comes before the +, exactly like the other bands, so no band
+    // reads "+ 1".
     const band = toggle.parentElement;
-    expect(band.lastElementChild.className).toContain("tabular-nums");
-    expect(band.lastElementChild).not.toBe(toggle);
+    const add = screen.getByRole("button", { name: "Spawn agent" });
+    const count = add.previousElementSibling;
+    expect(count.className).toContain("tabular-nums");
+    expect(count.nextElementSibling).toBe(add);
+    expect(band.lastElementChild).toBe(add);
     // The label stretches, so the + lands against the count.
     expect(toggle.querySelector(".flex-1.min-w-0")).not.toBeNull();
   });

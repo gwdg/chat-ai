@@ -465,6 +465,9 @@ export default function AgentList({
           <span className="block truncate">{t("agents.section_title")}</span>
         </Tooltip>
       </button>
+      <span className="text-[11px] font-normal tabular-nums text-base-content/35">
+        {listedAgents.length}
+      </span>
       <button
         type="button"
         onClick={spawn}
@@ -475,9 +478,6 @@ export default function AgentList({
       >
         <Add size={15} />
       </button>
-      <span className="text-[11px] font-normal tabular-nums text-base-content/35">
-        {listedAgents.length}
-      </span>
     </div>
   );
 

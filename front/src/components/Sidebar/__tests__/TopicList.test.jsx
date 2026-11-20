@@ -397,7 +397,7 @@ describe("TopicList grouping headings", () => {
 });
 
 describe("TopicList row controls", () => {
-  it("puts the disclosure arrow at the trailing edge of the topic row", () => {
+  it("puts the disclosure arrow at the leading edge of the topic row", () => {
     const topic = { id: "t4", name: "Trailing topic", color: "violet" };
     render(
       <TopicList
@@ -411,16 +411,19 @@ describe("TopicList row controls", () => {
 
     const row = screen.getByText("Trailing topic").closest('[role="button"]');
     const toggle = row.querySelector('button[aria-label="Collapse topic"]');
-    const tail = row.lastElementChild;
+    const lead = row.firstElementChild;
 
-    expect(tail.contains(toggle)).toBe(true);
-    expect(tail.lastElementChild).toBe(toggle);
+    // The chevron opens the row, like the Chats and Workspaces bands; the
+    // emoji/icon slot follows it in the same 4px rhythm.
+    expect(lead.contains(toggle)).toBe(true);
+    expect(lead.firstElementChild).toBe(toggle);
+    expect(lead.className).toContain("gap-1");
     expect(toggle).toHaveAttribute("aria-expanded", "true");
-    // The emoji/icon slot and the label keep their leading positions.
-    expect(row.firstElementChild).not.toBe(toggle);
+    // Nothing folds the topic from the tail any more.
+    expect(row.lastElementChild.contains(toggle)).toBe(false);
   });
 
-  it("keeps the count and both controls in one flush tail group", () => {
+  it("keeps the count and the options menu in one flush tail group", () => {
     const topic = { id: "t4", name: "Trailing topic", color: "violet" };
     render(
       <TopicList
@@ -434,10 +437,10 @@ describe("TopicList row controls", () => {
 
     const row = screen.getByText("Trailing topic").closest('[role="button"]');
     const tail = row.lastElementChild;
-    // The count leads the group; no gap utility, so the controls sit flush.
+    // The count leads the group; no gap utility, so the menu sits flush.
     expect(tail.firstElementChild.textContent).toBe("1");
     expect([...tail.querySelectorAll("button")].map((b) => b.ariaLabel)).toEqual(
-      ["Topic options", "Collapse topic"],
+      ["Topic options"],
     );
     expect(tail.className).not.toContain("gap-");
     // The band is the same 40px box as a workspace band.

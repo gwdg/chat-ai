@@ -401,6 +401,9 @@ export default function WorkspaceList({
           {t("workspace.sidebar_title")}
         </span>
       </button>
+      <span className="text-[11px] font-normal tabular-nums text-base-content/35">
+        {listedWorkspaces.length}
+      </span>
       <button
         type="button"
         onClick={create}
@@ -411,9 +414,6 @@ export default function WorkspaceList({
       >
         <Add size={15} />
       </button>
-      <span className="text-[11px] font-normal tabular-nums text-base-content/35">
-        {listedWorkspaces.length}
-      </span>
     </div>
   );
 
@@ -468,6 +468,27 @@ export default function WorkspaceList({
                 } as CSSProperties
               }
             >
+              <button
+                type="button"
+                onClick={() =>
+                  dispatch(
+                    toggleTopic(collapseId(workspaceRowCollapseId(workspace.id))),
+                  )
+                }
+                disabled={!expandable}
+                className={`mr-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-base-content/40 ${
+                  expandable
+                    ? "cursor-pointer hover:text-base-content"
+                    : "cursor-default opacity-40"
+                }`}
+                aria-expanded={expanded}
+                aria-label={t("workspace.attached_items")}
+              >
+                <ChevronDown
+                  size={12}
+                  className={`transition-transform ${expanded ? "" : "-rotate-90"}`}
+                />
+              </button>
               <button
                 type="button"
                 onClick={(event) => {
@@ -603,27 +624,6 @@ export default function WorkspaceList({
                   )}
                 </PopoverPanel>
               </Popover>
-              <button
-                type="button"
-                onClick={() =>
-                  dispatch(
-                    toggleTopic(collapseId(workspaceRowCollapseId(workspace.id))),
-                  )
-                }
-                disabled={!expandable}
-                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-base-content/40 ${
-                  expandable
-                    ? "hover:text-base-content"
-                    : "cursor-default opacity-40"
-                }`}
-                aria-expanded={expanded}
-                aria-label={t("workspace.attached_items")}
-              >
-                <ChevronDown
-                  size={12}
-                  className={`transition-transform ${expanded ? "" : "-rotate-90"}`}
-                />
-              </button>
             </div>
             {expanded && expandable && (
               <div

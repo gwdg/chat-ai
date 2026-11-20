@@ -152,6 +152,9 @@ export default function McpServerList() {
             <span className="block truncate">{t("mcp.section_title")}</span>
           </Tooltip>
         </button>
+        <span className="text-[11px] font-normal tabular-nums text-base-content/35">
+          {servers.length}
+        </span>
         <button
           type="button"
           onClick={() => edit()}
@@ -162,9 +165,6 @@ export default function McpServerList() {
         >
           <Add size={15} />
         </button>
-        <span className="text-[11px] font-normal tabular-nums text-base-content/35">
-          {servers.length}
-        </span>
       </div>
 
       {collapsed ? null : servers.length === 0 ? (

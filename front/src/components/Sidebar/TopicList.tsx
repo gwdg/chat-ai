@@ -382,24 +382,48 @@ export default function TopicList({
             } as CSSProperties
           }
         >
-          <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center pointer-events-none">
-            {emoji ? (
-              <span
-                aria-hidden="true"
-                className="text-sm leading-none"
-                style={{ color: hex }}
-              >
-                {emoji}
-              </span>
-            ) : Icon ? (
-              <Icon size={16} style={{ color: hex }} />
-            ) : (
-              <span
-                aria-hidden="true"
-                className="h-2 w-2 rounded-full"
-                style={{ backgroundColor: withAlpha(hex, isDark ? 0.7 : 0.5) }}
+          <span className="flex flex-shrink-0 items-center gap-1">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleTopicCollapse(id);
+              }}
+              aria-expanded={!isCollapsed}
+              aria-label={
+                isCollapsed
+                  ? t("folders.expand_topic")
+                  : t("folders.collapse_topic")
+              }
+              className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md text-base-content/50 transition-colors hover:bg-base-300"
+            >
+              <ChevronDown
+                size={12}
+                className={`pointer-events-none transition-transform duration-200 ${
+                  isCollapsed ? "-rotate-90" : "rotate-0"
+                }`}
               />
-            )}
+            </button>
+
+            <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center pointer-events-none">
+              {emoji ? (
+                <span
+                  aria-hidden="true"
+                  className="text-sm leading-none"
+                  style={{ color: hex }}
+                >
+                  {emoji}
+                </span>
+              ) : Icon ? (
+                <Icon size={16} style={{ color: hex }} />
+              ) : (
+                <span
+                  aria-hidden="true"
+                  className="h-2 w-2 rounded-full"
+                  style={{ backgroundColor: withAlpha(hex, isDark ? 0.7 : 0.5) }}
+                />
+              )}
+            </span>
           </span>
 
           <span
@@ -437,28 +461,6 @@ export default function TopicList({
                 />
               </button>
             )}
-
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleTopicCollapse(id);
-              }}
-              aria-expanded={!isCollapsed}
-              aria-label={
-                isCollapsed
-                  ? t("folders.expand_topic")
-                  : t("folders.collapse_topic")
-              }
-              className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md text-base-content/50 transition-colors hover:bg-base-300"
-            >
-              <ChevronDown
-                size={12}
-                className={`pointer-events-none transition-transform duration-200 ${
-                  isCollapsed ? "-rotate-90" : "rotate-0"
-                }`}
-              />
-            </button>
           </span>
         </div>
 

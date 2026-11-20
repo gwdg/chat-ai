@@ -174,7 +174,12 @@ describe("WorkspaceList band shape", () => {
     const row = (await screen.findByText("Teaching")).closest(
       '[data-guide="workspace-row"]',
     ) as HTMLElement;
-    const label = row.children[0] as HTMLElement;
+    // The chevron leads; the name button and its tile follow.
+    const toggle = row.children[0] as HTMLElement;
+    const label = row.children[1] as HTMLElement;
+    expect(toggle.getAttribute("aria-label")).toBe(
+      "Attached chats, agents and sessions",
+    );
     expect(row.className).toContain("min-h-10");
     expect(row.className).toContain("px-1");
     // The whole band offers the pointer, exactly like a topic band.
@@ -786,16 +791,14 @@ describe("WorkspaceList section header", () => {
     expect(icons[0].getAttribute("class")).toContain("transition-transform");
     expect(icons[1].getAttribute("class")).not.toContain("transition-transform");
 
-    // The count closes the band, like the Chats count, so every band's number
-    // sits in one right-hand column.
+    // The count sits before the add action, so the band never reads "+ 1".
     const band = toggle.parentElement as HTMLElement;
-    const count = band.lastElementChild as HTMLElement;
+    const add = screen.getByRole("button", { name: "New workspace" });
+    const count = add.previousElementSibling as HTMLElement;
     expect(count).toHaveTextContent("1");
     expect(count.className).toContain("tabular-nums");
-
-    // The add action sits between the label and the count.
-    const add = screen.getByRole("button", { name: "New workspace" });
-    expect(add.nextElementSibling).toBe(count);
+    expect(count.nextElementSibling).toBe(add);
+    expect(band.lastElementChild).toBe(add);
   });
 
   it("stretches the section band to the sidebar's edges", () => {
@@ -814,7 +817,7 @@ describe("WorkspaceList section header", () => {
 });
 
 describe("WorkspaceList row controls", () => {
-  it("puts the disclosure arrow at the trailing edge of the row", async () => {
+  it("puts the disclosure arrow at the leading edge of the row", async () => {
     renderList(makeStore());
 
     await screen.findByText("Teaching");
@@ -823,10 +826,15 @@ describe("WorkspaceList row controls", () => {
       name: "Attached chats, agents and sessions",
     });
 
-    expect(row.lastElementChild).toBe(toggle);
+    // The chevron opens the row, like the Workspaces and Chats bands.
+    expect(row.firstElementChild).toBe(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
-    // The name button still comes first and owns the navigation click.
-    expect(row.querySelector("button")).not.toBe(toggle);
+    // It keeps the bands' 4px rhythm before the icon tile.
+    expect(toggle.className).toContain("mr-1");
+    expect(toggle.className).toContain("cursor-pointer");
+    // The name button follows it and owns the navigation click.
+    expect(toggle.nextElementSibling?.tagName).toBe("BUTTON");
+    expect(row.lastElementChild?.tagName).toBe("DIV");
   });
 });
 
