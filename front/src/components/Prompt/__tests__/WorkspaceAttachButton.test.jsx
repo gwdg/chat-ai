@@ -5,12 +5,13 @@ import WorkspaceAttachButton from "../WorkspaceAttachButton";
 
 const openModal = vi.fn();
 const navigate = vi.fn();
+const WORKSPACES = [
+  { id: "w1", name: "Research" },
+  { id: "w2", name: "Teaching" },
+];
 const dbMocks = vi.hoisted(() => ({
   links: [],
-  workspaces: [
-    { id: "w1", name: "Research" },
-    { id: "w2", name: "Teaching" },
-  ],
+  workspaces: [],
 }));
 
 vi.mock("../../../db/workspaceDb", () => ({
@@ -46,20 +47,27 @@ beforeEach(() => {
   openModal.mockClear();
   navigate.mockClear();
   dbMocks.links = [];
+  dbMocks.workspaces = WORKSPACES;
 });
 
 describe("WorkspaceAttachButton", () => {
-  it("opens Create workspace for a chat that has no workspace yet", async () => {
+  it("renders nothing for a chat that has no workspace", () => {
     renderButton();
-    openMenu();
 
-    fireEvent.click(await screen.findByText("Manage data"));
+    // A workspace button with no workspace behind it has nothing to show: the storage switch,
+    // the editor and the attachment list all belong to a workspace this chat does not have.
+    expect(
+      screen.queryByRole("button", { name: "Workspace" }),
+    ).not.toBeInTheDocument();
+  });
 
-    expect(navigate).not.toHaveBeenCalled();
-    // The new workspace takes the chat, so the dialog is Create workspace, not an empty browser.
-    expect(openModal).toHaveBeenCalledWith("workspaceCreate", {
-      attachConversationId: "conversation",
-    });
+  it("renders nothing when there is no workspace to attach at all", () => {
+    dbMocks.workspaces = [];
+    renderButton();
+
+    expect(
+      screen.queryByRole("button", { name: "Workspace" }),
+    ).not.toBeInTheDocument();
   });
 
   it("opens the workspace editor when exactly one workspace is attached", async () => {
@@ -91,6 +99,7 @@ describe("WorkspaceAttachButton", () => {
   });
 
   it("puts access storage first and writes it to the conversation", () => {
+    dbMocks.links = [{ workspaceId: "w1" }];
     const setLocalState = vi.fn((updater) => updater(localState));
     renderButton(setLocalState);
     openMenu();
@@ -103,15 +112,6 @@ describe("WorkspaceAttachButton", () => {
     const next = setLocalState.mock.results[0].value;
     expect(next.settings.tools.browser_storage).toBe(false);
     expect(next.flush).toBe(true);
-  });
-
-  it("offers the write switch only for a chat with an attached workspace", () => {
-    renderButton();
-    openMenu();
-
-    expect(
-      screen.queryByRole("checkbox", { name: "Allow write" }),
-    ).not.toBeInTheDocument();
   });
 
   it("toggles writing for the attached workspace right under access storage", () => {

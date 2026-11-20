@@ -441,8 +441,8 @@ export default {
     },
     manage_chat_data: {
       title: "Manage the files of a chat",
-      step1: "Access storage is on by default and sits at the top of the Workspace menu. Switch it off to give the model no file tools at all; attachments are still included in the message where possible.",
-      step2: "Choose Manage data to manage the files behind this switch. A chat attached to one workspace opens that workspace's editor — the same dialog as Create workspace, with its storage locations, its name, icon and colour, and Apply Changes; a chat with several workspaces lists them first; a chat with none opens Create workspace, and the chat joins the workspace it creates.",
+      step1: "Access storage is on by default and sits at the top of the Workspace menu, which appears while the chat belongs to a workspace. Switch it off to give the model no file tools at all; attachments are still included in the message where possible. A chat without a workspace has no such menu — attach it from the workspace first.",
+      step2: "Choose Manage data to manage the files behind this switch. A chat attached to one workspace opens that workspace's editor — the same dialog as Create workspace, with its storage locations, its name, icon and colour, and Apply Changes; a chat with several workspaces lists them first.",
       step3: "Upload, create, rename, download and delete the chat's files here.",
     },
     workspace_saia_fs: {
@@ -2365,8 +2365,6 @@ export default {
     chat_workspaces: "Workspace",
     chat_workspaces_attached_hint:
       "This chat is attached to {{names}} and can use all files there.",
-    chat_workspaces_hint: "Attach this chat to one or more workspaces.",
-    chat_workspaces_none: "No workspaces yet. Create one in the sidebar.",
     manage_data: "Manage data",
     manage_data_in: "Manage data in {{name}}",
     manage_data_workspace_hint:

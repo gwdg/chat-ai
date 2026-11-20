@@ -5,7 +5,6 @@ const api = vi.hoisted(() => ({
   navigate: vi.fn(),
   onClose: vi.fn(),
   createWorkspace: vi.fn(),
-  attachWorkspaceChat: vi.fn(),
   updateWorkspace: vi.fn(),
   deleteWorkspace: vi.fn(),
   useWorkspaceList: vi.fn(),
@@ -17,7 +16,6 @@ vi.mock("react-router", () => ({
 
 vi.mock("../../../db/workspaceDb", () => ({
   createWorkspace: (...args) => api.createWorkspace(...args),
-  attachWorkspaceChat: (...args) => api.attachWorkspaceChat(...args),
   updateWorkspace: (...args) => api.updateWorkspace(...args),
   deleteWorkspace: (...args) => api.deleteWorkspace(...args),
   useWorkspaceList: (...args) => api.useWorkspaceList(...args),
@@ -188,25 +186,6 @@ describe("CreateWorkspaceModal", () => {
       name: "Research",
     });
     expect(api.deleteWorkspace).not.toHaveBeenCalled();
-  });
-
-  it("takes the chat along when Manage data creates the workspace", async () => {
-    render(
-      <CreateWorkspaceModal
-        isOpen
-        onClose={api.onClose}
-        attachConversationId="c1"
-      />,
-    );
-    await waitForDraft();
-
-    typeName("Research");
-    fireEvent.click(screen.getByTestId("create-workspace-create"));
-
-    await waitFor(() =>
-      expect(api.attachWorkspaceChat).toHaveBeenCalledWith("ws-draft", "c1"),
-    );
-    expect(api.navigate).toHaveBeenCalledWith("/workspace/ws-draft");
   });
 
   it("deletes the abandoned draft on cancel and X, one draft per open", async () => {

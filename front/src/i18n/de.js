@@ -451,8 +451,8 @@ export default {
     },
     manage_chat_data: {
       title: "Dateien eines Chats verwalten",
-      step1: "Auf Speicher zugreifen ist standardmäßig an und steht oben im Arbeitsbereich-Menü. Schalten Sie es aus, erhält das Modell keine Dateiwerkzeuge; Anhänge werden weiterhin in die Nachricht aufgenommen, sofern möglich.",
-      step2: "Wählen Sie Daten verwalten, um die Dateien hinter diesem Schalter zu verwalten. Ist der Chat einem Arbeitsbereich zugeordnet, öffnet sich dessen Editor — derselbe Dialog wie „Arbeitsbereich erstellen“, mit Speicherorten, Name, Symbol und Farbe sowie „Änderungen übernehmen“; bei mehreren Arbeitsbereichen werden sie zuerst aufgelistet; ohne Arbeitsbereich öffnet sich „Arbeitsbereich erstellen“ und der Chat wird dem neuen Arbeitsbereich hinzugefügt.",
+      step1: "Auf Speicher zugreifen ist standardmäßig an und steht oben im Arbeitsbereich-Menü, das nur erscheint, solange der Chat zu einem Arbeitsbereich gehört. Schalten Sie es aus, erhält das Modell keine Dateiwerkzeuge; Anhänge werden weiterhin in die Nachricht aufgenommen, sofern möglich. Ein Chat ohne Arbeitsbereich hat dieses Menü nicht — verknüpfen Sie ihn zuerst im Arbeitsbereich.",
+      step2: "Wählen Sie Daten verwalten, um die Dateien hinter diesem Schalter zu verwalten. Ist der Chat einem Arbeitsbereich zugeordnet, öffnet sich dessen Editor — derselbe Dialog wie „Arbeitsbereich erstellen“, mit Speicherorten, Name, Symbol und Farbe sowie „Änderungen übernehmen“; bei mehreren Arbeitsbereichen werden sie zuerst aufgelistet.",
       step3: "Laden Sie die Dateien des Chats hier hoch, erstellen, benennen Sie sie um, laden Sie sie herunter oder löschen Sie sie.",
     },
     workspace_saia_fs: {
@@ -2403,8 +2403,6 @@ export default {
     chat_workspaces: "Arbeitsbereich",
     chat_workspaces_attached_hint:
       "Dieser Chat ist mit {{names}} verknüpft und kann alle Dateien dort nutzen.",
-    chat_workspaces_hint: "Verknüpfen Sie diesen Chat mit einem oder mehreren Arbeitsbereichen.",
-    chat_workspaces_none: "Noch keine Arbeitsbereiche. Erstellen Sie einen in der Seitenleiste.",
     manage_data: "Daten verwalten",
     manage_data_in: "Daten in {{name}} verwalten",
     manage_data_workspace_hint:

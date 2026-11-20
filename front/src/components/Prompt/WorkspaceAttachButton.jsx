@@ -59,7 +59,10 @@ export default function WorkspaceAttachButton({ localState, setLocalState }) {
     [links, workspaces],
   );
 
-  if (!conversationId) return null;
+  // A chat without a workspace has no workspace settings to offer: the switch, the editor and the
+  // attachment list all describe a workspace this chat does not have. Attaching happens from the
+  // workspace side (its options menu), so the button only exists once there is something to show.
+  if (!conversationId || attachedWorkspaces.length === 0) return null;
 
   const toggle = (workspaceId) => {
     if (attached.has(workspaceId)) {
@@ -106,25 +109,15 @@ export default function WorkspaceAttachButton({ localState, setLocalState }) {
       openModal("workspaceEdit", { workspaceId: soleWorkspace.id });
       return;
     }
-    if (attachedWorkspaces.length > 1) {
-      openModal("manageData", { localState });
-      return;
-    }
-    // No workspace yet: the same dialog in create mode, and the chat joins the
-    // workspace it creates — there is no chat storage to manage on its own.
-    openModal("workspaceCreate", { attachConversationId: conversationId });
+    openModal("manageData", { localState });
   };
   const manageDataLabel = soleWorkspace
     ? t("workspace.manage_data_in", { name: soleWorkspace.name })
     : t("workspace.manage_data");
 
-  const workspaceHint = attachedWorkspaces.length
-    ? t("workspace.chat_workspaces_attached_hint", {
-        names: attachedWorkspaces.map((workspace) => workspace.name).join(", "),
-      })
-    : workspaces.length
-      ? t("workspace.chat_workspaces_hint")
-      : t("workspace.chat_workspaces_none");
+  const workspaceHint = t("workspace.chat_workspaces_attached_hint", {
+    names: attachedWorkspaces.map((workspace) => workspace.name).join(", "),
+  });
 
   return (
     <Popover className="relative flex">
