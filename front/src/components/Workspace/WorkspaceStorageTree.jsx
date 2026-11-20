@@ -315,10 +315,11 @@ export default function WorkspaceStorageTree({
           return t("workspace.storage_badge_saia");
         case "agent":
           return t("workspace.storage_badge_agent");
-        case "chat":
-        case "browser":
         default:
-          return t("workspace.storage_badge_browser");
+          // Browser storage is the workspace's own root, so it is what every row
+          // without a source already is: a "browser" pill would only restate the
+          // absence of the other sources, which carry their own.
+          return undefined;
       }
     },
     [t],
@@ -357,19 +358,13 @@ export default function WorkspaceStorageTree({
       if (node.context) {
         return badgeForSource(sourceForMount(node.context.mount));
       }
-      if (node.entry.local) return t("workspace.storage_badge_browser");
-      // Chats are stored in the browser too, so /chats and everything below it
-      // is browser storage even though the folder itself is synthetic.
-      const path = node.displayPath ?? node.entry.path;
-      if (path === "/chats" || path.startsWith("/chats/")) {
-        return t("workspace.storage_badge_browser");
-      }
-      // Other virtual folders (the parents of a nested mount) carry the pill
-      // of whatever is mounted under them.
+      // Root files, the synthetic /chats folder and the parents of a nested
+      // mount: only the last has a source of its own, and it carries that
+      // source's pill. Browser storage stays unlabelled.
       const mount = mountForPath(node.entry.path);
       return mount ? badgeForSource(sourceForMount(mount)) : undefined;
     },
-    [badgeForSource, mountForPath, sourceForMount, t],
+    [badgeForSource, mountForPath, sourceForMount],
   );
 
   const labelFor = useCallback(

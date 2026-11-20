@@ -100,13 +100,13 @@ beforeEach(() => {
 });
 
 describe("WorkspaceStorageTree", () => {
-  it("renders the root listing with a browser pill", async () => {
+  it("renders the root listing without a browser pill", async () => {
     h.listWorkspaceRoot.mockResolvedValue([entry("/notes", "dir")]);
 
     render(<WorkspaceStorageTree workspaceId="ws-1" />);
 
     expect(await screen.findByText("notes")).toBeInTheDocument();
-    expect(within(rowFor("notes")).getByText("browser")).toBeInTheDocument();
+    expect(within(rowFor("notes")).queryByText("browser")).toBeNull();
   });
 
   it("loads a folder's children when its row is clicked", async () => {
@@ -183,7 +183,7 @@ describe("WorkspaceStorageTree", () => {
     expect(screen.getByRole("button", { name: "Refresh" })).toBeInTheDocument();
   });
 
-  it("marks /chats and every row under it as browser storage", async () => {
+  it("lists /chats and every row under it without a browser pill", async () => {
     h.listWorkspaceRoot.mockImplementation(async ({ path }) => {
       if (path === "/") return [entry("/chats", "dir", { local: false })];
       if (path === "/chats") {
@@ -195,15 +195,15 @@ describe("WorkspaceStorageTree", () => {
     render(<WorkspaceStorageTree workspaceId="ws-1" />);
 
     const chatsRow = await screen.findByText("chats");
-    expect(within(rowFor("chats")).getByText("browser")).toBeInTheDocument();
+    expect(within(rowFor("chats")).queryByText("browser")).toBeNull();
 
     fireEvent.click(chatsRow);
 
     expect(await screen.findByText("conv-1")).toBeInTheDocument();
-    expect(within(rowFor("conv-1")).getByText("browser")).toBeInTheDocument();
+    expect(within(rowFor("conv-1")).queryByText("browser")).toBeNull();
   });
 
-  it("ends every row with one fixed-width pill and no trash button", async () => {
+  it("pills only rows that come from a source", async () => {
     h.sources = [{ id: "dev-1", kind: "local", label: "Phone", readOnly: false }];
     h.mounts = [mountRow];
     h.providers = new Map([["dev-1", { status: "connected" }]]);
@@ -217,14 +217,12 @@ describe("WorkspaceStorageTree", () => {
     await screen.findByText("readme.md");
     expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
 
-    for (const name of ["readme.md", "Phone"]) {
-      const pill = within(rowFor(name)).getByText(
-        name === "Phone" ? "device" : "browser",
-      );
-      expect(pill).toHaveClass("w-14");
-      expect(pill).toHaveClass("justify-center");
-      expect(pill.parentElement.lastElementChild).toBe(pill);
-    }
+    const pill = within(rowFor("Phone")).getByText("device");
+    expect(pill).toHaveClass("w-14");
+    expect(pill).toHaveClass("justify-center");
+    expect(pill.parentElement.lastElementChild).toBe(pill);
+
+    expect(within(rowFor("readme.md")).queryByText("browser")).toBeNull();
   });
 
   it("puts the lock before the pill on a read-only row", async () => {
