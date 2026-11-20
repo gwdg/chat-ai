@@ -9,7 +9,6 @@ import {
   FolderAdd,
   Locked,
   Renew,
-  TrashCan,
   Upload,
 } from "@carbon/icons-react";
 
@@ -51,7 +50,7 @@ const withProviderChildren =
       displayPath: joinPath(parentPath, entry.name),
     }));
 
-function StorageRow({ node, depth, api, reloadParent }) {
+function StorageRow({ node, depth, api }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [children, setChildren] = useState(null);
@@ -93,8 +92,6 @@ function StorageRow({ node, depth, api, reloadParent }) {
   const badge = api.badgeFor(node);
   const label = api.labelFor(node);
   const readOnly = api.isReadOnly?.(node) ?? false;
-  const deletable =
-    node.context === null && node.entry.local === true && !node.entry.mount;
   const childDepth = depth + 1;
 
   return (
@@ -132,11 +129,6 @@ function StorageRow({ node, depth, api, reloadParent }) {
           <span className="min-w-0 flex-1 truncate text-base-content">
             {label}
           </span>
-          {badge && (
-            <span className="shrink-0 rounded-full border border-base-300 px-1.5 py-px text-[9px] font-medium tracking-wide text-base-content/55">
-              {badge}
-            </span>
-          )}
           {readOnly && (
             <span
               className="shrink-0 text-warning"
@@ -146,21 +138,14 @@ function StorageRow({ node, depth, api, reloadParent }) {
               <Locked size={11} />
             </span>
           )}
+          {/* The pill always ends the row and keeps one width, so every
+              location lines up no matter how long its label is. */}
+          {badge && (
+            <span className="inline-flex w-14 shrink-0 items-center justify-center rounded-full border border-base-300 px-1.5 py-px text-[9px] font-medium tracking-wide text-base-content/55">
+              {badge}
+            </span>
+          )}
         </button>
-        {deletable && api.onDelete && (
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              api.onDelete({ ...node, reload: reloadParent });
-            }}
-            className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-base-content/40 opacity-0 hover:bg-error/10 hover:text-error focus-visible:opacity-100 group-hover:opacity-100"
-            title={t("common.delete")}
-            aria-label={t("common.delete")}
-          >
-            <TrashCan size={11} />
-          </button>
-        )}
       </div>
       {isDir && open && (
         <div>
@@ -187,7 +172,6 @@ function StorageRow({ node, depth, api, reloadParent }) {
                 node={child}
                 depth={childDepth}
                 api={api}
-                reloadParent={reload}
               />
             ))}
         </div>
@@ -202,7 +186,7 @@ export default function WorkspaceStorageTree({
   showTitle = true,
 }) {
   const { t } = useTranslation();
-  const { openModal, confirmAction } = useModal();
+  const { openModal } = useModal();
   const sources = useWorkspaceSources(workspaceId ?? undefined);
   const mounts = useWorkspaceMounts(workspaceId ?? undefined);
   useWorkspaceChats(workspaceId ?? undefined);
@@ -456,36 +440,6 @@ export default function WorkspaceStorageTree({
     return rootProvider;
   };
 
-  const deleteNode = async (node) => {
-    if (!rootProvider) return;
-    try {
-      await rootProvider.connect();
-      await rootProvider.remove(node.entry.path, {
-        recursive: node.entry.kind === "dir",
-      });
-      await node.reload?.();
-    } catch (reason) {
-      setActionError(errorMessage(reason));
-    }
-  };
-
-  const requestDelete = (node) => {
-    confirmAction(
-      {
-        warningKey: "warn_workspace_file_delete",
-        messageKey:
-          node.entry.kind === "dir"
-            ? "workspace.delete_folder_confirm"
-            : "workspace.delete_file_confirm",
-        confirmKey: "common.delete",
-        danger: true,
-      },
-      () => {
-        void deleteNode(node);
-      },
-    );
-  };
-
   const uploadFiles = async (event) => {
     const files = Array.from(event.target.files || []);
     event.target.value = "";
@@ -536,7 +490,6 @@ export default function WorkspaceStorageTree({
     loadChildren,
     selectTarget,
     isReadOnly: readOnlyFor,
-    onDelete: rootProvider ? requestDelete : undefined,
   };
 
   const showLoading = rootEntries === null;
@@ -626,7 +579,6 @@ export default function WorkspaceStorageTree({
                   node={node}
                   depth={0}
                   api={api}
-                  reloadParent={loadRoot}
                 />
               );
             })}

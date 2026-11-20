@@ -194,7 +194,7 @@ describe("WorkspaceStorageTree", () => {
     expect(within(rowFor("conv-1")).getByText("browser")).toBeInTheDocument();
   });
 
-  it("offers the trash button only on non-mount local rows", async () => {
+  it("ends every row with one fixed-width pill and no trash button", async () => {
     h.sources = [{ id: "dev-1", kind: "local", label: "Phone", readOnly: false }];
     h.mounts = [mountRow];
     h.providers = new Map([["dev-1", { status: "connected" }]]);
@@ -206,12 +206,34 @@ describe("WorkspaceStorageTree", () => {
     render(<WorkspaceStorageTree workspaceId="ws-1" />);
 
     await screen.findByText("readme.md");
-    expect(
-      within(rowFor("readme.md")).getByRole("button", { name: "Delete" }),
-    ).toBeInTheDocument();
-    expect(
-      within(rowFor("Phone")).queryByRole("button", { name: "Delete" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
+
+    for (const name of ["readme.md", "Phone"]) {
+      const pill = within(rowFor(name)).getByText(
+        name === "Phone" ? "device" : "browser",
+      );
+      expect(pill).toHaveClass("w-14");
+      expect(pill).toHaveClass("justify-center");
+      expect(pill.parentElement.lastElementChild).toBe(pill);
+    }
+  });
+
+  it("puts the lock before the pill on a read-only row", async () => {
+    h.sources = [{ id: "dev-1", kind: "local", label: "Phone", readOnly: true }];
+    h.mounts = [mountRow];
+    h.providers = new Map([["dev-1", { status: "connected" }]]);
+    h.listWorkspaceRoot.mockResolvedValue([
+      entry("/Phone", "dir", { local: false, mount: mountRow }),
+    ]);
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" />);
+
+    await screen.findByText("Phone");
+    const row = rowFor("Phone");
+    const lock = within(row).getByLabelText("Read-only");
+    const pill = within(row).getByText("device");
+    expect(lock.nextElementSibling).toBe(pill);
+    expect(pill).toHaveClass("w-14");
   });
 
   it("locks a row that sits under a read-only mount", async () => {
