@@ -37,6 +37,12 @@ let bridgePublicUrl = process.env.BRIDGE_PUBLIC_URL || "";
 // them. The env var still wins, so a deployment can override the file.
 let bridgeSharedSecret = process.env.BRIDGE_SHARED_SECRET || "";
 let bridgeCorsOrigins = process.env.CORS_ORIGINS || "";
+// saia-fs is an MCP server that lives behind the SAIA registry's HTTP listener
+// (:5000/services/saia-fs), which is not published to the public proxy. The
+// browser therefore talks to /saia-fs/* here, and this service forwards to the
+// registry with the user's identity header, like the Arcana routes do.
+let saiaFsEndpoint =
+  process.env.SAIA_FS_ENDPOINT || "http://localhost:5000/services/saia-fs";
 
 // Load configuration
 try {
@@ -74,6 +80,13 @@ try {
     config.bridgePublicUrl.trim()
   ) {
     bridgePublicUrl = config.bridgePublicUrl.trim();
+  }
+  if (
+    typeof config.saiaFsEndpoint === "string" &&
+    config.saiaFsEndpoint.trim() &&
+    !process.env.SAIA_FS_ENDPOINT
+  ) {
+    saiaFsEndpoint = config.saiaFsEndpoint.trim();
   }
   if (
     typeof config.bridgeSharedSecret === "string" &&
@@ -173,7 +186,13 @@ app.use(bodyParser.urlencoded({ extended: false }));
 // Access-Control-Allow-Origin header there.
 app.use((req, res, next) => {
   if (req.path.startsWith("/bridge")) return next();
-  return cors()(req, res, next);
+  // `mcp-session-id` is how the saia-fs MCP client keeps its session; a
+  // browser cannot read a response header CORS does not expose.
+  return cors({ exposedHeaders: ["mcp-session-id", "mcp-protocol-version"] })(
+    req,
+    res,
+    next
+  );
 });
 
 // Function to process file with docling
@@ -445,6 +464,58 @@ app.post("/images/generations", (req, res) =>
   forward(req, res, "/images/generations", JSON.stringify(req.body ?? {}), "application/json"),
 );
 app.post("/websearch", (req, res) => forward(req, res, "/websearch", JSON.stringify(req.body ?? {}), "application/json"));
+
+// saia-fs is an MCP server (Streamable HTTP at /mcp) behind the SAIA registry's
+// HTTP listener, which the public proxy does not publish. The browser calls
+// `<backend>/saia-fs/mcp`; this route forwards the MCP exchange unchanged and
+// adds the user's identity, the same way the Arcana routes do. The body is
+// already parsed by express.json(), and MCP only sends JSON; the answer must
+// stay streamed because a tool result arrives as server-sent events.
+const SAIA_FS_HEADERS = [
+  "accept",
+  "content-type",
+  "mcp-session-id",
+  "mcp-protocol-version",
+];
+
+app.all(/^\/saia-fs(\/.*)?$/, async (req, res) => {
+  if (!saiaFsEndpoint) {
+    res.status(503).json({ error: "saia-fs is not configured (saiaFsEndpoint)" });
+    return;
+  }
+  const controller = new AbortController();
+  res.on("close", () => controller.abort());
+  const headers = { ...remoteAuthHeaders(req) };
+  for (const name of SAIA_FS_HEADERS) {
+    const value = req.headers[name];
+    if (value) headers[name] = value;
+  }
+  let body;
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    const parsed = req.body;
+    if (typeof parsed === "string") body = parsed || undefined;
+    else if (parsed && Object.keys(parsed).length) body = JSON.stringify(parsed);
+  }
+  const suffix = req.path.replace(/^\/saia-fs/, "") || "/mcp";
+  try {
+    const upstream = await globalThis.fetch(
+      `${saiaFsEndpoint.replace(/\/+$/, "")}${suffix}`,
+      { method: req.method, headers, body, signal: controller.signal }
+    );
+    res.status(upstream.status);
+    for (const name of [...SAIA_FS_HEADERS, "cache-control"]) {
+      const value = upstream.headers.get(name);
+      if (value) res.setHeader(name, value);
+    }
+    if (upstream.body) pipeline(Readable.fromWeb(upstream.body), res, () => {});
+    else res.end();
+  } catch (error) {
+    if (controller.signal.aborted) return;
+    console.error("Error in /saia-fs:", error);
+    if (!res.headersSent) res.status(502);
+    res.end(`saia-fs is not reachable at ${saiaFsEndpoint}.`);
+  }
+});
 
 // Remote file store. Files live in a dedicated saia-rag-web Arcana and are
 // accessed through the saia-rag-web backend with the user's OIDC header.

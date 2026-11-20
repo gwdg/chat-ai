@@ -14,7 +14,13 @@ import { createWorkspaceRootProvider } from "./workspaceRoot";
 
 export type WorkspaceSelection = {
   sourceId: string;
-  sourceKind: "local" | "chat" | "arcana-filesystem" | "arcana" | "mcp";
+  sourceKind:
+    | "local"
+    | "chat"
+    | "arcana-filesystem"
+    | "arcana"
+    | "mcp"
+    | "saia-fs";
   /** Provider path; "/" means the source (or chat) root. */
   path: string;
   name: string;
@@ -146,7 +152,10 @@ export async function addSelectionToWorkspace(
         (entry.sourceKind === "local" ||
           entry.sourceKind === "arcana-filesystem" ||
           entry.sourceKind === "arcana" ||
-          entry.sourceKind === "mcp")
+          entry.sourceKind === "mcp" ||
+          // The SAIA filesystem belongs to the account, not to the workspace, so
+          // it is mounted live like an Arcana folder rather than copied.
+          entry.sourceKind === "saia-fs")
       ) {
         await addWorkspaceMount({
           workspaceId,

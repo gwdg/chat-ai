@@ -185,6 +185,10 @@ export type SourceKind =
   // A chat's own OPFS tree, linked into a workspace at /chats/<conversationId> while the chat is
   // attached (db/workspaceDb.ts#ensureChatStorageSource).
   | 'chat'
+  // The caller's folder on the SAIA filesystem (saia/saia-rag-cli/saia-fs), auto-provisioned per
+  // workspace while the engine lists the `saia-fs` service for the user
+  // (db/workspaceDb.ts#ensureSaiaFsSource).
+  | 'saia-fs'
 
 export type SourceStatus =
   | 'connected'
@@ -223,6 +227,9 @@ export type McpConfig = {
 export type ArcanaConfig = { remoteWorkspaceId: string; baseUrl?: string }
 export type AgentFilesConfig = { agentId: string }
 export type ChatStorageConfig = { conversationId: string }
+// The folder belongs to the caller's SAIA account, so the row carries no
+// address of its own: the endpoint is the deployment's `/saia-fs` proxy.
+export type SaiaFsConfig = Record<string, never>
 
 export type SourceConfig =
   | BrowserConfig
@@ -231,6 +238,7 @@ export type SourceConfig =
   | ArcanaConfig
   | AgentFilesConfig
   | ChatStorageConfig
+  | SaiaFsConfig
 
 export type WorkspaceRow = {
   id: string

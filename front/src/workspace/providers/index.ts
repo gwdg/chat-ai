@@ -8,6 +8,7 @@ import { workspaceBrowserStorageId } from "../browserStorage";
 import { LocalProvider } from "./local";
 import { McpProvider } from "./mcp";
 import { ReadOnlyProvider } from "./readOnly";
+import { SaiaFsProvider } from "./saiaFs";
 import type { FileProvider } from "./types";
 
 export function createProvider(source: WorkspaceSourceRow): FileProvider {
@@ -45,6 +46,10 @@ export function createProvider(source: WorkspaceSourceRow): FileProvider {
     );
   } else if (source.kind === "arcana-filesystem") {
     provider = new ArcanaFilesystemProvider(source.id);
+  } else if (source.kind === "saia-fs") {
+    // The per-user folder on the SAIA filesystem, reached through back's
+    // /saia-fs MCP proxy (providers/saiaFs.ts).
+    provider = new SaiaFsProvider(source.id);
   } else {
     provider = new McpProvider(
       source.id,

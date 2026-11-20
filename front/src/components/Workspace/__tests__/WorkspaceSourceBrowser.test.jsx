@@ -96,6 +96,27 @@ const mcpProvider = {
   list: vi.fn(),
 };
 
+const saiaSource = {
+  id: "saia-1",
+  workspaceId: "ws-1",
+  kind: "saia-fs",
+  label: "SAIA Files",
+  config: {},
+  capabilities: {},
+  status: "connected",
+  createdAt: 1,
+  lastModified: 1,
+};
+
+const saiaProvider = {
+  sourceId: "saia-1",
+  kind: "saia-fs",
+  status: "connected",
+  capabilities: {},
+  quota: vi.fn(),
+  list: vi.fn(),
+};
+
 const chatRoot = () => {
   const file = {
     kind: "file",
@@ -184,6 +205,19 @@ beforeEach(() => {
     entries: [
       { sourceId: "mcp-1", path: "/files", name: "files", kind: "dir" },
       { sourceId: "mcp-1", path: "/readme.md", name: "readme.md", kind: "file" },
+    ],
+  });
+  saiaProvider.list.mockReset();
+  saiaProvider.list.mockResolvedValue({
+    entries: [
+      { sourceId: "saia-1", path: "/notes", name: "notes", kind: "dir" },
+      {
+        sourceId: "saia-1",
+        path: "/readme.md",
+        name: "readme.md",
+        kind: "file",
+        size: 9,
+      },
     ],
   });
 });
@@ -588,6 +622,61 @@ describe("WorkspaceSourceBrowser", () => {
 
     expect(await screen.findByText("recipes")).toBeInTheDocument();
     expect(arcanaProvider.list).toHaveBeenCalledWith("/");
+  });
+
+  it("browses the SAIA account folder and mounts one of its folders", async () => {
+    mocks.sources = [localSource, arcanaSource, saiaSource];
+    mocks.providers = new Map([
+      ["local-1", localProvider],
+      ["arcana-1", arcanaProvider],
+      ["saia-1", saiaProvider],
+    ]);
+    renderBrowser({ target: { drive: "saia-fs" } });
+
+    // It is one account folder, not a source list: the drive opens inside it.
+    expect(await screen.findByText("notes")).toBeInTheDocument();
+    expect(saiaProvider.list).toHaveBeenCalledWith("/");
+    expect(screen.queryByText("Project")).not.toBeInTheDocument();
+
+    const file = screen.getByText("readme.md").closest(".group");
+    expect(within(file).getByText("SAIA")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("notes"));
+    expect(addButton()).toHaveTextContent("Add to Workspace (1)");
+    fireEvent.click(addButton());
+
+    await waitFor(() =>
+      expect(mocks.onAddToWorkspace).toHaveBeenCalledWith([
+        expect.objectContaining({
+          sourceId: "saia-1",
+          sourceKind: "saia-fs",
+          path: "/notes",
+          name: "notes",
+          kind: "dir",
+        }),
+      ]),
+    );
+
+    // Drilling into the folder lists its own path, and one Back returns to the root.
+    fireEvent.click(screen.getByText("notes"));
+    await waitFor(() => expect(saiaProvider.list).toHaveBeenCalledWith("/notes"));
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(await screen.findByText("readme.md")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(mocks.onTargetChange).toHaveBeenCalledWith(null);
+  });
+
+  it("locks the SAIA rows when the account folder is read-only", async () => {
+    mocks.sources = [{ ...saiaSource, readOnly: true }];
+    mocks.providers = new Map([["saia-1", saiaProvider]]);
+    renderBrowser({ target: { drive: "saia-fs" } });
+
+    const notes = (await screen.findByText("notes")).closest(".group");
+    expect(within(notes).getByLabelText("Read-only")).toBeInTheDocument();
+    // Read-only forbids writing through the row, not mounting it: the workspace
+    // gets a read-only mount of the folder.
+    fireEvent.click(screen.getByLabelText("notes"));
+    expect(addButton()).toHaveTextContent("Add to Workspace (1)");
   });
 
   it("lists MCP sources, drills in, and adds an MCP folder", async () => {

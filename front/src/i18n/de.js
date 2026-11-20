@@ -455,6 +455,11 @@ export default {
       step2: "Wählen Sie Daten verwalten, um die Dateien hinter diesem Schalter zu sehen. Chats, die einem Arbeitsbereich zugeordnet sind, öffnen diesen, dessen Reiter Dateien das Dateisystem zeigt; Chats ohne Arbeitsbereich durchsuchen die für den Chat in diesem Browser gespeicherten Dateien.",
       step3: "Laden Sie die Dateien des Chats hier hoch, erstellen, benennen Sie sie um, laden Sie sie herunter oder löschen Sie sie.",
     },
+    workspace_saia_fs: {
+      title: "Ihre SAIA-Dateien in einem Arbeitsbereich",
+      step1: "Erstellen Sie mit „Arbeitsbereich erstellen“ einen neuen Arbeitsbereich. In der Quellen-Leiste erhält er seine Dateien.",
+      step2: "SAIA-Dateien ist Ihr Kontoordner. Er erscheint nur, solange diese Installation den Dienst saia-fs für Sie bereitstellt; öffnen Sie ihn, wählen Sie einen Ordner und fügen Sie ihn dem Arbeitsbereich hinzu.",
+    },
     workspace_clone: {
       title: "Git-Repository importieren",
       step1: "Öffnen Sie „Arbeitsbereich erstellen“, wählen Sie links „Git-Repository“, den lokalen Agenten für den Klon und drücken Sie dann „Erstellen“.",
@@ -2454,6 +2459,8 @@ export default {
       chats: "Browser",
       arcanas: "Arcanas",
       mcp: "MCP",
+      saia_fs: "SAIA-Dateien",
+      saia_hint: "Dein SAIA-Kontoordner",
       add_to_workspace: "Zum Arbeitsbereich hinzufügen",
       add_to_workspace_count: "Zum Arbeitsbereich hinzufügen ({{count}})",
       unmount: "Aushängen",
@@ -2500,6 +2507,7 @@ export default {
     storage_badge_arcana: "Arcana",
     storage_badge_mcp: "MCP",
     storage_badge_agent: "Agent",
+    storage_badge_saia: "SAIA",
     add_source: "Quelle hinzufügen",
     source_kind: "Quellentyp",
     choose_folder: "Ordner auswählen…",
@@ -2517,6 +2525,7 @@ export default {
     kind_arcana: "Arcana",
     "kind_arcana-filesystem": "Arcana-Dateisystem",
     kind_mcp: "MCP",
+    "kind_saia-fs": "SAIA-Dateisystem",
     local_hint:
       "Der Browser fragt nach Zugriff auf den Ordner. Der Ordner bleibt auf diesem Gerät und wird nie hochgeladen.",
     local_unsupported: "Dieser Browser kann keine lokalen Ordner öffnen.",

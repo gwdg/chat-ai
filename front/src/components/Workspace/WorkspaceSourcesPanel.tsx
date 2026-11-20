@@ -3,6 +3,7 @@ import {
   AlertCircle,
   Boxes,
   ChevronRight,
+  Cloud,
   HardDrive,
   MessageSquare,
   Plus,
@@ -116,6 +117,7 @@ export default function WorkspaceSourcesPanel({
     localSources,
     arcanaSources,
     mcpSources,
+    saiaSource,
     deviceQuota,
     chatsQuota,
     arcanasQuota,
@@ -203,6 +205,18 @@ export default function WorkspaceSourcesPanel({
           active={activeDrive === "arcanas"}
           onClick={() => onOpenTarget({ drive: "arcanas" })}
         />
+        {saiaSource && (
+          <DriveCard
+            dataGuide="workspace-source-saia-fs"
+            icon={Cloud}
+            title={t("workspace.source_browser.saia_fs")}
+            subtitle={t("workspace.source_browser.saia_hint")}
+            usageLabel=""
+            broken={brokenReason([saiaSource])}
+            active={activeDrive === "saia-fs"}
+            onClick={() => onOpenTarget({ drive: "saia-fs" })}
+          />
+        )}
         {mcpSources.length > 0 && (
           <DriveCard
             dataGuide="workspace-source-mcp"

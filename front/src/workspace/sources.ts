@@ -50,5 +50,12 @@ export function sourceRowActions({
   if (kind === "chat" || kind === "agent") {
     return { addFolder: kind === "agent", toggleReadOnly: false, remove: false };
   }
+  if (kind === "saia-fs") {
+    // The account folder exists for as long as the service is granted, so the row
+    // is recreated by `ensureSaiaFsSource` and never removed by hand: removing it
+    // would also drop its mounts. Folders can be mounted and the row can be made
+    // read-only to keep a workspace from writing into the account folder.
+    return { addFolder: true, toggleReadOnly: true, remove: false };
+  }
   return { addFolder: true, toggleReadOnly: true, remove: true };
 }

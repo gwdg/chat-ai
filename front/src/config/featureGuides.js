@@ -163,6 +163,30 @@ export const featureGuides = {
       },
     ],
   },
+  workspace_saia_fs: {
+    titleKey: "feature_guide.workspace_saia_fs.title",
+    prompt:
+      "Chat AI can show your SAIA account folder as a filesystem inside a workspace. It only appears when this deployment offers the saia-fs service to your account. Open Create workspace: the Sources rail lists it next to browser storage, this device, Arcanas and MCP servers, and you can mount one of its folders into the workspace.",
+    keywords: [
+      "saia files",
+      "saia filesystem",
+      "account folder",
+      "saia-fs",
+      "workspace files",
+      "mount folder",
+    ],
+    steps: [
+      {
+        target: '[data-guide="workspace-add-source"]',
+        textKey: "feature_guide.workspace_saia_fs.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="workspace-source-saia-fs"]',
+        textKey: "feature_guide.workspace_saia_fs.step2",
+      },
+    ],
+  },
   attach_from_workspace: {
     titleKey: "feature_guide.attach_from_workspace.title",
     prompt:
@@ -1690,7 +1714,7 @@ export const FEATURE_CATEGORIES = {
     "summarize_conversation",
     "close_chat",
   ],
-  workspace: ["workspace_overview", "manage_chat_data", "pin_workspace", "pin_agent", "workspace_clone", "workspace_upload", "workspace_multiselect", "arcana_filesystem", "attach_from_workspace", "remote_agents", "agent_recovery", "close_group_sessions", "session_workspaces", "agent_workspace_access"],
+  workspace: ["workspace_overview", "manage_chat_data", "pin_workspace", "pin_agent", "workspace_clone", "workspace_upload", "workspace_multiselect", "arcana_filesystem", "workspace_saia_fs", "attach_from_workspace", "remote_agents", "agent_recovery", "close_group_sessions", "session_workspaces", "agent_workspace_access"],
   personas: ["chat_with_persona"],
   settings: [
     "settings_overview",
@@ -1758,6 +1782,7 @@ const germanGuideKeywords = {
   mcp_server: ["mcp", "mcp server", "mcp-server", "model context protocol"],
   diagram_renderers: ["graphviz", "dot", "vega", "vega-lite", "chart.js", "chartjs", "diagramm", "diagramme", "diagramm zeichnen", "chart"],
   browser_storage: ["browserspeicher", "browser speicher", "arbeitsbereich", "arbeitsfläche", "opfs", "lokale dateien"],
+  workspace_saia_fs: ["saia dateien", "saia-dateien", "saia dateisystem", "kontoordner", "saia-fs"],
   tools_overview: ["werkzeuge", "tools", "gwdg tools", "tool nutzung", "werkzeug verwend"],
   search_chats: ["chats durchsuch", "chat durchsuch", "chat such", "unterhaltung such", "chat find", "suche nach chat"],
   manage_topics: ["thema", "themen", "topic", "themen erstell", "chats organisier"],

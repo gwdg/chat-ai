@@ -7,19 +7,20 @@
 
 import { agentTunnelEnabled, tunnelBody, tunnelRequest } from "./agentTunnel";
 
-/** The service's routes on the app origin, served by the SAIA gateway. */
-export const AGENT_SERVICE_PATH = "/agents";
+// The engine-side model id, shared with the chat-list filter (`apis/serviceModels`).
+export { AGENT_SERVICE_MODEL } from "./serviceModels";
 
 /**
- * The model the service is registered as in the SAIA engine.
- *
- * It sits in an engine access group (`agent` by default), so `/v1/models` lists
- * it only for a user that was granted that group. The model list is therefore
- * the entitlement answer for this user, and
- * `hooks/useAgentServiceAccess.js` reads it before the add-agent dialog offers
- * the service fields.
+ * The service's routes on the app origin, served by the SAIA gateway.
  */
-export const AGENT_SERVICE_MODEL = "saia-agent";
+export const AGENT_SERVICE_PATH = "/agents";
+
+// `AGENT_SERVICE_MODEL` sits in an engine access group (`agent` by default), so
+// `/v1/models` lists it only for a user that was granted that group. The model
+// list is therefore the entitlement answer for this user, and
+// `hooks/useAgentServiceAccess.js` reads it before the add-agent dialog offers
+// the service fields. It is not a chat model and is filtered from the selector
+// in `hooks/useUpdateModelsData.jsx`.
 
 export const serviceOpencodeUrl = (agentId) =>
   `${AGENT_SERVICE_PATH}/${encodeURIComponent(agentId)}/opencode`;

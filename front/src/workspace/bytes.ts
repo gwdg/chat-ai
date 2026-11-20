@@ -41,3 +41,12 @@ export const fromBase64 = (value: string): Uint8Array => {
   for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
   return bytes;
 };
+
+/** Base64 for a whole buffer, in chunks small enough for `String.fromCharCode`. */
+export const toBase64 = (data: Uint8Array): string => {
+  let binary = "";
+  for (let i = 0; i < data.length; i += 0x8000) {
+    binary += String.fromCharCode(...data.subarray(i, i + 0x8000));
+  }
+  return btoa(binary);
+};

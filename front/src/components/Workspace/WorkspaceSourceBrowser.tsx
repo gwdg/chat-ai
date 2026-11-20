@@ -32,7 +32,13 @@ import Tooltip from "../Others/Tooltip";
 
 export type SourcesSelection = {
   sourceId: string;
-  sourceKind: "local" | "chat" | "arcana-filesystem" | "arcana" | "mcp";
+  sourceKind:
+    | "local"
+    | "chat"
+    | "arcana-filesystem"
+    | "arcana"
+    | "mcp"
+    | "saia-fs";
   path: string;
   name: string;
   kind: "dir" | "file";
@@ -44,7 +50,8 @@ export type SourceTarget =
   | { drive: "device"; sourceId?: string }
   | { drive: "chats"; conversationId?: string }
   | { drive: "arcanas" }
-  | { drive: "mcp" };
+  | { drive: "mcp" }
+  | { drive: "saia-fs" };
 
 type DeviceView = { drive: "device"; level: "drives" };
 type DeviceSourceView = {
@@ -62,13 +69,17 @@ type McpSourceView = {
 };
 type ChatsView = { drive: "chats"; level: "drives" };
 type ArcanasView = { drive: "arcanas"; level: "browse" };
+// The SAIA filesystem is a single account folder, so there is no source list to
+// choose from: the drive opens straight into that folder.
+type SaiaFsView = { drive: "saia-fs"; level: "browse" };
 type View =
   | DeviceView
   | DeviceSourceView
   | McpView
   | McpSourceView
   | ChatsView
-  | ArcanasView;
+  | ArcanasView
+  | SaiaFsView;
 
 type Row = {
   id: string;
@@ -162,6 +173,10 @@ export function useSourceQuotas(sources: WorkspaceSourceRow[]) {
     [sources],
   );
   const arcanaSource = arcanaSources[0] ?? null;
+  // saia-fs reports no quota (the account folder's size is not exposed), so it
+  // has a card without a meter.
+  const saiaSource =
+    sources.find((source) => source.kind === "saia-fs") ?? null;
 
   useEffect(() => {
     let cancelled = false;
@@ -225,6 +240,7 @@ export function useSourceQuotas(sources: WorkspaceSourceRow[]) {
     mcpSources,
     arcanaSources,
     arcanaSource,
+    saiaSource,
     deviceQuota,
     chatsQuota,
     arcanasQuota,
@@ -267,7 +283,7 @@ export default function WorkspaceSourceBrowser({
 }) {
   const { t } = useTranslation();
   const conversations = (useConversationList() || []) as Conversation[];
-  const { providers, quotas, localSources, mcpSources, arcanaSource } =
+  const { providers, quotas, localSources, mcpSources, arcanaSource, saiaSource } =
     useSourceQuotas(sources);
   const [view, setView] = useState<View | null>(null);
   const [path, setPath] = useState("/");
@@ -323,8 +339,9 @@ export default function WorkspaceSourceBrowser({
         : mcpById.get(view.sourceId)?.readOnly === true;
     }
     if (view.drive === "arcanas") return arcanaSource?.readOnly === true;
+    if (view.drive === "saia-fs") return saiaSource?.readOnly === true;
     return false;
-  }, [view, localById, mcpById, arcanaSource]);
+  }, [view, localById, mcpById, arcanaSource, saiaSource]);
 
   useEffect(() => {
     setPath("/");
@@ -353,6 +370,10 @@ export default function WorkspaceSourceBrowser({
     }
     if (targetDrive === "mcp") {
       setView({ drive: "mcp", level: "drives" });
+      return;
+    }
+    if (targetDrive === "saia-fs") {
+      setView({ drive: "saia-fs", level: "browse" });
       return;
     }
     setView({ drive: "arcanas", level: "browse" });
@@ -418,6 +439,11 @@ export default function WorkspaceSourceBrowser({
               };
             }),
           );
+        } else if (view.drive === "saia-fs") {
+          if (!saiaSource) throw new Error(t("workspace.source_browser.unavailable"));
+          const provider = providers.get(saiaSource.id);
+          if (!provider) return;
+          next = await listProvider(provider, path);
         } else if (!arcanaSource) {
           throw new Error(t("workspace.source_browser.unavailable"));
         } else {
@@ -453,6 +479,7 @@ export default function WorkspaceSourceBrowser({
     conversations,
     conversationTitle,
     arcanaSource,
+    saiaSource,
     t,
   ]);
 
@@ -519,6 +546,17 @@ export default function WorkspaceSourceBrowser({
           title: row.name,
         };
       }
+      if (view.drive === "saia-fs") {
+        if (!saiaSource) return null;
+        return {
+          sourceId: saiaSource.id,
+          sourceKind: "saia-fs",
+          path: row.path,
+          name: row.name,
+          kind: row.kind,
+          title: row.kind === "dir" ? row.name : undefined,
+        };
+      }
       if (!arcanaSource) return null;
       const sourceKind: Extract<SourceKind, "arcana" | "arcana-filesystem"> =
         arcanaSource.kind === "arcana" ? "arcana" : "arcana-filesystem";
@@ -531,7 +569,7 @@ export default function WorkspaceSourceBrowser({
         title: row.kind === "dir" ? row.name : undefined,
       };
     },
-    [view, localById, mcpById, arcanaSource],
+    [view, localById, mcpById, arcanaSource, saiaSource],
   );
 
   const visibleItems = useMemo(
@@ -707,7 +745,9 @@ export default function WorkspaceSourceBrowser({
         ? t("workspace.source_browser.chats")
         : view.drive === "mcp"
           ? t("workspace.source_browser.mcp")
-          : t("workspace.source_browser.arcanas")
+          : view.drive === "saia-fs"
+            ? t("workspace.source_browser.saia_fs")
+            : t("workspace.source_browser.arcanas")
     : "";
   const pending = adding || unmounting || busy;
   const usageLabel = (quota: QuotaInfo | null, shared = false) =>
@@ -738,6 +778,8 @@ export default function WorkspaceSourceBrowser({
           return t("workspace.storage_badge_arcana");
         case "mcp":
           return t("workspace.storage_badge_mcp");
+        case "saia-fs":
+          return t("workspace.storage_badge_saia");
         case "agent":
           return t("workspace.storage_badge_agent");
         default:
@@ -752,6 +794,8 @@ export default function WorkspaceSourceBrowser({
       if (view?.drive === "chats") return t("workspace.storage_badge_browser");
       if (view?.drive === "mcp") return t("workspace.storage_badge_mcp");
       if (view?.drive === "arcanas") return t("workspace.storage_badge_arcana");
+      if (view?.drive === "saia-fs")
+        return t("workspace.storage_badge_saia");
       const source =
         view && view.level === "source"
           ? localById.get(view.sourceId)

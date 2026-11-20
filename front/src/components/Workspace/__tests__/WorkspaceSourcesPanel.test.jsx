@@ -105,6 +105,26 @@ const arcanaProvider = {
   quota: vi.fn(),
 };
 
+const saiaSource = {
+  id: "saia-1",
+  workspaceId: "ws-1",
+  kind: "saia-fs",
+  label: "SAIA Files",
+  config: {},
+  capabilities: {},
+  status: "connected",
+  createdAt: 1,
+  lastModified: 1,
+};
+
+const saiaProvider = {
+  sourceId: "saia-1",
+  kind: "saia-fs",
+  status: "connected",
+  capabilities: {},
+  quota: vi.fn(),
+};
+
 const renderPanel = (props = {}) =>
   render(
     <WorkspaceSourcesPanel
@@ -397,6 +417,44 @@ describe("WorkspaceSourcesPanel", () => {
     renderPanel({ activeTarget: { drive: "mcp" } });
 
     expect(drive("workspace-source-mcp")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await act(async () => {});
+  });
+
+  it("omits the SAIA drive while the service is not available", async () => {
+    renderPanel();
+
+    expect(drive("workspace-source-saia-fs")).toBeNull();
+    await act(async () => {});
+  });
+
+  it("opens the SAIA drive once the workspace has its account folder", async () => {
+    mocks.sources = [...mocks.sources, saiaSource];
+    mocks.providers = new Map([...mocks.providers, ["saia-1", saiaProvider]]);
+    renderPanel();
+
+    expect(
+      within(drive("workspace-source-saia-fs")).getByText("Your SAIA account folder"),
+    ).toBeInTheDocument();
+    // The account folder's size is not exposed, so there is no meter and no usage line.
+    expect(
+      drive("workspace-source-saia-fs").querySelector("[data-quota-bar]"),
+    ).toBeNull();
+
+    fireEvent.click(drive("workspace-source-saia-fs"));
+    expect(mocks.onOpenTarget).toHaveBeenCalledWith({ drive: "saia-fs" });
+
+    await act(async () => {});
+  });
+
+  it("marks the SAIA drive active", async () => {
+    mocks.sources = [...mocks.sources, saiaSource];
+    mocks.providers = new Map([...mocks.providers, ["saia-1", saiaProvider]]);
+    renderPanel({ activeTarget: { drive: "saia-fs" } });
+
+    expect(drive("workspace-source-saia-fs")).toHaveAttribute(
       "aria-pressed",
       "true",
     );

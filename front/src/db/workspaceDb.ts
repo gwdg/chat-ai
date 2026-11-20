@@ -114,6 +114,9 @@ export async function listCloneTargets() {
         source.kind !== "agent" &&
         // A chat's folder is derived: its files belong to the chat, not to a clone target.
         source.kind !== "chat" &&
+        // saia-fs is an MCP filesystem: a git object database is binary and would be
+        // pushed through base64 one object at a time.
+        source.kind !== "saia-fs" &&
         source.readOnly !== true &&
         (!source.deviceId || source.deviceId === getDeviceId()) &&
         source.capabilities?.write === true &&
@@ -387,6 +390,37 @@ export async function ensureArcanaFilesystemSource(
     workspaceId,
     kind: "arcana-filesystem",
     label: i18n.t("workspace.kind_arcana-filesystem"),
+    config: {},
+    status: "offline",
+  });
+}
+
+/**
+ * The caller's SAIA filesystem, for every workspace.
+ *
+ * Unlike the Arcana source this cannot be created in a Dexie upgrade or in
+ * `createWorkspace`: whether the service exists for this user is answered by the
+ * engine's model list, which is an async HTTP call. `WorkspaceStorageManager`
+ * reconciles it once `hooks/useSaiaFsAccess` reports the service, so a workspace
+ * whose dialog was never opened has no row yet — exactly like the Arcana source
+ * before it was first opened, and nothing else depends on the row existing.
+ *
+ * A row is never removed here. Revoking the grant leaves it in place: it reports
+ * its own error, and deleting it would also delete the mounts pointing into it.
+ */
+export async function ensureSaiaFsSource(
+  workspaceId: string,
+): Promise<string | undefined> {
+  if (!workspaceId) return undefined;
+  const existing = await db.workspace_sources
+    .where("[workspaceId+kind]")
+    .equals([workspaceId, "saia-fs"])
+    .first();
+  if (existing) return existing.id;
+  return addSource({
+    workspaceId,
+    kind: "saia-fs",
+    label: i18n.t("workspace.kind_saia-fs"),
     config: {},
     status: "offline",
   });

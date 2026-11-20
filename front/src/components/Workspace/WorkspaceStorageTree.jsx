@@ -311,6 +311,8 @@ export default function WorkspaceStorageTree({
           return t("workspace.storage_badge_arcana");
         case "mcp":
           return t("workspace.storage_badge_mcp");
+        case "saia-fs":
+          return t("workspace.storage_badge_saia");
         case "agent":
           return t("workspace.storage_badge_agent");
         case "chat":

@@ -21,11 +21,13 @@ import {
   groupLocalSources,
   ensureBrowserSource,
   ensureChatStorageSource,
+  ensureSaiaFsSource,
   getChatWorkspaceId,
   getSourceHandle,
   getWorkspace,
   getWorkspaceAgentSessionIds,
   listDeviceLocalSources,
+  listCloneTargets,
   listWorkspaceSummaries,
   hasWorkspaceAgentSessionLink,
   removeOrphanWorkspaceAgents,
@@ -150,6 +152,66 @@ describe("workspace database", () => {
     } finally {
       import.meta.env.VITE_MODULE_ARCANAS = original;
     }
+  });
+
+  it("adds the SAIA filesystem once per workspace, on demand", async () => {
+    const workspaceId = await createWorkspace("With SAIA files");
+
+    // Availability is an async `/models` answer, so creation cannot add the row:
+    // `ensureSaiaFsSource` adds it when the engine lists the service.
+    expect(
+      (await db.workspace_sources.where("workspaceId").equals(workspaceId).toArray())
+        .map((source) => source.kind),
+    ).not.toContain("saia-fs");
+
+    const first = await ensureSaiaFsSource(workspaceId);
+    const second = await ensureSaiaFsSource(workspaceId);
+
+    expect(first).toBeTruthy();
+    expect(second).toBe(first);
+    const sources = await db.workspace_sources
+      .where("workspaceId")
+      .equals(workspaceId)
+      .toArray();
+    const saia = sources.filter((source) => source.kind === "saia-fs");
+    expect(saia).toHaveLength(1);
+    expect(saia[0]).toMatchObject({
+      id: first,
+      config: {},
+      readOnly: false,
+      status: "offline",
+    });
+    // Account-plane: one folder per user, not bound to this device.
+    expect(saia[0].deviceId).toBeUndefined();
+  });
+
+  it("keeps one SAIA source per workspace", async () => {
+    const one = await createWorkspace("First");
+    const two = await createWorkspace("Second");
+
+    const sourceId = await ensureSaiaFsSource(one);
+    const otherId = await ensureSaiaFsSource(two);
+
+    expect(otherId).not.toBe(sourceId);
+    const rows = await db.workspace_sources
+      .where("workspaceId")
+      .anyOf(one, two)
+      .filter((source) => source.kind === "saia-fs")
+      .toArray();
+    expect(rows).toHaveLength(2);
+    expect(new Set(rows.map((row) => row.workspaceId))).toEqual(
+      new Set([one, two]),
+    );
+  });
+
+  it("does not offer the SAIA filesystem as a clone target", async () => {
+    const workspaceId = await createWorkspace("Clone source");
+    const sourceId = await ensureSaiaFsSource(workspaceId);
+
+    const targets = await listCloneTargets();
+
+    expect(targets.map((target) => target.kind)).not.toContain("saia-fs");
+    expect(targets.map((target) => target.id)).not.toContain(sourceId);
   });
 
   it("binds device-plane sources to this device and leaves Arcana device-free", async () => {

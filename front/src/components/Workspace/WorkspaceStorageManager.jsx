@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import WorkspaceSourceBrowser from "./WorkspaceSourceBrowser";
@@ -6,6 +6,7 @@ import WorkspaceSourcesPanel from "./WorkspaceSourcesPanel";
 import WorkspaceStorageTree from "./WorkspaceStorageTree";
 import {
   detachWorkspaceChat,
+  ensureSaiaFsSource,
   removeWorkspaceMount,
   unmountLocalFolder,
   useAllWorkspaceChats,
@@ -16,6 +17,7 @@ import {
   useWorkspaceSources,
 } from "../../db/workspaceDb";
 import { useModal } from "../../modals/ModalContext";
+import { useSaiaFsAccess, SAIA_FS_GRANTED } from "../../hooks/useSaiaFsAccess";
 import { addSelectionToWorkspace } from "../../workspace/addSelectionToWorkspace";
 import { addLocalSource, pickDirectory } from "../../workspace/localWorkspace";
 
@@ -25,7 +27,18 @@ export default function WorkspaceStorageManager({ workspaceId, onOpenAddSource }
   const [target, setTarget] = useState(null);
   const [adding, setAdding] = useState(false);
   const [addProgress, setAddProgress] = useState(null);
+  const saiaFsAccess = useSaiaFsAccess();
   const workspaceSources = useWorkspaceSources(workspaceId ?? undefined);
+
+  // The SAIA filesystem is per account, not per workspace, so every workspace gets one source
+  // for it — but only while the engine lists the service for this user, which is an async
+  // answer. `useSaiaFsAccess` fails closed: an unreadable model list leaves the source out
+  // instead of adding a row that cannot connect. The row is never removed again, so a revoked
+  // grant keeps its mounts and reports its own error.
+  useEffect(() => {
+    if (!workspaceId || saiaFsAccess !== SAIA_FS_GRANTED) return;
+    void ensureSaiaFsSource(workspaceId);
+  }, [workspaceId, saiaFsAccess]);
   // "Your Device" lists every folder this browser has been granted, not only the
   // ones already mounted in this workspace.
   const deviceSources = useDeviceLocalSources(workspaceId ?? undefined);

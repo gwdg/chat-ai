@@ -445,6 +445,11 @@ export default {
       step2: "Choose Manage data to see the files behind this switch. A chat attached to a workspace opens that workspace, whose Files tab shows the file system; a chat without a workspace browses the files kept in this browser for the chat.",
       step3: "Upload, create, rename, download and delete the chat's files here.",
     },
+    workspace_saia_fs: {
+      title: "Your SAIA files in a workspace",
+      step1: "Start a new workspace with Create workspace. Its Sources rail is where a workspace gets its files.",
+      step2: "SAIA Files is your account folder. It is listed only while this deployment offers the saia-fs service to you; open it to pick a folder and add it to the workspace.",
+    },
     workspace_clone: {
       title: "Import a Git repository",
       step1: "Open Create workspace, pick Git repository on the left, choose the local agent that runs the clone, then press Create.",
@@ -2423,6 +2428,8 @@ export default {
       chats: "Browser",
       arcanas: "Arcanas",
       mcp: "MCP",
+      saia_fs: "SAIA Files",
+      saia_hint: "Your SAIA account folder",
       add_to_workspace: "Add to Workspace",
       add_to_workspace_count: "Add to Workspace ({{count}})",
       unmount: "Unmount",
@@ -2469,6 +2476,7 @@ export default {
     storage_badge_arcana: "arcana",
     storage_badge_mcp: "MCP",
     storage_badge_agent: "agent",
+    storage_badge_saia: "SAIA",
     add_source: "Add source",
     source_kind: "Source type",
     choose_folder: "Choose folder…",
@@ -2486,6 +2494,7 @@ export default {
     kind_arcana: "Arcana",
     "kind_arcana-filesystem": "Arcana filesystem",
     kind_mcp: "MCP",
+    "kind_saia-fs": "SAIA filesystem",
     local_hint:
       "The browser asks for access to the folder. The folder stays on this device and is never uploaded.",
     local_unsupported: "This browser cannot open local folders.",
