@@ -230,6 +230,24 @@ natively, because its tools then survive a closed tab:
   `useAgentMcpInjection` registers every configured server that has an HTTP URL
   and no stored headers through `PUT /api/experimental/mcp/<chatai-ext-…>` and
   `POST …/connect`, and polls `GET /api/mcp` for the result.
+- **One session owns an entry.** OpenCode's MCP registry belongs to the instance,
+  so an entry added there is offered to every session of the agent. The entry is
+  therefore named after the session (`chatai-ext-<server>-<session id>`, and
+  `chatai-bridge-<session id>` for the bridge's own server), and
+  `agents/agentMcpScope.js` writes that ownership into each session's permission
+  ruleset (`PATCH /api/session/<id>`): deny `chatai-*`, then allow the entries
+  whose session is that session or one of its ancestors, so a subagent keeps its
+  parent's tools while a sibling session gets none. A denied tool disappears from
+  the model's tool list; the last matching rule wins, which is why the allow comes
+  after the deny. Nothing is registered without a session id, because an unnamed
+  entry would be agent-wide, and entries are registered with `codemode: false` so
+  each tool has its own action a rule can hide. `sweepStaleBridgeEntries` keeps
+  exactly one bridge entry: a session switch replaces the name and removes the
+  previous entry without restarting the bridge or its socket. The app remembers
+  what it wrote per agent, so a later run removes only its own rules. A session
+  created after the last run has no rules until the next one, and the moment
+  between a switch and the re-registration still has the previous entry owned by
+  its old session.
 - **Kind is not a routing decision.** An entry with an address is injectable
   whether it is stored as `local` or as a gateway entry; a gateway entry that
   carries only a server id is answered by the gateway and never reaches OpenCode.

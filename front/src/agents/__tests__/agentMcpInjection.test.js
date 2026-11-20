@@ -19,10 +19,12 @@ import {
   injectableMcpServers,
   injectExternalMcpServers,
   injectedMcpName,
+  injectedMcpNames,
   removeInjectedMcpServers,
 } from "../agentMcpInjection";
 
 const agent = { id: "agent-1", name: "Example agent" };
+const sessionId = "ses_alpha";
 
 const servers = [
   { id: "web", name: "Web search", kind: "local", url: "http://search.test/mcp" },
@@ -78,23 +80,35 @@ describe("agent MCP injection", () => {
     ]);
   });
 
-  it("names an entry after its URL, so a rename does not leave the old one behind", () => {
-    const first = injectedMcpName({
-      name: "Old name",
-      url: "http://search.test/mcp",
-    });
-    const renamed = injectedMcpName({
-      name: "New name",
-      url: "http://search.test/mcp",
-    });
-    const other = injectedMcpName({
-      name: "Other",
-      url: "http://search.test/other",
-    });
+  it("names an entry after the server and ends it with the session id", () => {
+    const name = injectedMcpName(
+      { name: "Web search", url: "http://search.test/mcp" },
+      sessionId,
+    );
 
-    expect(first).toBe(renamed);
-    expect(first.startsWith(INJECTED_MCP_PREFIX)).toBe(true);
-    expect(other).not.toBe(first);
+    // The scope reads the trailing session id; a name that ends anywhere else would belong to
+    // every session again.
+    expect(name).toBe(`${INJECTED_MCP_PREFIX}web-search-${sessionId}`);
+    expect(name.endsWith(sessionId)).toBe(true);
+  });
+
+  it("falls back to the URL host and keeps same-named servers apart", () => {
+    expect(
+      injectedMcpName({ url: "http://search.test/mcp" }, sessionId),
+    ).toBe(`${INJECTED_MCP_PREFIX}search-test-${sessionId}`);
+
+    const names = injectedMcpNames(
+      [
+        { id: "one", name: "Same", url: "http://one.test/mcp" },
+        { id: "two", name: "Same", url: "http://two.test/mcp" },
+      ],
+      sessionId,
+    );
+
+    expect([...names.keys()]).toEqual([
+      `${INJECTED_MCP_PREFIX}same-${sessionId}`,
+      `${INJECTED_MCP_PREFIX}same-2-${sessionId}`,
+    ]);
   });
 
   it("keeps the servers OpenCode connected and hands the rest back to the bridge", async () => {
@@ -124,13 +138,23 @@ describe("agent MCP injection", () => {
         { id: "up", name: "Up", kind: "local", url: "http://reachable.test/mcp" },
         { id: "down", name: "Down", kind: "local", url: "http://blocked.test/mcp" },
       ],
-      { wait, delay: 0, attempts: 3 },
+      { sessionId, wait, delay: 0, attempts: 3 },
     );
 
     expect(result.injected.map((server) => server.id)).toEqual(["up"]);
     expect(result.failed).toEqual([
       expect.objectContaining({ id: "down", error: "ECONNREFUSED" }),
     ]);
+    // Every entry belongs to the session it was added for, and each tool stays a tool of its
+    // own so the session rules can deny it (Code Mode would hide it behind `execute`).
+    expect(result.injected[0].entryName).toBe(
+      `${INJECTED_MCP_PREFIX}up-${sessionId}`,
+    );
+    expect(mocks.add).toHaveBeenCalledWith(agent, result.injected[0].entryName, {
+      type: "remote",
+      url: "http://reachable.test/mcp",
+      codemode: false,
+    });
     // The failed entry is removed again; leaving it in OpenCode would show a broken server
     // next to the bridge relay that can actually reach it.
     expect(entries.has(result.failed[0].entryName)).toBe(false);
@@ -140,6 +164,14 @@ describe("agent MCP injection", () => {
     );
   });
 
+  it("does nothing without a session, because an unnamed entry is agent-wide", async () => {
+    const result = await injectExternalMcpServers(agent, servers, {});
+
+    expect(result).toEqual({ injected: [], failed: [], removed: [] });
+    expect(mocks.add).not.toHaveBeenCalled();
+    expect(mocks.list).not.toHaveBeenCalled();
+  });
+
   it("reuses a connected entry and removes stale injected ones", async () => {
     const up = {
       id: "up",
@@ -147,7 +179,10 @@ describe("agent MCP injection", () => {
       kind: "local",
       url: "http://reachable.test/mcp",
     };
-    const kept = { name: injectedMcpName(up), status: { status: "connected" } };
+    const kept = {
+      name: injectedMcpName(up, sessionId),
+      status: { status: "connected" },
+    };
     const stale = {
       name: `${INJECTED_MCP_PREFIX}gone-000000`,
       status: { status: "connected" },
@@ -160,6 +195,7 @@ describe("agent MCP injection", () => {
     ]);
 
     const result = await injectExternalMcpServers(agent, [up], {
+      sessionId,
       wait: async () => {},
       delay: 0,
       attempts: 1,
@@ -172,10 +208,41 @@ describe("agent MCP injection", () => {
     expect(mocks.remove).toHaveBeenCalledWith(agent, stale.name);
   });
 
+  it("moves the entries to the session that is open now", async () => {
+    // The registry is agent-wide: the entries of the session opened before have to go, or that
+    // session would keep the servers it was never given again.
+    const up = {
+      id: "up",
+      name: "Up",
+      kind: "local",
+      url: "http://reachable.test/mcp",
+    };
+    const previous = {
+      name: injectedMcpName(up, "ses_previous"),
+      status: { status: "connected" },
+    };
+    mocks.list.mockResolvedValue([previous]);
+
+    const result = await injectExternalMcpServers(agent, [up], {
+      sessionId,
+      wait: async () => {},
+      delay: 0,
+      attempts: 1,
+    });
+
+    expect(mocks.remove).toHaveBeenCalledWith(agent, previous.name);
+    expect(result.removed).toEqual([previous.name]);
+    expect(mocks.add).toHaveBeenCalledWith(
+      agent,
+      `${INJECTED_MCP_PREFIX}up-${sessionId}`,
+      expect.objectContaining({ url: up.url }),
+    );
+  });
+
   it("removes only the entries this app injected", async () => {
     mocks.list.mockResolvedValue([
-      { name: `${INJECTED_MCP_PREFIX}one-000001` },
-      { name: `${INJECTED_MCP_PREFIX}two-000002` },
+      { name: `${INJECTED_MCP_PREFIX}one-ses_a` },
+      { name: `${INJECTED_MCP_PREFIX}two-ses_b` },
       { name: "chatai-bridge-1234" },
       { name: "manual" },
     ]);

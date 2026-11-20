@@ -253,6 +253,9 @@ export default function AgentWorkspaceButton({
             <p className="text-[10px] font-semibold uppercase tracking-wide text-base-content/50">
               {t("agents.bridge.mcp_servers")}
             </p>
+            <p className="mt-0.5 text-[10px] leading-snug text-base-content/50">
+              {t("agents.bridge.session_scope")}
+            </p>
             <div className="mt-1.5 flex flex-col gap-1 text-[11px]">
               <label className="flex items-center gap-2">
                 <input

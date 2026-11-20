@@ -504,7 +504,7 @@ export default {
       title: "Give an agent access to workspace files",
       step1: "Open an agent. The left panel is its file browser.",
       step2: "Open the workspace button next to the prompt box and turn Agent workspace access on to provide the reverse proxy for this agent. Attach a workspace, choose which one the bridge uses, allow writes if the agent may change files, and keep this tab open while the agent works.",
-      step3: "The same panel holds the MCP options. MCP tools lets the agent call your configured MCP servers through this tab; Inject external MCP tools also registers the servers OpenCode reaches itself, so those keep working without the tab while the rest stay on the bridge.",
+      step3: "The same panel holds the MCP options. MCP tools lets the agent call your configured MCP servers through this tab; Inject external MCP tools also registers the servers OpenCode reaches itself, so those keep working without the tab while the rest stay on the bridge. Both routes belong to the session that is open: another session of the same agent, and every session of another agent, cannot use them.",
     },
     catalog: {
       open: "Browse tutorials",
@@ -1996,6 +1996,10 @@ export default {
       inject_fallback: "Via bridge: {{servers}}",
       inject_none: "No MCP server without a password is configured.",
       inject_error: "Could not add the MCP servers to OpenCode: {{message}}",
+      session_scope:
+        "Both routes are limited to the session that is open: the entries carry its id and every other session of this agent is denied, including its subagents' siblings.",
+      rescope_failed:
+        "Could not move the bridge to this session: {{message}}",
       keep_open: "Keep this tab open. Workspace files and the MCP servers kept on the bridge are available only while the browser is connected.",
       tab_warning: "The agent bridge needs this tab to stay connected. Workspace files and the MCP servers kept on the bridge may stop until you return.",
       start_failed: "Could not start the workspace bridge: {{message}}",

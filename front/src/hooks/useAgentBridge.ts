@@ -13,6 +13,7 @@ import { agentTunnelEnabled, tunnelRequest } from "../apis/agentTunnel";
 import {
   addOpencodeMcpServer,
   connectOpencodeMcpServer,
+  listOpencodeMcpServers,
   removeOpencodeMcpServer,
 } from "../apis/opencodeAgents";
 import type { WorkspaceMountRow } from "../db/dbTypes";
@@ -52,6 +53,12 @@ class BridgeRejectedError extends Error {
 
 type BridgeInput = {
   agent: any;
+  /**
+   * The OpenCode session the tools belong to. The registry itself is agent-wide, so the entry is
+   * named after this session and only that session (and its subagents) may use it —
+   * `agents/agentMcpScope.js` writes the permission rules that enforce it.
+   */
+  sessionId?: string | null;
   workspaceId?: string | null;
   writable: boolean;
   mcp: boolean;
@@ -192,8 +199,38 @@ const readMcpServers = (settings: any) =>
       typeof server?.url === "string" && !!server.url.trim(),
   );
 
+/** Every OpenCode entry this hook registers, and the session it belongs to. */
+export const BRIDGE_ENTRY_PREFIX = "chatai-bridge-";
+export const bridgeMcpName = (sessionId: string) =>
+  `${BRIDGE_ENTRY_PREFIX}${sessionId}`;
+
+/**
+ * Remove the bridge entries of sessions that are no longer open.
+ *
+ * OpenCode's registry is agent-wide and survives a page reload, so a crashed or closed tab
+ * leaves its entry behind; without this sweep a user who opened the bridge in five sessions
+ * would see five of them. Exactly one may exist at a time, and it is the one about to be
+ * registered.
+ */
+export async function sweepStaleBridgeEntries(agent: any, keep: string) {
+  const servers = await listOpencodeMcpServers(agent).catch(() => []);
+  const stale = (Array.isArray(servers) ? servers : [])
+    .map((server: any) => server?.name)
+    .filter(
+      (name: any) =>
+        typeof name === "string" &&
+        name.startsWith(BRIDGE_ENTRY_PREFIX) &&
+        name !== keep,
+    );
+  for (const name of stale) {
+    await removeOpencodeMcpServer(agent, name).catch(() => {});
+  }
+  return stale;
+}
+
 export function useAgentBridge({
   agent,
+  sessionId,
   workspaceId,
   writable,
   mcp,
@@ -214,12 +251,24 @@ export function useAgentBridge({
   const [error, setError] = useState("");
   const [unavailable, setUnavailable] = useState(false);
   const [tabAway, setTabAway] = useState(false);
+  // The OpenCode entry belongs to one session. `entryName` mirrors it for the rename effect
+  // below, which moves it when the user opens another session; the bridge session itself (the
+  // socket, the workspace pairing) keeps running, so this is not a restart.
+  const [entryName, setEntryName] = useState("");
+  const sessionIdRef = useRef<string>("");
+  const nameRef = useRef<string>("");
+  const configRef = useRef<Record<string, unknown> | null>(null);
+  const aliveRef = useRef(false);
+  const registerEntryRef = useRef<
+    ((sessionId: string, previous?: string) => Promise<void>) | null
+  >(null);
 
   notifyRef.current = notifyError;
   tRef.current = t;
   providersRef.current = providers;
   mountsRef.current = mounts;
   rootRef.current = rootProvider;
+  sessionIdRef.current = sessionId || "";
 
   const mcpServers = useMemo(() => readMcpServers(userSettings), [userSettings]);
   // A ref, not an effect dependency: injection finishes after the bridge is online, and
@@ -246,13 +295,13 @@ export function useAgentBridge({
       setUnavailable(false);
       return;
     }
+    aliveRef.current = true;
     let cancelled = false;
     let socket: WebSocket | null = null;
     let pollController: AbortController | null = null;
     let retryTimer: number | null = null;
     let session: any = null;
     let sessionDeleted = false;
-    let mcpName = "";
     let wasHidden = false;
     const originalTitle = document.title;
     const tunneled = bridgeUsesTunnel(agent);
@@ -537,6 +586,28 @@ export function useAgentBridge({
       }
     };
 
+    /**
+     * Register the bridge entry under one session's name, removing every other bridge entry.
+     *
+     * `previous` is the entry this hook registered before a session switch: the bridge session
+     * and its socket are unchanged, only the OpenCode entry moves (a rename is not an API
+     * OpenCode offers), so the registry never holds two bridges and no other session can use the
+     * one it holds.
+     */
+    const registerEntry = async (sid: string, previous?: string) => {
+      if (!aliveRef.current || !sid || !configRef.current) return;
+      const name = bridgeMcpName(sid);
+      if (previous && previous !== name) {
+        await removeOpencodeMcpServer(agent, previous).catch(() => {});
+      }
+      await sweepStaleBridgeEntries(agent, name);
+      await addOpencodeMcpServer(agent, name, configRef.current);
+      await connectOpencodeMcpServer(agent, name);
+      nameRef.current = name;
+      if (aliveRef.current) setEntryName(name);
+    };
+    registerEntryRef.current = registerEntry;
+
     const start = async () => {
       setStatus("connecting");
       setError("");
@@ -570,7 +641,6 @@ export function useAgentBridge({
           deleteSession();
           throw new BridgeUnavailableError(sessionUrl, 404);
         }
-        mcpName = `chatai-bridge-${String(session.id).slice(0, 8)}`;
         const sidecarCommand = sidecarCommandFor(
           SIDECAR_COMMAND,
           agent,
@@ -584,7 +654,7 @@ export function useAgentBridge({
           ]
             .filter(Boolean)
             .join(",");
-          await addOpencodeMcpServer(agent, mcpName, {
+          configRef.current = {
             type: "local",
             command: sidecarCommand,
             codemode: false,
@@ -593,15 +663,18 @@ export function useAgentBridge({
               CHAT_AI_BRIDGE_TOKEN: session.agentToken,
               CHAT_AI_BRIDGE_SCOPES: scopes,
             },
-          });
+          };
         } else {
-          await addOpencodeMcpServer(agent, mcpName, {
+          configRef.current = {
             type: "remote",
             url: session.mcpUrl,
             headers: { Authorization: `Bearer ${session.token}` },
-          });
+            // Code Mode would bury the bridge tools behind `execute`; the session scope in
+            // `agents/agentMcpScope.js` can only deny what is a tool of its own.
+            codemode: false,
+          };
         }
-        await connectOpencodeMcpServer(agent, mcpName);
+        await registerEntry(sessionIdRef.current);
         if (!cancelled) {
           if (tunneled) {
             void pollBridge(session.pollUrl, session.replyUrl);
@@ -669,22 +742,27 @@ export function useAgentBridge({
 
     return () => {
       cancelled = true;
+      aliveRef.current = false;
+      configRef.current = null;
+      registerEntryRef.current = null;
       window.removeEventListener("beforeunload", beforeUnload);
       document.removeEventListener("visibilitychange", onVisibility);
       document.title = originalTitle;
       if (retryTimer !== null) window.clearTimeout(retryTimer);
       pollController?.abort();
       socket?.close();
-      if (mcpName) {
-        void removeOpencodeMcpServer(agent, mcpName).catch(() => {});
+      if (nameRef.current) {
+        // The name lives in a ref because the rename effect below may have replaced it; the
+        // closure's own value would point at an entry that is already gone.
+        void removeOpencodeMcpServer(agent, nameRef.current).catch(() => {});
+        nameRef.current = "";
       }
+      setEntryName("");
       deleteSession();
     };
-    // Deliberately not `[agent]`: switching the agent's OpenCode session only changes
-    // `sessionId` plus its summaries, and the bridge is agent-scoped (one MCP server in that
-    // agent's OpenCode, one workspace link), so a session switch must keep the running bridge
-    // instead of tearing it down and registering a second one. Only the fields that decide
-    // where and how it connects restart it.
+    // Deliberately not `[agent]` or `[sessionId]`: a session switch only re-registers the MCP
+    // entry under the new session's name (the effect below), while the one bridge session and
+    // its socket keep running. Only the fields that decide where and how it connects restart it.
   }, [
     agent?.id,
     agent?.serviceAgentId,
@@ -697,5 +775,28 @@ export function useAgentBridge({
     mcpServers,
   ]);
 
-  return { status, error, tabAway, unavailable };
+  /**
+   * Move the bridge entry to the session the user just opened.
+   *
+   * The connection is not restarted: `registerEntry` only replaces the OpenCode entry, so one
+   * bridge exists at any time and it always belongs to the visible session. A failure leaves the
+   * previous entry in place and says so, because a silent failure would look like a bridge that
+   * works but whose tools are denied.
+   */
+  useEffect(() => {
+    const target = sessionId ? bridgeMcpName(sessionId) : "";
+    if (!target || !entryName || entryName === target) return;
+    const register = registerEntryRef.current;
+    if (!register) return;
+    void register(sessionId as string, entryName).catch((reason) => {
+      notifyRef.current(
+        tRef.current("agents.bridge.rescope_failed", {
+          message: reason instanceof Error ? reason.message : String(reason),
+        }),
+      );
+    });
+    // `entryName` belongs in the dependencies: the move sets it, and the guard above then stops.
+  }, [agent?.id, sessionId, entryName]);
+
+  return { status, error, tabAway, unavailable, entryName };
 }

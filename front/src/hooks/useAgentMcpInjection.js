@@ -19,7 +19,8 @@ const readGlobalServers = (settings) =>
   Array.isArray(settings?.mcp_servers) ? settings.mcp_servers : [];
 
 /**
- * Keep the natively injectable MCP servers of one agent registered inside its OpenCode.
+ * Keep the natively injectable MCP servers of one agent registered inside its OpenCode, for the
+ * session that is open right now.
  *
  * `enabled` is the agent's `bridgeInjectExternal` option on an agent that can run the bridge:
  * with access off there is no second route, so the split would only create entries nobody
@@ -27,11 +28,12 @@ const readGlobalServers = (settings) =>
  * handed to OpenCode, which connects itself, and the ones it cannot reach stay on the bridge
  * relay.
  *
- * The effect depends on the connection fields and the candidate list, never on `sessionId`:
- * injection is agent-scoped (one OpenCode registry serves all its sessions), so switching
- * sessions must not tear the entries down and re-add them.
+ * OpenCode's MCP registry belongs to the instance, not to a session, so `sessionId` is part of
+ * every entry name and of this effect: switching sessions hands the entries over to the newly
+ * open one (and removes the previous session's), which is what keeps another session of the same
+ * agent from using them. `agents/agentMcpScope.js` additionally denies them everywhere else.
  */
-export function useAgentMcpInjection({ agent, enabled }) {
+export function useAgentMcpInjection({ agent, enabled, sessionId }) {
   const userSettings = useSelector(selectUserSettings);
   const globalServers = useMemo(
     () => readGlobalServers(userSettings),
@@ -49,7 +51,7 @@ export function useAgentMcpInjection({ agent, enabled }) {
     .join("\n\n");
 
   useEffect(() => {
-    if (!agent?.id || !enabled) {
+    if (!agent?.id || !enabled || !sessionId) {
       if (!wasEnabledRef.current) return;
       wasEnabledRef.current = false;
       setState(idleState);
@@ -69,6 +71,7 @@ export function useAgentMcpInjection({ agent, enabled }) {
     void (async () => {
       try {
         const result = await injectExternalMcpServers(agent, globalServers, {
+          sessionId,
           isCancelled: () => cancelled,
         });
         if (cancelled) return;
@@ -91,8 +94,8 @@ export function useAgentMcpInjection({ agent, enabled }) {
     return () => {
       cancelled = true;
     };
-    // Deliberately not `[agent]`: a session switch only changes `sessionId` and the
-    // summaries, and the MCP registry of that agent's OpenCode is shared by all sessions.
+    // Deliberately not `[agent]`: a new assistant turn or a renamed session must not tear the
+    // entries down. `sessionId` is different — the entries carry it, so they move with it.
   }, [
     agent?.id,
     agent?.serviceAgentId,
@@ -100,6 +103,7 @@ export function useAgentMcpInjection({ agent, enabled }) {
     agent?.username,
     agent?.password,
     enabled,
+    sessionId,
     signature,
   ]);
 

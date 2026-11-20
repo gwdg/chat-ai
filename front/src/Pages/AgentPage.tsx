@@ -25,6 +25,7 @@ import { useUpdateUserData } from "../hooks/useUpdateUserData";
 import { useOpencodeFilePreview } from "../hooks/useOpencodeFilePreview";
 import { useAgentBridge } from "../hooks/useAgentBridge";
 import { useAgentMcpInjection } from "../hooks/useAgentMcpInjection";
+import { useAgentMcpScope } from "../hooks/useAgentMcpScope";
 import {
   useAgentWorkspaceLinksState,
   useWorkspaceList,
@@ -120,10 +121,13 @@ export default function AgentPage() {
   // Servers OpenCode can reach itself are registered there instead of being relayed through
   // the browser, so the relay below only carries the rest. Injection needs neither the bridge
   // nor a workspace: OpenCode dials those servers itself, and skipping them here is what keeps
-  // a bridge from offering the same server twice once it is started.
+  // a bridge from offering the same server twice once it is started. Both routes are scoped to
+  // the session that is open — OpenCode's MCP registry is agent-wide — through the entry names
+  // and `useAgentMcpScope` below.
   const mcpInjection = useAgentMcpInjection({
     agent,
     enabled: agent?.bridgeInjectExternal === true,
+    sessionId: agent?.sessionId,
   });
   const injectedMcpUrls = useMemo(
     () => mcpInjection.injected.map((server) => server.url),
@@ -131,6 +135,7 @@ export default function AgentPage() {
   );
   const bridge = useAgentBridge({
     agent,
+    sessionId: agent?.sessionId,
     workspaceId,
     writable: agent?.bridgeWritable === true,
     mcp: agent?.bridgeMcp === true,
@@ -139,6 +144,16 @@ export default function AgentPage() {
     providers,
     rootProvider,
   });
+  const scopedEntries = useMemo(
+    () => [
+      ...mcpInjection.injected.map((server) => server.entryName),
+      ...(bridge.entryName ? [bridge.entryName] : []),
+    ],
+    [mcpInjection.injected, bridge.entryName],
+  );
+  // Denies both routes to every other session of this agent. Runs on its own, so neither hook
+  // has to know about the permission rules that make its entries session-private.
+  useAgentMcpScope({ agent, entryNames: scopedEntries });
   // Reason of a bridge that could not start. Access is switched off in that case, so the hook
   // reports "off" afterwards; the popover still shows why until access is turned on again.
   const [bridgeFailure, setBridgeFailure] = useState("");

@@ -63,23 +63,15 @@ const slugify = (value) =>
     .replace(/^-+|-+$/g, "")
     .slice(0, 32);
 
-/** FNV-1a, just enough to keep two servers with the same hostname apart in OpenCode. */
-const shortHash = (value) => {
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-  return hash.toString(36).padStart(6, "0").slice(-6);
-};
-
 /**
  * The OpenCode name of an injected server.
  *
- * Derived from the URL alone, not from the display name: renaming a server must not leave the
- * old entry behind as the "stale" one, and the same URL always maps to the same entry.
+ * `<prefix><server>-<session>`: the server part identifies the entry for a human, and the
+ * trailing session id is what `agents/agentMcpScope.js` reads to decide which session may use
+ * it. The session id is required — an entry without one would belong to every session of the
+ * agent — and the name follows a rename, since the old entry is removed on the next run.
  */
-export function injectedMcpName(server) {
+export function injectedMcpName(server, sessionId, index = 1) {
   const url = normalizeMcpUrl(server?.url) || String(server?.url ?? "");
   let host = "";
   try {
@@ -87,9 +79,33 @@ export function injectedMcpName(server) {
   } catch {
     host = "";
   }
-  const label =
-    slugify(host || server?.name) || slugify(server?.name) || "server";
-  return `${INJECTED_MCP_PREFIX}${label}-${shortHash(url)}`;
+  const label = slugify(server?.name) || slugify(host) || "server";
+  // The counter sits before the session id, which must stay the end of the name: that is what
+  // `agentMcpScope.js` reads to decide the owner.
+  const counter = index > 1 ? `-${index}` : "";
+  return `${INJECTED_MCP_PREFIX}${label}${counter}-${sessionId}`;
+}
+
+/**
+ * Name every candidate for one session, keeping two servers with the same display name apart.
+ *
+ * The order of the settings array decides which one keeps the plain name, so the same input
+ * always produces the same mapping and a later run recognises its own entries.
+ */
+export function injectedMcpNames(servers = [], sessionId) {
+  const used = new Set();
+  const names = new Map();
+  for (const server of servers) {
+    let index = 1;
+    let name = injectedMcpName(server, sessionId, index);
+    while (used.has(name)) {
+      index += 1;
+      name = injectedMcpName(server, sessionId, index);
+    }
+    used.add(name);
+    names.set(name, server);
+  }
+  return names;
 }
 
 const isInjectedName = (name) =>
@@ -129,22 +145,32 @@ async function waitForMcpStatus(agent, name, options = {}) {
 }
 
 /**
- * Reconcile the natively injected MCP servers of one agent.
+ * Reconcile the natively injected MCP servers of one agent for one session.
  *
  * Every candidate is added to OpenCode and connected. One that ends up `connected` is reported
  * as injected, so the bridge no longer relays it; one that fails (not reachable from the
  * OpenCode host, or still pending after the timeout) is removed again and reported as failed,
  * which leaves it to the bridge relay. Entries from an earlier run that no longer match a
- * candidate are deleted, so a removed or changed server does not linger.
+ * candidate are deleted, so a removed or changed server does not linger — including the entries
+ * of every other session, because the registry is agent-wide and only one session may own them
+ * (`agents/agentMcpScope.js` then restricts them to this one).
  *
  * OpenCode's `/experimental/mcp` API is runtime-only (nothing is written to disk), so this has
- * to run again after the agent's OpenCode restarts.
+ * to run again after the agent's OpenCode restarts, and again whenever the session changes.
  */
-export async function injectExternalMcpServers(agent, servers, options = {}) {
+export async function injectExternalMcpServers(
+  agent,
+  servers,
+  options = {},
+) {
+  const sessionId = options.sessionId ?? agent?.sessionId ?? "";
+  if (!sessionId) {
+    // Without a session id the entry would be visible to every session, which is exactly what
+    // this function must not do.
+    return { injected: [], failed: [], removed: [] };
+  }
   const candidates = injectableMcpServers(servers);
-  const desired = new Map(
-    candidates.map((server) => [injectedMcpName(server), server]),
-  );
+  const desired = injectedMcpNames(candidates, sessionId);
   const existing = await listOpencodeMcpServers(agent);
   const owned = existing.filter((server) => isInjectedName(server?.name));
 
@@ -174,6 +200,10 @@ export async function injectExternalMcpServers(agent, servers, options = {}) {
         await addOpencodeMcpServer(agent, name, {
           type: "remote",
           url: server.url,
+          // Kept off so each tool is a real tool with its own `<server>_<tool>` action, which is
+          // what the per-session permission rules can deny; Code Mode would hide them behind a
+          // single `execute` tool.
+          codemode: false,
         });
         await connectOpencodeMcpServer(agent, name);
         entry = { name, status: { status: "pending" } };

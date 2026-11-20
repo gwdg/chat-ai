@@ -1557,16 +1557,18 @@ back to `!!bridgeWorkspaceId`. The same entry stores
 `bridgeWorkspaceId`, `bridgeWritable`, `bridgeMcp` and `bridgeInjectExternal` in localStorage; all
 five (with the access flag) are per agent, not per session, because one workspace link and one MCP
 registry in the agent's OpenCode serve every session of that agent. **They must survive a session
-switch.** Two things used to break that:
+switch.** The registry is instance-wide, so an entry cannot be made per-session by itself: the
+entry's name ends with the session it belongs to and `agents/agentMcpScope.js` turns that into
+permission rules (below). Two things used to break the settings across a switch:
 `AgentPage` cleared `bridgeEnabled` whenever `bridgeCandidates` was empty, which is also true for
 the first frame before Dexie answers — so mounting the page switched a running bridge off
 permanently (read the links through `useAgentWorkspaceLinksState`, which is `undefined` until it
 knows, and only clear a flag on a known-empty list); and `useAgentBridge`'s
 effect depended on the whole `agent` object, so every `sessionId` change tore the bridge down and
 registered a new one, where a failed restart disabled access. Its deps are the connection fields
-(agent id, service id, server url/credentials, workspace, write, MCP, servers) — never `sessionId`.
-Switching back to a session therefore finds its settings stored on the agent and the same bridge
-still connected. While a
+(agent id, service id, server url/credentials, workspace, write, MCP, servers) — never `sessionId`,
+which is an input for the entry's name, not for the connection. Switching back to a session
+therefore finds its settings stored on the agent and the same bridge still connected. While a
 bridge is active the page warns that the tab must stay open, sets a warning title when hidden,
 shows a toast on return, and registers `beforeunload`. In production, the initial invocation must be
 able to spawn the sidecar and open the outbound WebSocket; the bridge host must be reachable from the
@@ -1580,11 +1582,14 @@ workspace, because the servers are registered in the agent's own OpenCode; `Agen
 enables `useAgentMcpInjection` from the flag alone, and the relay narrows itself once a bridge
 starts. The configured `kind` does not decide the route: an entry with an address is dialable by
 OpenCode, while a SAIA-gateway entry carries only a server id and keeps its server-side path.
-`useAgentMcpInjection` reconciles the entries; it is agent-scoped and depends on the connection
-fields and the candidate list, never on `sessionId`, and the option is stored per agent
-(`bridgeInjectExternal`) like the write/MCP flags, so it survives a session switch. Names are
-derived from the URL alone (`agents/agentMcpInjection.js`), so renaming a server does not leave the
-old entry behind. A server OpenCode cannot reach (or one still `pending` after the poll) is removed
+`useAgentMcpInjection` reconciles the entries for the session that is open now and runs again when
+it changes; the option itself is stored per agent (`bridgeInjectExternal`) like the write/MCP flags,
+so it survives a session switch. A name is `<prefix><server label>-<session id>` (a `-2` counter
+before the session id keeps two same-named servers apart), so two sessions cannot share one entry
+and a renamed server leaves only a stale entry the next run sweeps. Without a session id nothing is
+registered at all, because an unnamed entry would be agent-wide. Every entry is registered with
+`codemode: false`, since Code Mode hides the tools behind `execute` and the session rules can only
+deny a tool of its own. A server OpenCode cannot reach (or one still `pending` after the poll) is removed
 again and reported as fallback, which leaves it on the bridge relay. Successful entries reach
 `useAgentBridge` as `excludedMcpUrls`; the relay reads that list at tool-call time, so finishing an
 injection neither restarts a running bridge nor offers the same server twice. Switching the option
@@ -1592,6 +1597,21 @@ off removes only the `chatai-ext-*` entries and hands those servers back to the 
 turning bridge access off leaves them alone, because they need no tab. Leaving the page does not
 remove them either, for the same reason. OpenCode's `/experimental/mcp` API is runtime-only, so
 nothing survives an OpenCode restart and the page reconciles again on its next mount.
+
+Both routes are scoped to the session by `agents/agentMcpScope.js`, because OpenCode's MCP registry
+is instance-wide and a session's own `permissions` are the only per-session lever. The bridge entry
+is `chatai-bridge-<session id>`, an injected one ends with its session id, and only one bridge entry
+exists: `sweepStaleBridgeEntries` deletes the rest on every registration, and a session switch
+removes the previous entry and registers the new name without restarting the socket. The scope then
+patches every session of the agent (`PATCH /api/session/{id}` with `permissions`) to deny
+`chatai-*` and allow exactly the entries whose session id is that session or one of its ancestors,
+so a subagent keeps its parent's tools and a sibling session gets none. Rules are appended, and
+OpenCode applies the last match, which is why the allow comes after the deny. What the app wrote
+last is kept per agent in localStorage so the next run removes only its own rules and leaves the
+user's; with no entry left the rules are removed entirely. `useAgentMcpScope` reruns on entry
+changes, on mount and on `chatai:agent-session(s)-changed`. Two gaps are accepted: a session created
+after a run (an agent-spawned subagent) has no rules until the next one, and the instant between a
+session switch and the re-registration still has the previous entry usable by its own session.
 
 `back`'s own bridge is authenticated and bounded. `POST /bridge/sessions` requires the `x-bridge-key`
 header to equal `BRIDGE_SHARED_SECRET`, and the route answers 503 when that variable is unset rather

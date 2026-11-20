@@ -35,9 +35,9 @@ beforeEach(() => {
 });
 
 describe("useAgentMcpInjection", () => {
-  it("runs for the agent, not for each session", async () => {
-    // The MCP registry belongs to the agent's OpenCode, so a session switch (which only
-    // moves `sessionId`) must not remove and re-add the servers.
+  it("moves the entries when another session is opened", async () => {
+    // The registry is agent-wide, but the entries carry the session, so a switch hands them
+    // over instead of leaving them available to the session that was open before.
     mocks.settings = {
       mcp_servers: [
         {
@@ -56,21 +56,48 @@ describe("useAgentMcpInjection", () => {
 
     const { result, rerender } = renderHook(
       ({ current, enabled }) =>
-        useAgentMcpInjection({ agent: current, enabled }),
+        useAgentMcpInjection({
+          agent: current,
+          enabled,
+          sessionId: current.sessionId,
+        }),
       { initialProps: { current: agent, enabled: true } },
     );
 
     await waitFor(() => expect(result.current.status).toBe("ready"));
     expect(mocks.inject).toHaveBeenCalledTimes(1);
+    expect(mocks.inject.mock.calls[0][2]).toMatchObject({
+      sessionId: "session-1",
+    });
     expect(result.current.injected).toHaveLength(1);
 
-    rerender({ current: { ...agent, sessionId: "session-2" }, enabled: true });
-    expect(mocks.inject).toHaveBeenCalledTimes(1);
+    rerender({
+      current: { ...agent, sessionId: "session-2" },
+      enabled: true,
+    });
+    await waitFor(() => expect(mocks.inject).toHaveBeenCalledTimes(2));
+    expect(mocks.inject.mock.calls[1][2]).toMatchObject({
+      sessionId: "session-2",
+    });
+    // The previous session's entries are removed by the reconcile itself, so switching does
+    // not tear down every server first.
     expect(mocks.remove).not.toHaveBeenCalled();
 
-    rerender({ current: { ...agent, sessionId: "session-2" }, enabled: false });
+    rerender({
+      current: { ...agent, sessionId: "session-2" },
+      enabled: false,
+    });
     await waitFor(() => expect(mocks.remove).toHaveBeenCalledTimes(1));
     expect(result.current.status).toBe("off");
+  });
+
+  it("does nothing without a session, because the entry would be agent-wide", async () => {
+    const { result } = renderHook(() =>
+      useAgentMcpInjection({ agent, enabled: true, sessionId: "" }),
+    );
+
+    await waitFor(() => expect(result.current.status).toBe("off"));
+    expect(mocks.inject).not.toHaveBeenCalled();
   });
 
   it("reconciles again when the configured servers change", async () => {
@@ -86,12 +113,12 @@ describe("useAgentMcpInjection", () => {
     };
 
     const { rerender } = renderHook(
-      ({ enabled }) => useAgentMcpInjection({ agent, enabled }),
+      ({ enabled }) =>
+        useAgentMcpInjection({ agent, enabled, sessionId: agent.sessionId }),
       { initialProps: { enabled: true } },
     );
 
     await waitFor(() => expect(mocks.inject).toHaveBeenCalledTimes(1));
-
 
     mocks.settings = {
       mcp_servers: [

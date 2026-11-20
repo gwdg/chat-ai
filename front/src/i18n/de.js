@@ -517,7 +517,7 @@ export default {
       title: "Einem Agenten Zugriff auf Arbeitsbereichsdateien geben",
       step1: "Öffnen Sie einen Agenten. Das Fenster links ist sein Dateibrowser.",
       step2: "Öffnen Sie die Arbeitsbereich-Schaltfläche neben dem Eingabefeld und schalten Sie den Arbeitsbereich-Zugriff ein, um den Reverse-Proxy für diesen Agenten bereitzustellen. Verbinden Sie einen Arbeitsbereich, wählen Sie, welchen die Brücke nutzt, erlauben Sie Schreibzugriff, wenn der Agent Dateien ändern darf, und lassen Sie diesen Tab geöffnet, während der Agent arbeitet.",
-      step3: "Dasselbe Fenster enthält die MCP-Optionen. „MCP-Werkzeuge“ erlaubt dem Agenten, Ihre konfigurierten MCP-Server über diesen Tab aufzurufen; „Externe MCP-Werkzeuge einbinden“ registriert zusätzlich die Server, die OpenCode selbst erreicht, sodass diese ohne den Tab weiterlaufen, während die übrigen an der Brücke bleiben.",
+      step3: "Dasselbe Fenster enthält die MCP-Optionen. „MCP-Werkzeuge“ erlaubt dem Agenten, Ihre konfigurierten MCP-Server über diesen Tab aufzurufen; „Externe MCP-Werkzeuge einbinden“ registriert zusätzlich die Server, die OpenCode selbst erreicht, sodass diese ohne den Tab weiterlaufen, während die übrigen an der Brücke bleiben. Beide Wege gelten nur für die gerade geöffnete Sitzung: Eine andere Sitzung desselben Agenten und jede Sitzung eines anderen Agenten kann sie nicht nutzen.",
     },
     catalog: {
       open: "Tutorials durchsuchen",
@@ -2025,6 +2025,10 @@ export default {
       inject_none: "Es ist kein MCP-Server ohne Passwort konfiguriert.",
       inject_error:
         "Die MCP-Server konnten nicht zu OpenCode hinzugefügt werden: {{message}}",
+      session_scope:
+        "Beide Wege gelten nur für die gerade geöffnete Sitzung: Die Einträge tragen ihre Kennung, und jeder anderen Sitzung dieses Agenten wird der Zugriff verweigert.",
+      rescope_failed:
+        "Die Brücke konnte nicht auf diese Sitzung umgestellt werden: {{message}}",
       keep_open: "Lassen Sie diesen Tab geöffnet. Arbeitsbereichsdateien und die an der Brücke verbliebenen MCP-Server sind nur verfügbar, solange der Browser verbunden ist.",
       tab_warning: "Die Agenten-Brücke benötigt diesen Tab. Arbeitsbereichsdateien und die an der Brücke verbliebenen MCP-Server sind möglicherweise nicht verfügbar, bis Sie zurückkehren.",
       start_failed: "Die Arbeitsbereich-Brücke konnte nicht gestartet werden: {{message}}",

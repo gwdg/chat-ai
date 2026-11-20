@@ -242,6 +242,28 @@ export async function createOpencodeSession(agent, title) {
   return result?.data ?? result;
 }
 
+/**
+ * Replace one session's permission ruleset.
+ *
+ * OpenCode has no per-session MCP registry: a server added through the
+ * experimental MCP routes belongs to the instance and therefore to every session
+ * of that agent. A session's own ruleset is the only per-session lever, so the
+ * MCP scoping in `agents/agentMcpScope.js` writes the rules here. `PATCH`
+ * replaces the whole array, so the caller has to send the user's own rules back.
+ */
+export async function updateOpencodeSessionPermissions(
+  agent,
+  sessionId,
+  permissions,
+) {
+  return request(agent, `/session/${encodeURIComponent(sessionId)}`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      permissions: Array.isArray(permissions) ? permissions : [],
+    }),
+  });
+}
+
 export async function listOpencodeFiles(agent, path = "") {
   const query = path ? `?path=${encodeURIComponent(path)}` : "";
   const result = await request(agent, `/fs/list${query}`);

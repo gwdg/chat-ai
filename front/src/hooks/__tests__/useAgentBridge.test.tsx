@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   settings: { mcp_servers: [] },
   tunnel: false,
   tunnelRequest: vi.fn(),
+  listMcp: vi.fn(async () => [] as any[]),
 }));
 
 vi.mock("../useToast", () => ({
@@ -17,6 +18,7 @@ vi.mock("react-redux", () => ({
 vi.mock("../../apis/opencodeAgents", () => ({
   addOpencodeMcpServer: vi.fn(async () => {}),
   connectOpencodeMcpServer: vi.fn(async () => {}),
+  listOpencodeMcpServers: (...args: unknown[]) => mocks.listMcp(...args),
   removeOpencodeMcpServer: vi.fn(async () => {}),
 }));
 vi.mock("../../agent/mcp", () => ({
@@ -51,6 +53,9 @@ import {
 
 const props = {
   agent: { id: "agent-1", name: "Example agent" },
+  // Every entry the bridge registers belongs to one session, so the hook needs one. Without
+  // it there is nothing to name the entry after and registration is skipped.
+  sessionId: "ses_alpha",
   workspaceId: "ws-1",
   writable: false,
   mcp: false,
@@ -121,6 +126,10 @@ const respondWithSession = () =>
 afterEach(() => {
   vi.unstubAllGlobals();
   mocks.notifyError.mockReset();
+  // `mockReset` + a fresh implementation: a test that answered with stale entries must not
+  // make the next one think OpenCode still holds them.
+  mocks.listMcp.mockReset();
+  mocks.listMcp.mockResolvedValue([]);
   // `mockClear`, not `mockReset`: Testing Library's cleanup unmounts after this
   // hook, and the deleted tunnel session still calls the last implementation.
   mocks.tunnelRequest.mockClear();
@@ -238,10 +247,10 @@ describe("useAgentBridge", () => {
     expect(result.current.unavailable).toBe(false);
   });
 
-  it("keeps the running bridge when only the agent's session changes", async () => {
-    // The bridge is registered in the agent's own OpenCode and exposes its workspace, so it
-    // belongs to the agent, not to one session: switching sessions must not tear it down and
-    // start a second one (which is what lost the user's write/MCP settings until it returned).
+  it("keeps the running bridge and moves its entry to the session that is open", async () => {
+    // The bridge session (socket, workspace pairing) belongs to the agent, but the OpenCode
+    // entry belongs to one session. Switching must not start a second bridge — that is what
+    // lost the user's write/MCP settings until it returned — only re-register the entry.
     const fetchMock = vi.fn(async (_url: string, init?: { method?: string }) =>
       init?.method === "POST"
         ? { ok: true, status: 200, json: async () => sessionResponse }
@@ -252,22 +261,80 @@ describe("useAgentBridge", () => {
     vi.mocked(addOpencodeMcpServer).mockClear();
     vi.mocked(removeOpencodeMcpServer).mockClear();
 
-    const { rerender } = renderHook(
-      ({ agent }) => useAgentBridge({ ...props, agent }),
-      { initialProps: { agent: serviceAgent } },
+    const { result, rerender } = renderHook(
+      ({ sessionId }: { sessionId: string }) =>
+        useAgentBridge({ ...props, agent: serviceAgent, sessionId }),
+      { initialProps: { sessionId: "ses_alpha" } },
     );
     await waitFor(() => expect(addOpencodeMcpServer).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(addOpencodeMcpServer).mock.calls[0][1]).toBe(
+      "chatai-bridge-ses_alpha",
+    );
 
-    rerender({ agent: { ...serviceAgent, sessionId: "session-2" } });
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    rerender({ sessionId: "ses_beta" });
 
+    await waitFor(() =>
+      expect(addOpencodeMcpServer).toHaveBeenCalledTimes(2),
+    );
+    // The old entry is removed by name, because OpenCode has no rename: leaving it behind
+    // would keep the previous session's bridge reachable.
+    expect(removeOpencodeMcpServer).toHaveBeenCalledWith(
+      serviceAgent,
+      "chatai-bridge-ses_alpha",
+    );
+    expect(vi.mocked(addOpencodeMcpServer).mock.calls[1][1]).toBe(
+      "chatai-bridge-ses_beta",
+    );
     const creates = fetchMock.mock.calls.filter(
       ([url, init]) => init?.method === "POST" && String(url).endsWith("/bridge/sessions"),
     );
     expect(creates).toHaveLength(1);
-    expect(addOpencodeMcpServer).toHaveBeenCalledTimes(1);
-    expect(removeOpencodeMcpServer).not.toHaveBeenCalled();
     expect(FakeWebSocket.instances).toHaveLength(1);
+    expect(result.current.entryName).toBe("chatai-bridge-ses_beta");
+  });
+
+  it("keeps exactly one bridge entry, the one of the open session", async () => {
+    // A crashed tab leaves its entry in the agent-wide registry, so a later start sweeps the
+    // rest: two sessions would otherwise both see a bridge, and the scope could not tell them
+    // apart by name.
+    mocks.listMcp.mockResolvedValue([
+      { name: "chatai-bridge-ses_old", status: { status: "connected" } },
+      { name: "chatai-bridge-ses_alpha", status: { status: "connected" } },
+      { name: "manual", status: { status: "connected" } },
+    ]);
+    vi.stubGlobal("fetch", respondWithSession());
+    vi.stubGlobal("WebSocket", FakeWebSocket);
+    vi.mocked(addOpencodeMcpServer).mockClear();
+    vi.mocked(removeOpencodeMcpServer).mockClear();
+
+    renderHook(() =>
+      useAgentBridge({ ...props, agent: serviceAgent, sessionId: "ses_alpha" }),
+    );
+
+    await waitFor(() => expect(addOpencodeMcpServer).toHaveBeenCalled());
+    expect(vi.mocked(addOpencodeMcpServer).mock.calls[0][1]).toBe(
+      "chatai-bridge-ses_alpha",
+    );
+    expect(vi.mocked(removeOpencodeMcpServer).mock.calls).toEqual([
+      [serviceAgent, "chatai-bridge-ses_old"],
+    ]);
+    // Its own entry and a manually configured server are not swept.
+    expect(mocks.listMcp).toHaveBeenCalledWith(serviceAgent);
+  });
+
+  it("registers no entry without a session, because it would belong to all of them", async () => {
+    // An unnamed entry is agent-wide by definition, which is the state this feature removes.
+    vi.stubGlobal("fetch", respondWithSession());
+    vi.stubGlobal("WebSocket", FakeWebSocket);
+    vi.mocked(addOpencodeMcpServer).mockClear();
+
+    const { result } = renderHook(() =>
+      useAgentBridge({ ...props, agent: serviceAgent, sessionId: "" }),
+    );
+
+    await waitFor(() => expect(FakeWebSocket.instances).toHaveLength(1));
+    expect(addOpencodeMcpServer).not.toHaveBeenCalled();
+    expect(result.current.entryName).toBe("");
   });
 
   it("restarts when the workspace or the settings change", async () => {
@@ -616,8 +683,10 @@ describe("useAgentBridge", () => {
     renderHook(() => useAgentBridge({ ...props, agent: serviceAgent }));
 
     await waitFor(() => expect(addOpencodeMcpServer).toHaveBeenCalled());
-    expect(vi.mocked(addOpencodeMcpServer).mock.calls[0][1]).toMatch(
-      /^chatai-bridge-/,
+    // Named after the session, not a hash of the bridge session: the scope reads that suffix
+    // to decide which session may use the entry.
+    expect(vi.mocked(addOpencodeMcpServer).mock.calls[0][1]).toBe(
+      "chatai-bridge-ses_alpha",
     );
     expect(vi.mocked(addOpencodeMcpServer).mock.calls[0][2]).toMatchObject({
       type: "local",
