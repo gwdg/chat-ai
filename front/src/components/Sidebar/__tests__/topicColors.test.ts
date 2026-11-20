@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { chatRowTint, groupRowTint, withAlpha } from "../topicColors";
+import {
+  chatRowTint,
+  groupRowTint,
+  neutralRowTint,
+  withAlpha,
+} from "../topicColors";
 
 const alphaOf = (colour: string) => Number(colour.split(", ").pop()?.replace(")", ""));
 
@@ -41,6 +46,34 @@ describe("groupRowTint", () => {
       expect(open).toBeGreaterThan(rest * 2);
       expect(rest).toBeLessThan(hover);
       expect(hover).toBeLessThan(open);
+    }
+  });
+});
+
+describe("neutralRowTint", () => {
+  it("keeps Unsorted Chats within a step of the sidebar, not at band strength", () => {
+    for (const isDark of [false, true]) {
+      const rest = alphaOf(neutralRowTint(isDark));
+      expect(rest).toBeLessThanOrEqual(isDark ? 0.04 : 0.02);
+      // Far below the 6% light / 9% dark a coloured topic rests at.
+      expect(rest).toBeLessThan(alphaOf(groupRowTint("#7C3AED", isDark)) / 2);
+      const hover = alphaOf(neutralRowTint(isDark, { hover: true }));
+      const open = alphaOf(neutralRowTint(isDark, { active: true }));
+      expect(rest).toBeLessThan(hover);
+      expect(hover).toBeLessThan(open);
+    }
+  });
+
+  it("keeps a chat under it below the group's hover and open washes", () => {
+    // The group's rest is only a trace, so an open chat may lead it — but never the
+    // washes that mark the group itself as hovered or open.
+    for (const isDark of [false, true]) {
+      expect(
+        alphaOf(neutralRowTint(isDark, { hover: true, chat: true })),
+      ).toBeLessThan(alphaOf(neutralRowTint(isDark, { hover: true })));
+      expect(
+        alphaOf(neutralRowTint(isDark, { active: true, chat: true })),
+      ).toBeLessThan(alphaOf(neutralRowTint(isDark, { active: true })));
     }
   });
 });

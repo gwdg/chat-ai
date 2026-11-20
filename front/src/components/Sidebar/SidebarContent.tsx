@@ -83,7 +83,7 @@ import {
 } from "./chatDrop";
 import { dropAgentSessionOnWorkspace } from "./sessionDrop";
 import { rememberSidebarScroll, restoreSidebarScroll } from "./sidebarScroll";
-import { chatRowTint, topicColor } from "./topicColors";
+import { chatRowTint, neutralRowTint, topicColor } from "./topicColors";
 import PinnedSection from "./PinnedSection";
 import { showAdvancedSidebarSections } from "./sidebarVisibility";
 import SidebarUserCard from "./SidebarUserCard";
@@ -750,10 +750,19 @@ export default function SidebarContent({
     // edge between them; nowhere else has rules to sit between.
     const flush = options.flush === true;
     const accentStyle = accentHex
-      ? {
-          "--chat-tint": chatRowTint(accentHex, isDark, { active: true }),
-          "--chat-tint-hover": chatRowTint(accentHex, isDark, { hover: true }),
-        }
+      ? options.neutral
+        ? {
+            // Chats under Unsorted Chats follow that group's near-transparent scale.
+            "--chat-tint": neutralRowTint(isDark, { active: true, chat: true }),
+            "--chat-tint-hover": neutralRowTint(isDark, {
+              hover: true,
+              chat: true,
+            }),
+          }
+        : {
+            "--chat-tint": chatRowTint(accentHex, isDark, { active: true }),
+            "--chat-tint-hover": chatRowTint(accentHex, isDark, { hover: true }),
+          }
       : undefined;
     const showDates =
       !showCreated &&

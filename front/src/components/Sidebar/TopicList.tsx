@@ -18,7 +18,13 @@ import {
 } from "@carbon/icons-react";
 
 import type { FolderRow } from "../../db/dbTypes";
-import { groupRowTint, groupRule, topicColor, withAlpha } from "./topicColors";
+import {
+  groupRowTint,
+  groupRule,
+  neutralRowTint,
+  topicColor,
+  withAlpha,
+} from "./topicColors";
 import { isTopicIconId, topicIcon } from "./topicIcons";
 
 import { useModal } from "../../modals/ModalContext";
@@ -316,6 +322,9 @@ export default function TopicList({
       draggingConversationId !== null && dragOverTopicId === id;
     const isActiveTopic = activeTopicId === id;
     const count = conversations.length;
+    // Unsorted Chats is the only group without a colour: it must not wear a grey
+    // wash that reads as a section band, so it sits a step from the sidebar itself.
+    const neutral = id === UNSORTED_TOPIC_ID;
 
     return (
       <div 
@@ -372,13 +381,20 @@ export default function TopicList({
           } ${isDropTarget ? "ring-2 ring-accent/60" : ""}`}
           style={
             {
-              "--group-tint": groupRowTint(hex, isDark, {
-                active: isActiveTopic,
-              }),
-              "--group-tint-hover": groupRowTint(hex, isDark, {
-                active: isActiveTopic,
-                hover: true,
-              }),
+              "--group-tint": neutral
+                ? neutralRowTint(isDark, { active: isActiveTopic })
+                : groupRowTint(hex, isDark, {
+                    active: isActiveTopic,
+                  }),
+              "--group-tint-hover": neutral
+                ? neutralRowTint(isDark, {
+                    active: isActiveTopic,
+                    hover: true,
+                  })
+                : groupRowTint(hex, isDark, {
+                    active: isActiveTopic,
+                    hover: true,
+                  }),
             } as CSSProperties
           }
         >
@@ -471,7 +487,11 @@ export default function TopicList({
           >
             {count > 0 && (
               conversations.map((conv) =>
-                renderConversationRow(conv, { accentHex: hex, flush: true }),
+                renderConversationRow(conv, {
+                  accentHex: hex,
+                  flush: true,
+                  neutral,
+                }),
               )
             ) }
           </div>

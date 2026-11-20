@@ -37,6 +37,7 @@ const renderConversationRow = (conv, options = {}) => (
     data-leading-dash={options.leadingDash === true ? "true" : "false"}
     data-accent={options.accentHex ?? ""}
     data-flush={options.flush === true ? "true" : "false"}
+    data-neutral={options.neutral === true ? "true" : "false"}
   >
     {conv.title}
   </div>
@@ -244,6 +245,25 @@ describe("TopicList group colours", () => {
       "rgba(124, 58, 237, 0.16)",
     );
     expect(row.className).toContain("text-accent");
+  });
+
+  it("keeps Unsorted Chats a step from the sidebar, not at band strength", () => {
+    const looseChat = { id: "c9", title: "Loose chat", lastModified: 1 };
+    render(<TopicList {...baseProps} unsortedConversations={[looseChat]} />);
+
+    const row = rowFor("Unsorted Chats");
+    // The near-ink trace, not the slate band the section headers wear.
+    expect(row.style.getPropertyValue("--group-tint")).toBe(
+      "rgba(15, 23, 42, 0.015)",
+    );
+    expect(row.style.getPropertyValue("--group-tint-hover")).toBe(
+      "rgba(15, 23, 42, 0.03)",
+    );
+    // Its chats follow the same near-transparent scale, not a slate wash.
+    expect(screen.getByTestId("conv-c9")).toHaveAttribute(
+      "data-neutral",
+      "true",
+    );
   });
 });
 

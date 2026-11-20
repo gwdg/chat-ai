@@ -98,6 +98,48 @@ export function groupRule(hex: string, isDark: boolean) {
 }
 
 /**
+ * Background of the Unsorted Chats group — the one group with no colour of its own.
+ * Slate at a topic's strength reads as one of the grey section bands (CHATS,
+ * WORKSPACES, AGENTS), so this row keeps within a step of the sidebar's own colour:
+ * a trace at rest, a hint on hover and a touch more when it is the open group.
+ * `chat` is the row inside it: it stays below the group's open and hover washes, so
+ * it still reads as part of the group — but it may lead the resting group, whose
+ * wash is only a trace; otherwise an open chat would be invisible.
+ */
+export function neutralRowTint(
+  isDark: boolean,
+  { active = false, hover = false, chat = false } = {},
+) {
+  const ink = isDark ? "148, 163, 184" : "15, 23, 42";
+  if (chat) {
+    const alpha = isDark
+      ? active
+        ? 0.085
+        : hover
+          ? 0.05
+          : 0.03
+      : active
+        ? 0.045
+        : hover
+          ? 0.025
+          : 0.012;
+    return `rgba(${ink}, ${alpha})`;
+  }
+  const alpha = isDark
+    ? active
+      ? 0.11
+      : hover
+        ? 0.06
+        : 0.035
+    : active
+      ? 0.06
+      : hover
+        ? 0.03
+        : 0.015;
+  return `rgba(${ink}, ${alpha})`;
+}
+
+/**
  * Background of a chat row inside a group. Deliberately weaker than the
  * group's own wash — about two thirds of it — so the open chat reads as a
  * highlight inside the topic instead of competing with the topic's name.
