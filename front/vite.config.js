@@ -125,6 +125,17 @@ try {
     } else if (key == "default") {
       process.env["VITE_DEFAULT_SETTINGS"] = JSON.stringify(value);
       console.log("Default settings:", JSON.stringify(value));
+    } else if (key == "userSettings") {
+      // Defaults for the Redux `user_settings` store, applied only to a fresh profile or
+      // after a reset (persisted settings win). Log the keys only: `mcp_servers` may
+      // carry authorization headers, and config output ends up in logs.
+      process.env["VITE_USER_SETTINGS"] = JSON.stringify(value);
+      console.log(
+        "User settings:",
+        value && typeof value === "object" && !Array.isArray(value)
+          ? Object.keys(value).join(", ") || "none"
+          : "invalid (expected an object)"
+      );
     } else if (key == "titleGenerationModel") {
       process.env["VITE_TITLE_GENERATION_MODEL"] = value;
       console.log("Title generation model:", value);

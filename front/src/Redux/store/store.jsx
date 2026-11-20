@@ -9,6 +9,7 @@ import {
 } from "redux-state-sync";
 import { migrations } from "./migrations";
 import { stateSyncConfig } from "./stateSync";
+import { getDefaultUserSettings } from "../reducers/userSettingsReducer";
 
 const persistConfig = {
   key: "root",
@@ -51,34 +52,9 @@ const getDefaultState = () => {
       completed_use_cases: [],
       suppressed_tutorials: [],
     },
-    // Conditionally preserve memories
-    user_settings: {
-      memories: [],
-      memory_groups: [],
-      default_memory_group: "default",
-      mcp_servers: [],
-      timeout: 300000,
-      memory_mode: 0,
-      suggest_user_prompts: false,
-      html_render_mode: "off",
-      html_load_external: false,
-      html_sanitization: "strict",
-      set_title_once: true,
-      render_typst: false,
-      render_latex: false,
-      render_graphviz: false,
-      render_vega: false,
-      render_chartjs: false,
-      collapse_reasoning_while_streaming: true,
-      document_conversion_mode: "choice",
-      conversation_summaries: true,
-      show_timestamps: false,
-      advanced_mode: false,
-      send_with_enter: null,
-      mcp_tool_policy: "ask",
-      e2ee_keys: [],
-      e2ee_models: {},
-    },
+    // Conditionally preserve memories. Defaults come from the reducer, so front.json
+    // can seed a deployment's `userSettings` and a reset picks them up too.
+    user_settings: getDefaultUserSettings(),
   };
 };
 

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import userSettingsReducer, {
   addMcpServer,
   addMemory,
@@ -7,6 +7,7 @@ import userSettingsReducer, {
   deleteMemory,
   deleteMemoryGroup,
   editMemory,
+  getDefaultUserSettings,
   importUserSettings,
   removeMcpServer,
   renameMemoryGroup,
@@ -492,5 +493,86 @@ describe("interface settings reducer", () => {
     state = interfaceSettingsReducer(state, collapseTopics("__pinned__"));
     state = interfaceSettingsReducer(state, expandTopics(["t1", "t2"]));
     expect(state.collapsed_topics).toEqual(["t3", "__pinned__"]);
+  });
+});
+
+describe("deployment user settings defaults", () => {
+  // The value arrives as VITE_USER_SETTINGS (JSON) from `userSettings` in front.json.
+  const stubSettings = (value) => {
+    vi.stubEnv(
+      "VITE_USER_SETTINGS",
+      value === undefined ? undefined : JSON.stringify(value),
+    );
+  };
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("uses the built-in defaults when the config sets nothing", () => {
+    stubSettings(undefined);
+    const settings = getDefaultUserSettings();
+    expect(settings.memory_mode).toBe(0);
+    expect(settings.advanced_mode).toBe(false);
+    expect(settings.mcp_tool_policy).toBe("ask");
+    expect(settings.send_with_enter).toBeNull();
+    expect(settings.timeout).toBe(300000);
+    expect(settings.memories).toEqual([]);
+    expect(settings.e2ee_models).toEqual({});
+  });
+
+  it("applies valid overrides from the config", () => {
+    stubSettings({
+      memory_mode: 2,
+      advanced_mode: true,
+      suggest_user_prompts: true,
+      send_with_enter: false,
+      mcp_tool_policy: "never",
+      document_conversion_mode: "browser",
+      timeout: 45000,
+    });
+    const settings = getDefaultUserSettings();
+    expect(settings.memory_mode).toBe(2);
+    expect(settings.advanced_mode).toBe(true);
+    expect(settings.suggest_user_prompts).toBe(true);
+    expect(settings.send_with_enter).toBe(false);
+    expect(settings.mcp_tool_policy).toBe("never");
+    expect(settings.document_conversion_mode).toBe("browser");
+    expect(settings.timeout).toBe(45000);
+  });
+
+  it("ignores unknown keys, wrong types, and out-of-range values", () => {
+    stubSettings({
+      not_a_setting: "ignored",
+      memory_mode: 9,
+      mcp_tool_policy: "sometimes",
+      html_sanitization: "loose",
+      advanced_mode: "yes",
+      timeout: 1,
+    });
+    const settings = getDefaultUserSettings();
+    expect(settings).not.toHaveProperty("not_a_setting");
+    expect(settings.memory_mode).toBe(0);
+    expect(settings.mcp_tool_policy).toBe("ask");
+    expect(settings.html_sanitization).toBe("strict");
+    expect(settings.advanced_mode).toBe(false);
+    // Clamped to the 5 s minimum by the shared import validation.
+    expect(settings.timeout).toBe(5000);
+  });
+
+  it("falls back to the defaults when the config value is not usable", () => {
+    for (const raw of ["{not json", "[]", "null", "42", "true"]) {
+      vi.stubEnv("VITE_USER_SETTINGS", raw);
+      const settings = getDefaultUserSettings();
+      expect(settings.memory_mode).toBe(0);
+      expect(settings.mcp_tool_policy).toBe("ask");
+    }
+  });
+
+  it("keeps the reducer's initial state independent of later env changes", () => {
+    const state = init(userSettingsReducer);
+    stubSettings({ memory_mode: 2, advanced_mode: true });
+    expect(state.memory_mode).toBe(0);
+    expect(state.advanced_mode).toBe(false);
   });
 });
