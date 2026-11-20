@@ -524,7 +524,7 @@ export default function WorkspaceStorageTree({
         className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
       >
         {showTitle && (
-          <div className="flex min-w-0 shrink-0 items-center gap-1 border-b border-base-300 px-2 py-1.5">
+          <div className="flex min-h-[37px] min-w-0 shrink-0 items-center gap-1 border-b border-base-300 px-2 py-1.5">
             <div className="min-w-0 flex-1">
               <div className="truncate text-[11px] font-semibold leading-tight text-base-content">
                 {t("workspace.files_title")}
