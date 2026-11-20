@@ -12,6 +12,9 @@ const ICON_TILE =
  * kind's icon as a tinted tile, the name, and one line that says what kind of
  * page this is before its chat count ("Topic · 2 chats"). No band behind it,
  * no rule under it — the chat rows start right below, level with the sidebar.
+ *
+ * It starts at the sidebar's edge rather than in the centred reading column,
+ * and it leaves the top-right corner free for the page's floating delete.
  */
 type PageKindHeaderProps = {
   kind: PageKind;
@@ -51,7 +54,7 @@ export default function PageKindHeader({
 
   return (
     <header data-testid={`${kind}-page-header`} className="shrink-0 px-4 pt-2">
-      <div className="mx-auto flex w-full max-w-3xl items-center gap-2.5">
+      <div className="flex w-full min-w-0 items-center gap-2.5 pr-12">
         {leading}
         <div className="relative shrink-0">
           {onIconClick ? (

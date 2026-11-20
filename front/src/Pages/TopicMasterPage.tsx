@@ -27,6 +27,8 @@ import Header from "../components/Header/Header";
 import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
 import TopicComposer from "../components/TopicMaster/TopicComposer";
 import PageKindHeader from "../components/Others/PageKindHeader";
+import FloatingTrashButton from "../components/Others/FloatingTrashButton";
+import { useModal } from "../modals/ModalContext";
 import { UNSORTED_TOPIC_ID } from "../components/Sidebar/TopicList";
 import IconColorPicker from "../components/Sidebar/IconColorPicker";
 import {
@@ -46,6 +48,7 @@ export default function TopicMasterPage() {
   const { topicId = "" } = useParams();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
+  const { openModal } = useModal();
   const userSettings = useSelector(selectUserSettings);
   const showSummaries = useSelector(selectConversationSummaries);
   const isDark = useSelector(selectDarkMode);
@@ -60,6 +63,17 @@ export default function TopicMasterPage() {
     () => folders.find((folder) => folder.id === topicId) ?? null,
     [folders, topicId],
   );
+
+  // The same dialog the sidebar's topic menu opens, so the wording matches; the
+  // page leaves the topic once it is gone.
+  const deleteCurrentTopic = () => {
+    if (!topic) return;
+    openModal("deleteFolder", {
+      folderId: topic.id,
+      folderName: topic.name,
+      onDeleted: () => navigate("/chat"),
+    });
+  };
 
   // A direct URL load sees an empty `useFolderList()` for a frame. Do not
   // flash a "topic not found" panel during that initial read.
@@ -233,6 +247,16 @@ export default function TopicMasterPage() {
             </div>
           ) : (
             <>
+              {/* Delete floats over the top-right corner, where a chat floats Close Chat. */}
+              {topic && !isUnsorted && (
+                <div className="absolute right-2 top-2 z-20">
+                  <FloatingTrashButton
+                    label={t("folders.delete_title")}
+                    onClick={deleteCurrentTopic}
+                    testId="topic-page-delete"
+                  />
+                </div>
+              )}
               <PageKindHeader
                 kind="topic"
                 title={topicName}

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router";
 import { useSelector } from "react-redux";
-import { Chat, ChevronRight, Time, TrashCan } from "@carbon/icons-react";
+import { Chat, ChevronRight, Time } from "@carbon/icons-react";
 
 import { useConversationList } from "../db";
 import type { ConversationRow } from "../db/dbTypes";
@@ -38,6 +38,7 @@ import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
 import WorkspaceComposer from "../components/Workspace/WorkspaceComposer";
 import WorkspaceRightPanel from "../components/Workspace/WorkspaceRightPanel";
 import PageKindHeader from "../components/Others/PageKindHeader";
+import FloatingTrashButton from "../components/Others/FloatingTrashButton";
 import IconColorPicker from "../components/Sidebar/IconColorPicker";
 import { isTopicIconId, topicIconById } from "../components/Sidebar/topicIcons";
 import { topicColor, topicColorById } from "../components/Sidebar/topicColors";
@@ -298,7 +299,15 @@ export default function WorkspacePage() {
             </div>
           ) : workspace ? (
             <div className="flex min-h-0 min-w-0 flex-1 gap-2">
-              <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+              <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+                {/* Delete floats over the top-right corner, where a chat floats Close Chat. */}
+                <div className="absolute right-2 top-2 z-20">
+                  <FloatingTrashButton
+                    label={t("workspace.delete_workspace")}
+                    onClick={deleteCurrentWorkspace}
+                    testId="workspace-page-delete"
+                  />
+                </div>
                 <PageKindHeader
                   kind="workspace"
                   title={workspace.name}
@@ -337,17 +346,6 @@ export default function WorkspacePage() {
                         />
                       </div>
                     ) : null
-                  }
-                  trailing={
-                    <button
-                      type="button"
-                      onClick={deleteCurrentWorkspace}
-                      title={t("workspace.delete_workspace")}
-                      aria-label={t("workspace.delete_workspace")}
-                      className="btn btn-ghost btn-sm btn-square shrink-0"
-                    >
-                      <TrashCan size={18} />
-                    </button>
                   }
                 />
 
