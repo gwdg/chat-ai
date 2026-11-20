@@ -83,7 +83,7 @@ import {
 } from "./chatDrop";
 import { dropAgentSessionOnWorkspace } from "./sessionDrop";
 import { rememberSidebarScroll, restoreSidebarScroll } from "./sidebarScroll";
-import { groupRowTint, topicColor } from "./topicColors";
+import { chatRowTint, topicColor } from "./topicColors";
 import PinnedSection from "./PinnedSection";
 import { showAdvancedSidebarSections } from "./sidebarVisibility";
 import SidebarUserCard from "./SidebarUserCard";
@@ -750,8 +750,8 @@ export default function SidebarContent({
     const flush = options.flush === true;
     const accentStyle = accentHex
       ? {
-          "--chat-tint": groupRowTint(accentHex, isDark, { active: true }),
-          "--chat-tint-hover": groupRowTint(accentHex, isDark, { hover: true }),
+          "--chat-tint": chatRowTint(accentHex, isDark, { active: true }),
+          "--chat-tint-hover": chatRowTint(accentHex, isDark, { hover: true }),
         }
       : undefined;
     const showDates =

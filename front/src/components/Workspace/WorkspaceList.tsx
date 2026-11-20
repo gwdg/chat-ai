@@ -58,7 +58,13 @@ import { useToast } from "../../hooks/useToast";
 import { activeSessionIdFor, useOpenAgent } from "../../hooks/useOpenAgent";
 import { topicIconById } from "../Sidebar/topicIcons";
 import { pinnedStateId } from "../Sidebar/pinnedState";
-import { groupRowTint, groupRule, topicColor, withAlpha } from "../Sidebar/topicColors";
+import {
+  chatRowTint,
+  groupRowTint,
+  groupRule,
+  topicColor,
+  withAlpha,
+} from "../Sidebar/topicColors";
 import {
   isChatDrag,
   readChatDrag,
@@ -442,7 +448,7 @@ export default function WorkspaceList({
                 handleWorkspaceDragLeave(event, workspace.id)
               }
               onDrop={(event) => handleWorkspaceDrop(event, workspace.id)}
-              className={`group flex items-center rounded-xl transition bg-[var(--group-tint)] hover:bg-[var(--group-tint-hover)] ${
+              className={`group flex items-center rounded-lg transition bg-[var(--group-tint)] hover:bg-[var(--group-tint-hover)] ${
                 active ? "text-accent" : "text-base-content"
               } ${
                 dragOverWorkspaceId === workspace.id
@@ -646,12 +652,12 @@ export default function WorkspaceList({
                           : ""
                       }`}
                       style={{
-                        "--chat-tint": groupRowTint(
+                        "--chat-tint": chatRowTint(
                           workspaceColor.hex,
                           isDark,
                           { active: true },
                         ),
-                        "--chat-tint-hover": groupRowTint(
+                        "--chat-tint-hover": chatRowTint(
                           workspaceColor.hex,
                           isDark,
                           { hover: true },

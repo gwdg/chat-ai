@@ -367,7 +367,7 @@ export default function TopicList({
               onOpenTopic(id);
             }
           }}
-          className={`group flex items-center gap-2 rounded-2xl px-1 py-2 text-xs transition cursor-pointer bg-[var(--group-tint)] hover:bg-[var(--group-tint-hover)] ${
+          className={`group flex items-center gap-2 rounded-lg px-1 py-2 text-xs transition cursor-pointer bg-[var(--group-tint)] hover:bg-[var(--group-tint-hover)] ${
             isActiveTopic ? "text-accent" : "text-base-content"
           } ${isDropTarget ? "ring-2 ring-accent/60" : ""}`}
           style={
@@ -679,7 +679,7 @@ export default function TopicList({
                         toggleTopicCollapse(bucketId);
                       }
                     }}
-                    className="group flex items-center gap-2 rounded-2xl px-1 py-2 text-xs transition cursor-pointer border border-transparent text-base-content hover:bg-base-200"
+                    className="group flex items-center gap-2 rounded-lg px-1 py-2 text-xs transition cursor-pointer border border-transparent text-base-content hover:bg-base-200"
                   >
                     <ParentIcon
                       size={14}
