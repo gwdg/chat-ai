@@ -30,7 +30,7 @@ const sectionHeading =
  * more than one workspace; then each workspace gets its own tree and agent
  * panel under a heading with its name.
  */
-function WorkspaceFilesTab({ workspaceIds, onPreview }) {
+function WorkspaceFilesTab({ workspaceIds, names, onPreview }) {
   if (workspaceIds.length === 1) {
     return (
       <WorkspaceStorageTree
@@ -41,16 +41,24 @@ function WorkspaceFilesTab({ workspaceIds, onPreview }) {
       />
     );
   }
+  // Several workspaces share this tab, so each tree gets its name as a grey uppercase heading and
+  // a hairline above it — the same heading the Agents tab uses, and the only thing that tells the
+  // sections apart.
   return (
     <div className="flex min-h-0 flex-col gap-3 overflow-y-auto">
-      {workspaceIds.map((workspaceId) => (
-        <WorkspaceStorageTree
-          key={workspaceId}
-          workspaceId={workspaceId}
-          className="min-h-0 min-w-0"
-          showTitle={false}
-          onPreview={onPreview}
-        />
+      {workspaceIds.map((workspaceId, index) => (
+        <section key={workspaceId} className="min-w-0">
+          {index > 0 && <div className="mb-2 h-px bg-base-300" />}
+          <h3 className={sectionHeading} data-testid="files-workspace-heading">
+            {names.get(workspaceId) ?? ""}
+          </h3>
+          <WorkspaceStorageTree
+            workspaceId={workspaceId}
+            className="min-h-0 min-w-0"
+            showTitle={false}
+            onPreview={onPreview}
+          />
+        </section>
       ))}
     </div>
   );
@@ -225,7 +233,11 @@ export default function WorkspaceRightPanel({
         id: "files",
         label: t("workspace.files_tab"),
         content: (
-          <WorkspaceFilesTab workspaceIds={ids} onPreview={openFilePreview} />
+          <WorkspaceFilesTab
+            workspaceIds={ids}
+            names={names}
+            onPreview={openFilePreview}
+          />
         ),
         contentClassName: ids.length === 1 ? "flex flex-col" : undefined,
       },

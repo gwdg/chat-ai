@@ -22,8 +22,12 @@ vi.mock("../../../db", () => ({
   useFileContent: () => "from the chat",
 }));
 
+const workspaceMocks = vi.hoisted(() => ({
+  rows: [{ id: "ws-1", name: "One" }],
+}));
+
 vi.mock("../../../db/workspaceDb", () => ({
-  useWorkspaceList: () => [{ id: "ws-1", name: "One" }],
+  useWorkspaceList: () => workspaceMocks.rows,
 }));
 
 vi.mock("../../../hooks/useToast", () => ({
@@ -63,13 +67,13 @@ function OpenChatFile() {
   );
 }
 
-const renderPanel = () =>
+const renderPanel = (workspaceIds = ["ws-1"]) =>
   render(
     <MemoryRouter>
       <FilePreviewProvider>
         <OpenChatFile />
         <WorkspaceRightPanel
-          workspaceIds={["ws-1"]}
+          workspaceIds={workspaceIds}
           userSettings={{}}
           scope={null}
           scopeKey="ws-1"
@@ -87,6 +91,36 @@ describe("WorkspaceRightPanel preview tab", () => {
     });
     localStorage.clear();
     localStorage.setItem("chatai.meta.changes-collapsed", "false");
+    workspaceMocks.rows = [{ id: "ws-1", name: "One" }];
+  });
+
+  it("draws one Files section per workspace only when there are several", () => {
+    renderPanel();
+    fireEvent.click(screen.getByRole("tab", { name: "Files" }));
+
+    expect(screen.queryAllByTestId("files-workspace-heading")).toHaveLength(0);
+  });
+
+  it("heads each workspace's files and rules a line between them", () => {
+    workspaceMocks.rows = [
+      { id: "ws-1", name: "One" },
+      { id: "ws-2", name: "Two" },
+    ];
+    const view = renderPanel(["ws-1", "ws-2"]);
+    fireEvent.click(screen.getByRole("tab", { name: "Files" }));
+
+    const headings = screen.getAllByTestId("files-workspace-heading");
+    expect(headings.map((heading) => heading.textContent)).toEqual([
+      "One",
+      "Two",
+    ]);
+    // Grey, all-capital section labels: the shared heading style of this panel.
+    expect(headings[0].className).toContain("uppercase");
+    expect(headings[0].className).toContain("text-base-content/45");
+    // The first section has no rule above it; each later one does.
+    expect(view.container.querySelectorAll("div.h-px.bg-base-300")).toHaveLength(
+      1,
+    );
   });
 
   it("shows the Preview tab only once a file is opened, and goes back", async () => {
