@@ -285,7 +285,7 @@ export default function WorkspaceList({
         workspaceId,
         getDefaultConversation(userSettings),
       );
-      navigate(`/chat/${id}`);
+      navigate(`/chat/${id}`, { state: { openWorkspacePanel: true } });
       onNavigate?.();
     } catch (error) {
       notifyError(error instanceof Error ? error.message : String(error));
@@ -498,7 +498,10 @@ export default function WorkspaceList({
                     return;
                   }
                   scheduleOpenWorkspace(() => {
-                    navigate(`/workspace/${workspace.id}`);
+                    // Opening a workspace also unfolds its right-hand Files panel.
+                    navigate(`/workspace/${workspace.id}`, {
+                      state: { openWorkspacePanel: true },
+                    });
                     onNavigate?.();
                   });
                 }}
@@ -671,7 +674,9 @@ export default function WorkspaceList({
                       <button
                         type="button"
                         onClick={() => {
-                          navigate(`/chat/${chat.id}`);
+                          navigate(`/chat/${chat.id}`, {
+                            state: { openWorkspacePanel: true },
+                          });
                           onNavigate?.();
                         }}
                         aria-current={chatActive ? "page" : undefined}

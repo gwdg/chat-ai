@@ -379,7 +379,9 @@ export default function WorkspacePage() {
                             key={conversation.id}
                             type="button"
                             onClick={() =>
-                              navigate(`/chat/${conversation.id}`)
+                              navigate(`/chat/${conversation.id}`, {
+                                state: { openWorkspacePanel: true },
+                              })
                             }
                             className="group flex w-full items-center gap-3 rounded-2xl border border-base-300 bg-base-100 px-4 py-3 text-left transition-colors hover:border-accent/40 hover:bg-base-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
                           >

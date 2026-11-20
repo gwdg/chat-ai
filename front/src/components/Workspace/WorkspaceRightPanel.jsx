@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
+import { useLocation, useNavigate } from "react-router";
 
 import { loadFile } from "../../db";
 import { useFilePreview } from "../../context/FilePreviewContext";
@@ -177,6 +178,8 @@ export default function WorkspaceRightPanel({
   scopeKey,
 }) {
   const { t } = useTranslation();
+  const location = useLocation();
+  const navigate = useNavigate();
   const {
     preview: filePreview,
     openFilePreview,
@@ -184,14 +187,41 @@ export default function WorkspaceRightPanel({
     registerPreviewHost,
   } = useFilePreview();
   const wide = useWidePanel();
-  const [activeTab, setActiveTab] = useState("changes");
+  // Entering a workspace, or one of its chats, lands on the Files tab: that is what
+  // the workspace is for. What's New stays one click away in the strip.
+  const [activeTab, setActiveTab] = useState("files");
   // The tab a file was opened from, so the chevron can put the user back there.
-  const [originTab, setOriginTab] = useState("changes");
+  const [originTab, setOriginTab] = useState("files");
+  // A click in the sidebar asks for the panel, not just the files: the intent rides
+  // on the router state of the selection that brought the user here.
+  const openOnArrive = Boolean(location.state?.openWorkspacePanel);
+  const [expandSignal, setExpandSignal] = useState(openOnArrive ? 1 : 0);
+  const arrivalRef = useRef(location.key);
   const activeTabRef = useRef(activeTab);
   useEffect(() => {
     activeTabRef.current = activeTab;
   }, [activeTab]);
   const workspaces = useWorkspaceList() ?? [];
+
+  // Moving to another chat keeps this component mounted, so a later arrival has to put
+  // the panel back on Files and unfold it on its own; the mount above already did.
+  useEffect(() => {
+    if (arrivalRef.current === location.key || !openOnArrive) return;
+    arrivalRef.current = location.key;
+    setActiveTab("files");
+    setOriginTab("files");
+    setExpandSignal((value) => value + 1);
+  }, [location.key, openOnArrive]);
+
+  // The intent is spent on the arrival it rode in with: a reload or a Back must not
+  // unfold the panel again over a rail the user folded themselves.
+  useEffect(() => {
+    if (!openOnArrive) return;
+    navigate(`${location.pathname}${location.search}`, {
+      replace: true,
+      state: { ...(location.state ?? {}), openWorkspacePanel: false },
+    });
+  }, [location.key, openOnArrive, navigate]);
 
   const ids = useMemo(
     () => [...new Set((workspaceIds ?? []).filter(Boolean))],
@@ -289,6 +319,7 @@ export default function WorkspaceRightPanel({
       activeTab={activeTab}
       onActiveTabChange={setActiveTab}
       revealSignal={filePreview?.key ?? 0}
+      expandSignal={expandSignal}
     />
   );
 }

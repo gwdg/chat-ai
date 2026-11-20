@@ -132,9 +132,20 @@ beforeEach(() => {
   mocks.openModal.mockReset();
 });
 
-const LocationProbe = () => (
-  <span data-testid="location">{useLocation().pathname}</span>
-);
+const LocationProbe = () => {
+  const location = useLocation();
+  return (
+    <span data-testid="location" data-state={JSON.stringify(location.state)}>
+      {location.pathname}
+    </span>
+  );
+};
+
+const asksForRightPanel = () =>
+  expect(screen.getByTestId("location")).toHaveAttribute(
+    "data-state",
+    expect.stringContaining('"openWorkspacePanel":true'),
+  );
 
 describe("WorkspaceList band shape", () => {
   it("shows the chat count between the name and the row controls", async () => {
@@ -622,6 +633,7 @@ describe("WorkspaceList chat rows", () => {
       await screen.findByRole("button", { name: "Workspace chat" }),
     );
     expect(screen.getByTestId("location")).toHaveTextContent("/chat/chat-1");
+    asksForRightPanel();
 
     fireEvent.click(screen.getByRole("button", { name: "Detach chat" }));
     await waitFor(() =>
@@ -998,6 +1010,7 @@ describe("WorkspaceList double click", () => {
       expect(screen.getByTestId("location")).toHaveTextContent(
         "/workspace/ws-1",
       );
+      asksForRightPanel();
     } finally {
       vi.useRealTimers();
     }

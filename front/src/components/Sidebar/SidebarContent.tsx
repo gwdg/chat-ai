@@ -627,7 +627,8 @@ export default function SidebarContent({
   const handleSelectConversation = (id) => {
     if (id === currentConversationId) return;
     setSelectedConversationId(id); // update selected now for nicer user interaction
-    navigate(`/chat/${id}`);
+    // A chat that lives in a workspace opens its Files panel too; a plain chat has no panel.
+    navigate(`/chat/${id}`, { state: { openWorkspacePanel: true } });
     if (!isDesktop) {
       onClose();
     }
