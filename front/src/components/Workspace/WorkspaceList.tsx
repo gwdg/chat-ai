@@ -64,7 +64,6 @@ import {
   groupRowTint,
   groupRule,
   topicColor,
-  withAlpha,
 } from "../Sidebar/topicColors";
 import {
   isChatDrag,
@@ -513,14 +512,8 @@ export default function WorkspaceList({
                 className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 self-stretch text-left"
               >
                 <span
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md"
-                  style={{
-                    color: workspaceColor.hex,
-                    backgroundColor: withAlpha(
-                      workspaceColor.hex,
-                      active ? 0.2 : 0.12,
-                    ),
-                  }}
+                  className="flex h-6 w-6 shrink-0 items-center justify-center"
+                  style={{ color: workspaceColor.hex }}
                 >
                   <WorkspaceIcon size={15} />
                 </span>

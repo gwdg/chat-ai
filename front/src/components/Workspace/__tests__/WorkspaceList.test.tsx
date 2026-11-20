@@ -219,6 +219,19 @@ describe("WorkspaceList band shape", () => {
     const subtree = row.nextElementSibling as HTMLElement;
     expect(subtree.querySelector(".border-t")).toBeNull();
   });
+
+  it("draws the workspace icon as a bare glyph, the way a topic does", async () => {
+    renderList(makeStore());
+
+    const row = (await screen.findByText("Teaching")).closest(
+      '[data-guide="workspace-row"]',
+    ) as HTMLElement;
+    const tile = row.querySelector("span.h-6.w-6") as HTMLElement;
+    // The row already carries the workspace colour: the icon adds no box of its own.
+    expect(tile.getAttribute("style") ?? "").not.toContain("background");
+    expect(tile.className).not.toContain("rounded-md");
+    expect(tile.querySelector("svg")).not.toBeNull();
+  });
 });
 
 describe("WorkspaceList pinning", () => {
