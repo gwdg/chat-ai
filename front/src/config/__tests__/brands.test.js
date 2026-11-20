@@ -126,14 +126,25 @@ describe("brand resolution", () => {
 describe("brand theme", () => {
   it("emits light and dark blocks for the whole palette", () => {
     const css = brandCss(getBrandProfile("ugoe"));
-    expect(css).toContain(":root {");
+    // `<html>` carries `.dark` in dark mode too, so the light palette may only
+    // land while the document is light; otherwise everything inherited from
+    // the html level keeps light-mode colours (dark text on a dark page).
+    expect(css).toContain(":root:not(.dark) {");
     expect(css).toContain("--color-primary: #13306a;");
     expect(css).toContain("--color-primary-content: #ffffff;");
     expect(css).toContain("--color-base-200: #e4eef5;");
     expect(css).toContain("--color-info: #0078a3;");
-    expect(css).toContain("body.dark {");
+    expect(css).toContain(":root.dark, body.dark {");
     expect(css).toContain("--color-primary: #8ab8cf;");
     expect(css).toContain("--color-base-100: #232a33;");
+  });
+
+  it("resolves the chat bubble colour where the brand repaints it", () => {
+    // index.css declares `--color-chat: var(--chat)` once on `:root`, so a
+    // brand-only `--chat` never reaches `bg-chat`; both must be emitted.
+    const css = brandCss(getBrandProfile("ugoe"));
+    expect(css).toContain("--chat: #d6e7f1; --color-chat: #d6e7f1;");
+    expect(css).toContain("--chat: #2b3440; --color-chat: #2b3440;");
   });
 
   it("repaints the sidebar surface, including its hover and border tokens", () => {
