@@ -54,14 +54,21 @@ test.describe("workspace", () => {
       },
     );
 
+    // The right-hand panel is `hidden` below the md breakpoint, so a phone
+    // shows the chat home without it. From md up it starts collapsed to a rail
+    // below the 1280 px desktop breakpoint, so a tablet has to expand it.
+    const wideLayout = (page.viewportSize()?.width ?? 1280) >= 768;
+
     await doc.step(
       "Create the workspace",
       {
         user: "The user names it “Deterministic workspace” and confirms.",
-        system:
-          "The workspace page opens as that workspace's chat home. Its right-hand panel offers the what's-new report, the Files tree and the Agents choices.",
-        shows:
-          "the workspace page for Deterministic workspace with an empty chat list, a prompt box, and a right-hand panel with What's New, Files and Agents tabs",
+        system: wideLayout
+          ? "The workspace page opens as that workspace's chat home. Its right-hand panel offers the what's-new report, the Files tree and the Agents choices."
+          : "The workspace page opens as that workspace's chat home. On a phone the right-hand panel is hidden by the responsive layout, so only the chat and the prompt box are shown.",
+        shows: wideLayout
+          ? "the workspace page for Deterministic workspace with an empty chat list, a prompt box, and a right-hand panel with What's New, Files and Agents tabs"
+          : "the workspace page for Deterministic workspace on a phone, with an empty chat list and a prompt box",
       },
       async () => {
         await page
@@ -80,9 +87,21 @@ test.describe("workspace", () => {
 
         // The storage no longer has a card of its own on the page: it is the
         // Files tab of the shared right-hand panel.
+        if (!wideLayout) {
+          await expect(
+            page.locator('[data-guide="meta-tab-strip"]'),
+          ).toHaveCount(0);
+          return;
+        }
+
+        const expand = page.getByRole("button", {
+          name: "Expand What's New",
+        });
+        if (await expand.isVisible().catch(() => false)) await expand.click();
         await expect(
           page.locator('[data-guide="meta-tab-strip"]'),
         ).toBeVisible();
+
         const filesTab = page.getByRole("tab", { name: "Files" });
         const agentsTab = page.getByRole("tab", { name: "Agents" });
         await expect(filesTab).toBeVisible();

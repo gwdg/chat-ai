@@ -1,4 +1,10 @@
-import { expect, openApp, openSidebar, test } from "./fixtures";
+import {
+  expect,
+  openApp,
+  openSidebar,
+  seedUserSettings,
+  test,
+} from "./fixtures";
 import type { Page } from "@playwright/test";
 
 /**
@@ -10,6 +16,10 @@ import type { Page } from "@playwright/test";
  * dialog: the test is about the sidebar, not about the add-agent flow, and the
  * mocked OpenCode server only has to answer the session listing.
  */
+
+// The sidebar is docked from 1081 px up; below that it is a drawer and the
+// new-topic flow becomes a modal, so this scenario pins a docked viewport.
+test.use({ viewport: { width: 1440, height: 900 } });
 
 const AGENT_ID = "agent-drag";
 const SESSION_ID = "ses_drag";
@@ -95,21 +105,10 @@ test.describe("agent sessions in the sidebar", () => {
   test("drags a session onto a workspace and folds it with a double click", async ({
     page,
   }) => {
+    await seedUserSettings(page, { advanced_mode: true });
     await page.addInitScript(
       ({ agent }) => {
         localStorage.setItem("chatai.agents", JSON.stringify([agent]));
-        // The Agents section is hidden until advanced mode is on. Seed the
-        // persisted Redux slice instead of walking the profile modal: the test
-        // is about the sidebar, and every setting keeps its default. The seed
-        // is deliberately one version behind, so the migration chain has to
-        // carry `advanced_mode` through instead of resetting the store.
-        localStorage.setItem(
-          "persist:root",
-          JSON.stringify({
-            user_settings: JSON.stringify({ advanced_mode: true }),
-            _persist: JSON.stringify({ version: 10, reflushed: true }),
-          }),
-        );
       },
       { agent: AGENT },
     );

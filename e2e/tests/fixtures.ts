@@ -1,6 +1,7 @@
 import {
   test as base,
   expect,
+  type BrowserContext,
   type Page,
   type Route,
 } from "@playwright/test";
@@ -14,6 +15,33 @@ import { ScenarioDocumentation } from "./documentation";
  * calls (/models, /user, /chat/completions). It is registered automatically for
  * every test, before the page navigates, so no test needs a real backend.
  */
+
+/**
+ * Seed the persisted Redux `user_settings` before the app boots.
+ *
+ * Advanced mode is off by default and gates the Agents and MCP Servers sidebar
+ * sections, which several scenarios need. Pass the `context` to seed every tab
+ * of the test. An existing `persist:root` is left untouched, so a reload keeps
+ * what the app itself wrote (including the seeded value) instead of re-running
+ * the migrations against an already-migrated state. The version is the current
+ * one from `front/src/Redux/store/store.jsx`; if it goes stale the persisted
+ * state is migrated, which must preserve these settings.
+ */
+export async function seedUserSettings(
+  target: Page | BrowserContext,
+  settings: Record<string, unknown>,
+): Promise<void> {
+  await target.addInitScript((seed) => {
+    if (localStorage.getItem("persist:root")) return;
+    localStorage.setItem(
+      "persist:root",
+      JSON.stringify({
+        user_settings: JSON.stringify(seed),
+        _persist: JSON.stringify({ version: 11, reflushed: true }),
+      }),
+    );
+  }, settings);
+}
 
 export const MOCK_MODELS = [
   {

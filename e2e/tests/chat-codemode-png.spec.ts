@@ -16,6 +16,14 @@ const code =
   `content: "${PNG_BASE64}", encoding: "base64" });\n` +
   `text(result);\nreturn "created";`;
 
+test.beforeEach(async ({ context }) => {
+  // The right-hand panel starts collapsed to a rail below 1280 px. The scenario
+  // needs its Files tab, and an explicit value overrides the viewport default.
+  await context.addInitScript(() => {
+    localStorage.setItem("chatai.meta.changes-collapsed", "false");
+  });
+});
+
 test.describe("codemode", () => {
   test("creates a PNG file through the codemode tool", async ({
     page,
@@ -37,6 +45,10 @@ test.describe("codemode", () => {
       () => openApp(page),
     );
 
+    // Below the md breakpoint the right-hand panel is hidden, so the file tree
+    // is not reachable on a phone; the chat home is what that layout shows.
+    const wideLayout = (page.viewportSize()?.width ?? 1280) >= 768;
+
     await doc.step(
       "Create a workspace",
       {
@@ -57,6 +69,12 @@ test.describe("codemode", () => {
           .getByRole("button", { name: "Create workspace", exact: true })
           .click();
         await expect(page).toHaveURL(/\/workspace\/[^/]+$/);
+        if (!wideLayout) {
+          await expect(
+            page.getByText("No chats in this workspace yet"),
+          ).toBeVisible();
+          return;
+        }
         await page.getByRole("tab", { name: "Files" }).click();
         await expect(
           page.locator('[data-guide="workspace-files"]'),

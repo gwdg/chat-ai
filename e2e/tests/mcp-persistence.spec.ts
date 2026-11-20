@@ -1,6 +1,13 @@
-import { expect, openApp, test } from "./fixtures";
+import { expect, openApp, seedUserSettings, test } from "./fixtures";
 
-test.use({ video: "off" });
+// The sidebar is docked from 1081 px up; below that it is a drawer, and the
+// lists these scenarios use are only reachable in their docked form.
+test.use({ video: "off", viewport: { width: 1440, height: 900 } });
+
+// The MCP Servers section is an advanced-mode section and is hidden by default.
+test.beforeEach(async ({ context }) => {
+  await seedUserSettings(context, { advanced_mode: true });
+});
 
 async function addServer(page: import("@playwright/test").Page, name: string) {
   await page.getByRole("button", { name: "Add MCP server" }).first().click();
