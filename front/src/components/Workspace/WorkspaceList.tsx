@@ -448,7 +448,7 @@ export default function WorkspaceList({
                 handleWorkspaceDragLeave(event, workspace.id)
               }
               onDrop={(event) => handleWorkspaceDrop(event, workspace.id)}
-              className={`group flex items-center rounded-lg transition bg-[var(--group-tint)] hover:bg-[var(--group-tint-hover)] ${
+              className={`group flex min-h-10 items-center rounded-lg px-1 transition bg-[var(--group-tint)] hover:bg-[var(--group-tint-hover)] ${
                 active ? "text-accent" : "text-base-content"
               } ${
                 dragOverWorkspaceId === workspace.id
@@ -485,10 +485,10 @@ export default function WorkspaceList({
                   cancelOpenWorkspace();
                   toggleWorkspaceCollapse(workspace.id, expandable);
                 }}
-                className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left"
+                className="flex min-w-0 flex-1 items-center gap-2 self-stretch text-left"
               >
                 <span
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md"
                   style={{
                     color: workspaceColor.hex,
                     backgroundColor: withAlpha(
@@ -503,6 +503,9 @@ export default function WorkspaceList({
                   {workspace.name}
                 </span>
               </button>
+              <span className="mx-1 shrink-0 text-[11px] tabular-nums font-semibold text-base-content/70">
+                {chats.length > 999 ? "999+" : chats.length}
+              </span>
               <button
                 type="button"
                 disabled={creatingChat === workspace.id}
@@ -608,7 +611,7 @@ export default function WorkspaceList({
                   )
                 }
                 disabled={!expandable}
-                className={`mr-1 flex h-5 w-5 shrink-0 items-center justify-center rounded text-base-content/40 ${
+                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-base-content/40 ${
                   expandable
                     ? "hover:text-base-content"
                     : "cursor-default opacity-40"

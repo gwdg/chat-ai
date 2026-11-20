@@ -411,11 +411,39 @@ describe("TopicList row controls", () => {
 
     const row = screen.getByText("Trailing topic").closest('[role="button"]');
     const toggle = row.querySelector('button[aria-label="Collapse topic"]');
+    const tail = row.lastElementChild;
 
-    expect(row.lastElementChild).toBe(toggle);
+    expect(tail.contains(toggle)).toBe(true);
+    expect(tail.lastElementChild).toBe(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
     // The emoji/icon slot and the label keep their leading positions.
     expect(row.firstElementChild).not.toBe(toggle);
+  });
+
+  it("keeps the count and both controls in one flush tail group", () => {
+    const topic = { id: "t4", name: "Trailing topic", color: "violet" };
+    render(
+      <TopicList
+        {...baseProps}
+        topics={[topic]}
+        conversationsByTopic={
+          new Map([["t4", [{ id: "c4", title: "Topic chat", lastModified: 1 }]]])
+        }
+      />,
+    );
+
+    const row = screen.getByText("Trailing topic").closest('[role="button"]');
+    const tail = row.lastElementChild;
+    // The count leads the group; no gap utility, so the controls sit flush.
+    expect(tail.firstElementChild.textContent).toBe("1");
+    expect([...tail.querySelectorAll("button")].map((b) => b.ariaLabel)).toEqual(
+      ["Topic options", "Collapse topic"],
+    );
+    expect(tail.className).not.toContain("gap-");
+    // The band is the same 40px box as a workspace band.
+    expect(row.className).toContain("min-h-10");
+    expect(row.className).toContain("px-1");
+    expect(row.className).not.toContain("py-2");
   });
 });
 

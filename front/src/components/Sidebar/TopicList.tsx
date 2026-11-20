@@ -367,7 +367,7 @@ export default function TopicList({
               onOpenTopic(id);
             }
           }}
-          className={`group flex items-center gap-2 rounded-lg px-1 py-2 text-xs transition cursor-pointer bg-[var(--group-tint)] hover:bg-[var(--group-tint-hover)] ${
+          className={`group flex min-h-10 items-center gap-2 rounded-lg px-1 text-xs transition cursor-pointer bg-[var(--group-tint)] hover:bg-[var(--group-tint-hover)] ${
             isActiveTopic ? "text-accent" : "text-base-content"
           } ${isDropTarget ? "ring-2 ring-accent/60" : ""}`}
           style={
@@ -382,27 +382,25 @@ export default function TopicList({
             } as CSSProperties
           }
         >
-          {emoji ? (
-            <span
-              aria-hidden="true"
-              className="flex-shrink-0 pointer-events-none text-sm leading-none"
-              style={{ color: hex }}
-            >
-              {emoji}
-            </span>
-          ) : Icon ? (
-            <Icon
-              size={16}
-              className="flex-shrink-0 pointer-events-none"
-              style={{ color: hex }}
-            />
-          ) : (
-            <span
-              aria-hidden="true"
-              className="h-2 w-2 rounded-full flex-shrink-0 pointer-events-none"
-              style={{ backgroundColor: withAlpha(hex, isDark ? 0.7 : 0.5) }}
-            />
-          )}
+          <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center pointer-events-none">
+            {emoji ? (
+              <span
+                aria-hidden="true"
+                className="text-sm leading-none"
+                style={{ color: hex }}
+              >
+                {emoji}
+              </span>
+            ) : Icon ? (
+              <Icon size={16} style={{ color: hex }} />
+            ) : (
+              <span
+                aria-hidden="true"
+                className="h-2 w-2 rounded-full"
+                style={{ backgroundColor: withAlpha(hex, isDark ? 0.7 : 0.5) }}
+              />
+            )}
+          </span>
 
           <span
             className="flex-1 truncate select-none pointer-events-none font-medium"
@@ -411,55 +409,57 @@ export default function TopicList({
             {label}
           </span>
 
-          <span className="text-[11px] select-none pointer-events-none font-semibold text-base-content/70">
-            {count > 999 ? "999+" : count}
-          </span>
+          <span className="flex flex-shrink-0 items-center">
+            <span className="mr-1 text-[11px] tabular-nums select-none pointer-events-none font-semibold text-base-content/70">
+              {count > 999 ? "999+" : count}
+            </span>
 
-          {topic && (
+            {topic && (
+              <button
+                type="button"
+                ref={(el) => {
+                  menuButtonRefs.current[id] = el;
+                }}
+                onClick={(e) => toggleTopicMenu(e, id)}
+                data-guide="topic-menu"
+                aria-label={t("folders.topic_options")}
+                aria-haspopup="menu"
+                aria-expanded={menuTopicId === id}
+                className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md hover:bg-base-300 transition ${
+                  menuTopicId === id || window.innerWidth < 1024
+                    ? "opacity-100"
+                    : "opacity-0 group-hover:opacity-100"
+                }`}
+              >
+                <OverflowMenuVertical
+                  size={16}
+                  className="text-base-content/70"
+                />
+              </button>
+            )}
+
             <button
               type="button"
-              ref={(el) => {
-                menuButtonRefs.current[id] = el;
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleTopicCollapse(id);
               }}
-              onClick={(e) => toggleTopicMenu(e, id)}
-              data-guide="topic-menu"
-              aria-label={t("folders.topic_options")}
-              aria-haspopup="menu"
-              aria-expanded={menuTopicId === id}
-              className={`flex-shrink-0 rounded-lg p-1 hover:bg-base-300 transition ${
-                menuTopicId === id || window.innerWidth < 1024
-                  ? "opacity-100"
-                  : "opacity-0 group-hover:opacity-100"
-              }`}
+              aria-expanded={!isCollapsed}
+              aria-label={
+                isCollapsed
+                  ? t("folders.expand_topic")
+                  : t("folders.collapse_topic")
+              }
+              className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md text-base-content/50 transition-colors hover:bg-base-300"
             >
-              <OverflowMenuVertical
-                size={16}
-                className="text-base-content/70"
+              <ChevronDown
+                size={12}
+                className={`pointer-events-none transition-transform duration-200 ${
+                  isCollapsed ? "-rotate-90" : "rotate-0"
+                }`}
               />
             </button>
-          )}
-
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleTopicCollapse(id);
-            }}
-            aria-expanded={!isCollapsed}
-            aria-label={
-              isCollapsed
-                ? t("folders.expand_topic")
-                : t("folders.collapse_topic")
-            }
-            className="flex-shrink-0 rounded-lg p-1 text-base-content/50 transition-colors hover:bg-base-300"
-          >
-            <ChevronDown
-              size={12}
-              className={`pointer-events-none transition-transform duration-200 ${
-                isCollapsed ? "-rotate-90" : "rotate-0"
-              }`}
-            />
-          </button>
+          </span>
         </div>
 
         {!isCollapsed && (

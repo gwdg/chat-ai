@@ -136,6 +136,54 @@ const LocationProbe = () => (
   <span data-testid="location">{useLocation().pathname}</span>
 );
 
+describe("WorkspaceList band shape", () => {
+  it("shows the chat count between the name and the row controls", async () => {
+    mocks.conversations.mockReturnValue([
+      { id: "chat-1", title: "Workspace chat", lastModified: 1 },
+      { id: "chat-2", title: "Second chat", lastModified: 1 },
+    ]);
+    mocks.chatLinks.mockReturnValue([
+      { workspaceId: "ws-1", conversationId: "chat-1" },
+      { workspaceId: "ws-1", conversationId: "chat-2" },
+    ]);
+    renderList(makeStore());
+
+    const row = (await screen.findByText("Teaching")).closest(
+      '[data-guide="workspace-row"]',
+    ) as HTMLElement;
+    const kids = [...row.children];
+    const count = kids.find(
+      (el) => el.textContent?.trim() === "2",
+    ) as HTMLElement;
+    expect(count).toBeTruthy();
+    expect(count.className).toContain("text-[11px]");
+    const addIndex = kids.findIndex(
+      (el) => el.getAttribute("aria-label") === "New chat in this workspace",
+    );
+    const menuIndex = kids.findIndex((el) =>
+      el.querySelector('[aria-label="Workspace options"]'),
+    );
+    expect(kids.indexOf(count)).toBeLessThan(addIndex);
+    expect(addIndex).toBeLessThan(menuIndex);
+  });
+
+  it("uses the same band box and icon slot as a topic row", async () => {
+    renderList(makeStore());
+
+    const row = (await screen.findByText("Teaching")).closest(
+      '[data-guide="workspace-row"]',
+    ) as HTMLElement;
+    const label = row.children[0] as HTMLElement;
+    expect(row.className).toContain("min-h-10");
+    expect(row.className).toContain("px-1");
+    expect(label.className).toContain("self-stretch");
+    expect(label.className).not.toContain("py-1.5");
+    expect((label.firstElementChild as HTMLElement).className).toContain(
+      "h-6 w-6",
+    );
+  });
+});
+
 describe("WorkspaceList pinning", () => {
   it("pins a workspace from its options menu", async () => {
     renderList(makeStore());
