@@ -14,7 +14,7 @@ import { downloadBlob } from "../../utils/download";
 export default function ChatFilePreviewPanel() {
   const { t } = useTranslation();
   const { notifyError } = useToast();
-  const { preview, closeFilePreview } = useFilePreview();
+  const { preview, closeFilePreview, hosts } = useFilePreview();
   const filePreview = useConversationFilePreview(
     preview?.fileId,
     preview?.name,
@@ -23,7 +23,10 @@ export default function ChatFilePreviewPanel() {
   // Leaving the page closes the panel instead of restoring it on the next visit.
   useEffect(() => () => closeFilePreview(), [closeFilePreview]);
 
-  if (!preview) return null;
+  // A workspace sidebar with a Preview tab shows the file itself; the docked panel
+  // stands down so the same click does not open two previews. It stays mounted, so
+  // leaving the page still closes the preview.
+  if (!preview || hosts > 0) return null;
 
   const handleDownload = async () => {
     try {

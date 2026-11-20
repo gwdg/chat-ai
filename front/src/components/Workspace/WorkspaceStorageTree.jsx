@@ -22,6 +22,7 @@ import { useModal } from "../../modals/ModalContext";
 import { chatFolderLabel } from "../../workspace/chatFolderName";
 import { listWorkspaceRoot } from "../../workspace/listWorkspaceRoot";
 import { joinPath } from "../../workspace/paths";
+import { readProviderPreview } from "../../workspace/filePreview";
 import { uploadLocalFiles } from "../../workspace/upload";
 import { useWorkspaceProviders } from "../../workspace/useWorkspaceProviders";
 import {
@@ -79,7 +80,10 @@ function StorageRow({ node, depth, api }) {
   }, [loadChildren]);
 
   const toggle = () => {
-    if (!isDir) return;
+    if (!isDir) {
+      api.openFile?.(node);
+      return;
+    }
     api.selectTarget({ ...node, reload });
     if (!open) {
       setOpen(true);
@@ -184,6 +188,7 @@ export default function WorkspaceStorageTree({
   workspaceId,
   className = "",
   showTitle = true,
+  onPreview,
 }) {
   const { t } = useTranslation();
   const { openModal } = useModal();
@@ -205,6 +210,7 @@ export default function WorkspaceStorageTree({
   const [actionError, setActionError] = useState("");
   const [uploading, setUploading] = useState(false);
   const requestRef = useRef(0);
+  const previewSeqRef = useRef(0);
 
   const mountsRef = useRef(mounts);
   mountsRef.current = mounts;
@@ -440,6 +446,52 @@ export default function WorkspaceStorageTree({
     return rootProvider;
   };
 
+  // A file row asks the preview pane to show its content. The pane gets a
+  // loading request at once, then the bytes (or a plain error).
+  const openFile = useCallback(
+    async (node) => {
+      if (!onPreview || !node || node.entry?.kind !== "file") return;
+      // Clicking a second file while the first is still reading must not let the
+      // slower read replace the newer preview.
+      const sequence = (previewSeqRef.current += 1);
+      const entry = {
+        name: node.entry.name,
+        mime: node.entry.mime,
+        size: node.entry.size,
+      };
+      onPreview({ entry, loading: true });
+      const mount = node.context?.mount ?? node.entry.mount;
+      const provider =
+        node.context?.provider ??
+        (mount ? providersRef.current.get(mount.sourceId) : null) ??
+        rootProvider;
+      if (!provider) {
+        onPreview({ entry, error: "This file cannot be previewed" });
+        return;
+      }
+      const sourcePath = node.context
+        ? node.context.sourcePath
+        : node.displayPath;
+      try {
+        if (provider.status !== "connected") await provider.connect();
+        const result = await readProviderPreview(provider, {
+          ...node.entry,
+          path: sourcePath,
+          kind: "file",
+        });
+        if (sequence !== previewSeqRef.current) {
+          result.release?.();
+          return;
+        }
+        onPreview(result);
+      } catch (reason) {
+        if (sequence !== previewSeqRef.current) return;
+        onPreview({ entry, error: errorMessage(reason) });
+      }
+    },
+    [onPreview, rootProvider],
+  );
+
   const uploadFiles = async (event) => {
     const files = Array.from(event.target.files || []);
     event.target.value = "";
@@ -489,6 +541,7 @@ export default function WorkspaceStorageTree({
     labelFor,
     loadChildren,
     selectTarget,
+    openFile,
     isReadOnly: readOnlyFor,
   };
 

@@ -2190,6 +2190,9 @@ export default {
     empty_body: "Schreiben Sie unten eine Eingabe, um den ersten Chat zu starten.",
     composer_placeholder: "Fragen Sie alles — startet einen neuen Chat in {{name}}",
     files_tab: "Dateien",
+    preview_tab: "Vorschau",
+    preview_empty:
+      "Klicken Sie im Chat oder unter Dateien auf eine Datei, um sie hier anzuzeigen.",
     storage: "Speicher",
     available_storage: "Verfügbarer Speicher",
     add_folder: "Ordner hinzufügen",

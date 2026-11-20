@@ -11,7 +11,6 @@ import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
 import { useUpdateUserData } from "../hooks/useUpdateUserData";
 import { useWindowSize } from "../hooks/useWindowSize";
 import { useSettingsDeepLink } from "../hooks/useSettingsDeepLink";
-import { useFilePreview } from "../context/FilePreviewContext";
 
 import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
 import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
@@ -47,7 +46,6 @@ export default function ChatPage() {
   const { isMobile } = useWindowSize();
 
   const [localState, setLocalState] = useState(() => getDefaultConversation());
-  const { preview: chatFilePreview } = useFilePreview();
   const [filePreview, setFilePreview] = useState<{
     agentId: string;
     path: string;
@@ -189,7 +187,9 @@ export default function ChatPage() {
               />
             </div>
           </div>
-          {isFeatureEnabled("workspaces") && !filePreview && !chatFilePreview && (
+          {/* A chat file opens in this sidebar's Preview tab, so the sidebar stays
+              put while it shows one. */}
+          {isFeatureEnabled("workspaces") && !filePreview && (
             <ChatAgentSidebar conversationId={localState?.id} />
           )}
         </div>

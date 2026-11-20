@@ -2337,6 +2337,9 @@ export default {
     empty_body: "Write a prompt below to start the first chat here.",
     composer_placeholder: "Ask anything — starts a new chat in {{name}}",
     files_tab: "Files",
+    preview_tab: "Preview",
+    preview_empty:
+      "Click a file in the chat or under Files to show it here.",
     storage_browser_private: "Private to this workspace",
     repositories: "Repositories",
     repositories_count_one: "{{count}} repository",

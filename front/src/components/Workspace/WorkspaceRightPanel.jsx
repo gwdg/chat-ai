@@ -1,29 +1,36 @@
-import { useMemo } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { loadFile } from "../../db";
+import { useFilePreview } from "../../context/FilePreviewContext";
+import { useConversationFilePreview } from "../../hooks/useConversationFilePreview";
+import { useToast } from "../../hooks/useToast";
+import { downloadBlob } from "../../utils/download";
 import MetaChangesPanel from "../Meta/MetaChangesPanel";
 import { useWorkspaceList } from "../../db/workspaceDb";
 import WorkspaceAgentPanel from "./WorkspaceAgentPanel";
+import WorkspacePreviewTab from "./WorkspacePreviewTab";
 import WorkspaceStorageTree from "./WorkspaceStorageTree";
 
 const sectionHeading =
   "mb-1 truncate px-1 text-[10px] font-semibold uppercase tracking-wider text-base-content/45";
 
 /**
- * The workspace's right-hand column: What's new, Files, Agents.
+ * The workspace's right-hand column: What's new, Files, Agents, Preview.
  *
  * A workspace page and a chat attached to that workspace render this same
  * component, so the column is identical in both places. A chat may belong to
  * more than one workspace; then each workspace gets its own tree and agent
  * panel under a heading with its name.
  */
-function WorkspaceFilesTab({ workspaceIds }) {
+function WorkspaceFilesTab({ workspaceIds, onPreview }) {
   if (workspaceIds.length === 1) {
     return (
       <WorkspaceStorageTree
         workspaceId={workspaceIds[0]}
         className="min-h-0 min-w-0 flex-1"
         showTitle={false}
+        onPreview={onPreview}
       />
     );
   }
@@ -35,9 +42,101 @@ function WorkspaceFilesTab({ workspaceIds }) {
           workspaceId={workspaceId}
           className="min-h-0 min-w-0"
           showTitle={false}
+          onPreview={onPreview}
         />
       ))}
     </div>
+  );
+}
+
+// Below md the panel is hidden by CSS, so it must not claim the preview — the
+// docked chat preview keeps working on narrow screens exactly as before.
+const useWidePanel = () => {
+  const [wide, setWide] = useState(
+    () =>
+      typeof window === "undefined" ||
+      typeof window.matchMedia !== "function" ||
+      window.matchMedia("(min-width: 768px)").matches,
+  );
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return undefined;
+    }
+    const query = window.matchMedia("(min-width: 768px)");
+    const sync = () => setWide(query.matches);
+    sync();
+    query.addEventListener?.("change", sync);
+    return () => query.removeEventListener?.("change", sync);
+  }, []);
+  return wide;
+};
+
+/**
+ * The Preview tab: one place that shows whatever file was clicked last, whether it
+ * came from the Files tree (already read) or from a chat attachment (a stored file
+ * id the tab resolves itself).
+ */
+function WorkspacePreviewPane({ request, onClose }) {
+  const { t } = useTranslation();
+  const { notifyError } = useToast();
+  const isChatFile = Boolean(request?.fileId);
+  const chatPreview = useConversationFilePreview(
+    request?.fileId,
+    request?.name,
+  );
+
+  if (!request) {
+    return (
+      <p className="px-3 py-4 text-[11px] text-base-content/55">
+        {t("workspace.preview_empty")}
+      </p>
+    );
+  }
+
+  const preview = isChatFile
+    ? { ...chatPreview, loading: !chatPreview.loaded }
+    : request;
+
+  const download = async (entry) => {
+    if (!isChatFile) {
+      if (preview.url) {
+        const link = document.createElement("a");
+        link.href = preview.url;
+        link.download = entry.name;
+        link.click();
+        return;
+      }
+      if (typeof preview.text === "string") {
+        downloadBlob(
+          new Blob([preview.text], {
+            type: entry.mime || "text/plain;charset=utf-8",
+          }),
+          entry.name,
+        );
+      }
+      return;
+    }
+    try {
+      const complete = await loadFile(request.fileId);
+      if (!complete) {
+        notifyError(t("file_preview.save_failed"));
+        return;
+      }
+      downloadBlob(complete, complete.name || entry.name);
+    } catch (reason) {
+      console.error("Download failed:", reason);
+      notifyError(t("file_preview.save_failed"));
+    }
+  };
+
+  return (
+    <WorkspacePreviewTab
+      preview={preview}
+      onClose={onClose}
+      onDownload={download}
+      showPdfHint={isChatFile}
+      resetKey={request.key ?? request.fileId ?? chatPreview.entry.name}
+    />
   );
 }
 
@@ -66,6 +165,14 @@ export default function WorkspaceRightPanel({
   scopeKey,
 }) {
   const { t } = useTranslation();
+  const {
+    preview: filePreview,
+    openFilePreview,
+    closeFilePreview,
+    registerPreviewHost,
+  } = useFilePreview();
+  const wide = useWidePanel();
+  const [activeTab, setActiveTab] = useState("changes");
   const workspaces = useWorkspaceList() ?? [];
 
   const ids = useMemo(
@@ -76,12 +183,26 @@ export default function WorkspaceRightPanel({
     () => new Map(workspaces.map((workspace) => [workspace.id, workspace.name])),
     [workspaces],
   );
+
+  // Newest click wins: switch to the Preview tab whenever a file arrives.
+  useEffect(() => {
+    if (filePreview?.key) setActiveTab("preview");
+  }, [filePreview?.key]);
+
+  // The panel only hosts the preview while it is actually on screen.
+  useLayoutEffect(() => {
+    if (!ids.length || !wide) return undefined;
+    return registerPreviewHost();
+  }, [ids.length, wide, registerPreviewHost]);
+
   const tabs = useMemo(
     () => [
       {
         id: "files",
         label: t("workspace.files_tab"),
-        content: <WorkspaceFilesTab workspaceIds={ids} />,
+        content: (
+          <WorkspaceFilesTab workspaceIds={ids} onPreview={openFilePreview} />
+        ),
         contentClassName: ids.length === 1 ? "flex flex-col" : undefined,
       },
       {
@@ -89,8 +210,19 @@ export default function WorkspaceRightPanel({
         label: t("meta_chat.agents_tab"),
         content: <WorkspaceAgentsTab workspaceIds={ids} names={names} />,
       },
+      {
+        id: "preview",
+        label: t("workspace.preview_tab"),
+        content: (
+          <WorkspacePreviewPane
+            request={filePreview}
+            onClose={closeFilePreview}
+          />
+        ),
+        contentClassName: "flex flex-col",
+      },
     ],
-    [ids, names, t],
+    [ids, names, t, openFilePreview, filePreview, closeFilePreview],
   );
 
   if (!ids.length) return null;
@@ -101,6 +233,9 @@ export default function WorkspaceRightPanel({
       scope={scope}
       scopeKey={scopeKey}
       tabs={tabs}
+      activeTab={activeTab}
+      onActiveTabChange={setActiveTab}
+      revealSignal={filePreview?.key ?? 0}
     />
   );
 }

@@ -17,6 +17,15 @@ const h = vi.hoisted(() => ({
     connect: vi.fn(async () => {}),
     remove: vi.fn(async () => {}),
     list: vi.fn(async () => ({ entries: [] })),
+    read: vi.fn(
+      async () =>
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode("hello"));
+            controller.close();
+          },
+        }),
+    ),
   },
   openModal: vi.fn(),
   confirmAction: vi.fn((options, onConfirm) => onConfirm()),
@@ -283,5 +292,29 @@ describe("WorkspaceStorageTree", () => {
     expect(
       within(rowFor("a.jpg")).getByLabelText("Read-only"),
     ).toBeInTheDocument();
+  });
+
+  it("opens a file row in the preview pane", async () => {
+    h.listWorkspaceRoot.mockResolvedValue([
+      entry("/notes.txt", "file", { mime: "text/plain" }),
+    ]);
+    const onPreview = vi.fn();
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" onPreview={onPreview} />);
+
+    fireEvent.click(await screen.findByText("notes.txt"));
+
+    expect(onPreview.mock.calls[0][0]).toEqual({
+      entry: { name: "notes.txt", mime: "text/plain", size: undefined },
+      loading: true,
+    });
+    await waitFor(() =>
+      expect(onPreview).toHaveBeenCalledWith(
+        expect.objectContaining({
+          text: "hello",
+          entry: expect.objectContaining({ name: "notes.txt" }),
+        }),
+      ),
+    );
   });
 });

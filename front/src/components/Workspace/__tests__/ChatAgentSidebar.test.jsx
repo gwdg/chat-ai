@@ -101,7 +101,7 @@ describe("ChatAgentSidebar what's new scope", () => {
     render(<ChatAgentSidebar conversationId="chat-1" />);
 
     const tabs = lastPanel().tabs;
-    expect(tabs.map((tab) => tab.id)).toEqual(["files", "agents"]);
+    expect(tabs.map((tab) => tab.id)).toEqual(["files", "agents", "preview"]);
     const agentsTab = tabs.find((tab) => tab.id === "agents");
     expect(agentsTab.label).toBe("Agents");
     expect(render(agentsTab.content).getByTestId("agent-panel-ws-1")).toBeInTheDocument();
@@ -137,12 +137,16 @@ describe("ChatAgentSidebar what's new scope", () => {
     });
   });
 
-  it("offers the same Files and Agents tabs as the workspace page", () => {
+  it("offers the same Files, Agents and Preview tabs as the workspace page", () => {
     render(<ChatAgentSidebar conversationId="chat-1" />);
 
     const tabs = lastPanel().tabs ?? [];
-    expect(tabs.map((tab) => tab.id)).toEqual(["files", "agents"]);
-    expect(tabs.map((tab) => tab.label)).toEqual(["Files", "Agents"]);
+    expect(tabs.map((tab) => tab.id)).toEqual(["files", "agents", "preview"]);
+    expect(tabs.map((tab) => tab.label)).toEqual([
+      "Files",
+      "Agents",
+      "Preview",
+    ]);
     expect(tabs.every((tab) => tab.content)).toBe(true);
   });
 

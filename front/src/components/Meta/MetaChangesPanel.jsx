@@ -86,12 +86,20 @@ export default function MetaChangesPanel({
   scopeKey = "",
   children,
   tabs = [],
+  activeTab: controlledTab,
+  onActiveTabChange,
+  revealSignal = 0,
 }) {
   const { t, i18n } = useTranslation();
   const [state, setState] = useState(() => readStored(scopeKey));
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const [width, setWidth] = useState(readWidth);
-  const [activeTab, setActiveTab] = useState("changes");
+  const [innerTab, setInnerTab] = useState("changes");
+  const activeTab = controlledTab ?? innerTab;
+  const selectTab = (id) => {
+    setInnerTab(id);
+    onActiveTabChange?.(id);
+  };
   const widthRef = useRef(width);
   useEffect(() => {
     widthRef.current = width;
@@ -104,6 +112,12 @@ export default function MetaChangesPanel({
   useEffect(() => {
     setState(readStored(scopeKey));
   }, [scopeKey]);
+
+  // Opening a file must show its tab, even when the panel was collapsed for the
+  // narrower window — the file is the reason the panel is being looked at.
+  useEffect(() => {
+    if (revealSignal) setCollapsed(false);
+  }, [revealSignal]);
 
   useEffect(() => {
     if (typeof window.matchMedia !== "function") return undefined;
@@ -252,7 +266,7 @@ export default function MetaChangesPanel({
               role="tab"
               data-guide="meta-tab-changes"
               aria-selected={activeTab === "changes"}
-              onClick={() => setActiveTab("changes")}
+              onClick={() => selectTab("changes")}
               className={tabClass(activeTab === "changes")}
             >
               {changesTitle}
@@ -264,7 +278,7 @@ export default function MetaChangesPanel({
                 role="tab"
                 data-guide={"meta-tab-" + tab.id}
                 aria-selected={activeTab === tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => selectTab(tab.id)}
                 className={tabClass(activeTab === tab.id)}
               >
                 {tab.label}
