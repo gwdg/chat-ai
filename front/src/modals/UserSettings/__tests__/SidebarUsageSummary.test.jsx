@@ -60,21 +60,43 @@ describe("SidebarUsageSummary", () => {
     expect(screen.getByText("Organization")).toBeInTheDocument();
   });
 
-  it("points the chevron the way the sidebar sections do", () => {
+  it("points the chevron up while folded and down once the figures are shown", () => {
     const { container } = render(<SidebarUsageSummary data={flatData} />);
     const chevron = () => container.querySelector("svg");
 
-    // Closed: right, like a folded sidebar section. Open: down, at the list it shows.
-    expect(chevron()).toHaveClass("-rotate-90");
-    fireEvent.click(screen.getByRole("button", { name: "Usage" }));
+    // Folded: up, at the card it will unfold. Open: down, at the figures it shows.
+    expect(chevron()).toHaveClass("rotate-180");
     expect(chevron()).not.toHaveClass("-rotate-90");
+    fireEvent.click(screen.getByRole("button", { name: "Usage" }));
     expect(chevron()).not.toHaveClass("rotate-180");
+    expect(chevron()).not.toHaveClass("-rotate-90");
   });
 
   it("stays out of the sidebar when the account reports no figures at all", () => {
     const { container } = render(<SidebarUsageSummary data={{}} />);
 
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("opens the usage tab from anywhere on the card except the arrow", () => {
+    const onOpenUsage = vi.fn();
+    render(<SidebarUsageSummary data={flatData} onOpenUsage={onOpenUsage} />);
+
+    fireEvent.click(screen.getByText("3.5 / 100€"));
+    expect(onOpenUsage).toHaveBeenCalledTimes(1);
+    // The figure click is the profile's way in, not the local fold.
+    expect(
+      screen.getByRole("button", { name: "Show details" }),
+    ).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(screen.getByRole("button", { name: "Usage" }));
+    expect(onOpenUsage).toHaveBeenCalledTimes(2);
+
+    fireEvent.click(screen.getByRole("button", { name: "Show details" }));
+    expect(onOpenUsage).toHaveBeenCalledTimes(2);
+    expect(
+      screen.getByRole("button", { name: "Show details" }),
+    ).toHaveAttribute("aria-expanded", "true");
   });
 
   it("sits almost on the sidebar's own colour, not on a grey card", () => {

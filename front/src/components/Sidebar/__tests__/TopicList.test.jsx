@@ -361,7 +361,7 @@ describe("TopicList grouping headings", () => {
     expect(label.className).toContain("text-base-content/45");
   });
 
-  it("hugs the CHATS band instead of floating under it", () => {
+  it("sits tight under the CHATS band instead of floating below it", () => {
     render(
       <TopicList
         {...baseProps}
@@ -370,10 +370,9 @@ describe("TopicList grouping headings", () => {
     );
 
     const heading = screen.getByText("Topics").parentElement;
-    // No padding of its own on top, and the list's 6px gap is cancelled, so the
-    // label sits 8px under the band rather than 16px.
+    // No padding of its own on top: the band's own 4px margin and the list's gap
+    // are the whole distance, so the label sits ~8px under the band, not 16px.
     expect(heading.className).toContain("pt-0");
-    expect(heading.className).toContain("-mt-1");
     expect(heading.className).not.toContain("py-1");
   });
 

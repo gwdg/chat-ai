@@ -84,7 +84,7 @@ import {
 import { dropAgentSessionOnWorkspace } from "./sessionDrop";
 import { rememberSidebarScroll, restoreSidebarScroll } from "./sidebarScroll";
 import { chatRowTint, neutralRowTint, topicColor } from "./topicColors";
-import { SECTION_RHYTHM } from "./sectionSpacing";
+import { SECTION_BOTTOM, SECTION_TOP } from "./sectionSpacing";
 import PinnedSection from "./PinnedSection";
 import { showAdvancedSidebarSections } from "./sidebarVisibility";
 import SidebarUserCard from "./SidebarUserCard";
@@ -1017,7 +1017,9 @@ export default function SidebarContent({
             </PinnedSection>
           )}
           <div
-            className={`sticky top-0 z-20 bg-base-100 px-3 ${SECTION_RHYTHM} ${
+            className={`sticky top-0 z-20 bg-base-100 px-3 ${SECTION_TOP} ${
+              chatsCollapsed && !hasSearch ? SECTION_BOTTOM : "pb-0"
+            } ${
               chatsHeaderElevated
                 ? "shadow-[0_2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.5)]"
                 : ""
