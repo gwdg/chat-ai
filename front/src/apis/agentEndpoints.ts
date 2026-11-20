@@ -44,6 +44,29 @@ export function modelSupportsTools(model: { id?: string; name?: string; external
 
 const blob = (data: Uint8Array, type = "") => new Blob([data as Uint8Array<ArrayBuffer>], { type });
 
+// These tools do not compute anything themselves: the engine forwards each route to a separate
+// service of its registry. When that service is not registered (or has no instance), the engine
+// answers 404 `{"detail":"Unknown model/service"}` on the non-chat routes, or names the service in
+// an `error.message` ("No instance available for service '<name>'"). Neither body says which
+// service the route needed, so a model reporting the failure can only repeat the opaque text.
+const UPSTREAM_SERVICE: Record<string, string> = {
+  "/documents/convert/file": "docling-serve",
+  "/audio/transcriptions": "whisperx",
+  "/audio/speech": "kokoro-82m",
+  "/images/generations": "flux",
+  "/images/edits": "image-edit-2511",
+};
+
+/** Why a 404/503 means "this deployment cannot do that", appended to the raw body. */
+const missingServiceHint = (path: string, status: number, body: string) => {
+  if (status !== 404 && status !== 503) return "";
+  if (!/unknown model\/service|no instance available/i.test(body)) return "";
+  const named = /service '([^']+)'/i.exec(body)?.[1];
+  const service = named || UPSTREAM_SERVICE[path];
+  if (!service) return "";
+  return `\nThe deployment's SAIA registry has no "${service}" service (or no instance of it), so ${path} never reached one. Chat, document conversion and media generation each need their own registered service; only the deployment's administrator can add one.`;
+};
+
 async function post(path: string, body: BodyInit, json = false, signal?: AbortSignal) {
   const headers = { ...(json ? { "Content-Type": "application/json" } : {}), ...agentRequestHeaders() };
   // `e2eeFetch` only rewrites keyed-model `/chat/completions` calls (explainImage);
@@ -54,7 +77,10 @@ async function post(path: string, body: BodyInit, json = false, signal?: AbortSi
     signal,
     headers: Object.keys(headers).length ? headers : undefined,
   });
-  if (!response.ok) throw new Error(`${path} failed: ${response.status} ${(await response.text()).slice(0, 500)}`);
+  if (!response.ok) {
+    const body = (await response.text()).slice(0, 500);
+    throw new Error(`${path} failed: ${response.status} ${body}${missingServiceHint(path, response.status, body)}`);
+  }
   return response;
 }
 

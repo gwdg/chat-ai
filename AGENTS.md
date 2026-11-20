@@ -1000,6 +1000,23 @@ id or name plus a `source` id, label or mount path, so they reach sources that a
 workspaces other than the first `workspace_chats` link, which is the only one `getChatWorkspaceBundle`
 puts into the chat VFS. They are registered whenever the chat has a `workspace_chats` link and the
 model supports tools, even while no agent is attached.
+The media and document tools (`explain_image`, `convert_document`, `transcribe_audio`,
+`generate_speech`, `generate_image`, `edit_image`, `create_docx`) read and write the same
+`WorkspaceAgentVfs` as `read`/`write`, so by default they see the workspace root and its mounts
+only. Each also takes the same `source` id/label/mount-path argument, which
+`createWorkspaceTools(...).files` (`WorkspaceFileAccess`) resolves across the attached workspaces
+through `explicitTarget`/`readTarget`/`writeTarget`; that is how a file in an unmounted saia-fs,
+Arcana or agent source is still convertible or writable. A write into a source is not attached to
+the chat as a file item (`agent/writtenFiles.ts` only observes the VFS), so the tool result says
+where the file landed instead of promising it is shown.
+Those tools need a service of their own in the SAIA registry: `docling-serve` for
+`/documents/convert/file`, `flux`/`flux2` for `/images/generations`, `image-edit-2511` for
+`/images/edits`, `kokoro-82m` for `/audio/speech` and `whisperx` for `/audio/transcriptions`
+(`saia-engine` `handle_image_generations`). When the registry has none, the engine answers 404 with
+the bare `{"detail":"Unknown model/service"}` instead of the `{"error":{...}}` envelope that
+`/chat/completions` uses, and nothing in the body names the service. `apis/agentEndpoints.ts#post`
+appends that name from the route (or from a `No instance available for service '<name>'` body), so
+the model and the user see why the tool cannot work on that deployment.
 `agent/prepare.ts` writes attachments and their converted variants under `/artefacts` in the
 attached workspace root (or the conversation OPFS when no workspace is linked); the agent VFS keeps
 `/uploads` routed to the conversation OPFS for legacy paths. `agent/writtenFiles.ts` turns every

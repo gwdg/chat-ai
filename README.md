@@ -149,6 +149,7 @@ The `front` service uses the following configurable attributes in `front.json`:
 - `userSettings`: (Optional) Defaults for the account-wide user settings, applied to a profile with no saved settings yet and after an explicit reset. It accepts the same keys as a settings export, for example `memory_mode`, `suggest_user_prompts`, `html_render_mode`, `html_load_external`, `html_sanitization`, `set_title_once`, the `render_*` switches, `collapse_reasoning_while_streaming`, `document_conversion_mode`, `conversation_summaries`, `show_timestamps`, `advanced_mode`, `send_with_enter`, `mcp_tool_policy` and `timeout` (milliseconds). Unknown or malformed values are ignored, and saved settings always win; `secrets/front.json.sample` lists the supported keys. `browser_document_conversion` is accepted as the legacy equivalent of `document_conversion_mode`
 - `titleGenerationModel`: Model ID for title generation
 - `memoryGenerationModel`: Model ID for memory generation and updates
+- `explainImageModel`: (Optional) Vision model the agent's `explain_image` tool asks about an image, used when the chat's own model cannot see images. Default: `gemma-4-31b-it`. A direct engine usually lists its models under a prefix (the local stack serves `bridge/gemma-4-31b-it`), so set the exact id there; otherwise the tool fails with `{"error":{"message":"Unknown model/service"}}`
 - `e2eeKeyUrl`: (Optional) Base URL of the directory that publishes the E2EE model node keys as `<MODELNAME>.pub` plus a `keys.json` manifest that binds every key to its model. The Encryption tab prefills it and loads every published key from it after verification (the Directory tab prefills `<e2eeKeyUrl>keys.json` and can also read a local folder of `.pub` files). Default: `https://docs.ai.gwdg.de/technical/saia-platform/keys/`. Generate the pairs and `keys.json` with `make -C encryption keys` or `node encryption/generate-model-keys.mjs` (see [encryption/README.md](encryption/README.md))
 - `announcement`: Text to be displayed in the announcement bar at the top of the window
 - `useOpenAISdk`: (Optional) `true` sends chat requests through the official `openai` SDK instead of the built-in lightweight `fetch` client. The SDK is then loaded on first use. Default: `false`
@@ -235,6 +236,7 @@ The `minimal` deployment is a separate front config, not a separate app, so it c
   "titleGenerationModel": "bridge/qwen3-30b-a3b-instruct-2507",
   "memoryGenerationModel": "bridge/qwen3-30b-a3b-instruct-2507",
   "proposalGenerationModel": "bridge/qwen3-30b-a3b-instruct-2507",
+  "explainImageModel": "bridge/gemma-4-31b-it",
   "default": {
     "model": {
       "id": "bridge/qwen3-30b-a3b-instruct-2507",
@@ -245,6 +247,8 @@ The `minimal` deployment is a separate front config, not a separate app, so it c
 ```
 
 `deployment: "minimal"` turns off every module and every feature except the Meta chat; the rest of the file is what `front-local-conf.json` does for the full UI. `CONFIG_LOCATION=../secrets/front-minimal.json npm run dev` then serves it on `:8083` without `back`. The model id must exist in the stack's `/public/v1/models`; without GWDG federation that is `bridge/local-echo-1` / `bridge/local-slow-1`. `secrets/front-minimal.json.sample` remains the portable variant that expects `back` on `:8081`.
+
+The local registry holds only chat/bridge models, `saia-agent` and `saia-fs`. Document conversion (`docling-serve`) and media generation (`flux`/`flux2`, `image-edit-2511`, `kokoro-82m`, `whisperx`) run as separate services that it does not start, so `convert_document`, `generate_image`, `edit_image`, `generate_speech` and `transcribe_audio` cannot work there; they fail with `{"detail":"Unknown model/service"}` plus the name of the service the route needs. `explain_image` does work, because it is an ordinary chat completion to `explainImageModel`.
 
 ## Reaching the Agent Service When Only the Model Is Exposed
 

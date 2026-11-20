@@ -1,7 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+// The E2EE wrapper only rewrites keyed /chat/completions calls; keep this test on plain fetch.
+vi.mock("../../e2ee/fetch", () => ({
+  e2eeFetch: (input: RequestInfo, init?: RequestInit) =>
+    (globalThis.fetch as typeof fetch)(input, init),
+}));
+
 import {
   agentApiKey,
   agentRequestHeaders,
+  convertDocument,
+  generateSpeech,
   markToolless,
   modelSupportsTools,
 } from "../agentEndpoints";
@@ -59,5 +68,48 @@ describe("modelSupportsTools", () => {
         name: "local-echo-toolless (External)",
       }),
     ).toBe(false);
+  });
+});
+
+describe("media and document failures", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  const respond = (status: number, body: string) => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(body, { status })),
+    );
+  };
+
+  it("names the upstream service behind the engine's opaque 404", async () => {
+    // saia-engine answers /audio/speech with the registry's bare error; the route name is the
+    // only thing that tells which service has to be registered.
+    respond(404, '{"detail":"Unknown model/service"}');
+
+    await expect(generateSpeech("hello")).rejects.toThrow(
+      /has no "kokoro-82m" service \(or no instance of it\), so \/audio\/speech never reached one/,
+    );
+  });
+
+  it("uses the service named in the engine's error body", async () => {
+    respond(
+      404,
+      '{"error":{"message":"No instance available for service \'saia-agent\'. Try again later."}}',
+    );
+
+    await expect(convertDocument(new Uint8Array(), "a.pdf")).rejects.toThrow(
+      /has no "saia-agent" service/,
+    );
+  });
+
+  it("keeps the plain failure text for an unrelated error", async () => {
+    respond(500, "upstream exploded");
+
+    await expect(generateSpeech("hello")).rejects.toThrow(
+      /^\/audio\/speech failed: 500 upstream exploded$/,
+    );
   });
 });

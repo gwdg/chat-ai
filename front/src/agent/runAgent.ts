@@ -5,7 +5,7 @@
 // tool calls, and tool results) in `meta.agent`, which is replayed as-is on the next turn.
 // Assistant messages without it (older chats, other models) are replayed from their text.
 import "./shims/globals";
-import { Agent, type AgentMessage } from "@earendil-works/pi-agent-core";
+import { Agent, type AgentMessage, type AgentTool } from "@earendil-works/pi-agent-core";
 import { createModels, createProvider, type Model } from "@earendil-works/pi-ai";
 import { openAICompletionsApi } from "@earendil-works/pi-ai/api/openai-completions.lazy";
 import { agentApiKey, agentEndpoint, agentGatewayTools, markToolless, modelSupportsTools } from "../apis/agentEndpoints";
@@ -22,7 +22,7 @@ import { activeMcpServers, connectMcpServers, McpUnavailableError, type McpServe
 import { beginMcpConfirmationSession } from "./mcpConfirmation";
 import { createTools } from "./tools";
 import { createConnectedAgentTools, type ConnectedAgentContext } from "./connectedAgentTools";
-import { createWorkspaceTools, type WorkspaceToolContext } from "./workspaceTools";
+import { createWorkspaceTools, type WorkspaceFileAccess, type WorkspaceToolContext } from "./workspaceTools";
 import { storageAccessEnabled, storageToolSettings, writeAccessEnabled } from "./storageAccess";
 import { type Change, observe } from "./vfs";
 import { getWorkspace, listMounts } from "./workspace";
@@ -388,17 +388,11 @@ export async function runAgentTurn({
       e2eeFetch,
     );
 
-    const tools = useTools
-      ? createTools(
-          workspace,
-          storageToolSettings(settings, {
-            vision,
-            attachedWorkspace: !!attachedWorkspace,
-            hasMounts: mounts.length > 0,
-          }),
-        )
-      : [];
+    // The workspace tools also carry file access for sources that are not mounted into the
+    // virtual filesystem, so the media and document tools can address them too.
     let workspaceContext: WorkspaceToolContext | null = null;
+    let workspaceFiles: WorkspaceFileAccess | undefined;
+    const workspaceToolList: AgentTool<any>[] = [];
     if (useTools && browserStorage) {
       try {
         const workspaceTools = await createWorkspaceTools(
@@ -407,12 +401,24 @@ export async function runAgentTurn({
           attachedWorkspace?.workspaceId,
           { writable: writeAccess },
         );
-        tools.push(...workspaceTools.tools);
+        workspaceToolList.push(...workspaceTools.tools);
         workspaceContext = workspaceTools.context;
+        workspaceFiles = workspaceTools.files;
       } catch (error) {
         console.warn("Could not load workspace tools", error);
       }
     }
+    const tools = useTools
+      ? createTools(workspace, {
+          ...storageToolSettings(settings, {
+            vision,
+            attachedWorkspace: !!attachedWorkspace,
+            hasMounts: mounts.length > 0,
+          }),
+          files: workspaceFiles,
+        })
+      : [];
+    tools.push(...workspaceToolList);
     let connectedAgentContext: ConnectedAgentContext | null = null;
     if (useTools && browserStorage) {
       try {
@@ -461,7 +467,7 @@ export async function runAgentTurn({
                 .map((workspace) => `${workspace.name} (${workspace.id})`)
                 .join(
                   ", ",
-                )}. Use workspace_list for its sources, mounts and agents, workspace_list_agents for the agents attached to each workspace, and workspace_files, workspace_read_file, workspace_write_file and workspace_fetch_file for files in it, including sources that are not mounted. The read, ls and find tools work on the workspace root and its mounted folders. This chat's own folder is mounted at /chats/${conversationId}: it belongs to the chat and stays there if the workspace is detached, so keep the chat's private files there and the shared ones in the workspace.`
+                )}. Use workspace_list for its sources, mounts and agents, workspace_list_agents for the agents attached to each workspace, and workspace_files, workspace_read_file, workspace_write_file and workspace_fetch_file for files in it, including sources that are not mounted. The read, ls and find tools work on the workspace root and its mounted folders, and the media and document tools (explain_image, convert_document, transcribe_audio, generate_speech, generate_image, edit_image, create_docx) take a source argument to address any of those sources by id, label or mount path, so a file that is not mounted is still reachable. This chat's own folder is mounted at /chats/${conversationId}: it belongs to the chat and stays there if the workspace is detached, so keep the chat's private files there and the shared ones in the workspace.`
             : "",
           connectedAgentContext?.workspaceIds.length
             ? connectedAgentContext.agents.length

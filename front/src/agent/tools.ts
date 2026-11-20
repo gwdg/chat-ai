@@ -32,6 +32,7 @@ import {
 import { markdownToDocx } from "./docx";
 import { isArcanasEnabled } from "../utils/modules";
 import { enoent, normalize, type Vfs, walk } from "./vfs";
+import type { WorkspaceFileAccess } from "./workspaceTools";
 
 export const CWD = "/";
 
@@ -61,6 +62,13 @@ export interface ToolOptions {
   enabled?: Record<string, boolean>;
   /** A local folder is mounted, so the file tools have storage to work on. */
   hasLocalFolder?: boolean;
+  /**
+   * Access to every source of the attached workspaces, mounted or not. The virtual filesystem
+   * only shows the workspace root and its mounts; the media and document tools take a `source`
+   * argument and use this to reach a file in a source that is not mounted (for example a folder
+   * on saia-fs).
+   */
+  files?: WorkspaceFileAccess;
 }
 
 // Tool toggles in the UI and the agent tools they switch. Browser storage is the master switch
@@ -107,7 +115,7 @@ const TOGGLES: Record<string, string[]> = {
   web_search: ["web_search"],
 };
 
-export function createTools(fs: Vfs, { vision, enabled = {}, hasLocalFolder = false }: ToolOptions): AgentTool<any>[] {
+export function createTools(fs: Vfs, { vision, enabled = {}, hasLocalFolder = false, files }: ToolOptions): AgentTool<any>[] {
   const readFile = async (path: string) => Buffer.from(await fs.readFile(path));
   const writeFile = (path: string, content: string) => fs.writeFile(path, content);
   const access = async (path: string) => {
@@ -115,6 +123,47 @@ export function createTools(fs: Vfs, { vision, enabled = {}, hasLocalFolder = fa
   };
   const exists = async (path: string) => (await fs.stat(path)) !== null;
   const detectImageMimeType = async (path: string) => detectSupportedImageMimeType(await fs.readFile(path)) ?? undefined;
+
+  // The media and document tools address a file by path. Without `source` that path is the
+  // conversation's virtual filesystem (the workspace root and its mounted folders when a workspace
+  // is attached); a `source` names any source of an attached workspace, mounted or not, so a file
+  // that `workspace_files` lists is reachable even when it was never mounted.
+  const sourceRef = (source: unknown) => String(source ?? "").trim();
+  const readAt = async (source: unknown, path: string): Promise<Uint8Array> => {
+    const reference = sourceRef(source);
+    if (!reference) return fs.readFile(path);
+    if (!files?.enabled) {
+      throw new Error(
+        `There is no workspace source "${reference}" in this chat. ${files ? files.describe() : "Attach a workspace to reach files outside this chat's own storage."}`,
+      );
+    }
+    return files.read(reference, path);
+  };
+  const writeAt = async (source: unknown, path: string, data: Uint8Array | string): Promise<void> => {
+    const reference = sourceRef(source);
+    if (!reference) return fs.writeFile(path, data);
+    if (!files?.enabled) {
+      throw new Error(
+        `There is no workspace source "${reference}" in this chat. ${files ? files.describe() : "Attach a workspace to reach files outside this chat's own storage."}`,
+      );
+    }
+    await files.write(reference, path, data);
+  };
+
+  const SOURCE_PARAM = Type.Optional(
+    Type.String({
+      description:
+        "Workspace source (id, label or mount path) to use instead of the workspace root; this reaches a source that is not mounted",
+    }),
+  );
+  // A file written into a workspace source is not attached to the chat, so the "shown to the
+  // user" promise of the tool description only holds for the chat's own storage.
+  const where = (source: unknown) => {
+    const reference = sourceRef(source);
+    return reference ? ` in the workspace source "${reference}"` : "";
+  };
+  const shownNote = (source: unknown) =>
+    sourceRef(source) ? "" : " The file is shown to the user.";
 
   const read = createReadTool(CWD, { autoResizeImages: false, operations: { readFile, access, detectImageMimeType } });
   // pi's read decodes everything that is not an image as text; point the model at the converters instead.
@@ -224,12 +273,13 @@ export function createTools(fs: Vfs, { vision, enabled = {}, hasLocalFolder = fa
     "explain_image",
     "Analyze an image file (png, jpeg, gif, webp) with a vision model and return a description or answer a question about it. Use this to read text in an image or to look at an image when read cannot show it.",
     Type.Object({
+      source: SOURCE_PARAM,
       path: Type.String({ description: "Path of the image" }),
       question: Type.Optional(Type.String({ description: "A specific question about the image" })),
     }),
-    async ({ path, question }, signal) => {
+    async ({ source, path, question }, signal) => {
       path = normalize(path);
-      const data = await fs.readFile(path);
+      const data = await readAt(source, path);
       const mimeType = detectSupportedImageMimeType(data);
       if (!mimeType) return text(`${path} is not a supported image.`);
       return text(await explainImage(data, mimeType, question || "Describe this image in detail. Quote any text in it verbatim.", signal));
@@ -482,81 +532,85 @@ export function createTools(fs: Vfs, { vision, enabled = {}, hasLocalFolder = fa
     explainImageTool,
     tool(
       "convert_document",
-      "Convert a document (PDF, DOCX, PPTX, XLSX, ...) to Markdown. The result is written next to it as <path>.md and returned.",
-      Type.Object({ path: Type.String({ description: "Path of the document" }) }),
-      async ({ path }, signal) => {
+      "Convert a document (PDF, DOCX, PPTX, XLSX, ...) to Markdown. The result is written next to it as <path>.md and returned. Pass `source` to read from and write to a workspace source other than the workspace root.",
+      Type.Object({ source: SOURCE_PARAM, path: Type.String({ description: "Path of the document" }) }),
+      async ({ source, path }, signal) => {
         path = normalize(path);
-        const markdown = await convertDocument(await fs.readFile(path), baseName(path), signal);
-        await fs.writeFile(`${path}.md`, markdown);
-        return text(`Wrote ${path}.md\n\n${clip(markdown)}`);
+        const markdown = await convertDocument(await readAt(source, path), baseName(path), signal);
+        await writeAt(source, `${path}.md`, markdown);
+        return text(`Wrote ${path}.md${where(source)}\n\n${clip(markdown)}`);
       },
     ),
     tool(
       "transcribe_audio",
-      "Transcribe an audio file (wav, mp3, ...) to text. The transcript is written next to it as <path>.txt and returned.",
-      Type.Object({ path: Type.String({ description: "Path of the audio file" }) }),
-      async ({ path }, signal) => {
+      "Transcribe an audio file (wav, mp3, ...) to text. The transcript is written next to it as <path>.txt and returned. Pass `source` to read from and write to a workspace source other than the workspace root.",
+      Type.Object({ source: SOURCE_PARAM, path: Type.String({ description: "Path of the audio file" }) }),
+      async ({ source, path }, signal) => {
         path = normalize(path);
-        const transcript = await transcribeAudio(await fs.readFile(path), baseName(path), signal);
-        await fs.writeFile(`${path}.txt`, transcript);
-        return text(`Wrote ${path}.txt\n\n${clip(transcript)}`);
+        const transcript = await transcribeAudio(await readAt(source, path), baseName(path), signal);
+        await writeAt(source, `${path}.txt`, transcript);
+        return text(`Wrote ${path}.txt${where(source)}\n\n${clip(transcript)}`);
       },
     ),
     tool(
       "generate_speech",
-      "Turn text into spoken audio (mp3). The file is shown to the user.",
+      "Turn text into spoken audio (mp3). Written to this chat's storage, or to a workspace source named by `source`, and shown to the user.",
       Type.Object({
         text: Type.String({ description: "What to say" }),
         voice: Type.Optional(Type.String({ description: `Kokoro voice id, default ${DEFAULT_VOICE}` })),
+        source: SOURCE_PARAM,
         path: Type.Optional(Type.String({ description: "Output path ending in .mp3; default /generated/speech-<time>.mp3" })),
       }),
       async (args, signal) => {
         const path = normalize(args.path || `/generated/speech-${stamp()}.mp3`);
-        await fs.writeFile(path, await generateSpeech(args.text, args.voice || DEFAULT_VOICE, signal));
-        return text(`Wrote ${path}`);
+        await writeAt(args.source, path, await generateSpeech(args.text, args.voice || DEFAULT_VOICE, signal));
+        return text(`Wrote ${path}${where(args.source)}${shownNote(args.source)}`);
       },
     ),
     tool(
       "generate_image",
-      "Generate an image (png) from a text prompt. The file is shown to the user.",
+      "Generate an image (png) from a text prompt. Written to this chat's storage, or to a workspace source named by `source`, and shown to the user.",
       Type.Object({
         prompt: Type.String({ description: "Description of the image" }),
         size: Type.Optional(Type.String({ description: "e.g. 1024x1024" })),
+        source: SOURCE_PARAM,
         path: Type.Optional(Type.String({ description: "Output path ending in .png; default /generated/image-<time>.png" })),
       }),
       async (args, signal) => {
         const path = normalize(args.path || `/generated/image-${stamp()}.png`);
-        await fs.writeFile(path, await generateImage(args.prompt, args.size, signal));
-        return text(`Wrote ${path}${vision ? ". Use read to look at it." : ""}`);
+        await writeAt(args.source, path, await generateImage(args.prompt, args.size, signal));
+        return text(`Wrote ${path}${where(args.source)}${vision ? ". Use read to look at it." : ""}`);
       },
     ),
     tool(
       "edit_image",
-      "Change an existing image according to a prompt. The result (png) is shown to the user.",
+      "Change an existing image according to a prompt. The result (png) is written to this chat's storage, or to a workspace source named by `source`, and shown to the user.",
       Type.Object({
+        source: SOURCE_PARAM,
         path: Type.String({ description: "Path of the image to edit" }),
         prompt: Type.String({ description: "What to change" }),
         output_path: Type.Optional(Type.String({ description: "Output path; default <path without extension>-edited.png" })),
       }),
       async (args, signal) => {
-        const source = normalize(args.path);
-        const path = normalize(args.output_path || `${source.replace(/\.[^./]+$/, "")}-edited.png`);
-        await fs.writeFile(path, await editImage(await fs.readFile(source), baseName(source), args.prompt, signal));
-        return text(`Wrote ${path}${vision ? ". Use read to look at it." : ""}`);
+        const input = normalize(args.path);
+        const path = normalize(args.output_path || `${input.replace(/\.[^./]+$/, "")}-edited.png`);
+        await writeAt(args.source, path, await editImage(await readAt(args.source, input), baseName(input), args.prompt, signal));
+        return text(`Wrote ${path}${where(args.source)}${vision ? ". Use read to look at it." : ""}`);
       },
     ),
     tool(
       "create_docx",
-      "Create a Word document (.docx) from Markdown. Supports #-headings, paragraphs, - and 1. lists, **bold**, *italic* and `code`. The file is shown to the user.",
+      "Create a Word document (.docx) from Markdown. Supports #-headings, paragraphs, - and 1. lists, **bold**, *italic* and `code`. Written to this chat's storage, or to a workspace source named by `source`, and shown to the user.",
       Type.Object({
         markdown: Type.String({ description: "Content in Markdown" }),
+        source: SOURCE_PARAM,
         path: Type.String({ description: "Output path ending in .docx" }),
         title: Type.Optional(Type.String({ description: "Document title (metadata)" })),
       }),
       async (args) => {
         const path = normalize(args.path);
-        await fs.writeFile(path, await markdownToDocx(args.markdown, args.title));
-        return text(`Wrote ${path}`);
+        await writeAt(args.source, path, await markdownToDocx(args.markdown, args.title));
+        return text(`Wrote ${path}${where(args.source)}${shownNote(args.source)}`);
       },
     ),
   ];

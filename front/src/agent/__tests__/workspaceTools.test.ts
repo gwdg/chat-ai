@@ -447,3 +447,80 @@ describe("createWorkspaceTools", () => {
     expect(output).toContain("Attached /workspace-files/Team-files/logo.png");
   });
 });
+
+describe("workspace file access", () => {
+  const open = async (workspaceVfs = vfs(), primaryWorkspaceId?: string) =>
+    createWorkspaceTools(
+      "chat-1",
+      workspaceVfs as any,
+      primaryWorkspaceId,
+    );
+
+  it("is disabled and refuses a source when no workspace is attached", async () => {
+    mocks.conversationWorkspaces.mockResolvedValue([]);
+
+    const { files } = await open();
+
+    expect(files.enabled).toBe(false);
+    expect(files.describe()).toContain("not attached to a workspace");
+    await expect(files.read("Shared documents", "/a.txt")).rejects.toThrow(
+      /No workspace is attached to this chat/,
+    );
+    await expect(
+      files.write("Shared documents", "/a.txt", "hi"),
+    ).rejects.toThrow(/No workspace is attached to this chat/);
+  });
+
+  it("reads through a source named by label, resolving a mount-relative path", async () => {
+    const provider = providerWith({
+      read: vi.fn(async () => bytesOf("hello")),
+    });
+    mocks.createProvider.mockReturnValue(provider);
+
+    const { files } = await open();
+    const bytes = await files.read("Shared documents", "/shared/intro.txt");
+
+    expect(mocks.createProvider).toHaveBeenCalledWith(arcanaSource);
+    expect(provider.read).toHaveBeenCalledWith("/docs/intro.txt");
+    expect(new TextDecoder().decode(bytes)).toBe("hello");
+  });
+
+  it("writes into the source, creating the parent folder", async () => {
+    const provider = providerWith();
+    mocks.createProvider.mockReturnValue(provider);
+
+    const { files } = await open();
+    await files.write("Shared documents", "/shared/out/note.md", "hi");
+
+    expect(provider.mkdir).toHaveBeenCalledWith("/docs/out");
+    expect(provider.write).toHaveBeenCalledWith(
+      "/docs/out/note.md",
+      expect.anything(),
+      { overwrite: true },
+    );
+  });
+
+  it("refuses a write through a read-only mount", async () => {
+    mocks.mounts.mockResolvedValue([{ ...mount, readOnly: true }]);
+    const provider = providerWith();
+    mocks.createProvider.mockReturnValue(provider);
+
+    const { files } = await open();
+
+    await expect(
+      files.write("Shared documents", "/shared/note.md", "hi"),
+    ).rejects.toThrow(/read-only/);
+    expect(provider.write).not.toHaveBeenCalled();
+  });
+
+  it("names the available sources when the reference is unknown", async () => {
+    const { files } = await open();
+
+    await expect(files.read("Nowhere", "/a.txt")).rejects.toThrow(
+      /Source "Nowhere" not found\. Available sources: Browser storage \(src-browser\), Shared documents \(src-arcana\)\./,
+    );
+    expect(files.describe()).toBe(
+      "Team files: Browser storage (src-browser), Shared documents (src-arcana)",
+    );
+  });
+});

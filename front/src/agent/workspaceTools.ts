@@ -59,6 +59,22 @@ export type WorkspaceToolContext = {
   workspaces: WorkspaceToolSummary[];
 };
 
+/**
+ * File access for the tools of `tools.ts` (documents, media). Those tools work on the chat's
+ * virtual filesystem, which only shows the workspace root and the folders that are mounted into
+ * it. A `source` names any source of an attached workspace - mounted or not - so a document in a
+ * saia-fs, Arcana or agent source can be converted or an image written into it, exactly like the
+ * `workspace_*` tools address one.
+ */
+export type WorkspaceFileAccess = {
+  /** False without a workspace link, so a `source` argument cannot be resolved. */
+  readonly enabled: boolean;
+  /** The attached workspaces and their sources, for an error message. */
+  describe(): string;
+  read(source: string, path: string): Promise<Uint8Array>;
+  write(source: string, path: string, data: Uint8Array | string): Promise<void>;
+};
+
 type FileTarget = {
   /** `null` means the workspace root, which overlays the mounted folders. */
   source: WorkspaceSourceRow | null;
@@ -74,6 +90,22 @@ const availableOnThisDevice = (source: WorkspaceSourceRow) =>
   source.deviceId === getDeviceId();
 
 const agentLabel = (agent: any) => `${agent.name || agent.id} (${agent.id})`;
+
+/** The accessor a chat without a workspace link gets: a `source` argument cannot be resolved. */
+const noWorkspaceFiles: WorkspaceFileAccess = (() => {
+  const refuse = (reference: string): never => {
+    throw new Error(
+      `No workspace is attached to this chat, so the source "${reference}" cannot be used. Attach a workspace to reach files outside this chat's own storage.`,
+    );
+  };
+  return {
+    enabled: false,
+    describe: () =>
+      "none (this chat is not attached to a workspace)",
+    read: async (reference) => refuse(reference),
+    write: async (reference) => refuse(reference),
+  };
+})();
 
 async function loadWorkspaces(workspaceIds: string[]): Promise<WorkspaceBundle[]> {
   const [rows, sources, mounts, links] = await Promise.all([
@@ -101,13 +133,21 @@ export async function createWorkspaceTools(
   workspace: Vfs,
   primaryWorkspaceId?: string,
   { writable = true }: { writable?: boolean } = {},
-): Promise<{ tools: AgentTool<any>[]; context: WorkspaceToolContext }> {
+): Promise<{
+  tools: AgentTool<any>[];
+  context: WorkspaceToolContext;
+  files: WorkspaceFileAccess;
+}> {
   const workspaceIds = await getConversationWorkspaceIds(conversationId);
   const context: WorkspaceToolContext = { workspaceIds, workspaces: [] };
-  if (!workspaceIds.length) return { tools: [], context };
+  if (!workspaceIds.length) {
+    return { tools: [], context, files: noWorkspaceFiles };
+  }
 
   const bundles = await loadWorkspaces(workspaceIds);
-  if (!bundles.length) return { tools: [], context };
+  if (!bundles.length) {
+    return { tools: [], context, files: noWorkspaceFiles };
+  }
   const agents = getAgents();
   context.workspaces = bundles.map(({ workspace: row, sources, mounts, agentIds }) => ({
     id: row.id,
@@ -421,6 +461,54 @@ export async function createWorkspaceTools(
       if (directory !== "/") await provider.mkdir(directory).catch(() => {});
       await provider.write(target.path, streamOf(data), { overwrite: true });
     });
+  };
+
+  /** Every source of every attached workspace, as "label (id)". */
+  const allSources = () =>
+    bundles
+      .flatMap((bundle) =>
+        bundle.sources.map((source) => `${source.label} (${source.id})`),
+      )
+      .join(", ") || "none";
+
+  /**
+   * Resolve a `source` argument across the attached workspaces. The tools of `tools.ts` take one
+   * workspace-less `source`, so the first bundle that knows the id, label or mount path wins.
+   */
+  const externalTarget = (reference: string, pathValue: string) => {
+    const wanted = String(reference || "").trim();
+    if (!wanted) return null;
+    for (const bundle of bundles) {
+      const target = explicitTarget(bundle, wanted, pathValue);
+      if (target?.source) return { bundle, target };
+    }
+    return null;
+  };
+
+  const unknownSource = (reference: string) =>
+    new Error(
+      `Source "${reference}" not found. Available sources: ${allSources()}.`,
+    );
+
+  const fileAccess: WorkspaceFileAccess = {
+    enabled: bundles.length > 0,
+    describe: () =>
+      bundles
+        .map(
+          ({ workspace: row, sources }) =>
+            `${row.name}: ${sources.map((source) => `${source.label} (${source.id})`).join(", ") || "no sources"}`,
+        )
+        .join("; "),
+    read: async (reference, pathValue) => {
+      const found = externalTarget(reference, pathValue);
+      if (!found) throw unknownSource(reference);
+      return readTarget(found.bundle, found.target);
+    },
+    write: async (reference, pathValue, data) => {
+      const found = externalTarget(reference, pathValue);
+      if (!found) throw unknownSource(reference);
+      await writeTarget(found.bundle, found.target, data);
+    },
   };
 
   const listTool: AgentTool<any> = {
@@ -758,5 +846,6 @@ export async function createWorkspaceTools(
       fetchTool,
     ],
     context,
+    files: fileAccess,
   };
 }
