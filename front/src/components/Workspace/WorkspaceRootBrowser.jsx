@@ -70,6 +70,7 @@ export default function WorkspaceRootBrowser({
   onSelectAll,
   selectionActions,
   displayName,
+  entryBadge,
 }) {
   const { t } = useTranslation();
   const selected = new Set(selectedPaths);
@@ -77,9 +78,14 @@ export default function WorkspaceRootBrowser({
     const text = displayName?.(entry);
     return typeof text === "string" ? text : entry.name;
   };
+  const badgeFor = (entry) => {
+    const badge = entryBadge?.(entry);
+    return typeof badge === "string" ? badge : "";
+  };
   const selectableEntries = selectable
     ? entries.filter((entry) => !canSelectEntry || canSelectEntry(entry))
     : [];
+  const badges = new Map(entries.map((entry) => [entry.path, badgeFor(entry)]));
   const allSelected =
     selectableEntries.length > 0 &&
     selectableEntries.every((entry) => selected.has(entry.path));
@@ -121,7 +127,7 @@ export default function WorkspaceRootBrowser({
             </button>
           </span>
         ))}
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-1">
           {toolbarInfo}
           {selectable && onSelectAll && selectableEntries.length > 0 && (
             <label
@@ -143,8 +149,8 @@ export default function WorkspaceRootBrowser({
               type="button"
               onClick={onRefresh}
               className="btn btn-ghost btn-xs"
-              title={t("workspace.retry")}
-              aria-label={t("workspace.retry")}
+              title={t("workspace.refresh")}
+              aria-label={t("workspace.refresh")}
             >
               <Renew size={14} />
             </button>
@@ -313,6 +319,11 @@ export default function WorkspaceRootBrowser({
                   <span className="min-w-0 flex-1 truncate text-base-content">
                     {labelFor(entry)}
                   </span>
+                  {badges.get(entry.path) && (
+                    <span className="shrink-0 rounded-full border border-base-300 px-1.5 py-px text-[9px] font-medium tracking-wide text-base-content/55">
+                      {badges.get(entry.path)}
+                    </span>
+                  )}
                   {sourceLabel?.(entry) && (
                     <span className="shrink-0 text-[10px] font-semibold text-base-content/60">
                       {sourceLabel(entry)}

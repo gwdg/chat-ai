@@ -430,12 +430,28 @@ describe("ToolsContainer list layout", () => {
     expect(rows.at(-2).textContent).toContain("Arcana");
     expect(rows.at(-1).textContent).toContain("MCP Servers");
 
-    const children = [...rows.at(-2).firstElementChild.children];
-    expect(children.at(-1).tagName).toBe("BUTTON");
-    expect(
-      children.at(-1).querySelector("svg.lucide-chevron-right"),
-    ).toBeTruthy();
-    expect(children.at(-2).getAttribute("role")).toBe("switch");
+    const trail = rows.at(-2).firstElementChild.lastElementChild;
+    expect(trail.dataset.testid).toBe("tool-row-trail");
+    expect(trail.querySelector("svg.lucide-chevron-right")).toBeTruthy();
+    expect(trail.firstElementChild.getAttribute("role")).toBe("switch");
+  });
+
+  it("gives every row the same trailing slot, so the switches line up", () => {
+    render(<ToolsContainer localState={stateWith({})} setLocalState={vi.fn()} />);
+
+    const rows = [...document.querySelectorAll('[data-guide="tools-grid"] > li')];
+    const widthOf = (el) =>
+      (el.className.match(/(?:^|\s)(w-[\d.]+)(?:\s|$)/) ?? [])[1];
+    const chevronBox =
+      rows.at(-2).firstElementChild.lastElementChild.lastElementChild;
+    const chevronWidth = widthOf(chevronBox);
+    expect(chevronWidth).toBeTruthy();
+    for (const row of rows) {
+      const trail = row.firstElementChild.lastElementChild;
+      expect(trail.dataset.testid).toBe("tool-row-trail");
+      // A row without a page keeps an empty box exactly the chevron's size.
+      expect(widthOf(trail.lastElementChild)).toBe(chevronWidth);
+    }
   });
 
   it("explains a row's warning on hover", () => {

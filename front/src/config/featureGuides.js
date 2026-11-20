@@ -18,6 +18,7 @@ import {
   openTopicMenu,
   openWorkspaceMenu,
   openWorkspaceAgents,
+  openWorkspaceFiles,
   openUserSettings,
   searchHasQuery,
   selectSettingsTab,
@@ -30,21 +31,23 @@ export const featureGuides = {
   workspace_overview: {
     titleKey: "feature_guide.workspace_overview.title",
     prompt:
-      "Open a workspace from the sidebar. A workspace groups browser storage, local folders, Arcana collections and MCP file servers in one place. Add a source, click it to browse its files, and drag files between sources to copy or move them.",
+      "Open a workspace from the sidebar. A workspace is the home of the chats you run there: a prompt box starts a new chat, the list holds the ones already in it, and the right-hand panel shows what's new, the files the workspace stores, and the agent it runs.",
     keywords: ["workspace", "workspaces", "files", "browser storage", "local folder", "arcana files", "mcp files"],
     steps: [
       {
-        target: '[data-guide="workspace-add-source"]',
+        target: '[data-guide="meta-tab-files"]',
         textKey: "feature_guide.workspace_overview.step1",
         completeOnTargetClick: true,
       },
       {
-        target: '[data-guide="workspace-sources"]',
+        target: '[data-guide="workspace-add-source"]',
         textKey: "feature_guide.workspace_overview.step2",
+        prepare: openWorkspaceFiles,
       },
       {
         target: '[data-guide="workspace-files"]',
         textKey: "feature_guide.workspace_overview.step3",
+        prepare: openWorkspaceFiles,
       },
       {
         target: '[data-guide="workspace-agent"]',
@@ -96,23 +99,26 @@ export const featureGuides = {
         target: '[data-guide="workspace-add-source"]',
         textKey: "feature_guide.workspace_clone.step1",
         completeOnTargetClick: true,
+        prepare: openWorkspaceFiles,
       },
     ],
   },
   workspace_upload: {
     titleKey: "feature_guide.workspace_upload.title",
     prompt:
-      "Upload a file from your computer into a workspace. Open a workspace and use Upload file in the file browser; it writes into the folder you are viewing.",
+      "Upload a file from your computer into a workspace. Open a workspace and use Add file in the file browser; it writes into the folder you are viewing.",
     keywords: ["upload file", "workspace upload", "add file to workspace", "local file"],
     steps: [
       {
         target: '[data-guide="workspace-upload"]',
         textKey: "feature_guide.workspace_upload.step1",
         completeOnTargetClick: true,
+        prepare: openWorkspaceFiles,
       },
       {
         target: '[data-guide="workspace-files"]',
         textKey: "feature_guide.workspace_upload.step2",
+        prepare: openWorkspaceFiles,
       },
     ],
   },
@@ -121,21 +127,21 @@ export const featureGuides = {
     prompt:
       "Select several files or folders in a workspace browser to delete or move them at once. Tick the checkbox that appears next to each entry, or use Select all in the toolbar, then move or delete the whole selection from the bar above the list.",
     keywords: [
-      "select multiple files",
-      "bulk delete",
-      "bulk move",
-      "select all files",
-      "multiple selection workspace",
+      "delete workspace file",
+      "remove file from workspace",
+      "delete workspace folder",
+      "trash workspace file",
     ],
     steps: [
       {
-        target: '[data-guide="workspace-files"]',
+        target: '[data-guide="meta-tab-files"]',
         textKey: "feature_guide.workspace_multiselect.step1",
+        completeOnTargetClick: true,
       },
       {
-        target: '[data-guide="workspace-select-all"]',
+        target: '[data-guide="workspace-files"]',
         textKey: "feature_guide.workspace_multiselect.step2",
-        completeOnTargetClick: true,
+        prepare: openWorkspaceFiles,
       },
     ],
   },
@@ -146,12 +152,14 @@ export const featureGuides = {
     keywords: ["arcana filesystem", "arcana files", "browse arcanas", "arcana folder"],
     steps: [
       {
-        target: '[data-guide="workspace-sources"]',
+        target: '[data-guide="meta-tab-files"]',
         textKey: "feature_guide.arcana_filesystem.step1",
+        completeOnTargetClick: true,
       },
       {
         target: '[data-guide="workspace-files"]',
         textKey: "feature_guide.arcana_filesystem.step2",
+        prepare: openWorkspaceFiles,
       },
     ],
   },

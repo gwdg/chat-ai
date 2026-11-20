@@ -1,10 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import { Chat, ChevronLeft, ChevronRight, Folder, Time } from "@carbon/icons-react";
 
-import { useConversationList, useFolderList } from "../db";
+import {
+  setFolderColor,
+  setFolderIcon,
+  useConversationList,
+  useFolderList,
+} from "../db";
 import type { ConversationRow, FolderRow } from "../db/dbTypes";
 import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
 import { useUpdateUserData } from "../hooks/useUpdateUserData";
@@ -22,8 +27,9 @@ import Header from "../components/Header/Header";
 import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
 import TopicComposer from "../components/TopicMaster/TopicComposer";
 import { UNSORTED_TOPIC_ID } from "../components/Sidebar/TopicList";
-import { topicColor } from "../components/Sidebar/topicColors";
-import { isTopicIconId, topicIcon } from "../components/Sidebar/topicIcons";
+import IconColorPicker from "../components/Sidebar/IconColorPicker";
+import { topicColor, topicColorById } from "../components/Sidebar/topicColors";
+import { isTopicIconId, topicIconById } from "../components/Sidebar/topicIcons";
 
 function sortByRecent(first: ConversationRow, second: ConversationRow) {
   const firstTime = first.lastModified ?? first.createdAt ?? 0;
@@ -62,6 +68,46 @@ export default function TopicMasterPage() {
     return () => clearTimeout(timeout);
   }, [folders.length]);
 
+  const [iconPickerOpen, setIconPickerOpen] = useState(false);
+  const [iconDraft, setIconDraft] = useState("");
+  const [colorDraft, setColorDraft] = useState("");
+  const iconPickerRef = useRef<HTMLDivElement | null>(null);
+  const iconPickerSnapshotRef = useRef<{
+    icon: string;
+    color: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!topic) return;
+    setIconDraft(topic.icon ?? topicIconById(topic.icon).id);
+    setColorDraft(topic.color ?? topicColor(topic).id);
+  }, [topic?.id, topic?.icon, topic?.color]);
+
+  useEffect(() => {
+    if (!iconPickerOpen) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (
+        iconPickerRef.current &&
+        !iconPickerRef.current.contains(event.target as Node)
+      ) {
+        setIconPickerOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIconPickerOpen(false);
+    };
+    const id = setTimeout(
+      () => document.addEventListener("mousedown", onPointerDown),
+      0,
+    );
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      clearTimeout(id);
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [iconPickerOpen]);
+
   const topicConversations = useMemo(() => {
     const knownTopicIds = new Set(folders.map((folder) => folder.id));
     const matching = isUnsorted
@@ -94,10 +140,48 @@ export default function TopicMasterPage() {
     : topic?.name ?? t("topic_view.loading");
   const topicMissing = !isUnsorted && foldersSettled && !topic;
 
-  const emoji = topic?.icon && !isTopicIconId(topic.icon) ? topic.icon : null;
-  const TopicIcon = topic ? topicIcon(topic) : Folder;
+  const selectedIconId =
+    iconDraft || topic?.icon || topicIconById(topic?.icon).id;
+  const selectedColorId =
+    colorDraft || topic?.color || (topic ? topicColor(topic).id : "");
+  const emoji =
+    selectedIconId && !isTopicIconId(selectedIconId) ? selectedIconId : null;
+  const TopicIcon = topicIconById(selectedIconId).Icon;
   const unsortedHex = isDark ? "#94A3B8" : "#64748B";
-  const colorHex = topic ? topicColor(topic).hex : isUnsorted ? unsortedHex : undefined;
+  const colorHex = isUnsorted
+    ? unsortedHex
+    : topic
+      ? topicColorById(selectedColorId).hex
+      : undefined;
+
+  const chooseIcon = (icon: string) => {
+    setIconDraft(icon);
+    if (folderId) void setFolderIcon(folderId, icon);
+  };
+
+  const chooseColor = (color: string) => {
+    setColorDraft(color);
+    if (folderId) void setFolderColor(folderId, color);
+  };
+
+  const toggleIconPicker = () => {
+    if (!iconPickerOpen && topic) {
+      iconPickerSnapshotRef.current = {
+        icon: selectedIconId,
+        color: selectedColorId,
+      };
+    }
+    setIconPickerOpen((open) => !open);
+  };
+
+  const cancelIconPicker = () => {
+    const snapshot = iconPickerSnapshotRef.current;
+    if (snapshot) {
+      if (snapshot.icon !== selectedIconId) chooseIcon(snapshot.icon);
+      if (snapshot.color !== selectedColorId) chooseColor(snapshot.color);
+    }
+    setIconPickerOpen(false);
+  };
 
   return (
     <div className="grid h-dvh grid-rows-[auto_1fr]">
@@ -154,27 +238,64 @@ export default function TopicMasterPage() {
                   >
                     <ChevronLeft size={18} />
                   </button>
-                  <span
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-base-200"
-                    style={colorHex ? { color: colorHex } : undefined}
-                  >
-                    {emoji ? (
-                      <span aria-hidden="true" className="text-lg leading-none">
-                        {emoji}
-                      </span>
-                    ) : isUnsorted ? (
-                      <span
-                        aria-hidden="true"
-                        className="h-2.5 w-2.5 rounded-full"
-                        style={{ backgroundColor: unsortedHex }}
-                      />
-                    ) : (
-                      <TopicIcon
-                        size={20}
-                        className={colorHex ? undefined : "text-base-content/60"}
-                      />
-                    )}
-                  </span>
+                  {isUnsorted || !topic ? (
+                    <span
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-base-200"
+                      style={colorHex ? { color: colorHex } : undefined}
+                    >
+                      {isUnsorted ? (
+                        <span
+                          aria-hidden="true"
+                          className="h-2.5 w-2.5 rounded-full"
+                          style={{ backgroundColor: unsortedHex }}
+                        />
+                      ) : (
+                        <Folder size={20} className="text-base-content/60" />
+                      )}
+                    </span>
+                  ) : (
+                    <div ref={iconPickerRef} className="relative shrink-0">
+                      <button
+                        type="button"
+                        data-testid="topic-header-icon"
+                        onClick={toggleIconPicker}
+                        title={t("folders.choose_icon")}
+                        aria-label={t("folders.choose_icon")}
+                        aria-expanded={iconPickerOpen}
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-base-200"
+                        style={colorHex ? { color: colorHex } : undefined}
+                      >
+                        {emoji ? (
+                          <span
+                            aria-hidden="true"
+                            className="text-lg leading-none"
+                          >
+                            {emoji}
+                          </span>
+                        ) : (
+                          <TopicIcon
+                            size={20}
+                            className={
+                              colorHex ? undefined : "text-base-content/60"
+                            }
+                          />
+                        )}
+                      </button>
+                      {iconPickerOpen && (
+                        <div className="absolute left-0 top-full z-30 mt-2 w-80 rounded-xl border border-base-300 bg-base-100 p-2 shadow-lg">
+                          <IconColorPicker
+                            icon={selectedIconId}
+                            color={selectedColorId}
+                            onIconChange={chooseIcon}
+                            onColorChange={chooseColor}
+                            onCancel={cancelIconPicker}
+                            onDone={() => setIconPickerOpen(false)}
+                            testIdPrefix="topic-header"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <div className="min-w-0 flex-1">
                     <h1 className="truncate text-base font-semibold text-base-content">
                       {topicName}

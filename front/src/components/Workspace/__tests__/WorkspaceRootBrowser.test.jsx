@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import WorkspaceRootBrowser from "../WorkspaceRootBrowser";
@@ -135,5 +135,20 @@ describe("WorkspaceRootBrowser display names", () => {
     fireEvent.click(label);
 
     expect(onOpen).toHaveBeenCalledWith(entries[0]);
+  });
+});
+
+describe("WorkspaceRootBrowser entry badges", () => {
+  it("renders a pill only when entryBadge returns a label", () => {
+    renderBrowser({
+      entryBadge: (entry) =>
+        entry.path === "/a.txt" ? "device" : undefined,
+    });
+
+    const badgedRow = screen.getByText("a.txt").closest(".group");
+    expect(within(badgedRow).getByText("device")).toBeInTheDocument();
+
+    const plainRow = screen.getByText("b.txt").closest(".group");
+    expect(within(plainRow).queryByText("device")).toBeNull();
   });
 });

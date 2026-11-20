@@ -397,16 +397,9 @@ export default function Conversation({
               : "scale-100 opacity-100 flex-1 min-h-0"
           }`}
       >
-        {/* Hallucination Warning */}
-        {!(
-          localState?.isMetaChat === true ||
-          localState?.id === "meta-chat" ||
-          localState?.persona
-        ) && (hasBrandChatDisclaimer ? <BrandChatWarning /> : <HallucinationWarning />)}
-
-        {/* Close chat - normal flow, below every banner */}
+        {/* Close chat - floats over the top of the chat, so no band sits on top of it */}
         {!hideCloseButton && localState?.id && (
-          <div className="flex justify-end px-2 pt-1">
+          <div className="absolute right-2 top-2 z-20">
             <CloseChatButton
               localState={localState}
               setLocalState={setLocalState}
@@ -427,6 +420,12 @@ export default function Conversation({
           <div
             className="p-1.5 flex flex-col gap-1.5 h-full md:max-w-[85vw] xl:max-w-[1300px] transition-[max-width] duration-300 ease-in-out motion-reduce:transition-none mx-auto"
           >
+            {/* The chat disclaimer scrolls with the messages instead of covering
+                the top of the conversation. */}
+            {!(
+              localState?.isMetaChat === true ||
+              localState?.id === "meta-chat"
+            ) && (hasBrandChatDisclaimer ? <BrandChatWarning /> : <HallucinationWarning />)}
             {localState.messages.slice(0, -1)?.map((message, message_index) => (
               <div
                 key={message_index}

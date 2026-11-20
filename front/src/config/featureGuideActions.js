@@ -138,7 +138,12 @@ export function openChatWorkspaces() {
 }
 
 export function openWorkspaceAgents() {
-  const tab = find('[data-guide="workspace-tab-agents"]');
+  const tab = find('[data-guide="meta-tab-agents"]');
+  if (tab && tab.getAttribute("aria-selected") !== "true") tab.click();
+}
+
+export function openWorkspaceFiles() {
+  const tab = find('[data-guide="meta-tab-files"]');
   if (tab && tab.getAttribute("aria-selected") !== "true") tab.click();
 }
 

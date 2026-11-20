@@ -1,67 +1,32 @@
 import { useCallback, useEffect, useMemo } from "react";
-import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 
 import { useAgents } from "../../agents/agentStore";
 import {
   seedWorkspaceAgentSessions,
   useChatWorkspaces,
-  useWorkspaceList,
   useWorkspaceAgentLinks,
   useWorkspaceAgentSessionLinks,
   useWorkspaceChatLinks,
 } from "../../db/workspaceDb";
 import { workspaceSessionIds } from "../../agents/workspaceAgentSessions";
-import MetaChangesPanel from "../Meta/MetaChangesPanel";
-import WorkspaceAgentPanel from "./WorkspaceAgentPanel";
-import WorkspaceFilesPanel from "./WorkspaceFilesPanel";
-import WorkspaceSessionsPanel from "./WorkspaceSessionsPanel";
+import WorkspaceRightPanel from "./WorkspaceRightPanel";
 import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
-
-// The Agents tab picks how each of this chat's workspaces runs its agent. A chat
-// can be attached to several workspaces, so each gets its own selector, headed by
-// the workspace name only when there is more than one to tell apart.
-function ChatAgentsPanel({ workspaces }) {
-  if (!workspaces.length) return null;
-  return (
-    <div data-guide="chat-agents-tab" className="flex flex-col gap-3">
-      {workspaces.map((workspace) => (
-        <section key={workspace.id} className="min-w-0">
-          {workspaces.length > 1 && (
-            <h3 className="mb-1 truncate px-1 text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
-              {workspace.name}
-            </h3>
-          )}
-          <WorkspaceAgentPanel workspaceId={workspace.id} framed={false} />
-        </section>
-      ))}
-    </div>
-  );
-}
 
 // The right-hand panel of an attached chat: a What's new report scoped to the chat's
 // workspaces. Connected agents are listed in the sidebar, so the panel does not repeat them.
 export default function ChatAgentSidebar({ conversationId }) {
-  const { t } = useTranslation();
   const userSettings = useSelector(selectUserSettings);
   const agents = useAgents();
   const chatLinks = useChatWorkspaces(conversationId);
   const agentLinks = useWorkspaceAgentLinks();
   const sessionLinks = useWorkspaceAgentSessionLinks();
   const workspaceChatLinks = useWorkspaceChatLinks();
-  const workspaceList = useWorkspaceList();
 
   const workspaceIds = useMemo(
     () => [...new Set((chatLinks || []).map((link) => link.workspaceId))],
     [chatLinks],
   );
-
-  const chatWorkspaces = useMemo(() => {
-    const byId = new Map((workspaceList || []).map((row) => [row.id, row]));
-    return workspaceIds
-      .map((id) => byId.get(id))
-      .filter((row) => Boolean(row));
-  }, [workspaceIds, workspaceList]);
 
   const connectedAgents = useMemo(() => {
     const ids = new Set(
@@ -131,43 +96,14 @@ export default function ChatAgentSidebar({ conversationId }) {
     };
   }, [connectedAgents, sessionIdsFor, workspaceChatLinks, workspaceIds]);
 
-  // The panel's other tabs are the workspace itself: its files, the chats attached
-  // to it, and the agent each one runs. They stay inside the panel so the chat page
-  // keeps one right-hand column.
-  const tabs = useMemo(
-    () => [
-      {
-        id: "workspace",
-        label: t("meta_chat.files_tab"),
-        content: <WorkspaceFilesPanel workspaceIds={workspaceIds} />,
-      },
-      {
-        id: "sessions",
-        label: t("meta_chat.sessions_tab"),
-        content: (
-          <WorkspaceSessionsPanel
-            workspaceIds={workspaceIds}
-            activeConversationId={conversationId}
-          />
-        ),
-      },
-      {
-        id: "agents",
-        label: t("meta_chat.agents_tab"),
-        content: <ChatAgentsPanel workspaces={chatWorkspaces} />,
-      },
-    ],
-    [chatWorkspaces, conversationId, t, workspaceIds],
-  );
-
   if (!workspaceIds.length) return null;
 
   return (
-    <MetaChangesPanel
+    <WorkspaceRightPanel
+      workspaceIds={workspaceIds}
       userSettings={userSettings}
       scope={whatsNewScope}
       scopeKey={workspaceIds.join(",")}
-      tabs={tabs}
     />
   );
 }

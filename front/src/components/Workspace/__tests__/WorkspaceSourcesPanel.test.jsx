@@ -14,7 +14,6 @@ const mocks = vi.hoisted(() => ({
   conversations: [],
   onOpenTarget: vi.fn(),
   onAddSource: vi.fn(),
-  onAddDeviceFolder: vi.fn(),
 }));
 
 vi.mock("../../../workspace/useWorkspaceProviders", () => ({
@@ -112,7 +111,6 @@ const renderPanel = (props = {}) =>
       sources={mocks.sources}
       onOpenTarget={mocks.onOpenTarget}
       onAddSource={mocks.onAddSource}
-      onAddDeviceFolder={mocks.onAddDeviceFolder}
       {...props}
     />,
   );
@@ -129,7 +127,6 @@ beforeEach(() => {
   mocks.conversations = [{ id: "conv-uuid-1", title: "Planning chat" }];
   mocks.onOpenTarget.mockReset();
   mocks.onAddSource.mockReset();
-  mocks.onAddDeviceFolder.mockReset();
   localProvider.quota.mockReset();
   localProvider.quota.mockResolvedValue({
     usage: 512 * 1024,
@@ -156,9 +153,9 @@ describe("WorkspaceSourcesPanel", () => {
   it("renders the three drives with subtitles and opens the add-source modal", async () => {
     renderPanel();
 
-    expect(screen.getByText("Sources")).toBeInTheDocument();
+    expect(screen.getByText("Storage locations")).toBeInTheDocument();
     expect(screen.getByText("Your Device")).toBeInTheDocument();
-    expect(screen.getByText("Chats")).toBeInTheDocument();
+    expect(screen.getByText("Browser")).toBeInTheDocument();
     expect(screen.getByText("Arcanas")).toBeInTheDocument();
     expect(within(drive("workspace-source-device")).getByText("1 folder")).toBeInTheDocument();
     expect(within(drive("workspace-source-chats")).getByText("1 chat")).toBeInTheDocument();
@@ -235,10 +232,10 @@ describe("WorkspaceSourcesPanel", () => {
 
     const badge = within(
       drive("workspace-source-arcanas"),
-    ).getByRole("img", { name: /arcana filesystem is not working/i });
+    ).getByRole("img", { name: /arcana filesystem could not be opened/i });
     expect(badge).toHaveAttribute(
       "title",
-      "Arcana filesystem is not working right now. Arcana Tools is unreachable",
+      "Arcana filesystem could not be opened: Arcana Tools is unreachable",
     );
     expect(badge).toHaveAttribute(
       "data-guide",
@@ -252,6 +249,48 @@ describe("WorkspaceSourcesPanel", () => {
     ).toBeNull();
   });
 
+  it("turns a bare network failure into a plain explanation", () => {
+    mocks.sources = [
+      localSource,
+      browserSource,
+      { ...arcanaSource, status: "error", error: "Failed to fetch" },
+    ];
+    renderPanel();
+
+    const badge = within(
+      drive("workspace-source-arcanas"),
+    ).getByRole("img", { name: /could not be reached/i });
+    expect(badge).toHaveAttribute(
+      "title",
+      "Arcana filesystem could not be reached — the service is not answering right now.",
+    );
+    expect(badge.getAttribute("title")).not.toMatch(/fetch/i);
+  });
+
+  it("explains the error in German too", async () => {
+    const { default: i18n } = await import("../../../i18n");
+    await act(async () => {
+      await i18n.changeLanguage("de");
+    });
+    mocks.sources = [
+      localSource,
+      browserSource,
+      { ...arcanaSource, status: "error", error: "Failed to fetch" },
+    ];
+    renderPanel();
+
+    const badge = within(
+      drive("workspace-source-arcanas"),
+    ).getByRole("img", { name: /nicht erreichbar/i });
+    expect(badge).toHaveAttribute(
+      "title",
+      "„Arcana filesystem“ ist nicht erreichbar — der Dienst antwortet gerade nicht.",
+    );
+    await act(async () => {
+      await i18n.changeLanguage("en");
+    });
+  });
+
   it("treats a source that lost its permission as broken too", () => {
     mocks.sources = [
       { ...localSource, status: "needs-permission", error: "Permission denied" },
@@ -261,9 +300,44 @@ describe("WorkspaceSourcesPanel", () => {
     renderPanel();
 
     const badge = within(drive("workspace-source-device")).getByRole("img", {
-      name: /project is not working/i,
+      name: /project has lost access permission/i,
     });
     expect(badge.getAttribute("title")).toContain("Permission denied");
+  });
+
+  it("explains an error on hover and pins it on click without opening the drive", () => {
+    mocks.sources = [
+      localSource,
+      browserSource,
+      {
+        ...arcanaSource,
+        status: "error",
+        error: "Arcana Tools is unreachable",
+      },
+    ];
+    renderPanel();
+
+    const badge = within(
+      drive("workspace-source-arcanas"),
+    ).getByRole("img", { name: /could not be opened/i });
+    const trigger = badge.closest(".cursor-help");
+    expect(trigger).not.toBeNull();
+
+    fireEvent.mouseEnter(trigger);
+    expect(screen.getByRole("tooltip")).toHaveTextContent(
+      "Arcana filesystem could not be opened: Arcana Tools is unreachable",
+    );
+    fireEvent.mouseLeave(trigger);
+    expect(screen.queryByRole("tooltip")).toBeNull();
+
+    fireEvent.click(badge);
+    expect(screen.getByRole("tooltip")).toHaveTextContent(
+      "Arcana Tools is unreachable",
+    );
+    expect(mocks.onOpenTarget).not.toHaveBeenCalled();
+
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole("tooltip")).toBeNull();
   });
 
   it("marks Your Device active when one of its sources is open", async () => {
@@ -329,15 +403,8 @@ describe("WorkspaceSourcesPanel", () => {
     await act(async () => {});
   });
 
-  it("fires the add-folder row", async () => {
+  it("offers no add-folder row under the drives", async () => {
     renderPanel();
-    fireEvent.click(drive("workspace-sources-add-device-folder"));
-    expect(mocks.onAddDeviceFolder).toHaveBeenCalledTimes(1);
-    await act(async () => {});
-  });
-
-  it("omits the add-folder row without a handler", async () => {
-    renderPanel({ onAddDeviceFolder: undefined });
     expect(drive("workspace-sources-add-device-folder")).toBeNull();
     await act(async () => {});
   });

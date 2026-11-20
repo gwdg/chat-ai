@@ -11,6 +11,8 @@ import {
 
 import { useConversationList } from "../../db";
 import type { WorkspaceSourceRow } from "../../db/dbTypes";
+import Tooltip from "../Others/Tooltip";
+import { sourcesProblem } from "../../workspace/sourceStatus";
 import type { QuotaInfo } from "../../workspace/providers/types";
 import { formatBytes } from "../../utils/formatBytes";
 import {
@@ -66,15 +68,23 @@ function DriveCard({
             {title}
           </span>
           {broken && (
-            <span
-              role="img"
-              aria-label={broken}
-              title={broken}
-              data-guide="workspace-source-broken"
+            <Tooltip
+              text={broken}
+              placement="right"
+              interactive
+              width="max-w-[17rem]"
               className="shrink-0"
             >
-              <AlertCircle size={14} className="text-error" />
-            </span>
+              <span
+                role="img"
+                aria-label={broken}
+                title={broken}
+                data-guide="workspace-source-broken"
+                className="flex items-center"
+              >
+                <AlertCircle size={14} className="text-error" />
+              </span>
+            </Tooltip>
           )}
           <ChevronRight size={14} className="shrink-0 text-base-content/35" />
         </div>
@@ -92,14 +102,12 @@ export default function WorkspaceSourcesPanel({
   activeTarget = null,
   onOpenTarget,
   onAddSource,
-  onAddDeviceFolder,
   className = "",
 }: {
   sources: WorkspaceSourceRow[];
   activeTarget?: SourceTarget | null;
   onOpenTarget: (target: SourceTarget) => void;
   onAddSource: () => void;
-  onAddDeviceFolder?: () => void;
   className?: string;
 }) {
   const { t } = useTranslation();
@@ -130,16 +138,7 @@ export default function WorkspaceSourcesPanel({
 
   // A source that failed to connect (or lost its permission) cannot be browsed
   // right now, so its drive card carries a red exclamation with the reason.
-  const brokenReason = (rows: WorkspaceSourceRow[]) => {
-    const bad = rows.find(
-      (row) => row.status === "error" || row.status === "needs-permission",
-    );
-    if (!bad) return undefined;
-    const base = t("workspace.source_browser.source_broken", {
-      name: bad.label,
-    });
-    return bad.error ? `${base} ${bad.error}` : base;
-  };
+  const brokenReason = (rows: WorkspaceSourceRow[]) => sourcesProblem(rows, t);
   const chatSources = sources.filter((source) => source.kind === "chat");
 
   return (
@@ -147,7 +146,7 @@ export default function WorkspaceSourcesPanel({
       data-guide="workspace-sources"
       className={`min-w-0 rounded-xl border border-base-300 bg-base-100 p-1.5 ${className}`}
     >
-      <div className="flex items-center justify-between px-1 py-0.5">
+      <div className="flex h-6 items-center justify-between px-1">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
           {t("workspace.source_browser.title")}
         </span>
@@ -219,19 +218,6 @@ export default function WorkspaceSourcesPanel({
           />
         )}
 
-        {onAddDeviceFolder && (
-          <button
-            type="button"
-            data-guide="workspace-sources-add-device-folder"
-            onClick={onAddDeviceFolder}
-            className="flex w-full min-w-0 items-center gap-2 rounded-lg border border-dashed border-base-300 px-2 py-1.5 text-left text-[11px] font-medium text-base-content/70 transition hover:border-accent/40 hover:bg-base-200/60"
-          >
-            <Plus size={14} className="shrink-0" />
-            <span className="min-w-0 truncate">
-              {t("workspace.source_browser.add_device_folder")}
-            </span>
-          </button>
-        )}
       </div>
     </section>
   );

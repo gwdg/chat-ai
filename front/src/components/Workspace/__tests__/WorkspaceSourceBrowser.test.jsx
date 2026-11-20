@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   chatStorageDir: vi.fn(),
   onTargetChange: vi.fn(),
   onAddToWorkspace: vi.fn(),
+  onUnmountSelection: vi.fn(),
   onRemoveSource: vi.fn(),
   onToggleSourceReadOnly: vi.fn(),
   onAddDeviceFolder: vi.fn(),
@@ -115,6 +116,7 @@ const renderBrowser = (props = {}) =>
       target={null}
       onTargetChange={mocks.onTargetChange}
       onAddToWorkspace={mocks.onAddToWorkspace}
+      onUnmountSelection={mocks.onUnmountSelection}
       onRemoveSource={mocks.onRemoveSource}
       onToggleSourceReadOnly={mocks.onToggleSourceReadOnly}
       onAddDeviceFolder={mocks.onAddDeviceFolder}
@@ -124,6 +126,7 @@ const renderBrowser = (props = {}) =>
 
 const guide = (name) => document.querySelector(`[data-guide="${name}"]`);
 const addButton = () => guide("workspace-add-to-workspace");
+const unmountButton = () => guide("workspace-unmount");
 
 beforeEach(() => {
   mocks.sources = [localSource, arcanaSource];
@@ -137,6 +140,8 @@ beforeEach(() => {
   mocks.onTargetChange.mockReset();
   mocks.onAddToWorkspace.mockReset();
   mocks.onAddToWorkspace.mockResolvedValue(undefined);
+  mocks.onUnmountSelection.mockReset();
+  mocks.onUnmountSelection.mockResolvedValue(undefined);
   mocks.onRemoveSource.mockReset();
   mocks.onToggleSourceReadOnly.mockReset();
   mocks.onAddDeviceFolder.mockReset();
@@ -200,7 +205,7 @@ describe("WorkspaceSourceBrowser", () => {
     expect(addButton()).toBeInTheDocument();
     expect(addButton()).toBeDisabled();
     expect(addButton()).toHaveTextContent("Add to Workspace");
-    expect(screen.getByText("Sources")).toBeInTheDocument();
+    expect(screen.getByText("Storage locations")).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Back" }),
     ).not.toBeInTheDocument();
@@ -213,7 +218,8 @@ describe("WorkspaceSourceBrowser", () => {
 
     const project = await screen.findByText("Project");
     const row = project.closest(".group");
-    expect(within(row).getByText("Local folder")).toBeInTheDocument();
+    expect(row).toHaveClass(/gap-1\.5/);
+    expect(within(row).getByText("device")).toBeInTheDocument();
     await waitFor(() =>
       expect(row.querySelector("[data-quota-bar]")).toHaveStyle({
         width: "25%",
@@ -231,11 +237,78 @@ describe("WorkspaceSourceBrowser", () => {
     expect(localProvider.list).not.toHaveBeenCalled();
   });
 
+  it("marks a mounted folder that cannot be opened with a red exclamation", async () => {
+    mocks.sources = [
+      { ...localSource, status: "error", error: "Folder handle is missing" },
+      arcanaSource,
+    ];
+    renderBrowser({ target: { drive: "device" } });
+
+    const row = (await screen.findByText("Project")).closest(".group");
+    const badge = within(row).getByRole("img", {
+      name: /project could not be opened/i,
+    });
+    expect(badge).toHaveAttribute(
+      "title",
+      "Project could not be opened: Folder handle is missing",
+    );
+    expect(within(row).getByText("device")).toBeInTheDocument();
+
+    fireEvent.click(badge);
+    expect(screen.getByRole("tooltip")).toHaveTextContent(
+      "Project could not be opened: Folder handle is missing",
+    );
+    expect(localProvider.list).not.toHaveBeenCalled();
+  });
+
+  it("names the lock and the Unmount button in German", async () => {
+    const { default: i18n } = await import("../../../i18n");
+    await act(async () => {
+      await i18n.changeLanguage("de");
+    });
+    mocks.sources = [{ ...localSource, readOnly: true }, arcanaSource];
+    renderBrowser({ target: { drive: "device" } });
+
+    const row = (await screen.findByText("Project")).closest(".group");
+    expect(within(row).getByLabelText("Nur lesen")).toBeInTheDocument();
+    expect(unmountButton()).toHaveTextContent("Aushängen");
+    await act(async () => {
+      await i18n.changeLanguage("en");
+    });
+  });
+
+  it("shows the read-only lock on a mounted folder card", async () => {
+    mocks.sources = [{ ...localSource, readOnly: true }, arcanaSource];
+    renderBrowser({ target: { drive: "device" } });
+
+    const row = (await screen.findByText("Project")).closest(".group");
+    const lock = within(row).getByLabelText("Read-only");
+    expect(lock).toHaveAttribute("data-guide", "workspace-source-lock");
+    expect(within(row).getByText("device")).toBeInTheDocument();
+  });
+
   it("keeps the toolbar Add button disabled until a row is selected", async () => {
     renderBrowser({ target: { drive: "device" } });
 
     await screen.findByText("Project");
     expect(addButton()).toBeDisabled();
+  });
+
+  it("locks the rows inside a read-only source", async () => {
+    mocks.sources = [{ ...localSource, readOnly: true }, arcanaSource];
+    mocks.providers = new Map([
+      ["local-1", localProvider],
+      ["arcana-1", arcanaProvider],
+    ]);
+    renderBrowser({ target: { drive: "device" } });
+
+    fireEvent.click(await screen.findByText("Project"));
+    await screen.findByText("docs");
+
+    const docsRow = screen.getByText("docs").closest(".group");
+    expect(within(docsRow).getByLabelText("Read-only")).toBeInTheDocument();
+    const notesRow = screen.getByText("notes.txt").closest(".group");
+    expect(within(notesRow).getByLabelText("Read-only")).toBeInTheDocument();
   });
 
   it("drills into a source and adds the selected folder to the workspace", async () => {
@@ -304,11 +377,11 @@ describe("WorkspaceSourceBrowser", () => {
     expect(addButton()).toBeDisabled();
     expect(screen.getByLabelText("Planning chat")).not.toBeChecked();
 
-    fireEvent.click(screen.getByLabelText("Select all"));
+    fireEvent.click(screen.getByText("Second chat"));
 
-    expect(screen.getByLabelText("Planning chat")).toBeChecked();
+    expect(screen.getByLabelText("Planning chat")).not.toBeChecked();
     expect(screen.getByLabelText("Second chat")).toBeChecked();
-    expect(addButton()).toHaveTextContent("Add to Workspace (2)");
+    expect(addButton()).toHaveTextContent("Add to Workspace (1)");
   });
 
   it("does not open a chat as a folder when its row is clicked", async () => {
@@ -323,15 +396,17 @@ describe("WorkspaceSourceBrowser", () => {
     expect(mocks.onTargetChange).not.toHaveBeenCalled();
   });
 
-  it("selects every visible row with Select all", async () => {
+  it("keeps the select-all circle out of the toolbar", async () => {
+    mocks.conversations = [
+      { id: "conv-uuid-1", title: "Planning chat" },
+      { id: "conv-uuid-2", title: "Second chat" },
+    ];
     renderBrowser({ target: { drive: "chats" } });
 
     await screen.findByText("Planning chat");
-    fireEvent.click(screen.getByLabelText("Select all"));
-
-    expect(screen.getByLabelText("Planning chat")).toBeChecked();
-    expect(addButton()).toBeEnabled();
-    expect(addButton()).toHaveTextContent("Add to Workspace (1)");
+    expect(screen.queryByLabelText("Select all")).not.toBeInTheDocument();
+    expect(addButton()).toBeDisabled();
+    await act(async () => {});
   });
 
   it("marks a row that is already in the workspace", async () => {
@@ -344,11 +419,14 @@ describe("WorkspaceSourceBrowser", () => {
     expect(within(row).getByText("In workspace")).toBeInTheDocument();
 
     const checkbox = screen.getByLabelText("Planning chat");
-    expect(checkbox).toBeDisabled();
-    expect(checkbox).toHaveAttribute("title", "In workspace");
+    expect(checkbox).toBeEnabled();
+    expect(checkbox).toHaveAttribute(
+      "title",
+      "Remove this folder from Chat AI entirely — every workspace stops using it and it leaves this list. You can add it again at any time.",
+    );
   });
 
-  it("does not select or add a row that is already in the workspace", async () => {
+  it("selecting a mounted row arms Unmount, not Add", async () => {
     renderBrowser({
       target: { drive: "chats" },
       isInWorkspace: () => true,
@@ -356,12 +434,66 @@ describe("WorkspaceSourceBrowser", () => {
 
     fireEvent.click(await screen.findByText("Planning chat"));
 
-    expect(screen.getByLabelText("Planning chat")).not.toBeChecked();
+    expect(screen.getByLabelText("Planning chat")).toBeChecked();
     expect(addButton()).toBeDisabled();
+    expect(unmountButton()).toBeEnabled();
+    expect(unmountButton()).toHaveTextContent("Unmount (1)");
+    expect(unmountButton()).toHaveClass("btn-secondary");
+    expect(unmountButton()).not.toHaveClass("text-error");
     expect(mocks.onAddToWorkspace).not.toHaveBeenCalled();
+
+    fireEvent.click(unmountButton());
+    await waitFor(() =>
+      expect(mocks.onUnmountSelection).toHaveBeenCalledWith([
+        expect.objectContaining({
+          sourceId: "chat:conv-uuid-1",
+          sourceKind: "chat",
+          conversationId: "conv-uuid-1",
+        }),
+      ]),
+    );
+    await waitFor(() =>
+      expect(screen.getByLabelText("Planning chat")).not.toBeChecked(),
+    );
   });
 
-  it("selects only rows that are not already in the workspace with Select all", async () => {
+  it("arms Unmount for a folder mounted by another workspace", async () => {
+    renderBrowser({
+      target: { drive: "device" },
+      isInWorkspace: () => false,
+      isMounted: () => true,
+    });
+
+    fireEvent.click(await screen.findByLabelText("Project"));
+
+    // Still addable to this workspace, but the folder is mounted elsewhere.
+    expect(addButton()).toHaveTextContent("Add to Workspace (1)");
+    expect(unmountButton()).toBeEnabled();
+    expect(unmountButton()).toHaveTextContent("Unmount (1)");
+
+    fireEvent.click(unmountButton());
+    await waitFor(() =>
+      expect(mocks.onUnmountSelection).toHaveBeenCalledWith([
+        expect.objectContaining({ sourceId: "local-1", path: "/" }),
+      ]),
+    );
+  });
+
+  it("keeps Unmount quiet when nothing mounted is selected", async () => {
+    renderBrowser({
+      target: { drive: "chats" },
+      isInWorkspace: () => false,
+    });
+
+    fireEvent.click(await screen.findByText("Planning chat"));
+
+    expect(addButton()).toHaveTextContent("Add to Workspace (1)");
+    expect(unmountButton()).toBeDisabled();
+    expect(unmountButton()).toHaveTextContent("Unmount");
+    expect(mocks.onUnmountSelection).not.toHaveBeenCalled();
+  });
+
+  it("selects only rows that are not already in the workspace", async () => {
     mocks.conversations = [
       { id: "conv-uuid-1", title: "Planning chat" },
       { id: "conv-uuid-2", title: "Second chat" },
@@ -371,8 +503,7 @@ describe("WorkspaceSourceBrowser", () => {
       isInWorkspace: (selection) => selection.conversationId === "conv-uuid-1",
     });
 
-    await screen.findByText("Planning chat");
-    fireEvent.click(screen.getByLabelText("Select all"));
+    fireEvent.click(await screen.findByText("Second chat"));
 
     expect(screen.getByLabelText("Planning chat")).not.toBeChecked();
     expect(screen.getByLabelText("Second chat")).toBeChecked();
@@ -409,7 +540,7 @@ describe("WorkspaceSourceBrowser", () => {
 
     const row = (await screen.findByText("Project")).closest(".group");
     expect(within(row).getByText("In workspace")).toBeInTheDocument();
-    expect(screen.getByLabelText("Project")).toBeDisabled();
+    expect(screen.getByLabelText("Project")).toBeEnabled();
   });
 
   it("marks a file inside a source that is already in the workspace", async () => {
@@ -420,7 +551,7 @@ describe("WorkspaceSourceBrowser", () => {
 
     const row = (await screen.findByText("notes.txt")).closest(".group");
     expect(within(row).getByText("In workspace")).toBeInTheDocument();
-    expect(screen.getByLabelText("notes.txt")).toBeDisabled();
+    expect(screen.getByLabelText("notes.txt")).toBeEnabled();
   });
 
   it("drops the card chrome when embedded", () => {
@@ -468,8 +599,8 @@ describe("WorkspaceSourceBrowser", () => {
     ]);
     renderBrowser({ target: { drive: "mcp" } });
 
-    expect(await screen.findByText("MCP")).toBeInTheDocument();
-    expect(screen.getByText("Docs server")).toBeInTheDocument();
+    const mcpRow = (await screen.findByText("Docs server")).closest(".group");
+    expect(within(mcpRow).getByText("MCP")).toBeInTheDocument();
     expect(screen.queryByText("Project")).not.toBeInTheDocument();
     expect(mcpProvider.list).not.toHaveBeenCalled();
 
@@ -477,7 +608,6 @@ describe("WorkspaceSourceBrowser", () => {
 
     expect(await screen.findByText("files")).toBeInTheDocument();
     expect(mcpProvider.list).toHaveBeenCalledWith("/");
-    expect(document.querySelector('[title="Docs server"]')).toBeInTheDocument();
     expect(addButton()).toBeDisabled();
 
     fireEvent.click(screen.getByLabelText("files"));
@@ -544,5 +674,104 @@ describe("WorkspaceSourceBrowser", () => {
     renderBrowser({ target: { drive: "device", sourceId: "local-1" } });
 
     expect(await screen.findByText("Nothing here yet")).toBeInTheDocument();
+  });
+});
+
+describe("device empty state", () => {
+  const emptyDevice = async () => {
+    mocks.sources = [];
+    mocks.providers = new Map();
+    renderBrowser({ target: { drive: "device" } });
+    return waitFor(() => {
+      const zone = guide("workspace-device-empty");
+      expect(zone).toBeTruthy();
+      return zone;
+    });
+  };
+
+  it("invites a drop or a click instead of the small add button", async () => {
+    const zone = await emptyDevice();
+
+    expect(zone).toHaveTextContent("There's nothing here yet.");
+    expect(zone).toHaveTextContent("Drag and drop a folder here");
+    expect(guide("workspace-sources-add-device-folder")).toBeNull();
+
+    fireEvent.click(zone);
+    expect(mocks.onAddDeviceFolder).toHaveBeenCalledTimes(1);
+    await act(async () => {});
+  });
+
+  it("mounts a dropped folder and says when the drop was not one", async () => {
+    mocks.sources = [];
+    mocks.providers = new Map();
+    const mount = vi.fn();
+    renderBrowser({
+      target: { drive: "device" },
+      onMountDeviceFolder: mount,
+    });
+    const zone = await waitFor(() => guide("workspace-device-empty"));
+
+    const folder = { kind: "directory", name: "Thesis" };
+    fireEvent.drop(zone, {
+      dataTransfer: {
+        items: [{ kind: "file", getAsFileSystemHandle: async () => folder }],
+      },
+    });
+    await waitFor(() => expect(mount).toHaveBeenCalledWith(folder));
+
+    fireEvent.drop(zone, {
+      dataTransfer: {
+        items: [
+          {
+            kind: "file",
+            getAsFileSystemHandle: async () => ({ kind: "file", name: "a" }),
+          },
+        ],
+      },
+    });
+    expect(
+      await screen.findByText(/did not carry a folder/),
+    ).toBeInTheDocument();
+    await act(async () => {});
+  });
+
+  it("keeps the small add button once a folder is mounted", async () => {
+    renderBrowser({ target: { drive: "device" } });
+
+    await screen.findByText("Project");
+    expect(guide("workspace-sources-add-device-folder")).toBeTruthy();
+    await act(async () => {});
+  });
+
+  it("pills device files and browser chats like the workspace tree", async () => {
+    renderBrowser({ target: { drive: "device", sourceId: "local-1" } });
+
+    const folder = (await screen.findByText("docs")).closest(".group");
+    expect(within(folder).getByText("device")).toBeInTheDocument();
+    const file = screen.getByText("notes.txt").closest(".group");
+    expect(within(file).getByText("device")).toBeInTheDocument();
+  });
+
+  it("pills chat rows and their files as browser storage", async () => {
+    renderBrowser({ target: { drive: "chats" } });
+
+    const chat = (await screen.findByText("Planning chat")).closest(".group");
+    expect(within(chat).getByText("browser")).toBeInTheDocument();
+    await act(async () => {});
+  });
+
+  it("opens the folder picker from the empty state and shows why it failed", async () => {
+    mocks.sources = [];
+    mocks.providers = new Map();
+    const pick = vi.fn().mockResolvedValue("Folder picking is not supported");
+    renderBrowser({ target: { drive: "device" }, onPickDeviceFolder: pick });
+    const zone = await waitFor(() => guide("workspace-device-empty"));
+
+    fireEvent.click(zone);
+    expect(pick).toHaveBeenCalledTimes(1);
+    expect(
+      await screen.findByText("Folder picking is not supported"),
+    ).toBeInTheDocument();
+    await act(async () => {});
   });
 });

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { DragEvent, KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Locked, TrashCan, Unlocked } from "@carbon/icons-react";
 import {
@@ -8,6 +9,7 @@ import {
   ChevronRight,
   FileText,
   Folder,
+  HardDrive,
   MessageSquare,
   Plus,
 } from "lucide-react";
@@ -18,13 +20,15 @@ import type {
   WorkspaceFileEntry,
   WorkspaceSourceRow,
 } from "../../db/dbTypes";
-import { normalizePath, parentPath } from "../../workspace/paths";
+import { parentPath } from "../../workspace/paths";
 import type {
   FileProvider,
   QuotaInfo,
 } from "../../workspace/providers/types";
+import { sourceProblem } from "../../workspace/sourceStatus";
 import { useWorkspaceProviders } from "../../workspace/useWorkspaceProviders";
 import { formatBytes } from "../../utils/formatBytes";
+import Tooltip from "../Others/Tooltip";
 
 export type SourcesSelection = {
   sourceId: string;
@@ -232,11 +236,15 @@ export default function WorkspaceSourceBrowser({
   target,
   onTargetChange,
   onAddToWorkspace,
+  onUnmountSelection,
   busy = false,
   onRemoveSource,
   onToggleSourceReadOnly,
   onAddDeviceFolder,
+  onMountDeviceFolder,
+  onPickDeviceFolder,
   isInWorkspace,
+  isMounted,
   embedded = false,
   className = "",
 }: {
@@ -244,11 +252,16 @@ export default function WorkspaceSourceBrowser({
   target: SourceTarget | null;
   onTargetChange: (target: SourceTarget | null) => void;
   onAddToWorkspace: (selection: SourcesSelection[]) => Promise<void> | void;
+  onUnmountSelection?: (selection: SourcesSelection[]) => Promise<void> | void;
   busy?: boolean;
   onRemoveSource?: (source: WorkspaceSourceRow) => void;
   onToggleSourceReadOnly?: (source: WorkspaceSourceRow) => void;
   onAddDeviceFolder?: () => void;
+  onMountDeviceFolder?: (handle: FileSystemDirectoryHandle) => Promise<void> | void;
+  onPickDeviceFolder?: () => Promise<string | void> | string | void;
   isInWorkspace?: (selection: SourcesSelection) => boolean;
+  /** Whether any workspace mounts this item; defaults to `isInWorkspace`. */
+  isMounted?: (selection: SourcesSelection) => boolean;
   embedded?: boolean;
   className?: string;
 }) {
@@ -265,6 +278,9 @@ export default function WorkspaceSourceBrowser({
     new Map(),
   );
   const [adding, setAdding] = useState(false);
+  const [unmounting, setUnmounting] = useState(false);
+  const [dropActive, setDropActive] = useState(false);
+  const [dropError, setDropError] = useState("");
 
   const localById = useMemo(
     () => new Map(localSources.map((source) => [source.id, source])),
@@ -291,6 +307,24 @@ export default function WorkspaceSourceBrowser({
   const targetDrive = target?.drive ?? null;
   const targetSourceId =
     target && target.drive === "device" ? target.sourceId : undefined;
+
+  // Everything listed inside a read-only source is read-only too, so those
+  // rows carry the same lock the workspace tree shows.
+  const viewReadOnly = useMemo(() => {
+    if (!view) return false;
+    if (view.drive === "device") {
+      return view.level === "source"
+        ? localById.get(view.sourceId)?.readOnly === true
+        : false;
+    }
+    if (view.drive === "mcp") {
+      return view.level === "drives"
+        ? false
+        : mcpById.get(view.sourceId)?.readOnly === true;
+    }
+    if (view.drive === "arcanas") return arcanaSource?.readOnly === true;
+    return false;
+  }, [view, localById, mcpById, arcanaSource]);
 
   useEffect(() => {
     setPath("/");
@@ -524,32 +558,12 @@ export default function WorkspaceSourceBrowser({
         ),
     [rows, selectionFor, isInWorkspace],
   );
-  const selectableItems = visibleItems.filter((item) => !item.inWorkspace);
-  const allVisibleSelected =
-    selectableItems.length > 0 &&
-    selectableItems.every((item) =>
-      selected.has(selectionKey(item.selection)),
-    );
-
   const toggleSelection = (selection: SourcesSelection, checked: boolean) => {
     setSelected((current) => {
       const next = new Map(current);
       const key = selectionKey(selection);
       if (checked) next.set(key, selection);
       else next.delete(key);
-      return next;
-    });
-  };
-
-  const toggleVisible = (checked: boolean) => {
-    setSelected((current) => {
-      const next = new Map(current);
-      for (const item of visibleItems) {
-        if (checked && item.inWorkspace) continue;
-        const key = selectionKey(item.selection);
-        if (checked) next.set(key, item.selection);
-        else next.delete(key);
-      }
       return next;
     });
   };
@@ -588,7 +602,6 @@ export default function WorkspaceSourceBrowser({
     }
     if (view.drive === "chats") {
       const selection = selectionFor(row);
-      if (selection && isInWorkspace?.(selection)) return;
       if (selection) {
         toggleSelection(selection, !selected.has(selectionKey(selection)));
       }
@@ -599,7 +612,6 @@ export default function WorkspaceSourceBrowser({
       return;
     }
     const selection = selectionFor(row);
-    if (selection && isInWorkspace?.(selection)) return;
     if (selection) {
       toggleSelection(selection, !selected.has(selectionKey(selection)));
     }
@@ -644,16 +656,47 @@ export default function WorkspaceSourceBrowser({
     onTargetChange(null);
   };
 
+  // A row can be selected whether or not it is mounted already: the Add button
+  // takes the ones outside the workspace, Unmount takes the mounted ones.
+  const selectedList = useMemo(() => Array.from(selected.values()), [selected]);
+  const addableSelected = useMemo(
+    () => selectedList.filter((item) => !(isInWorkspace?.(item) ?? false)),
+    [selectedList, isInWorkspace],
+  );
+  const mountedSelected = useMemo(() => {
+    const mounted = isMounted ?? isInWorkspace;
+    return selectedList.filter((item) => mounted?.(item) ?? false);
+  }, [selectedList, isMounted, isInWorkspace]);
+  const forget = (items: SourcesSelection[]) =>
+    setSelected((current) => {
+      const next = new Map(current);
+      for (const item of items) next.delete(selectionKey(item));
+      return next;
+    });
+
   const addSelection = async () => {
-    if (selected.size === 0 || adding || busy) return;
+    if (addableSelected.length === 0 || adding || busy) return;
     setAdding(true);
     try {
-      await onAddToWorkspace(Array.from(selected.values()));
-      setSelected(new Map());
+      await onAddToWorkspace(addableSelected);
+      forget(addableSelected);
     } catch {
       return;
     } finally {
       setAdding(false);
+    }
+  };
+
+  const unmountSelection = async () => {
+    if (!onUnmountSelection || mountedSelected.length === 0 || unmounting || busy) {
+      return;
+    }
+    setUnmounting(true);
+    try {
+      await onUnmountSelection(mountedSelected);
+      forget(mountedSelected);
+    } finally {
+      setUnmounting(false);
     }
   };
 
@@ -666,18 +709,7 @@ export default function WorkspaceSourceBrowser({
           ? t("workspace.source_browser.mcp")
           : t("workspace.source_browser.arcanas")
     : "";
-  const breadcrumb = view
-    ? [
-        (view.drive === "device" || view.drive === "mcp") &&
-        view.level === "source"
-          ? view.label
-          : "",
-        ...normalizePath(path).split("/").filter(Boolean),
-      ]
-        .filter(Boolean)
-        .join(" / ") || "/"
-    : "/";
-  const pending = adding || busy;
+  const pending = adding || unmounting || busy;
   const usageLabel = (quota: QuotaInfo | null, shared = false) =>
     quota
       ? t(
@@ -690,6 +722,83 @@ export default function WorkspaceSourceBrowser({
           },
         )
       : "";
+
+  const deviceRoot = view?.drive === "device" && view.level === "drives";
+  const deviceEmpty =
+    deviceRoot && !loading && !error && rows.length === 0;
+
+  // The same pills the workspace tree shows, so a folder reads "device" here and in the tree.
+  const badgeForSource = useCallback(
+    (source?: WorkspaceSourceRow) => {
+      switch (source?.kind) {
+        case "local":
+          return t("workspace.storage_badge_device");
+        case "arcana":
+        case "arcana-filesystem":
+          return t("workspace.storage_badge_arcana");
+        case "mcp":
+          return t("workspace.storage_badge_mcp");
+        case "agent":
+          return t("workspace.storage_badge_agent");
+        default:
+          return t("workspace.storage_badge_browser");
+      }
+    },
+    [t],
+  );
+
+  const badgeForEntry = useCallback(
+    () => {
+      if (view?.drive === "chats") return t("workspace.storage_badge_browser");
+      if (view?.drive === "mcp") return t("workspace.storage_badge_mcp");
+      if (view?.drive === "arcanas") return t("workspace.storage_badge_arcana");
+      const source =
+        view && view.level === "source"
+          ? localById.get(view.sourceId)
+          : undefined;
+      return source
+        ? badgeForSource(source)
+        : t("workspace.storage_badge_device");
+    },
+    [badgeForSource, localById, t, view],
+  );
+
+  // A dropped folder arrives as a FileSystemDirectoryHandle in Chromium; anything else (a file, or
+  // a browser without getAsFileSystemHandle) cannot be mounted and says so.
+  const dropFolder = useCallback(
+    async (event: DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      setDropActive(false);
+      setDropError("");
+      for (const item of Array.from(event.dataTransfer?.items ?? [])) {
+        const pick = (
+          item as DataTransferItem & {
+            getAsFileSystemHandle?: () => Promise<FileSystemHandle | null>;
+          }
+        ).getAsFileSystemHandle;
+        if (item.kind !== "file" || typeof pick !== "function") continue;
+        try {
+          const handle = await pick.call(item);
+          if (handle && handle.kind === "directory" && onMountDeviceFolder) {
+            await onMountDeviceFolder(handle as FileSystemDirectoryHandle);
+            return;
+          }
+        } catch {
+          break;
+        }
+      }
+      setDropError(t("workspace.source_browser.device_drop_rejected"));
+    },
+    [onMountDeviceFolder, t],
+  );
+
+  const openFolderPicker = async () => {
+    setDropError("");
+    const message = onPickDeviceFolder
+      ? await onPickDeviceFolder()
+      : onAddDeviceFolder?.();
+    if (message) setDropError(message);
+  };
 
   const sectionClassName = embedded
     ? `flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden ${className}`
@@ -713,37 +822,40 @@ export default function WorkspaceSourceBrowser({
           <div className="truncate text-[11px] font-semibold leading-tight text-base-content">
             {view ? driveName : t("workspace.source_browser.title")}
           </div>
-          {view && (
-            <div
-              className="truncate text-[10px] leading-tight text-base-content/50"
-              title={breadcrumb}
-            >
-              {breadcrumb}
-            </div>
-          )}
         </div>
-        {view && visibleItems.length > 0 && (
-          <input
-            type="checkbox"
-            className="checkbox checkbox-xs mr-0.5 shrink-0"
-            checked={allVisibleSelected}
-            onChange={(event) => toggleVisible(event.target.checked)}
-            aria-label={t("workspace.source_browser.select_all")}
-            title={t("workspace.source_browser.select_all")}
-          />
+        {onUnmountSelection && (
+          <button
+            type="button"
+            data-guide="workspace-unmount"
+            onClick={() => void unmountSelection()}
+            disabled={mountedSelected.length === 0 || pending}
+            title={t("workspace.source_browser.unmount_hint")}
+            className="btn btn-secondary btn-xs shrink-0 gap-1"
+          >
+            {unmounting && (
+              <span className="loading loading-spinner loading-xs" />
+            )}
+            <span className="truncate">
+              {mountedSelected.length > 0
+                ? t("workspace.source_browser.unmount_count", {
+                    count: mountedSelected.length,
+                  })
+                : t("workspace.source_browser.unmount")}
+            </span>
+          </button>
         )}
         <button
           type="button"
           data-guide="workspace-add-to-workspace"
           onClick={() => void addSelection()}
-          disabled={selected.size === 0 || pending}
+          disabled={addableSelected.length === 0 || pending}
           className="btn btn-primary btn-xs shrink-0 gap-1"
         >
-          {pending && <span className="loading loading-spinner loading-xs" />}
+          {adding && <span className="loading loading-spinner loading-xs" />}
           <span className="truncate">
-            {selected.size > 0
+            {addableSelected.length > 0
               ? t("workspace.source_browser.add_to_workspace_count", {
-                  count: selected.size,
+                  count: addableSelected.length,
                 })
               : t("workspace.source_browser.add_to_workspace")}
           </span>
@@ -777,6 +889,54 @@ export default function WorkspaceSourceBrowser({
                 <AlertCircle size={14} className="mt-0.5 shrink-0" />
                 <span className="min-w-0 break-words">{error}</span>
               </div>
+            ) : deviceEmpty ? (
+              <div className="flex h-full min-h-[10rem] items-stretch p-1">
+                <div
+                  data-guide="workspace-device-empty"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={t("workspace.source_browser.device_empty_body")}
+                  onClick={openFolderPicker}
+                  onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      openFolderPicker();
+                    }
+                  }}
+                  onDragEnter={(event) => {
+                    event.preventDefault();
+                    setDropActive(true);
+                  }}
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    setDropActive(true);
+                  }}
+                  onDragLeave={() => setDropActive(false)}
+                  onDrop={dropFolder}
+                  className={`flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed px-5 py-8 text-center transition ${
+                    dropActive
+                      ? "border-accent bg-accent/10"
+                      : "border-base-300 hover:border-accent/50 hover:bg-base-200/40"
+                  }`}
+                >
+                  <HardDrive
+                    size={42}
+                    strokeWidth={1.25}
+                    className="text-base-content/20"
+                  />
+                  <p className="max-w-[22rem] text-sm font-semibold text-base-content/70">
+                    {t("workspace.source_browser.device_empty_title")}
+                  </p>
+                  <p className="max-w-[24rem] text-[11px] leading-relaxed text-base-content/45">
+                    {t("workspace.source_browser.device_empty_body")}
+                  </p>
+                  {dropError && (
+                    <p className="max-w-[24rem] text-[10px] text-error">
+                      {dropError}
+                    </p>
+                  )}
+                </div>
+              </div>
             ) : rows.length === 0 ? (
               <div className="flex flex-col items-center gap-1.5 p-4 text-center text-[11px] text-base-content/50">
                 <Folder size={18} className="text-base-content/30" />
@@ -799,10 +959,12 @@ export default function WorkspaceSourceBrowser({
                       : undefined;
                   if (source) {
                     const quota = quotas[source.id] ?? null;
+                    const problem = sourceProblem(source, t);
+                    const readOnlyLabel = t("workspace.mount_read_only");
                     return (
                       <div
                         key={row.id}
-                        className={`group flex min-w-0 items-start gap-1 rounded-xl border px-1.5 py-1.5 transition ${
+                        className={`group flex min-w-0 items-start gap-1.5 rounded-xl border px-1.5 py-1.5 transition ${
                           checked
                             ? "border-accent/50 bg-accent/5"
                             : "border-base-300/60 hover:border-accent/40 hover:bg-base-200/50"
@@ -810,12 +972,14 @@ export default function WorkspaceSourceBrowser({
                       >
                         <input
                           type="checkbox"
-                          className="checkbox checkbox-xs mt-0.5 shrink-0"
+                          className="checkbox checkbox-xs mr-0.5 mt-0.5 shrink-0"
                           checked={checked}
-                          disabled={inWorkspace}
-                          title={inWorkspace ? inWorkspaceLabel : undefined}
+                          title={
+                            inWorkspace
+                              ? t("workspace.source_browser.unmount_hint")
+                              : undefined
+                          }
                           onChange={(event) => {
-                            if (inWorkspace) return;
                             toggleSelection(selection, event.target.checked);
                           }}
                           aria-label={row.name}
@@ -833,8 +997,40 @@ export default function WorkspaceSourceBrowser({
                             <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-base-content">
                               {row.name}
                             </span>
-                            <span className="shrink-0 rounded bg-base-200 px-1 py-0.5 text-[8px] font-semibold uppercase tracking-wide text-base-content/50">
-                              {t("workspace.kind_" + source.kind)}
+                            {problem && (
+                              <Tooltip
+                                text={problem}
+                                placement="right"
+                                interactive
+                                width="max-w-[17rem]"
+                                className="shrink-0"
+                              >
+                                <span
+                                  role="img"
+                                  aria-label={problem}
+                                  title={problem}
+                                  data-guide="workspace-source-broken"
+                                  className="flex items-center"
+                                >
+                                  <AlertCircle
+                                    size={13}
+                                    className="text-error"
+                                  />
+                                </span>
+                              </Tooltip>
+                            )}
+                            {source.readOnly && (
+                              <span
+                                className="shrink-0 text-warning"
+                                title={readOnlyLabel}
+                                aria-label={readOnlyLabel}
+                                data-guide="workspace-source-lock"
+                              >
+                                <Locked size={11} />
+                              </span>
+                            )}
+                            <span className="shrink-0 rounded-full border border-base-300 px-1.5 py-px text-[9px] font-medium tracking-wide text-base-content/55">
+                              {badgeForSource(source)}
                             </span>
                           </span>
                           <QuotaMeter quota={quota} label={usageLabel(quota)} />
@@ -900,7 +1096,7 @@ export default function WorkspaceSourceBrowser({
                   return (
                     <div
                       key={row.id}
-                      className={`group flex min-w-0 items-center gap-1 rounded-lg border px-1 py-1 transition ${
+                      className={`group flex min-w-0 items-center gap-1.5 rounded-lg border px-1 py-1 transition ${
                         checked
                           ? "border-accent/50 bg-accent/5"
                           : "border-transparent hover:bg-base-200/60"
@@ -908,12 +1104,14 @@ export default function WorkspaceSourceBrowser({
                     >
                       <input
                         type="checkbox"
-                        className="checkbox checkbox-xs shrink-0"
+                        className="checkbox checkbox-xs mr-0.5 shrink-0"
                         checked={checked}
-                        disabled={inWorkspace}
-                        title={inWorkspace ? inWorkspaceLabel : undefined}
+                        title={
+                          inWorkspace
+                            ? t("workspace.source_browser.unmount_hint")
+                            : undefined
+                        }
                         onChange={(event) => {
-                          if (inWorkspace) return;
                           toggleSelection(selection, event.target.checked);
                         }}
                         aria-label={row.name}
@@ -938,6 +1136,18 @@ export default function WorkspaceSourceBrowser({
                         )}
                         <span className="min-w-0 flex-1 truncate text-[11px] text-base-content">
                           {row.name}
+                        </span>
+                        {viewReadOnly && (
+                          <span
+                            className="shrink-0 text-warning"
+                            title={t("workspace.mount_read_only")}
+                            aria-label={t("workspace.mount_read_only")}
+                          >
+                            <Locked size={11} />
+                          </span>
+                        )}
+                        <span className="shrink-0 rounded-full border border-base-300 px-1.5 py-px text-[9px] font-medium tracking-wide text-base-content/55">
+                          {badgeForEntry()}
                         </span>
                         {row.kind === "file" && typeof row.size === "number" && (
                           <span className="shrink-0 text-[10px] text-base-content/40">
@@ -964,9 +1174,7 @@ export default function WorkspaceSourceBrowser({
             )}
           </div>
 
-          {view.drive === "device" &&
-            view.level === "drives" &&
-            onAddDeviceFolder && (
+          {deviceRoot && !deviceEmpty && onAddDeviceFolder && (
               <div className="shrink-0 border-t border-base-300 px-1 py-1">
                 <button
                   type="button"

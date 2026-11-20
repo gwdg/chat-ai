@@ -78,7 +78,7 @@ const getFloatingCluster = () => {
 };
 
 describe("Conversation top and floating actions", () => {
-  it("renders one close button in normal flow, below the warning and above the messages", () => {
+  it("floats the close button over the top of the chat without a cover above it", () => {
     const { container } = renderConversation();
 
     const closeButtons = screen.getAllByRole("button", { name: "Close chat" });
@@ -89,21 +89,17 @@ describe("Conversation top and floating actions", () => {
     expect(closeButton.className).not.toMatch(/(^|\s)(absolute|fixed)(\s|$)/);
 
     const closeRow = closeButton.parentElement.parentElement;
-    expect(closeRow).toHaveClass("flex", "justify-end", "px-2", "pt-1");
-    expect(closeRow.className).not.toMatch(/(^|\s)(absolute|fixed)(\s|$)/);
-
-    const warning = screen.getByTestId("hallucination-warning");
-    expect(
-      warning.compareDocumentPosition(closeRow) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
+    expect(closeRow).toHaveClass("absolute", "right-2", "top-2", "z-20");
 
     const messageList = container.querySelector(".overflow-y-auto");
     expect(messageList).not.toBeNull();
-    expect(
-      closeRow.compareDocumentPosition(messageList) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
+    expect(messageList).not.toContainElement(closeRow);
+
+    // The notice is the first item of the conversation, not a band over it.
+    const warning = screen.getByTestId("hallucination-warning");
+    const column = messageList.firstElementChild;
+    expect(column.firstElementChild).toBe(warning);
+    expect(closeRow).not.toContainElement(warning);
 
     const cluster = getFloatingCluster();
     expect(closeRow).not.toBe(cluster);
