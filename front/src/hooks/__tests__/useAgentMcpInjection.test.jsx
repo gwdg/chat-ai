@@ -91,6 +91,35 @@ describe("useAgentMcpInjection", () => {
     expect(result.current.status).toBe("off");
   });
 
+  it("reports the servers that stay on the relay next to the injected ones", async () => {
+    mocks.settings = {
+      mcp_servers: [
+        { id: "search", name: "Search", kind: "local", url: "http://search.test/mcp" },
+        {
+          id: "crm",
+          name: "CRM",
+          kind: "local",
+          url: "http://crm.test/mcp",
+          headers: { Authorization: "Bearer secret" },
+        },
+      ],
+    };
+    mocks.inject.mockResolvedValue({
+      injected: [{ id: "search", name: "Search", url: "http://search.test/mcp" }],
+      failed: [],
+      removed: [],
+    });
+
+    const { result } = renderHook(() =>
+      useAgentMcpInjection({ agent, enabled: true, sessionId: agent.sessionId }),
+    );
+
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    // A server with stored headers never leaves the browser, so it is relayed even while the
+    // injection runs; the injected one must not be counted twice.
+    expect(result.current.relayed.map((server) => server.id)).toEqual(["crm"]);
+  });
+
   it("does nothing without a session, because the entry would be agent-wide", async () => {
     const { result } = renderHook(() =>
       useAgentMcpInjection({ agent, enabled: true, sessionId: "" }),

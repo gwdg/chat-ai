@@ -1669,7 +1669,14 @@ workspace, because the servers are registered in the agent's own OpenCode; `Agen
 enables `useAgentMcpInjection` from the flag alone, and the relay narrows itself once a bridge
 starts. Every configured server has a URL, so the address alone makes it dialable; a server with
 stored headers (a token) stays on the relay, because only the browser may hold it, and a URL that
-does not parse cannot be handed over either.
+does not parse cannot be handed over either. The popover's status line counts that split
+explicitly: "Direct in OpenCode" is what OpenCode took and "via bridge" is what is left for the
+relay (`relayedMcpServers`), **not** the injections that failed — `via bridge: 0` therefore means
+nothing is left to relay, usually because every server was injected. A non-zero relay count next
+to a switched-off `bridgeMcp` is called out as a warning, because `mcp_list_servers` only exists in
+a bridge session that was started with the MCP scope; a read-only bridge (its tool list is
+`workspace_list`/`workspace_stat`/`workspace_read` with no write or MCP tools) means both switches
+were off when it started.
 `useAgentMcpInjection` reconciles the entries for the session that is open now and runs again when
 it changes; the option itself is stored per agent (`bridgeInjectExternal`) like the write/MCP flags,
 so it survives a session switch. A name is `<prefix><server label>-<session id>` (a `-2` counter

@@ -57,7 +57,11 @@ export default function AgentWorkspaceButton({
   const injectStatus = mcpInjection?.status || "off";
   const injectInjected = mcpInjection?.injected || [];
   const injectFallback = mcpInjection?.fallback || [];
+  const injectRelayed = mcpInjection?.relayed || [];
   const injectError = mcpInjection?.error || "";
+  // The relay only runs with the bridge, so a count alone would claim servers this session
+  // never sees: the line below names the switch instead.
+  const relayOn = agent?.bridgeMcp === true && accessOn;
 
   // A status only says something about a bridge that is meant to run, so nothing is reported
   // while access is off — except the failure that made the page switch access off.
@@ -317,7 +321,7 @@ export default function AgentWorkspaceButton({
                       <span className="text-base-content/60">
                         {t("agents.bridge.inject_summary", {
                           direct: injectInjected.length,
-                          bridge: injectFallback.length,
+                          bridge: injectRelayed.length,
                         })}
                       </span>
                       {injectFallback.length > 0 && (
@@ -337,11 +341,20 @@ export default function AgentWorkspaceButton({
                           })}
                         </span>
                       )}
-                      {!injectInjected.length && !injectFallback.length && (
-                        <span className="block text-base-content/50">
-                          {t("agents.bridge.inject_none")}
+                      {injectRelayed.length > 0 && !relayOn && (
+                        <span className="mt-0.5 block text-warning">
+                          {t("agents.bridge.inject_relay_off", {
+                            count: injectRelayed.length,
+                          })}
                         </span>
                       )}
+                      {!injectInjected.length &&
+                        !injectFallback.length &&
+                        !injectRelayed.length && (
+                          <span className="block text-base-content/50">
+                            {t("agents.bridge.inject_none")}
+                          </span>
+                        )}
                     </>
                   ) : null}
                 </div>

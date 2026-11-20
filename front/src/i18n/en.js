@@ -2021,7 +2021,12 @@ export default {
         "OpenCode connects to the MCP servers it can reach that need no password, so their tools work without this tab and without workspace access. The others stay on the local MCP relay.",
       inject_running: "Adding MCP servers to OpenCode…",
       inject_summary: "Direct in OpenCode: {{direct}} · via bridge: {{bridge}}",
-      inject_fallback: "Via bridge: {{servers}}",
+      inject_fallback:
+        "OpenCode could not connect {{servers}}, so they stay on the bridge relay",
+      inject_relay_off_one:
+        "The MCP tools switch above is off, so {{count}} server is not relayed in this session.",
+      inject_relay_off_other:
+        "The MCP tools switch above is off, so {{count}} servers are not relayed in this session.",
       inject_none: "No MCP server without a password is configured.",
       inject_error: "Could not add the MCP servers to OpenCode: {{message}}",
       session_scope:

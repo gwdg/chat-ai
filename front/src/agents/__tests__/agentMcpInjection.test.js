@@ -20,6 +20,7 @@ import {
   injectExternalMcpServers,
   injectedMcpName,
   injectedMcpNames,
+  relayedMcpServers,
   removeInjectedMcpServers,
 } from "../agentMcpInjection";
 
@@ -78,6 +79,30 @@ describe("agent MCP injection", () => {
       "http://localhost:9000/mcp",
       "http://ok.test/mcp",
     ]);
+  });
+
+  it("counts what stays on the relay, headers included and injected servers excluded", () => {
+    // The two routes are mutually exclusive per server: an entry OpenCode connected is no
+    // longer relayed, while a password-protected one always is. A gateway entry with only an
+    // id has no address to relay.
+    const relayed = relayedMcpServers(servers, [
+      { url: "http://search.test/mcp" },
+    ]);
+
+    expect(relayed.map((server) => server.id)).toEqual([
+      "auth",
+      "public-gateway",
+    ]);
+    expect(relayed[0].url).toBe("http://auth.test/mcp");
+  });
+
+  it("does not count the same address twice", () => {
+    const relayed = relayedMcpServers([
+      { id: "one", url: "http://same.test/mcp" },
+      { id: "two", url: "http://same.test/mcp" },
+    ]);
+
+    expect(relayed).toHaveLength(1);
   });
 
   it("names an entry after the server and ends it with the session id", () => {

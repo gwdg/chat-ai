@@ -5,6 +5,7 @@ import { selectUserSettings } from "../Redux/reducers/userSettingsReducer";
 import {
   injectExternalMcpServers,
   injectableMcpServers,
+  relayedMcpServers,
   removeInjectedMcpServers,
 } from "../agents/agentMcpInjection";
 
@@ -45,6 +46,13 @@ export function useAgentMcpInjection({ agent, enabled, sessionId }) {
   );
   const [state, setState] = useState(idleState);
   const wasEnabledRef = useRef(false);
+  // The other half of the split: servers that stay on the bridge relay. Reported next to the
+  // injected ones so the popover can say how many servers each route carries — a `0` in the
+  // relay column then means "none left for the relay", not "the bridge is broken".
+  const relayed = useMemo(
+    () => relayedMcpServers(globalServers, state.injected),
+    [globalServers, state.injected],
+  );
 
   const signature = candidates
     .map((server) => `${server.id}\n${server.url}`)
@@ -107,5 +115,5 @@ export function useAgentMcpInjection({ agent, enabled, sessionId }) {
     signature,
   ]);
 
-  return state;
+  return { ...state, relayed };
 }

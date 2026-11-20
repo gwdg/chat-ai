@@ -56,6 +56,36 @@ export function injectableMcpServers(servers = []) {
   return result;
 }
 
+/**
+ * The servers the bridge relay carries: every configured server with an address that OpenCode
+ * did not take over itself.
+ *
+ * The popover reports this count next to the injected ones, because "injected" and "relayed"
+ * are the two routes a server can take. A failing injection is relayed too, so it belongs in
+ * this list even before OpenCode has answered; only a `connected` entry leaves the relay.
+ * Servers with stored headers always stay here — the token may not leave the browser.
+ */
+export function relayedMcpServers(servers = [], injected = []) {
+  const taken = new Set(
+    (Array.isArray(injected) ? injected : [])
+      .map((server) => normalizeMcpUrl(server?.url))
+      .filter(Boolean),
+  );
+  const seen = new Set();
+  const result = [];
+  for (const server of Array.isArray(servers) ? servers : []) {
+    const url = normalizeMcpUrl(server?.url);
+    if (!url || taken.has(url) || seen.has(url)) continue;
+    seen.add(url);
+    result.push({
+      id: typeof server.id === "string" ? server.id : url,
+      name: server.name || url,
+      url,
+    });
+  }
+  return result;
+}
+
 const slugify = (value) =>
   String(value ?? "")
     .toLowerCase()

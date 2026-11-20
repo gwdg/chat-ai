@@ -97,7 +97,7 @@ describe("AgentWorkspaceButton", () => {
   it("shows how many servers OpenCode took and which stay on the bridge", async () => {
     mocks.links = [{ workspaceId: "ws-1" }];
     await openPanel(
-      { bridgeInjectExternal: true },
+      { bridgeInjectExternal: true, bridgeMcp: true },
       {
         mcpInjection: {
           status: "ready",
@@ -105,15 +105,51 @@ describe("AgentWorkspaceButton", () => {
           fallback: [
             { name: "GWDG search", error: "ECONNREFUSED" },
           ],
+          // The relay is the other half of the split: every configured server OpenCode did
+          // not take, including the ones whose injection failed.
+          relayed: [
+            { name: "GWDG search", url: "http://search.test/mcp" },
+            { name: "CRM", url: "http://crm.test/mcp" },
+          ],
           error: "",
         },
       },
     );
 
     expect(
-      screen.getByText("Direct in OpenCode: 1 · via bridge: 1"),
+      screen.getByText("Direct in OpenCode: 1 · via bridge: 2"),
     ).toBeInTheDocument();
-    expect(screen.getByText("Via bridge: GWDG search")).toBeInTheDocument();
+    expect(
+      screen.getByText(/could not connect GWDG search/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/MCP tools switch above is off/),
+    ).not.toBeInTheDocument();
+  });
+
+  it("says when the relay a server waits for is switched off", async () => {
+    // "via bridge: 0" with servers configured must not read as a broken bridge: the relay row
+    // is simply off, and that is what the note points at.
+    mocks.links = [{ workspaceId: "ws-1" }];
+    await openPanel(
+      { bridgeInjectExternal: true, bridgeMcp: false },
+      {
+        mcpInjection: {
+          status: "ready",
+          injected: [],
+          fallback: [],
+          relayed: [{ name: "CRM", url: "http://crm.test/mcp" }],
+          error: "",
+        },
+      },
+    );
+
+    expect(
+      screen.getByText("Direct in OpenCode: 0 · via bridge: 1"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/so 1 server is not relayed in this session/),
+    ).toBeInTheDocument();
   });
 
   it("reports why the injection could not run without any workspace attached", async () => {

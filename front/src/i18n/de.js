@@ -2046,7 +2046,12 @@ export default {
         "OpenCode verbindet sich selbst mit den erreichbaren MCP-Servern, die kein Passwort benötigen; deren Werkzeuge funktionieren dann ohne diesen Tab und ohne Arbeitsbereich-Zugriff. Die übrigen bleiben an der lokalen MCP-Weiterleitung.",
       inject_running: "MCP-Server werden zu OpenCode hinzugefügt …",
       inject_summary: "Direkt in OpenCode: {{direct}} · über die Brücke: {{bridge}}",
-      inject_fallback: "Über die Brücke: {{servers}}",
+      inject_fallback:
+        "OpenCode konnte {{servers}} nicht verbinden, sie bleiben auf dem Relay",
+      inject_relay_off_one:
+        "Der Schalter „MCP-Werkzeuge“ oben ist aus, daher wird {{count}} Server in dieser Sitzung nicht durchgereicht.",
+      inject_relay_off_other:
+        "Der Schalter „MCP-Werkzeuge“ oben ist aus, daher werden {{count}} Server in dieser Sitzung nicht durchgereicht.",
       inject_none: "Es ist kein MCP-Server ohne Passwort konfiguriert.",
       inject_error:
         "Die MCP-Server konnten nicht zu OpenCode hinzugefügt werden: {{message}}",
