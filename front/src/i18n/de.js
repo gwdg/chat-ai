@@ -2400,7 +2400,7 @@ export default {
       unmount: "Aushängen",
       unmount_count: "Aushängen ({{count}})",
       unmount_hint:
-        "Aus dem Arbeitsbereich entfernen — der Ordner selbst bleibt auf diesem Gerät.",
+        "Diesen Ordner vollständig aus Chat AI entfernen — alle Arbeitsbereiche nutzen ihn nicht mehr und er verschwindet aus dieser Liste. Du kannst ihn jederzeit wieder hinzufügen.",
       selected_one: "{{count}} ausgewählt",
       selected_many: "{{count}} ausgewählt",
       empty: "Hier ist noch nichts",

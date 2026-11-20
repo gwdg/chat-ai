@@ -830,7 +830,7 @@ export default function WorkspaceSourceBrowser({
             onClick={() => void unmountSelection()}
             disabled={mountedSelected.length === 0 || pending}
             title={t("workspace.source_browser.unmount_hint")}
-            className="btn btn-ghost btn-xs shrink-0 gap-1 text-base-content/70 hover:bg-base-200"
+            className="btn btn-secondary btn-xs shrink-0 gap-1"
           >
             {unmounting && (
               <span className="loading loading-spinner loading-xs" />

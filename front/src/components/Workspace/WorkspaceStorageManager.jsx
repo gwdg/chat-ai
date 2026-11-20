@@ -7,6 +7,7 @@ import WorkspaceStorageTree from "./WorkspaceStorageTree";
 import {
   detachWorkspaceChat,
   removeWorkspaceMount,
+  unmountLocalFolder,
   useAllWorkspaceChats,
   useAllWorkspaceMounts,
   useDeviceLocalSources,
@@ -69,7 +70,9 @@ export default function WorkspaceStorageManager({ workspaceId, onOpenAddSource }
       item.path.startsWith(`${mount.sourcePath}/`));
 
   // Your Device lists folders from every workspace, so Unmount has to see every
-  // mount — a folder mounted in another workspace is still mounted.
+  // mount — a folder mounted in another workspace is still mounted. A device
+  // folder can always be unmounted: it is listed because Chat AI holds it, so
+  // forgetting it is exactly what takes it off the list.
   const isMounted = useCallback(
     (selection) => {
       if (selection.sourceKind === "chat") {
@@ -77,13 +80,15 @@ export default function WorkspaceStorageManager({ workspaceId, onOpenAddSource }
           (chat) => chat.conversationId === selection.conversationId,
         );
       }
+      if (selection.sourceKind === "local") return true;
       return everyMount.some((mount) => mountCovers(mount, selection));
     },
     [everyMount, everyChat],
   );
 
-  // Unmounting only drops the workspace's link: the source row (and the browser's
-  // permission for the folder) stays, so the folder remains under Your Device.
+  // Unmounting is "stop using this folder": a device folder loses its row in
+  // every workspace, its stored permission and its mounts, so it leaves the
+  // list. The folder itself is untouched on disk and can be added again.
   const unmountSelection = async (selection) => {
     if (selection.length === 0) return;
     for (const item of selection) {
@@ -93,6 +98,10 @@ export default function WorkspaceStorageManager({ workspaceId, onOpenAddSource }
             await detachWorkspaceChat(chat.workspaceId, chat.conversationId);
           }
         }
+        continue;
+      }
+      if (item.sourceKind === "local") {
+        await unmountLocalFolder(item.sourceId);
         continue;
       }
       for (const mount of everyMount) {

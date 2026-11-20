@@ -422,7 +422,7 @@ describe("WorkspaceSourceBrowser", () => {
     expect(checkbox).toBeEnabled();
     expect(checkbox).toHaveAttribute(
       "title",
-      "Remove from the workspace — the folder itself stays on your device.",
+      "Remove this folder from Chat AI entirely — every workspace stops using it and it leaves this list. You can add it again at any time.",
     );
   });
 
@@ -438,6 +438,7 @@ describe("WorkspaceSourceBrowser", () => {
     expect(addButton()).toBeDisabled();
     expect(unmountButton()).toBeEnabled();
     expect(unmountButton()).toHaveTextContent("Unmount (1)");
+    expect(unmountButton()).toHaveClass("btn-secondary");
     expect(unmountButton()).not.toHaveClass("text-error");
     expect(mocks.onAddToWorkspace).not.toHaveBeenCalled();
 

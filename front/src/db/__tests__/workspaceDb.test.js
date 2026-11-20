@@ -31,6 +31,7 @@ import {
   removeOrphanWorkspaceAgents,
   removeWorkspaceAgentSessionLinks,
   removeSource,
+  unmountLocalFolder,
   saveSourceHandle,
   seedWorkspaceAgentSessions,
   setWorkspaceMountReadOnly,
@@ -198,6 +199,53 @@ describe("workspace database", () => {
 
     expect(await adoptLocalSource(second, sourceId)).toBe(adopted);
     expect(await adoptLocalSource(first, sourceId)).toBe(sourceId);
+  });
+
+  it("forgets a device folder in every workspace when unmounted", async () => {
+    const first = await createWorkspace("First");
+    const second = await createWorkspace("Second");
+    const handle = { kind: "directory", name: "Notes" };
+    const firstId = await addSource({
+      workspaceId: first,
+      kind: "local",
+      label: "Notes",
+      config: { handleKey: "", folderName: "Notes" },
+      handle,
+    });
+    const secondId = await addSource({
+      workspaceId: second,
+      kind: "local",
+      label: "Notes",
+      config: { handleKey: "", folderName: "Notes" },
+      handle,
+    });
+    const otherId = await addSource({
+      workspaceId: second,
+      kind: "local",
+      label: "Other",
+      config: { handleKey: "", folderName: "Other" },
+      handle: { kind: "directory", name: "Other" },
+    });
+    await addWorkspaceMount({
+      workspaceId: first,
+      sourceId: firstId,
+      sourcePath: "/",
+      path: "/Notes",
+    });
+    await addWorkspaceMount({
+      workspaceId: second,
+      sourceId: secondId,
+      sourcePath: "/",
+      path: "/Notes",
+    });
+
+    await unmountLocalFolder(firstId);
+
+    expect(await db.workspace_sources.get(firstId)).toBeUndefined();
+    expect(await db.workspace_sources.get(secondId)).toBeUndefined();
+    expect(await db.workspace_sources.get(otherId)).toBeTruthy();
+    expect(await getSourceHandle(firstId)).toBeFalsy();
+    expect(await db.workspace_mounts.toArray()).toHaveLength(0);
   });
 
   it("lists one device row per folder, not one per workspace", async () => {

@@ -2368,7 +2368,7 @@ export default {
       unmount: "Unmount",
       unmount_count: "Unmount ({{count}})",
       unmount_hint:
-        "Remove from the workspace — the folder itself stays on your device.",
+        "Remove this folder from Chat AI entirely — every workspace stops using it and it leaves this list. You can add it again at any time.",
       selected_one: "{{count}} selected",
       selected_many: "{{count}} selected",
       empty: "Nothing here yet",

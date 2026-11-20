@@ -607,6 +607,28 @@ export async function listDeviceLocalSources(): Promise<WorkspaceSourceRow[]> {
 }
 
 /**
+ * Forget a device folder everywhere: the row in every workspace that points at
+ * the same folder, its stored permission and every mount of it. The folder stays
+ * on disk; Chat AI simply stops holding it, and it leaves the device list.
+ */
+export async function unmountLocalFolder(sourceId: string): Promise<void> {
+  const source = await db.workspace_sources.get(sourceId);
+  if (!source) return;
+  if (source.kind !== "local") {
+    await removeSource(sourceId);
+    return;
+  }
+  const rows = await db.workspace_sources.where("kind").equals("local").toArray();
+  const handles = new Map<string, FileSystemDirectoryHandle | undefined>();
+  for (const row of rows) handles.set(row.id, await getSourceHandle(row.id));
+  for (const row of rows) {
+    if (row.id === sourceId || (await sameLocalFolder(source, row, handles))) {
+      await removeSource(row.id);
+    }
+  }
+}
+
+/**
  * Gives the workspace its own source row for a local folder that was mounted
  * elsewhere, reusing the row when the folder is already there.
  */
