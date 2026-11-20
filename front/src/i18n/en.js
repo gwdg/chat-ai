@@ -442,7 +442,7 @@ export default {
     manage_chat_data: {
       title: "Manage the files of a chat",
       step1: "Access storage is on by default and sits at the top of the Workspace menu, which appears while the chat belongs to a workspace. Switch it off to give the model no file tools at all; attachments are still included in the message where possible. A chat without a workspace has no such menu — attach it from the workspace first.",
-      step2: "Choose Manage Workspace to manage the files behind this switch. One attached workspace opens its editor — the same dialog as Create workspace, with its storage locations, its name, icon and colour, and Apply Changes; with several, the chevron opens the list of attached workspaces right here, and picking one opens that workspace's editor.",
+      step2: "Choose Manage Workspace to manage the files behind this switch. One attached workspace opens its editor — the same dialog as Create workspace, with its storage locations, its name, icon and colour, and Apply Changes. With several, the menu turns into the list of attached workspaces: pick one to open that workspace's editor, or use the back arrow to return to these settings.",
     },
     workspace_saia_fs: {
       title: "Your SAIA files in a workspace",

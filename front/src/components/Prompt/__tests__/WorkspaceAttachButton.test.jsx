@@ -70,7 +70,7 @@ describe("WorkspaceAttachButton", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("opens the workspace editor when exactly one workspace is attached", async () => {
+  it("opens the workspace editor when exactly one workspace is attached", () => {
     dbMocks.links = [{ workspaceId: "w1" }];
     renderButton();
     openMenu();
@@ -80,10 +80,12 @@ describe("WorkspaceAttachButton", () => {
     ).toBeInTheDocument();
     const row = document.querySelector('[data-guide="manage-workspace"]');
     expect(row).toHaveTextContent("Manage Workspace");
-    // Nothing to choose between, so no chevron and no list.
-    expect(row).not.toHaveAttribute("aria-expanded");
     fireEvent.click(row);
 
+    // Nothing to choose between, so it goes straight to the editor — no list page.
+    expect(
+      document.querySelector('[data-guide="manage-workspace-list"]'),
+    ).toBeNull();
     // The editor is Create workspace in edit mode: name, icon, colour and the storage rail.
     expect(openModal).toHaveBeenCalledWith("workspaceEdit", {
       workspaceId: "w1",
@@ -91,22 +93,24 @@ describe("WorkspaceAttachButton", () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
-  it("lists the attached workspaces in the popover when several are attached", async () => {
+  it("replaces the settings with the attached workspaces when several are attached", () => {
     dbMocks.links = [{ workspaceId: "w1" }, { workspaceId: "w2" }];
     renderButton();
     openMenu();
 
     const row = document.querySelector('[data-guide="manage-workspace"]');
-    expect(row).toHaveAttribute("aria-expanded", "false");
     expect(
       document.querySelectorAll('[data-guide="manage-workspace-option"]'),
     ).toHaveLength(0);
 
     fireEvent.click(row);
 
-    // No second dialog: the choice happens inside this popover, which lists only the attachments.
+    // The same menu, now showing just the list — no second dialog, and no settings around it.
     expect(openModal).not.toHaveBeenCalled();
-    expect(row).toHaveAttribute("aria-expanded", "true");
+    expect(
+      screen.queryByRole("checkbox", { name: "Access storage" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Back" })).toBeInTheDocument();
     const options = [
       ...document.querySelectorAll('[data-guide="manage-workspace-option"]'),
     ];
@@ -114,29 +118,40 @@ describe("WorkspaceAttachButton", () => {
       "Research",
       "Teaching",
     ]);
+  });
 
+  it("returns to the workspace settings with the back arrow", () => {
+    dbMocks.links = [{ workspaceId: "w1" }, { workspaceId: "w2" }];
+    renderButton();
+    openMenu();
+
+    fireEvent.click(document.querySelector('[data-guide="manage-workspace"]'));
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+
+    expect(
+      screen.getByRole("checkbox", { name: "Access storage" }),
+    ).toBeInTheDocument();
+    expect(
+      document.querySelectorAll('[data-guide="manage-workspace-option"]'),
+    ).toHaveLength(0);
+    expect(openModal).not.toHaveBeenCalled();
+  });
+
+  it("opens the editor for the workspace picked from the list", () => {
+    dbMocks.links = [{ workspaceId: "w1" }, { workspaceId: "w2" }];
+    renderButton();
+    openMenu();
+
+    fireEvent.click(document.querySelector('[data-guide="manage-workspace"]'));
+    const options = [
+      ...document.querySelectorAll('[data-guide="manage-workspace-option"]'),
+    ];
     fireEvent.click(options[1]);
 
     expect(navigate).not.toHaveBeenCalled();
     expect(openModal).toHaveBeenCalledWith("workspaceEdit", {
       workspaceId: "w2",
     });
-  });
-
-  it("collapses the list again when the row is clicked twice", async () => {
-    dbMocks.links = [{ workspaceId: "w1" }, { workspaceId: "w2" }];
-    renderButton();
-    openMenu();
-
-    const row = document.querySelector('[data-guide="manage-workspace"]');
-    fireEvent.click(row);
-    fireEvent.click(row);
-
-    expect(row).toHaveAttribute("aria-expanded", "false");
-    expect(
-      document.querySelectorAll('[data-guide="manage-workspace-option"]'),
-    ).toHaveLength(0);
-    expect(openModal).not.toHaveBeenCalled();
   });
 
   it("puts access storage first and writes it to the conversation", () => {

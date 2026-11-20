@@ -452,7 +452,7 @@ export default {
     manage_chat_data: {
       title: "Dateien eines Chats verwalten",
       step1: "Auf Speicher zugreifen ist standardmäßig an und steht oben im Arbeitsbereich-Menü, das nur erscheint, solange der Chat zu einem Arbeitsbereich gehört. Schalten Sie es aus, erhält das Modell keine Dateiwerkzeuge; Anhänge werden weiterhin in die Nachricht aufgenommen, sofern möglich. Ein Chat ohne Arbeitsbereich hat dieses Menü nicht — verknüpfen Sie ihn zuerst im Arbeitsbereich.",
-      step2: "Wählen Sie „Arbeitsbereich verwalten“, um die Dateien hinter diesem Schalter zu verwalten. Bei einem verknüpften Arbeitsbereich öffnet sich dessen Editor — derselbe Dialog wie „Arbeitsbereich erstellen“, mit Speicherorten, Name, Symbol und Farbe sowie „Änderungen übernehmen“; bei mehreren öffnet das Pfeilsymbol die Liste der verknüpften Arbeitsbereiche direkt hier, und ein Klick öffnet den Editor des gewählten Arbeitsbereichs.",
+      step2: "Wählen Sie „Arbeitsbereich verwalten“, um die Dateien hinter diesem Schalter zu verwalten. Bei einem verknüpften Arbeitsbereich öffnet sich dessen Editor — derselbe Dialog wie „Arbeitsbereich erstellen“, mit Speicherorten, Name, Symbol und Farbe sowie „Änderungen übernehmen“. Bei mehreren wird das Menü zur Liste der verknüpften Arbeitsbereiche: ein Klick öffnet den Editor des gewählten Arbeitsbereichs, der Pfeil zurück führt wieder zu diesen Einstellungen.",
     },
     workspace_saia_fs: {
       title: "Ihre SAIA-Dateien in einem Arbeitsbereich",

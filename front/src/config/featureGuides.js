@@ -59,7 +59,7 @@ export const featureGuides = {
   manage_chat_data: {
     titleKey: "feature_guide.manage_chat_data.title",
     prompt:
-      "Open the Workspace menu in the prompt box of a chat that belongs to a workspace. Access storage sits at the top: it is on by default and with it off the model gets no file tools. Manage Workspace is where this chat keeps its files: with one workspace it opens that workspace's editor — the same dialog as Create workspace, with its storage locations, its name, icon and colour, and Apply Changes — and with several the chevron opens the list of attached workspaces right in the menu, each one opening the same editor. A chat that belongs to no workspace has no Workspace menu at all; attach it from the workspace itself.",
+      "Open the Workspace menu in the prompt box of a chat that belongs to a workspace. Access storage sits at the top: it is on by default and with it off the model gets no file tools. Manage Workspace is where this chat keeps its files: with one workspace it opens that workspace's editor — the same dialog as Create workspace, with its storage locations, its name, icon and colour, and Apply Changes — and with several the chevron turns the menu into a list of the attached workspaces, each one opening the same editor, with a back arrow to return to the settings. A chat that belongs to no workspace has no Workspace menu at all; attach it from the workspace itself.",
     keywords: [
       "manage workspace",
       "manage data",
