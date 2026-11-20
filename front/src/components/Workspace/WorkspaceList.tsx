@@ -616,7 +616,7 @@ export default function WorkspaceList({
             </div>
             {expanded && expandable && (
               <div
-                className="mb-1 ml-8 flex flex-col gap-0.5 border-x-2 px-2"
+                className="ml-2 flex flex-col gap-1 border-x-2 px-2"
                 style={{
                   borderColor: groupRule(workspaceColor.hex, isDark),
                 }}
@@ -836,7 +836,7 @@ export default function WorkspaceList({
   }
 
   return (
-    <div className="px-3 pt-3 pb-1" data-guide="workspace-list">
+    <div className="pl-3 pr-2 pt-3 pb-1" data-guide="workspace-list">
       {header}
       {body}
     </div>

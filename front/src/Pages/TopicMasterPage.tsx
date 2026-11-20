@@ -26,9 +26,14 @@ import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
 import Header from "../components/Header/Header";
 import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
 import TopicComposer from "../components/TopicMaster/TopicComposer";
+import PageKindHeader from "../components/Others/PageKindHeader";
 import { UNSORTED_TOPIC_ID } from "../components/Sidebar/TopicList";
 import IconColorPicker from "../components/Sidebar/IconColorPicker";
-import { topicColor, topicColorById } from "../components/Sidebar/topicColors";
+import {
+  withAlpha,
+  topicColor,
+  topicColorById,
+} from "../components/Sidebar/topicColors";
 import { isTopicIconId, topicIconById } from "../components/Sidebar/topicIcons";
 
 function sortByRecent(first: ConversationRow, second: ConversationRow) {
@@ -228,8 +233,59 @@ export default function TopicMasterPage() {
             </div>
           ) : (
             <>
-              <header className="border-b border-base-300 bg-base-100 px-4 py-3">
-                <div className="mx-auto flex w-full max-w-3xl items-center gap-3">
+              <PageKindHeader
+                kind="topic"
+                title={topicName}
+                kindLabel={t("topic_view.kind")}
+                countLabel={t("topic_view.chat_count", {
+                  count: topicConversations.length,
+                })}
+                iconColor={colorHex ?? unsortedHex}
+                iconLabel={t("folders.choose_icon")}
+                iconExpanded={iconPickerOpen}
+                onIconClick={
+                  isUnsorted || !topic ? undefined : toggleIconPicker
+                }
+                iconTestId="topic-header-icon"
+                icon={
+                  isUnsorted ? (
+                    <span
+                      aria-hidden="true"
+                      className="h-2.5 w-2.5 rounded-full"
+                      style={{
+                        backgroundColor: withAlpha(
+                          unsortedHex,
+                          isDark ? 0.7 : 0.5,
+                        ),
+                      }}
+                    />
+                  ) : emoji ? (
+                    <span aria-hidden="true" className="text-lg leading-none">
+                      {emoji}
+                    </span>
+                  ) : (
+                    <TopicIcon size={20} />
+                  )
+                }
+                iconMenu={
+                  iconPickerOpen && topic ? (
+                    <div
+                      ref={iconPickerRef}
+                      className="absolute left-0 top-full z-30 mt-2 w-80 rounded-xl border border-base-300 bg-base-100 p-2 shadow-lg"
+                    >
+                      <IconColorPicker
+                        icon={selectedIconId}
+                        color={selectedColorId}
+                        onIconChange={chooseIcon}
+                        onColorChange={chooseColor}
+                        onCancel={cancelIconPicker}
+                        onDone={() => setIconPickerOpen(false)}
+                        testIdPrefix="topic-header"
+                      />
+                    </div>
+                  ) : null
+                }
+                leading={
                   <button
                     type="button"
                     onClick={() => navigate("/chat")}
@@ -238,78 +294,10 @@ export default function TopicMasterPage() {
                   >
                     <ChevronLeft size={18} />
                   </button>
-                  {isUnsorted || !topic ? (
-                    <span
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-base-200"
-                      style={colorHex ? { color: colorHex } : undefined}
-                    >
-                      {isUnsorted ? (
-                        <span
-                          aria-hidden="true"
-                          className="h-2.5 w-2.5 rounded-full"
-                          style={{ backgroundColor: unsortedHex }}
-                        />
-                      ) : (
-                        <Folder size={20} className="text-base-content/60" />
-                      )}
-                    </span>
-                  ) : (
-                    <div ref={iconPickerRef} className="relative shrink-0">
-                      <button
-                        type="button"
-                        data-testid="topic-header-icon"
-                        onClick={toggleIconPicker}
-                        title={t("folders.choose_icon")}
-                        aria-label={t("folders.choose_icon")}
-                        aria-expanded={iconPickerOpen}
-                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-base-200"
-                        style={colorHex ? { color: colorHex } : undefined}
-                      >
-                        {emoji ? (
-                          <span
-                            aria-hidden="true"
-                            className="text-lg leading-none"
-                          >
-                            {emoji}
-                          </span>
-                        ) : (
-                          <TopicIcon
-                            size={20}
-                            className={
-                              colorHex ? undefined : "text-base-content/60"
-                            }
-                          />
-                        )}
-                      </button>
-                      {iconPickerOpen && (
-                        <div className="absolute left-0 top-full z-30 mt-2 w-80 rounded-xl border border-base-300 bg-base-100 p-2 shadow-lg">
-                          <IconColorPicker
-                            icon={selectedIconId}
-                            color={selectedColorId}
-                            onIconChange={chooseIcon}
-                            onColorChange={chooseColor}
-                            onCancel={cancelIconPicker}
-                            onDone={() => setIconPickerOpen(false)}
-                            testIdPrefix="topic-header"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <h1 className="truncate text-base font-semibold text-base-content">
-                      {topicName}
-                    </h1>
-                    <p className="text-xs text-base-content/70">
-                      {t("topic_view.chat_count", {
-                        count: topicConversations.length,
-                      })}
-                    </p>
-                  </div>
-                </div>
-              </header>
+                }
+              />
 
-              <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+              <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-2">
                 <div className="mx-auto flex w-full max-w-3xl flex-col gap-2">
                   {topicConversations.length === 0 ? (
                     <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">

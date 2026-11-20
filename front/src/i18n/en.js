@@ -151,6 +151,7 @@ export default {
     create_inline: "Create",
   },
   topic_view: {
+    kind: "Topic",
     chat_count_one: "{{count}} chat",
     chat_count_other: "{{count}} chats",
     empty_title: "No chats in this topic yet",
@@ -2403,6 +2404,7 @@ export default {
     update_error: "Could not save the workspace",
     not_found: "Workspace not found",
     files_title: "Workspace files",
+    kind: "Workspace",
     chat_count_one: "{{count}} chat",
     chat_count_other: "{{count}} chats",
     empty_title: "No chats in this workspace yet",

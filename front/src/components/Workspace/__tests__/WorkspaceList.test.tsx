@@ -482,6 +482,29 @@ describe("WorkspaceList chat rows", () => {
     expect(detach.className).toContain("duration-200");
   });
 
+  it("indents its chat list exactly like a topic's", async () => {
+    renderList(makeStore());
+
+    const chat = await screen.findByRole("button", { name: "Workspace chat" });
+    const list = chat.closest('[data-guide="workspace-chat-row"]')
+      ?.parentElement as HTMLElement;
+    // The topic list under a topic is `ml-2 … gap-1 border-x-2 px-2`; the
+    // workspace list used to sit at `ml-8` with `gap-0.5`, which made every
+    // row 24 pixels narrower.
+    expect(list.className).toContain("ml-2");
+    expect(list.className).toContain("gap-1");
+    expect(list.className).toContain("border-x-2");
+    expect(list.className).toContain("px-2");
+    expect(list.className).not.toContain("ml-8");
+    expect(list.className).not.toContain("gap-0.5");
+
+    const section = document.querySelector(
+      '[data-guide="workspace-list"]',
+    ) as HTMLElement;
+    expect(section.className).toContain("pl-3");
+    expect(section.className).toContain("pr-2");
+  });
+
   it("keeps chat navigation and detach working", async () => {
     render(
       <Provider store={makeStore()}>

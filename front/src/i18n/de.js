@@ -151,6 +151,7 @@ export default {
     create_inline: "Erstellen",
   },
   topic_view: {
+    kind: "Thema",
     chat_count_one: "{{count}} Chat",
     chat_count_other: "{{count}} Chats",
     empty_title: "Noch keine Chats in diesem Thema",
@@ -2257,6 +2258,7 @@ export default {
     tab_preview: "Vorschau",
     tab_agents: "Agenten",
     root_hint: "Dateien und Ordner in diesem Arbeitsbereich.",
+    kind: "Arbeitsbereich",
     chat_count_one: "{{count}} Chat",
     chat_count_other: "{{count}} Chats",
     empty_title: "Noch keine Chats in diesem Arbeitsbereich",
