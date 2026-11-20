@@ -545,3 +545,85 @@ describe("WorkspaceSourceBrowser", () => {
     expect(await screen.findByText("Nothing here yet")).toBeInTheDocument();
   });
 });
+
+describe("device empty state", () => {
+  const emptyDevice = async () => {
+    mocks.sources = [];
+    mocks.providers = new Map();
+    renderBrowser({ target: { drive: "device" } });
+    return waitFor(() => {
+      const zone = guide("workspace-device-empty");
+      expect(zone).toBeTruthy();
+      return zone;
+    });
+  };
+
+  it("invites a drop or a click instead of the small add button", async () => {
+    const zone = await emptyDevice();
+
+    expect(zone).toHaveTextContent("There's nothing here yet.");
+    expect(zone).toHaveTextContent("Drag and drop a folder here");
+    expect(guide("workspace-sources-add-device-folder")).toBeNull();
+
+    fireEvent.click(zone);
+    expect(mocks.onAddDeviceFolder).toHaveBeenCalledTimes(1);
+    await act(async () => {});
+  });
+
+  it("mounts a dropped folder and says when the drop was not one", async () => {
+    mocks.sources = [];
+    mocks.providers = new Map();
+    const mount = vi.fn();
+    renderBrowser({
+      target: { drive: "device" },
+      onMountDeviceFolder: mount,
+    });
+    const zone = await waitFor(() => guide("workspace-device-empty"));
+
+    const folder = { kind: "directory", name: "Thesis" };
+    fireEvent.drop(zone, {
+      dataTransfer: {
+        items: [{ kind: "file", getAsFileSystemHandle: async () => folder }],
+      },
+    });
+    await waitFor(() => expect(mount).toHaveBeenCalledWith(folder));
+
+    fireEvent.drop(zone, {
+      dataTransfer: {
+        items: [
+          {
+            kind: "file",
+            getAsFileSystemHandle: async () => ({ kind: "file", name: "a" }),
+          },
+        ],
+      },
+    });
+    expect(
+      await screen.findByText(/did not carry a folder/),
+    ).toBeInTheDocument();
+    await act(async () => {});
+  });
+
+  it("keeps the small add button once a folder is mounted", async () => {
+    renderBrowser({ target: { drive: "device" } });
+
+    await screen.findByText("Project");
+    expect(guide("workspace-sources-add-device-folder")).toBeTruthy();
+    await act(async () => {});
+  });
+
+  it("opens the folder picker from the empty state and shows why it failed", async () => {
+    mocks.sources = [];
+    mocks.providers = new Map();
+    const pick = vi.fn().mockResolvedValue("Folder picking is not supported");
+    renderBrowser({ target: { drive: "device" }, onPickDeviceFolder: pick });
+    const zone = await waitFor(() => guide("workspace-device-empty"));
+
+    fireEvent.click(zone);
+    expect(pick).toHaveBeenCalledTimes(1);
+    expect(
+      await screen.findByText("Folder picking is not supported"),
+    ).toBeInTheDocument();
+    await act(async () => {});
+  });
+});

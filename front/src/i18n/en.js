@@ -2369,6 +2369,11 @@ export default {
       select_all: "Select all",
       clear: "Clear",
       add_device_folder: "Add folder from this device",
+      device_empty_title: "There's nothing here yet.",
+      device_empty_body:
+        "Drag and drop a folder here, or click to mount one from this device.",
+      device_drop_rejected:
+        "That drop did not carry a folder. Click to mount a folder from this device.",
       in_workspace: "In workspace",
       untitled_chat: "Untitled chat",
       pick_source: "Pick a source on the left to browse its files.",

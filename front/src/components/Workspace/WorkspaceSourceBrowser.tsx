@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { DragEvent, KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Locked, TrashCan, Unlocked } from "@carbon/icons-react";
 import {
@@ -8,6 +9,7 @@ import {
   ChevronRight,
   FileText,
   Folder,
+  HardDrive,
   MessageSquare,
   Plus,
 } from "lucide-react";
@@ -236,6 +238,8 @@ export default function WorkspaceSourceBrowser({
   onRemoveSource,
   onToggleSourceReadOnly,
   onAddDeviceFolder,
+  onMountDeviceFolder,
+  onPickDeviceFolder,
   isInWorkspace,
   embedded = false,
   className = "",
@@ -248,6 +252,8 @@ export default function WorkspaceSourceBrowser({
   onRemoveSource?: (source: WorkspaceSourceRow) => void;
   onToggleSourceReadOnly?: (source: WorkspaceSourceRow) => void;
   onAddDeviceFolder?: () => void;
+  onMountDeviceFolder?: (handle: FileSystemDirectoryHandle) => Promise<void> | void;
+  onPickDeviceFolder?: () => Promise<string | void> | string | void;
   isInWorkspace?: (selection: SourcesSelection) => boolean;
   embedded?: boolean;
   className?: string;
@@ -265,6 +271,8 @@ export default function WorkspaceSourceBrowser({
     new Map(),
   );
   const [adding, setAdding] = useState(false);
+  const [dropActive, setDropActive] = useState(false);
+  const [dropError, setDropError] = useState("");
 
   const localById = useMemo(
     () => new Map(localSources.map((source) => [source.id, source])),
@@ -680,6 +688,47 @@ export default function WorkspaceSourceBrowser({
         )
       : "";
 
+  const deviceRoot = view?.drive === "device" && view.level === "drives";
+  const deviceEmpty =
+    deviceRoot && !loading && !error && rows.length === 0;
+
+  // A dropped folder arrives as a FileSystemDirectoryHandle in Chromium; anything else (a file, or
+  // a browser without getAsFileSystemHandle) cannot be mounted and says so.
+  const dropFolder = useCallback(
+    async (event: DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      setDropActive(false);
+      setDropError("");
+      for (const item of Array.from(event.dataTransfer?.items ?? [])) {
+        const pick = (
+          item as DataTransferItem & {
+            getAsFileSystemHandle?: () => Promise<FileSystemHandle | null>;
+          }
+        ).getAsFileSystemHandle;
+        if (item.kind !== "file" || typeof pick !== "function") continue;
+        try {
+          const handle = await pick.call(item);
+          if (handle && handle.kind === "directory" && onMountDeviceFolder) {
+            await onMountDeviceFolder(handle as FileSystemDirectoryHandle);
+            return;
+          }
+        } catch {
+          break;
+        }
+      }
+      setDropError(t("workspace.source_browser.device_drop_rejected"));
+    },
+    [onMountDeviceFolder, t],
+  );
+
+  const openFolderPicker = async () => {
+    setDropError("");
+    const message = onPickDeviceFolder
+      ? await onPickDeviceFolder()
+      : onAddDeviceFolder?.();
+    if (message) setDropError(message);
+  };
+
   const sectionClassName = embedded
     ? `flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden ${className}`
     : `flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-base-300 bg-base-100 ${className}`;
@@ -757,6 +806,54 @@ export default function WorkspaceSourceBrowser({
               <div className="flex items-start gap-1.5 p-2 text-[11px] text-error">
                 <AlertCircle size={14} className="mt-0.5 shrink-0" />
                 <span className="min-w-0 break-words">{error}</span>
+              </div>
+            ) : deviceEmpty ? (
+              <div className="flex h-full min-h-[10rem] items-stretch p-1">
+                <div
+                  data-guide="workspace-device-empty"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={t("workspace.source_browser.device_empty_body")}
+                  onClick={openFolderPicker}
+                  onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      openFolderPicker();
+                    }
+                  }}
+                  onDragEnter={(event) => {
+                    event.preventDefault();
+                    setDropActive(true);
+                  }}
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    setDropActive(true);
+                  }}
+                  onDragLeave={() => setDropActive(false)}
+                  onDrop={dropFolder}
+                  className={`flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed px-5 py-8 text-center transition ${
+                    dropActive
+                      ? "border-accent bg-accent/10"
+                      : "border-base-300 hover:border-accent/50 hover:bg-base-200/40"
+                  }`}
+                >
+                  <HardDrive
+                    size={42}
+                    strokeWidth={1.25}
+                    className="text-base-content/20"
+                  />
+                  <p className="max-w-[22rem] text-sm font-semibold text-base-content/70">
+                    {t("workspace.source_browser.device_empty_title")}
+                  </p>
+                  <p className="max-w-[24rem] text-[11px] leading-relaxed text-base-content/45">
+                    {t("workspace.source_browser.device_empty_body")}
+                  </p>
+                  {dropError && (
+                    <p className="max-w-[24rem] text-[10px] text-error">
+                      {dropError}
+                    </p>
+                  )}
+                </div>
               </div>
             ) : rows.length === 0 ? (
               <div className="flex flex-col items-center gap-1.5 p-4 text-center text-[11px] text-base-content/50">
@@ -945,9 +1042,7 @@ export default function WorkspaceSourceBrowser({
             )}
           </div>
 
-          {view.drive === "device" &&
-            view.level === "drives" &&
-            onAddDeviceFolder && (
+          {deviceRoot && !deviceEmpty && onAddDeviceFolder && (
               <div className="shrink-0 border-t border-base-300 px-1 py-1">
                 <button
                   type="button"

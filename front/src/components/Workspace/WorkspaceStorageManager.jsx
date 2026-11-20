@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import WorkspaceSourceBrowser from "./WorkspaceSourceBrowser";
 import WorkspaceSourcesPanel from "./WorkspaceSourcesPanel";
@@ -6,8 +7,10 @@ import WorkspaceStorageTree from "./WorkspaceStorageTree";
 import { useWorkspaceSources } from "../../db/workspaceDb";
 import { useModal } from "../../modals/ModalContext";
 import { addSelectionToWorkspace } from "../../workspace/addSelectionToWorkspace";
+import { addLocalSource, pickDirectory } from "../../workspace/localWorkspace";
 
-export default function WorkspaceStorageManager({ workspaceId }) {
+export default function WorkspaceStorageManager({ workspaceId, onOpenAddSource }) {
+  const { t } = useTranslation();
   const { openModal } = useModal();
   const [target, setTarget] = useState(null);
   const [adding, setAdding] = useState(false);
@@ -28,11 +31,46 @@ export default function WorkspaceStorageManager({ workspaceId }) {
     }
   };
 
+  // Inside the create-workspace dialog the caller owns the nested dialog: opening the global
+  // modal there would replace the create dialog and its draft workspace.
   const openAdd = (kind) =>
-    openModal("workspaceAddSource", {
-      workspaceId,
-      initialKind: kind,
-    });
+    onOpenAddSource
+      ? onOpenAddSource(kind)
+      : openModal("workspaceAddSource", {
+          workspaceId,
+          initialKind: kind,
+        });
+
+  // A folder dropped on the device pane already arrives as a directory handle, so it mounts
+  // straight away instead of opening the dialog. A drop only grants read access, which the
+  // provider asks to widen when the folder is first written to.
+  const mountDroppedFolder = async (handle) => {
+    if (!workspaceId) return;
+    try {
+      await handle.requestPermission?.({ mode: "readwrite" });
+    } catch {
+      // The handle stays readable; writing asks for permission again when it is needed.
+    }
+    await addLocalSource({ workspaceId, handle });
+  };
+
+  // Clicking the device pane's empty state goes straight to the folder picker: no second dialog,
+  // which would replace the create-workspace dialog it was opened from.
+  const pickDeviceFolder = async () => {
+    if (!workspaceId) return "";
+    try {
+      const handle = await pickDirectory({
+        mode: "readwrite",
+        insecureMessage: t("workspace.local_insecure"),
+        unsupportedMessage: t("workspace.local_unsupported"),
+      });
+      await addLocalSource({ workspaceId, handle });
+      return "";
+    } catch (error) {
+      if (error && error.name === "AbortError") return "";
+      return error instanceof Error ? error.message : String(error);
+    }
+  };
 
   return (
     <div
@@ -63,6 +101,8 @@ export default function WorkspaceStorageManager({ workspaceId }) {
             onAddToWorkspace={addSelection}
             busy={adding}
             onAddDeviceFolder={() => openAdd("local")}
+            onMountDeviceFolder={mountDroppedFolder}
+            onPickDeviceFolder={pickDeviceFolder}
             embedded
             className="min-h-0 flex-1"
           />

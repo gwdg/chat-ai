@@ -2401,6 +2401,11 @@ export default {
       select_all: "Alle auswählen",
       clear: "Auswahl aufheben",
       add_device_folder: "Ordner von diesem Gerät hinzufügen",
+      device_empty_title: "Hier ist noch nichts.",
+      device_empty_body:
+        "Ziehe einen Ordner hierher oder klicke, um einen von diesem Gerät einzubinden.",
+      device_drop_rejected:
+        "Der abgelegte Eintrag war kein Ordner. Klicke, um einen Ordner von diesem Gerät einzubinden.",
       in_workspace: "Im Arbeitsbereich",
       untitled_chat: "Unbenannter Chat",
       pick_source: "Wählen Sie links eine Quelle, um ihre Dateien zu durchsuchen.",

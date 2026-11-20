@@ -22,8 +22,22 @@ vi.mock("../../../db/workspaceDb", () => ({
 }));
 
 vi.mock("../../../components/Workspace/WorkspaceStorageManager", () => ({
-  default: ({ workspaceId }) => (
-    <div data-testid="storage-manager" data-workspace={workspaceId ?? ""} />
+  default: ({ workspaceId, onOpenAddSource }) => (
+    <div data-testid="storage-manager" data-workspace={workspaceId ?? ""}>
+      <button type="button" onClick={() => onOpenAddSource?.("local")}>
+        open add source
+      </button>
+    </div>
+  ),
+}));
+
+vi.mock("../AddSourceModal", () => ({
+  default: ({ initialKind, workspaceId }) => (
+    <div
+      data-testid="add-source-modal"
+      data-kind={initialKind}
+      data-workspace={workspaceId ?? ""}
+    />
   ),
 }));
 
@@ -65,6 +79,19 @@ describe("CreateWorkspaceModal", () => {
     expect(api.createWorkspace).toHaveBeenCalledTimes(1);
     expect(api.createWorkspace).toHaveBeenCalledWith("New workspace");
     expect(screen.getAllByTestId("storage-manager")).toHaveLength(1);
+  });
+
+  it("opens Add source inside the dialog instead of replacing it", async () => {
+    renderModal();
+    await waitForDraft();
+
+    fireEvent.click(screen.getByText("open add source"));
+
+    expect(screen.getByTestId("add-source-modal")).toHaveAttribute(
+      "data-kind",
+      "local",
+    );
+    expect(screen.getByTestId("storage-manager")).toBeInTheDocument();
   });
 
   it("keeps colour dots inside the icon popover and writes the choice", async () => {
