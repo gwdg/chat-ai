@@ -916,6 +916,24 @@ export default function SidebarContent({
         </div>
       )}
 
+      <div className="flex items-center justify-between gap-1 px-3 pb-2">
+        <NewChatButton
+          topicId={localState?.folderId}
+          variant={"sidebar"}
+          onNewConversation={handleNewConversation}
+        />
+        <div className="flex items-center justify-between gap-1">
+          <ImportPersonaButton
+            topicId={localState?.folderId}
+            variant={"sidebar"}
+          />
+          <ImportChatButton
+            topicId={localState?.folderId}
+            variant={"sidebar"}
+          />
+        </div>
+      </div>
+
       <div className="flex-1 flex flex-col overflow-hidden">
         {isFeatureEnabled("tutorials") && (
           <div className="px-3 pb-1">
@@ -1116,15 +1134,6 @@ export default function SidebarContent({
               </button>
             </div>
             )}          </div>
-          {(!chatsCollapsed || hasSearch) && (
-          <div className="flex items-center justify-between gap-1 pb-2">
-            <NewChatButton topicId={localState?.folderId} variant={"sidebar"} onNewConversation={handleNewConversation} />
-          <div className="flex items-center justify-between gap-1">
-            <ImportPersonaButton topicId={localState?.folderId} variant={"sidebar"} />
-            <ImportChatButton topicId={localState?.folderId} variant={"sidebar"} />
-          </div>
-          </div>
-          )}
           {(!chatsCollapsed || hasSearch) && (
           <div
             className={`relative overflow-hidden transform-gpu transition-[max-height,opacity,transform,padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
