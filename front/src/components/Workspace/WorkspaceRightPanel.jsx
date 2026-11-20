@@ -22,7 +22,7 @@ function WorkspaceFilesTab({ workspaceIds }) {
     return (
       <WorkspaceStorageTree
         workspaceId={workspaceIds[0]}
-        className="min-h-0 min-w-0"
+        className="min-h-0 min-w-0 flex-1"
         showTitle={false}
       />
     );
@@ -82,6 +82,7 @@ export default function WorkspaceRightPanel({
         id: "files",
         label: t("workspace.files_tab"),
         content: <WorkspaceFilesTab workspaceIds={ids} />,
+        contentClassName: ids.length === 1 ? "flex flex-col" : undefined,
       },
       {
         id: "agents",

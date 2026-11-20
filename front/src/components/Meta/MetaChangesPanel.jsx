@@ -305,7 +305,11 @@ export default function MetaChangesPanel({
         </div>
       )}
       {activeContentTab ? (
-        <div className="min-h-0 flex-1 overflow-y-auto p-2">
+        <div
+          className={`min-h-0 flex-1 overflow-y-auto ${
+            activeContentTab.contentClassName ?? "p-2"
+          }`}
+        >
           {activeContentTab.content}
         </div>
       ) : (

@@ -521,16 +521,18 @@ export default function WorkspaceStorageTree({
       <div
         data-testid="workspace-storage-tree"
         data-guide="workspace-storage-tree"
-        className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-1.5"
+        className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
       >
         {showTitle && (
-          <div className="flex h-6 items-center justify-between px-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
-              {t("workspace.files_title")}
-            </span>
+          <div className="flex min-w-0 shrink-0 items-center gap-1 border-b border-base-300 px-2 py-1.5">
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[11px] font-semibold leading-tight text-base-content">
+                {t("workspace.files_title")}
+              </div>
+            </div>
           </div>
         )}
-        <div className="mt-1 flex flex-wrap items-center gap-1 border-b border-base-300 px-2 py-1">
+        <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-base-300 px-2 py-1">
           <button
             type="button"
             data-guide="workspace-upload"
