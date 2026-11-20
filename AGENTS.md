@@ -124,8 +124,11 @@ plugins `.eslintrc.cjs` extends are in `front/devDependencies`, so a clean `npm 
 lint in your verification loop until that is fixed, and don't report it as passing.
 
 **Tests:** `front` uses Vitest with jsdom, fake-indexeddb, and Testing Library (`vitest.config.js`,
-`src/test/setup.js`). Put tests next to the code as `*.test.js|jsx|ts|tsx`. `back` still has no
-test suite (`npm test` is `exit 1`), and `.github/` contains only issue templates, so there is no
+`src/test/setup.js`). Put tests next to the code as `*.test.js|jsx|ts|tsx`. `back` has no suite
+either (`npm test` is still `exit 1`), only standalone files run with `node --test`: `test-bridge.mjs`
+(the bridge host protocol), `test-bridge-direct.mjs` (a direct agent end to end, with an opt-in live
+leg — `npm run test:bridge` / `test:bridge-direct`), `test-bridge-resources.mjs` (MCP resources) and
+`test-remote-files.mjs`. `.github/` contains only issue templates, so there is no
 CI. A passing build or unit test is not evidence that the full UI works; exercise changes in a
 browser when behaviour matters. **Include tests with new features:** add at least one focused
 `*.test.js|jsx|ts|tsx` covering the new behavior, plus regression coverage for bugs you fix.
@@ -278,7 +281,7 @@ inside `db/`. UI strings and i18n keys say topic.
 `VITE_PROPOSAL_GENERATION_MODEL`, `VITE_ANNOUNCEMENT`, `VITE_USE_OPENAI_SDK`,
 `VITE_E2EE_KEY_URL`, `VITE_OPENCODE_SERVER_URL`, `VITE_OPENCODE_SERVER_USERNAME`,
 `VITE_OPENCODE_SERVER_PASSWORD`, `VITE_AGENT_SERVICE_MODE`, `VITE_AGENT_SERVICE_MODEL`,
-`VITE_BRIDGE_KEY`, `VITE_FAKE_AUTH_HEADERS`, `VITE_SAIA_FS_ENDPOINT`, `VITE_MODULE_*`. Consequences: **a new
+`VITE_BRIDGE_PATH`, `VITE_BRIDGE_KEY`, `VITE_FAKE_AUTH_HEADERS`, `VITE_SAIA_FS_ENDPOINT`, `VITE_MODULE_*`. Consequences: **a new
 config key requires editing `front/vite.config.js` too**, and a config change requires a dev-server
 restart. Read values via `import.meta.env.VITE_*`; they arrive as strings, hence the
 `=== "true"` comparisons.
@@ -1564,6 +1567,16 @@ only the host that spawns OpenCode knows a path there (`sidecarCommandFor()` pre
 same `front.json` command still cannot break a SAIA deployment. When no command is available the
 hook registers the remote MCP endpoint (`mcpUrl`) instead.
 
+**A `local` entry's command is resolved on the OpenCode host, never in the page or the checkout.**
+A direct server in another container or on another machine therefore cannot see
+`back/bridge-sidecar.mjs`: node answers `Cannot find module`, and that host's `/api/fs` lists its own
+project, which is how the two filesystems are told apart. Unless `opencodeBridgeSidecarCommand`
+names a path that exists *there* (an image that copies the sidecar, a shared mount), a direct agent
+uses the HTTP `mcpUrl` entry and the stdio sidecar is only an option for a host that has the file.
+`back/test-bridge-direct.mjs` covers both, and its live leg defaults to `mcpUrl` for that reason.
+OpenCode 2.3.0 lists MCP entries at `GET /api/mcp`; `GET /api/experimental/mcp` is 404, while the
+`PUT`/`…/connect`/`DELETE` calls live under `/experimental`.
+
 `mcpUrl` and `agentWsUrl` are absolute. The service derives them for a backend it spawned —
 loopback plus its own `AGENT_SERVICE_PORT` for `process` and `network: host`, the docker gateway for
 a container on its own network — and keeps the request base URL for `kind: remote`. Set
@@ -1713,13 +1726,18 @@ so the usual dev pair (`front` on :8080, `back` on :8081) is cross-origin and mu
 request.
 
 The first call is `POST <bridge base>/bridge/sessions`, where the base is `/agents/<serviceAgentId>`
-for a service-managed agent and `VITE_BACKEND_ENDPOINT` for a direct one. A 404 or 405 means that
-base has no bridge route (a direct engine such as the `saia/saia-engine/local-testing` stack answers
-404, and so does an agent service older than the bridge), so the hook sets `unavailable` with the URL
-and status instead of retrying: the popover shows "Agent bridge not available", the endpoint, and
-disables the switch. Any other non-OK status stays a normal failure. Direct mode therefore cannot
-use the bridge, and the UI says so rather than reporting a broken bridge. The gateway must forward
-the `Upgrade` header on `/agents/*`; this is the only WebSocket the UI opens.
+for a service-managed agent and, for a direct one, `bridgePath` (`VITE_BRIDGE_PATH`) when it is set,
+otherwise `VITE_BACKEND_ENDPOINT`. The two are separate because `backendPath` is where models come
+from: the `saia/saia-engine/local-testing` stack points it straight at the engine
+(`…/public/v1`), which has no bridge route, while `back` on its own port still serves one. Leaving
+`bridgePath` empty keeps the deployed setup, where the backend is the Chat AI service itself. A 404
+or 405 means the base has no bridge route (a direct engine answers 404, OpenCode itself answers 405
+because it has no bridge host at all, and so does an agent service older than the bridge), so the
+hook sets `unavailable` with the URL and status instead of retrying: the popover shows "Agent bridge
+not available", the endpoint, and disables the switch. Any other non-OK status (`401` for a key
+mismatch, `503` for a missing secret) stays a normal failure. A direct agent therefore needs
+`bridgePath` whenever its `backendPath` is not `back`. The gateway must forward the `Upgrade` header
+on `/agents/*`; this is the only WebSocket the UI opens.
 
 ### 4.28 The local-files skill is documentation, not installation
 

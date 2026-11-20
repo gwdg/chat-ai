@@ -258,6 +258,48 @@ natively, because its tools then survive a closed tab:
   vanish with the OpenCode process and are reconciled on the next page load.
   A `localhost` URL means the OpenCode host, not the user's machine.
 
+### 4.5 Verifying a direct agent end to end
+
+`back/test-bridge-direct.mjs` (`npm run test:bridge-direct` in `back/`) is the
+direct-agent counterpart of `back/test-bridge.mjs`. It runs the real
+`back/bridge.mjs` host, the real `back/bridge-sidecar.mjs` as a stdio MCP server,
+a browser leg that answers exactly like `useAgentBridge#handleToolCall` (an
+in-memory workspace tree for `workspace_*`, a real HTTP MCP server for `mcp_*`),
+and asserts the sidecar's tool list, reads, writes, resource listing and the
+`BRIDGE_OFFLINE` answer when the browser is gone. No model and no network are
+needed for that part.
+
+The last test is opt-in and drives a live server:
+
+```bash
+DIRECT_OPENCODE_URL=http://127.0.0.1:9000 DIRECT_OPENCODE_PASSWORD=… \
+  node --test back/test-bridge-direct.mjs
+```
+
+It registers, connects and finally removes the entry under
+`chatai-bridge-<session id>`, prompts a tool-capable model, and asserts that the
+browser leg saw `workspace_read` and `mcp_call` and that the file's contents
+reached the model. It skips itself without a password.
+
+- **The bridge host is `back`, not the engine and not OpenCode.** `bridgePath`
+  (`VITE_BRIDGE_PATH`) names it for a direct agent; empty means `backendPath`. That
+  matters for a local stack, where `backendPath` is the engine
+  (`http://localhost:10000/public/v1`) and answers 404 for `/bridge/sessions`, and
+  where `localhost:8081` is `back`. OpenCode itself is never the host: it answers
+  405, because it has no bridge route at all. A `401` means `bridgeKey` (front) and
+  `bridgeSharedSecret` (back) disagree, `503` means `back` has no secret.
+- **The sidecar path is the agent host's, not the app's.** A `local` MCP entry's
+  `command` is resolved by the process that runs OpenCode, so a direct server in
+  another container or on another machine cannot see `back/bridge-sidecar.mjs`
+  from the checkout: node answers `Cannot find module`. Its `/api/fs` then lists
+  that host's own project, which is how you tell the two filesystems apart. That
+  is why a direct agent with no `opencodeBridgeSidecarCommand` uses the HTTP
+  `mcpUrl` entry, and why the live test defaults to it
+  (`DIRECT_OPENCODE_SIDECAR=<path on the agent host>` switches it to stdio).
+- **The entry list is `GET /api/mcp`, not `/api/experimental/mcp`.** The latter
+  answers 404 on OpenCode 2.3.0; `PUT`/`POST …/connect`/`DELETE` live under
+  `experimental`, the list does not.
+
 ## 5. Not implemented
 
 ### 5.1 Route `/agents/*` at the gateway
@@ -331,6 +373,7 @@ leg's status is visible.
 | `back/bridge-sidecar.mjs` | stdio MCP sidecar for **direct** agents (WebSocket + Bearer) |
 | `back/bridge.mjs` | `/bridge/*` for direct agents |
 | `back/bridge-resources.mjs` | MCP resources for both JS hosts (sidecar + `mcpUrl`) |
+| `back/test-bridge-direct.mjs` | end-to-end test for a direct agent (§4.5), with an opt-in live leg |
 | `agent-service/src/saia_agent_service/bridge.py` | `/agents/<id>/bridge/*`, `_agent_base`, `_sidecar_command`, both legs |
 | `agent-service/src/saia_agent_service/bridge_tools.py` | the one tool list both transports offer |
 | `agent-service/src/saia_agent_service/bridge_resources.py` | MCP resources for both Python transports (§4.3) |

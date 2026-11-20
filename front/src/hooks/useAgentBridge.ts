@@ -77,6 +77,18 @@ const BACKEND = String(import.meta.env.VITE_BACKEND_ENDPOINT || "").replace(
   /\/+$/,
   "",
 );
+/**
+ * The host that serves `/bridge/*` for a direct agent, when it is not `backendPath`.
+ *
+ * `backendPath` is where models come from, and in a local test stack that is the engine
+ * (`…/public/v1`), which has no bridge route: the app is then a direct client of the engine and
+ * the agent's bridge still belongs to `back`. Naming it here keeps the two apart. Empty means
+ * "the backend also serves the bridge", which is the deployed Chat AI setup.
+ */
+const BRIDGE_ENDPOINT = String(import.meta.env.VITE_BRIDGE_PATH || "").replace(
+  /\/+$/,
+  "",
+);
 const BRIDGE_KEY = String(import.meta.env.VITE_BRIDGE_KEY || "").trim();
 
 /**
@@ -84,14 +96,21 @@ const BRIDGE_KEY = String(import.meta.env.VITE_BRIDGE_KEY || "").trim();
  *
  * An agent owned by the SAIA agent service is served by that service on the
  * app's own origin (`/agents/<id>/bridge/...`), which is what a SAIA deployment
- * has. A direct OpenCode agent falls back to the configured backend, where
- * `back` serves the same protocol at `/bridge`. The service URL stays relative
- * so the page origin decides where the browser connects, not the backend config.
+ * has. A direct OpenCode agent uses the configured bridge host — `bridgePath`
+ * when the backend is not the Chat AI service itself — and falls back to the
+ * backend, then to the page origin. The service URL stays relative so the page
+ * origin decides where the browser connects, not the backend config.
  */
-export const bridgeBaseFor = (agent: any, backend: string) =>
+export const bridgeBaseFor = (
+  agent: any,
+  backend: string,
+  bridgeEndpoint: string = BRIDGE_ENDPOINT,
+) =>
   agent?.serviceAgentId
     ? `${AGENT_SERVICE_PATH}/${encodeURIComponent(agent.serviceAgentId)}`
-    : backend || (typeof window !== "undefined" ? window.location.origin : "");
+    : bridgeEndpoint ||
+      backend ||
+      (typeof window !== "undefined" ? window.location.origin : "");
 
 const bridgeBase = (agent: any) => bridgeBaseFor(agent, BACKEND);
 

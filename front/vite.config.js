@@ -169,6 +169,12 @@ try {
       // gateway stays the real boundary. Never log the value.
       process.env["VITE_BRIDGE_KEY"] = String(value ?? "");
       console.log("Bridge key:", value ? "set" : "not set");
+    } else if (key == "bridgePath") {
+      // Where a *direct* agent's `/bridge/*` lives when that is not `backendPath`:
+      // a local test stack talks to the engine directly and has no bridge there,
+      // while `back` still serves it. Empty means "use backendPath".
+      process.env["VITE_BRIDGE_PATH"] = String(value ?? "");
+      console.log("Bridge path:", value || "backendPath");
     } else if (key == "agentServiceMode") {
       // "tunnel" reaches the agent service through the model endpoint, for a
       // deployment whose gateway forwards only `saia-agent` and has no `/agents`

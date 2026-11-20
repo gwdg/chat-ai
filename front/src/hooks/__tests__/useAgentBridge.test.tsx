@@ -712,6 +712,24 @@ describe("useAgentBridge", () => {
     ).toBe("/agents/svc-1");
     expect(bridgeBaseFor({ id: "local-1" }, "")).toBe(window.location.origin);
 
+    // A local test stack talks to the engine directly, and the engine has no bridge: the
+    // configured bridge host must win over `backendPath`, while the service prefix still
+    // wins over both.
+    expect(
+      bridgeBaseFor(
+        { id: "local-1" },
+        "http://localhost:10000/public/v1",
+        "http://localhost:8081",
+      ),
+    ).toBe("http://localhost:8081");
+    expect(
+      bridgeBaseFor(
+        { id: "local-1", serviceAgentId: "svc-1" },
+        "http://localhost:10000/public/v1",
+        "http://localhost:8081",
+      ),
+    ).toBe("/agents/svc-1");
+
     // Only the agent service is reachable through the model endpoint; a direct
     // OpenCode agent keeps its own URL and its WebSocket.
     mocks.tunnel = true;
