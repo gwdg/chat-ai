@@ -11,6 +11,7 @@ import {
 
 import { useConversationList } from "../../db";
 import type { WorkspaceSourceRow } from "../../db/dbTypes";
+import Tooltip from "../Others/Tooltip";
 import type { QuotaInfo } from "../../workspace/providers/types";
 import { formatBytes } from "../../utils/formatBytes";
 import {
@@ -66,15 +67,23 @@ function DriveCard({
             {title}
           </span>
           {broken && (
-            <span
-              role="img"
-              aria-label={broken}
-              title={broken}
-              data-guide="workspace-source-broken"
+            <Tooltip
+              text={broken}
+              placement="right"
+              interactive
+              width="max-w-[17rem]"
               className="shrink-0"
             >
-              <AlertCircle size={14} className="text-error" />
-            </span>
+              <span
+                role="img"
+                aria-label={broken}
+                title={broken}
+                data-guide="workspace-source-broken"
+                className="flex items-center"
+              >
+                <AlertCircle size={14} className="text-error" />
+              </span>
+            </Tooltip>
           )}
           <ChevronRight size={14} className="shrink-0 text-base-content/35" />
         </div>
@@ -133,10 +142,24 @@ export default function WorkspaceSourcesPanel({
       (row) => row.status === "error" || row.status === "needs-permission",
     );
     if (!bad) return undefined;
-    const base = t("workspace.source_browser.source_broken", {
-      name: bad.label,
-    });
-    return bad.error ? `${base} ${bad.error}` : base;
+    const detail = bad.error?.trim();
+    if (detail && /failed to fetch|networkerror|load failed|network error/i.test(detail)) {
+      return t("workspace.source_browser.source_unreachable", {
+        name: bad.label,
+      });
+    }
+    if (bad.status === "needs-permission") {
+      const base = t("workspace.source_browser.source_needs_permission", {
+        name: bad.label,
+      });
+      return detail ? `${base} ${detail}` : base;
+    }
+    return detail
+      ? t("workspace.source_browser.source_error_detail", {
+          name: bad.label,
+          detail,
+        })
+      : t("workspace.source_browser.source_broken", { name: bad.label });
   };
   const chatSources = sources.filter((source) => source.kind === "chat");
 

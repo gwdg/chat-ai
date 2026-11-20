@@ -2354,6 +2354,11 @@ export default {
     source_browser: {
       title: "Storage locations",
       source_broken: "{{name}} is not working right now.",
+      source_needs_permission:
+        "{{name}} has lost access permission — open it and allow access again.",
+      source_unreachable:
+        "{{name}} could not be reached — the service is not answering right now.",
+      source_error_detail: "{{name}} could not be opened: {{detail}}",
       device: "Your Device",
       chats: "Browser",
       arcanas: "Arcanas",

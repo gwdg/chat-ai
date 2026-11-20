@@ -2386,6 +2386,11 @@ export default {
     source_browser: {
       title: "Speicherorte",
       source_broken: "„{{name}}“ funktioniert gerade nicht.",
+      source_needs_permission:
+        "„{{name}}“ hat die Zugriffsberechtigung verloren — öffne sie und erlaube den Zugriff erneut.",
+      source_unreachable:
+        "„{{name}}“ ist nicht erreichbar — der Dienst antwortet gerade nicht.",
+      source_error_detail: "„{{name}}“ konnte nicht geöffnet werden: {{detail}}",
       device: "Dieses Gerät",
       chats: "Browser",
       arcanas: "Arcanas",
