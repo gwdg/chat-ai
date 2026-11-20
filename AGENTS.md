@@ -210,6 +210,12 @@ tab then disappears on the next reload of the other (the regression test is
 Adding a persisted key means adding it to `persistConfig.whitelist` **and** `getDefaultState()` in
 `Redux/store/store.jsx`.
 
+**Every migration must return the state.** `createMigrate` reduces with each function's return value,
+so a migration that only mutates returns `undefined`: a one-step upgrade then rehydrates nothing and
+every persisted setting falls back to its default, and a multi-step upgrade runs the next migration on
+`undefined` and errors out. `Redux/store/__tests__/migrations.test.js` asserts the return value and a
+multi-version chain.
+
 ### 4.2 The conversation data flow
 
 `ChatPage.tsx` holds the whole hydrated conversation in one `localState` object and passes
