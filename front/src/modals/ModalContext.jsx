@@ -47,7 +47,6 @@ import HelpMCPModal from "./Help/HelpMCPModal";
 import ImportSettingsDisclaimerModal from "./Alert/ImportSettingsDisclaimerModal";
 import HelpReasoningModal from "./Help/HelpReasoningModal";
 import CreateWorkspaceModal from "./Workspace/CreateWorkspaceModal";
-import EditWorkspaceStorageModal from "./Workspace/EditWorkspaceStorageModal";
 import AddSourceModal from "./Workspace/AddSourceModal";
 import TransferConfirmModal from "./Workspace/TransferConfirmModal";
 import MoveToModal from "./Workspace/MoveToModal";
@@ -56,7 +55,6 @@ import AttachChatModal from "./Workspace/AttachChatModal";
 import AttachAgentModal from "./Workspace/AttachAgentModal";
 import AttachAgentSessionModal from "./Workspace/AttachAgentSessionModal";
 import CreateEntryModal from "./Workspace/CreateEntryModal";
-import RenameWorkspaceModal from "./Workspace/RenameWorkspaceModal";
 import McpServerModal from "./McpServer/McpServerModal";
 import McpServerDetailsModal from "./McpServer/McpServerDetailsModal";
 import AddAgentModal from "./Agent/AddAgentModal";
@@ -211,13 +209,6 @@ export function ModalProvider({ children }) {
       {modalType === "workspaceEdit" && (
         <CreateWorkspaceModal isOpen onClose={closeModal} {...modalProps} />
       )}
-      {modalType === "workspaceEditStorage" && (
-        <EditWorkspaceStorageModal
-          isOpen
-          onClose={closeModal}
-          {...modalProps}
-        />
-      )}
       {modalType === "workspaceAddSource" && (
         <AddSourceModal isOpen onClose={closeModal} {...modalProps} />
       )}
@@ -241,9 +232,6 @@ export function ModalProvider({ children }) {
       )}
       {modalType === "workspaceCreateEntry" && (
         <CreateEntryModal isOpen onClose={closeModal} {...modalProps} />
-      )}
-      {modalType === "workspaceRename" && (
-        <RenameWorkspaceModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {modalType === "mcpServerEdit" && (
         <McpServerModal isOpen onClose={closeModal} {...modalProps} />

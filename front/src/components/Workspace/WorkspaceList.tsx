@@ -7,7 +7,6 @@ import {
   Add,
   Bot,
   ChevronDown,
-  DataBase,
   Edit,
   Link,
   OverflowMenuVertical,
@@ -565,32 +564,15 @@ export default function WorkspaceList({
                         type="button"
                         onClick={() => {
                           close();
-                          openModal("workspaceEditStorage", {
+                          openModal("workspaceEdit", {
                             workspaceId: workspace.id,
-                            workspaceName: workspace.name,
                           });
                         }}
-                        data-guide="workspace-edit-storage"
-                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
-                      >
-                        <DataBase size={14} />
-                        {t("workspace.edit_storage")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          close();
-                          openModal("workspaceRename", {
-                            workspaceId: workspace.id,
-                            initialName: workspace.name,
-                            initialIcon: workspace.icon,
-                            initialColor: workspaceColor.id,
-                          });
-                        }}
+                        data-guide="workspace-manage"
                         className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
                       >
                         <Edit size={14} />
-                        {t("common.edit")}
+                        {t("workspace.manage_workspace")}
                       </button>
                       <button
                         type="button"

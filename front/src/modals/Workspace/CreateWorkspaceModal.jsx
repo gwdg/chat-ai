@@ -8,6 +8,7 @@ import AddSourceModal from "./AddSourceModal";
 import WorkspaceStorageManager from "../../components/Workspace/WorkspaceStorageManager";
 import IconColorPicker from "../../components/Sidebar/IconColorPicker";
 import {
+  attachWorkspaceChat,
   createWorkspace,
   deleteWorkspace,
   updateWorkspace,
@@ -48,6 +49,7 @@ export default function CreateWorkspaceModal({
   isOpen,
   onClose,
   workspaceId = null,
+  attachConversationId = null,
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -182,6 +184,9 @@ export default function CreateWorkspaceModal({
         return;
       }
       await updateWorkspace(id, { name: name.trim() });
+      if (attachConversationId) {
+        await attachWorkspaceChat(id, attachConversationId);
+      }
       settledRef.current = true;
       draftIdRef.current = null;
       onClose();

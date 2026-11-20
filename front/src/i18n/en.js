@@ -435,14 +435,14 @@ export default {
     workspace_overview: {
       title: "Workspaces",
       step1: "The right-hand panel belongs to the workspace: What's new opens first, Files shows what the workspace stores, and Agents shows how it runs.",
-      step2: "Sources can join a workspace at any time: Edit storage in its options menu opens the same storage locations rail as Create workspace.",
+      step2: "Sources can join a workspace at any time: Manage Workspace in its options menu opens the same dialog as Create workspace.",
       step3: "Browse the tree in the Files tab. The pill on each row says where that entry lives: browser, device, arcana, MCP or agent.",
       step4: "Choose how this workspace runs its agent: in the browser, through an OpenCode server, or with the Remote agent.",
     },
     manage_chat_data: {
       title: "Manage the files of a chat",
       step1: "Access storage is on by default and sits at the top of the Workspace menu. Switch it off to give the model no file tools at all; attachments are still included in the message where possible.",
-      step2: "Choose Manage data to see the files behind this switch. A chat attached to one workspace opens that workspace's editor — the same dialog as Create workspace, with its storage locations, its name, icon and colour, and Apply Changes; a chat with several workspaces lists them first. A chat without a workspace browses the files kept in this browser for the chat.",
+      step2: "Choose Manage data to manage the files behind this switch. A chat attached to one workspace opens that workspace's editor — the same dialog as Create workspace, with its storage locations, its name, icon and colour, and Apply Changes; a chat with several workspaces lists them first; a chat with none opens Create workspace, and the chat joins the workspace it creates.",
       step3: "Upload, create, rename, download and delete the chat's files here.",
     },
     workspace_saia_fs: {
@@ -451,10 +451,10 @@ export default {
       step2: "SAIA Files is your account folder. It is listed only while this deployment offers the saia-fs service to you; open it to pick a folder and add it to the workspace.",
     },
     workspace_edit_storage: {
-      title: "Add storage to a workspace",
-      step1: "Open the options menu of a workspace in the sidebar.",
+      title: "Manage a workspace",
+      step1: "Open the options menu of a workspace in the sidebar and choose Manage Workspace.",
       step2:
-        "Edit storage opens the storage locations of this workspace — the same dialog you see while creating one. Pick a folder, mount a source, or add a local folder, a repository or an MCP server; every change is saved right away.",
+        "Manage Workspace is Create workspace for a workspace that already exists: rename it, change its icon and colour, and edit its storage in the same dialog. Pick a folder, mount a source, or add a local folder, a repository or an MCP server; storage changes are saved as you make them, and Apply Changes saves the name, icon and colour.",
     },
     workspace_clone: {
       title: "Import a Git repository",
@@ -2214,6 +2214,7 @@ export default {
     root_empty_hint: "Create a folder or file, or mount a folder from a source.",
     edit_title: "Edit workspace",
     edit_storage: "Edit storage",
+    manage_workspace: "Manage Workspace",
     edit_storage_hint:
       "Storage locations of {{name}}. Every change is applied immediately.",
     edit_storage_hint_no_name: "Every change is applied immediately.",

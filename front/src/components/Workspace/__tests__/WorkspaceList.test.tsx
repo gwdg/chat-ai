@@ -261,19 +261,22 @@ describe("WorkspaceList pinning", () => {
   });
 });
 
-describe("WorkspaceList storage", () => {
-  it("opens the storage editor of the workspace from its options menu", async () => {
+describe("WorkspaceList manage", () => {
+  it("opens the workspace editor — name, icon, colour and storage — from its options menu", async () => {
     renderList(makeStore());
 
     fireEvent.click(
       await screen.findByRole("button", { name: "Workspace options" }),
     );
-    fireEvent.click(screen.getByRole("button", { name: "Edit storage" }));
+    fireEvent.click(screen.getByRole("button", { name: "Manage Workspace" }));
 
-    expect(mocks.openModal).toHaveBeenCalledWith("workspaceEditStorage", {
+    expect(mocks.openModal).toHaveBeenCalledWith("workspaceEdit", {
       workspaceId: "ws-1",
-      workspaceName: "Teaching",
     });
+    // One entry instead of two: the old storage-only and rename-only dialogs are gone.
+    expect(
+      screen.queryByRole("button", { name: "Edit storage" }),
+    ).not.toBeInTheDocument();
   });
 });
 

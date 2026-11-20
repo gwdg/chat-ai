@@ -59,7 +59,7 @@ export const featureGuides = {
   manage_chat_data: {
     titleKey: "feature_guide.manage_chat_data.title",
     prompt:
-      "Open the Workspace menu in the prompt box. Access storage sits at the top: it is on by default and with it off the model gets no file tools. Manage data shows where this chat keeps its files: a chat attached to one workspace opens that workspace's editor — the same dialog as Create workspace, with its storage locations, its name, icon and colour, and Apply Changes; a chat with several workspaces lists them first; a chat without a workspace browses the files stored in this browser for the chat.",
+      "Open the Workspace menu in the prompt box. Access storage sits at the top: it is on by default and with it off the model gets no file tools. Manage data is where this chat keeps its files: a chat attached to one workspace opens that workspace's editor — the same dialog as Create workspace, with its storage locations, its name, icon and colour, and Apply Changes; a chat with several workspaces lists them first; a chat with none opens Create workspace, and the chat joins the workspace it creates.",
     keywords: [
       "manage data",
       "access storage",
@@ -92,7 +92,7 @@ export const featureGuides = {
   workspace_edit_storage: {
     titleKey: "feature_guide.workspace_edit_storage.title",
     prompt:
-      "Add or remove the storage of a workspace that already exists. Open the workspace's options menu in the sidebar and choose Edit storage: it shows the same storage locations rail as Create workspace, so you can browse browser storage, this device, Arcanas, the SAIA account folder and MCP servers, mount a folder, or add a local folder, a Git repository or an MCP server.",
+      "Manage a workspace that already exists. Open the workspace's options menu in the sidebar and choose Manage Workspace: it is Create workspace with the fields filled in, so you rename the workspace, change its icon and colour, and work on the same storage locations rail — browser storage, this device, Arcanas, the SAIA account folder and MCP servers — mount a folder, or add a local folder, a Git repository or an MCP server.",
     keywords: [
       "edit storage",
       "workspace storage",
@@ -108,7 +108,7 @@ export const featureGuides = {
         completeOnTargetClick: true,
       },
       {
-        target: '[data-guide="workspace-edit-storage"]',
+        target: '[data-guide="workspace-manage"]',
         prepare: openWorkspaceMenu,
         textKey: "feature_guide.workspace_edit_storage.step2",
         completeOnTargetClick: true,

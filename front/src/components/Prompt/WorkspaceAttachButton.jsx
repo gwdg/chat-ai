@@ -106,7 +106,13 @@ export default function WorkspaceAttachButton({ localState, setLocalState }) {
       openModal("workspaceEdit", { workspaceId: soleWorkspace.id });
       return;
     }
-    openModal("manageData", { localState });
+    if (attachedWorkspaces.length > 1) {
+      openModal("manageData", { localState });
+      return;
+    }
+    // No workspace yet: the same dialog in create mode, and the chat joins the
+    // workspace it creates — there is no chat storage to manage on its own.
+    openModal("workspaceCreate", { attachConversationId: conversationId });
   };
   const manageDataLabel = soleWorkspace
     ? t("workspace.manage_data_in", { name: soleWorkspace.name })

@@ -445,14 +445,14 @@ export default {
     workspace_overview: {
       title: "Arbeitsbereiche",
       step1: "Das rechte Fenster gehört zum Arbeitsbereich: Zuerst öffnet sich Neuigkeiten, Dateien zeigt den gespeicherten Inhalt, Agenten die Ausführung.",
-      step2: "Quellen können jederzeit hinzukommen: „Speicher bearbeiten“ im Optionsmenü öffnet dieselbe Leiste mit Speicherorten wie „Arbeitsbereich erstellen“.",
+      step2: "Quellen können jederzeit hinzukommen: „Arbeitsbereich verwalten“ im Optionsmenü öffnet denselben Dialog wie „Arbeitsbereich erstellen“.",
       step3: "Durchsuchen Sie den Baum im Reiter Dateien. Die Markierung jeder Zeile zeigt, wo der Eintrag liegt: Browser, Gerät, Arcana, MCP oder Agent.",
       step4: "Wählen Sie, wie der Agent in diesem Arbeitsbereich läuft: im Browser, über einen OpenCode-Server oder mit dem Remote-Agenten.",
     },
     manage_chat_data: {
       title: "Dateien eines Chats verwalten",
       step1: "Auf Speicher zugreifen ist standardmäßig an und steht oben im Arbeitsbereich-Menü. Schalten Sie es aus, erhält das Modell keine Dateiwerkzeuge; Anhänge werden weiterhin in die Nachricht aufgenommen, sofern möglich.",
-      step2: "Wählen Sie Daten verwalten, um die Dateien hinter diesem Schalter zu sehen. Ist der Chat einem Arbeitsbereich zugeordnet, öffnet sich dessen Editor — derselbe Dialog wie „Arbeitsbereich erstellen“, mit Speicherorten, Name, Symbol und Farbe sowie „Änderungen übernehmen“; bei mehreren Arbeitsbereichen werden sie zuerst aufgelistet. Chats ohne Arbeitsbereich durchsuchen die für den Chat in diesem Browser gespeicherten Dateien.",
+      step2: "Wählen Sie Daten verwalten, um die Dateien hinter diesem Schalter zu verwalten. Ist der Chat einem Arbeitsbereich zugeordnet, öffnet sich dessen Editor — derselbe Dialog wie „Arbeitsbereich erstellen“, mit Speicherorten, Name, Symbol und Farbe sowie „Änderungen übernehmen“; bei mehreren Arbeitsbereichen werden sie zuerst aufgelistet; ohne Arbeitsbereich öffnet sich „Arbeitsbereich erstellen“ und der Chat wird dem neuen Arbeitsbereich hinzugefügt.",
       step3: "Laden Sie die Dateien des Chats hier hoch, erstellen, benennen Sie sie um, laden Sie sie herunter oder löschen Sie sie.",
     },
     workspace_saia_fs: {
@@ -461,10 +461,10 @@ export default {
       step2: "SAIA-Dateien ist Ihr Kontoordner. Er erscheint nur, solange diese Installation den Dienst saia-fs für Sie bereitstellt; öffnen Sie ihn, wählen Sie einen Ordner und fügen Sie ihn dem Arbeitsbereich hinzu.",
     },
     workspace_edit_storage: {
-      title: "Speicher zu einem Arbeitsbereich hinzufügen",
-      step1: "Öffnen Sie das Optionsmenü eines Arbeitsbereichs in der Seitenleiste.",
+      title: "Einen Arbeitsbereich verwalten",
+      step1: "Öffnen Sie das Optionsmenü eines Arbeitsbereichs in der Seitenleiste und wählen Sie „Arbeitsbereich verwalten“.",
       step2:
-        "„Speicher bearbeiten“ öffnet die Speicherorte dieses Arbeitsbereichs – derselbe Dialog wie beim Erstellen. Wählen Sie einen Ordner, hängen Sie eine Quelle ein oder fügen Sie einen lokalen Ordner, ein Repository oder einen MCP-Server hinzu; jede Änderung wird sofort gespeichert.",
+        "„Arbeitsbereich verwalten“ ist „Arbeitsbereich erstellen“ für einen bestehenden Arbeitsbereich: Name, Symbol und Farbe ändern und den Speicher im selben Dialog bearbeiten. Wählen Sie einen Ordner, hängen Sie eine Quelle ein oder fügen Sie einen lokalen Ordner, ein Repository oder einen MCP-Server hinzu; Speicheränderungen werden sofort gespeichert, Name, Symbol und Farbe mit „Änderungen übernehmen“.",
     },
     workspace_clone: {
       title: "Git-Repository importieren",
@@ -2242,6 +2242,7 @@ export default {
     root_empty_hint: "Erstellen Sie einen Ordner oder eine Datei oder hängen Sie einen Quellordner ein.",
     edit_title: "Arbeitsbereich bearbeiten",
     edit_storage: "Speicher bearbeiten",
+    manage_workspace: "Arbeitsbereich verwalten",
     edit_storage_hint:
       "Speicherorte von {{name}}. Jede Änderung wird sofort übernommen.",
     edit_storage_hint_no_name: "Jede Änderung wird sofort übernommen.",

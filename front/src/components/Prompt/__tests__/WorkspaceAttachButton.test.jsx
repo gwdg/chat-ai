@@ -49,14 +49,17 @@ beforeEach(() => {
 });
 
 describe("WorkspaceAttachButton", () => {
-  it("opens the chat files from the workspace menu when no workspace is attached", async () => {
+  it("opens Create workspace for a chat that has no workspace yet", async () => {
     renderButton();
     openMenu();
 
     fireEvent.click(await screen.findByText("Manage data"));
 
     expect(navigate).not.toHaveBeenCalled();
-    expect(openModal).toHaveBeenCalledWith("manageData", { localState });
+    // The new workspace takes the chat, so the dialog is Create workspace, not an empty browser.
+    expect(openModal).toHaveBeenCalledWith("workspaceCreate", {
+      attachConversationId: "conversation",
+    });
   });
 
   it("opens the workspace editor when exactly one workspace is attached", async () => {
