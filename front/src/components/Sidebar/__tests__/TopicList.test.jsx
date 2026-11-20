@@ -187,12 +187,12 @@ describe("TopicList group colours", () => {
 
     const row = rowFor("Violet topic");
     expect(row).toHaveAttribute("role", "button");
-    // #7C3AED: 8% behind the name in light mode.
+    // #7C3AED: 6% behind the name in light mode.
     expect(row.style.getPropertyValue("--group-tint")).toBe(
-      "rgba(124, 58, 237, 0.08)",
+      "rgba(124, 58, 237, 0.06)",
     );
     expect(row.style.getPropertyValue("--group-tint-hover")).toBe(
-      "rgba(124, 58, 237, 0.12)",
+      "rgba(124, 58, 237, 0.09)",
     );
     // The name row carries no vertical rules; only the chats below it are bracketed.
     expect(row.className).not.toContain("border-l-2");
@@ -209,7 +209,7 @@ describe("TopicList group colours", () => {
 
     const row = rowFor("Violet topic");
     expect(row.style.getPropertyValue("--group-tint")).toBe(
-      "rgba(124, 58, 237, 0.12)",
+      "rgba(124, 58, 237, 0.09)",
     );
     expect(rulesFor().style.borderRightColor).toBe(
       "rgba(124, 58, 237, 0.5)",
@@ -444,7 +444,7 @@ describe("TopicList row controls", () => {
     );
     expect(tail.className).not.toContain("gap-");
     // The band is the same 40px box as a workspace band.
-    expect(row.className).toContain("min-h-10");
+    expect(row.className).toContain("min-h-9");
     expect(row.className).toContain("px-1");
     expect(row.className).not.toContain("py-2");
   });

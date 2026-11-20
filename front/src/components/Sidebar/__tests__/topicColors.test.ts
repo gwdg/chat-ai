@@ -28,3 +28,19 @@ describe("chatRowTint", () => {
     }
   });
 });
+
+describe("groupRowTint", () => {
+  it("keeps the resting wash quiet and lets the open group stand clear", () => {
+    const hex = "#7C3AED";
+    for (const isDark of [false, true]) {
+      const rest = alphaOf(groupRowTint(hex, isDark));
+      const hover = alphaOf(groupRowTint(hex, isDark, { hover: true }));
+      const open = alphaOf(groupRowTint(hex, isDark, { active: true }));
+      // Rest is only a hint of the colour; the open row is more than twice it.
+      expect(rest).toBeLessThanOrEqual(isDark ? 0.09 : 0.06);
+      expect(open).toBeGreaterThan(rest * 2);
+      expect(rest).toBeLessThan(hover);
+      expect(hover).toBeLessThan(open);
+    }
+  });
+});

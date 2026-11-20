@@ -68,8 +68,10 @@ export function withAlpha(hex: string, alpha: number) {
 
 /**
  * Background of a coloured group row (topic, workspace). A light version of the
- * group colour so the row still reads as a name, not as a button; the open group
- * is a little stronger and hovering brightens it one more step.
+ * group colour so the row still reads as a name, not as a button. The resting
+ * wash stays close to the sidebar background — the open group, at 16% (20% in
+ * dark mode), is what carries the colour, and the quieter rest is what makes
+ * that difference visible.
  */
 export function groupRowTint(
   hex: string,
@@ -80,13 +82,13 @@ export function groupRowTint(
     ? active
       ? 0.2
       : hover
-        ? 0.17
-        : 0.12
+        ? 0.13
+        : 0.09
     : active
       ? 0.16
       : hover
-        ? 0.12
-        : 0.08;
+        ? 0.09
+        : 0.06;
   return withAlpha(hex, alpha);
 }
 
@@ -107,12 +109,12 @@ export function chatRowTint(
 ) {
   const alpha = isDark
     ? active
-      ? 0.1
+      ? 0.08
       : hover
-        ? 0.07
+        ? 0.06
         : 0.05
     : active
-      ? 0.06
+      ? 0.05
       : hover
         ? 0.04
         : 0.03;

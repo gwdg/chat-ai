@@ -180,7 +180,7 @@ describe("WorkspaceList band shape", () => {
     expect(toggle.getAttribute("aria-label")).toBe(
       "Attached chats, agents and sessions",
     );
-    expect(row.className).toContain("min-h-10");
+    expect(row.className).toContain("min-h-9");
     expect(row.className).toContain("px-1");
     // The whole band offers the pointer, exactly like a topic band.
     expect(row.className).toContain("cursor-pointer");
@@ -621,12 +621,12 @@ describe("WorkspaceList group colours", () => {
 
     await screen.findByText("Teaching");
     const row = rowFor();
-    // #7C3AED: 8% behind the name in light mode.
+    // #7C3AED: 6% behind the name in light mode.
     expect(row.style.getPropertyValue("--group-tint")).toBe(
-      "rgba(124, 58, 237, 0.08)",
+      "rgba(124, 58, 237, 0.06)",
     );
     expect(row.style.getPropertyValue("--group-tint-hover")).toBe(
-      "rgba(124, 58, 237, 0.12)",
+      "rgba(124, 58, 237, 0.09)",
     );
     // The name row carries no vertical rules; only the rows below are bracketed.
     expect(row.className).not.toContain("border-l-2");

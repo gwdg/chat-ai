@@ -448,7 +448,7 @@ export default function WorkspaceList({
                 handleWorkspaceDragLeave(event, workspace.id)
               }
               onDrop={(event) => handleWorkspaceDrop(event, workspace.id)}
-              className={`group flex min-h-10 cursor-pointer items-center rounded-lg px-1 transition bg-[var(--group-tint)] hover:bg-[var(--group-tint-hover)] ${
+              className={`group flex min-h-9 cursor-pointer items-center rounded-lg px-1 transition bg-[var(--group-tint)] hover:bg-[var(--group-tint-hover)] ${
                 active ? "text-accent" : "text-base-content"
               } ${
                 dragOverWorkspaceId === workspace.id

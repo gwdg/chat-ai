@@ -367,7 +367,7 @@ export default function TopicList({
               onOpenTopic(id);
             }
           }}
-          className={`group flex min-h-10 items-center gap-2 rounded-lg px-1 text-xs transition cursor-pointer bg-[var(--group-tint)] hover:bg-[var(--group-tint-hover)] ${
+          className={`group flex min-h-9 items-center gap-2 rounded-lg px-1 text-xs transition cursor-pointer bg-[var(--group-tint)] hover:bg-[var(--group-tint-hover)] ${
             isActiveTopic ? "text-accent" : "text-base-content"
           } ${isDropTarget ? "ring-2 ring-accent/60" : ""}`}
           style={
