@@ -26,6 +26,7 @@ import { joinPath } from "../../workspace/paths";
 import { readProviderPreview } from "../../workspace/filePreview";
 import { uploadLocalFiles } from "../../workspace/upload";
 import { useWorkspaceProviders } from "../../workspace/useWorkspaceProviders";
+import { WORKSPACE_FILES_CHANGED_EVENT } from "../../workspace/filesChanged";
 import {
   createWorkspaceRootProvider,
   emptyStream,
@@ -34,10 +35,30 @@ import {
 const errorMessage = (error) =>
   error instanceof Error ? error.message : String(error);
 
+// How long a "new" or "changed" dot keeps its place before the row goes quiet.
+const FILE_MARK_MS = 4000;
+
 const nodeKey = (node) =>
   node.context
     ? `${node.context.mount?.id ?? node.context.provider.sourceId}:${node.context.sourcePath}`
     : node.displayPath;
+
+// The Files tab is unmounted while another tab is showing, and with it every row's open
+// state. Which folders are unfolded belongs to the workspace, not to the mount, so it is
+// kept here for the session and rebuilt on the way back.
+const expandedByWorkspace = new Map();
+
+const expandedSet = (workspaceId) => {
+  let set = expandedByWorkspace.get(workspaceId);
+  if (!set) {
+    set = new Set();
+    expandedByWorkspace.set(workspaceId, set);
+  }
+  return set;
+};
+
+/** Test hook: forget which folders were unfolded. */
+export const resetExpandedFolders = () => expandedByWorkspace.clear();
 
 const withProviderChildren =
   ({ provider, sourcePath, mount }, parentPath) =>
@@ -54,13 +75,14 @@ const withProviderChildren =
 
 function StorageRow({ node, depth, api }) {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(() => api.isExpanded?.(node) ?? false);
   const [children, setChildren] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const isDir = node.entry.kind === "dir";
   const isSelected = api.selectedKey === nodeKey(node);
+  const mark = isDir ? null : api.markFor?.(node);
 
   const loadChildren = useCallback(async () => {
     setLoading(true);
@@ -80,6 +102,28 @@ function StorageRow({ node, depth, api }) {
     await loadChildren();
   }, [loadChildren]);
 
+  // A row that comes back unfolded (after a tab switch) has nothing underneath it yet.
+  useEffect(() => {
+    if (!open || children !== null || loading) return;
+    void loadChildren();
+  }, [open, children, loading, loadChildren]);
+
+  // A refresh has to reach every open folder, not just the root: a row keeps its
+  // own children, so nothing above it can replace them.
+  const revisionRef = useRef(api.revision ?? 0);
+  useEffect(() => {
+    const revision = api.revision ?? 0;
+    if (revisionRef.current === revision) return;
+    revisionRef.current = revision;
+    if (open) {
+      void loadChildren();
+      return;
+    }
+    // Collapsed rows drop what they had, so the next expand lists fresh.
+    setChildren(null);
+    setError("");
+  }, [api.revision, open, loadChildren]);
+
   const toggle = () => {
     api.selectNode?.(node);
     if (!isDir) {
@@ -89,10 +133,12 @@ function StorageRow({ node, depth, api }) {
     api.selectTarget({ ...node, reload });
     if (!open) {
       setOpen(true);
+      api.setExpanded?.(node, true);
       if (children === null && !loading) void loadChildren();
       return;
     }
     setOpen(false);
+    api.setExpanded?.(node, false);
   };
 
   const badge = api.badgeFor(node);
@@ -103,6 +149,7 @@ function StorageRow({ node, depth, api }) {
   return (
     <div>
       <div
+        data-guide="workspace-row"
         className={`group flex items-center gap-1 rounded pr-1 text-[11px] ${
           isSelected ? "bg-accent/10" : "hover:bg-base-200/70"
         }`}
@@ -124,6 +171,19 @@ function StorageRow({ node, depth, api }) {
                 className="shrink-0 text-base-content/50"
               />
             )
+          ) : mark ? (
+            // A new file wears a green dot where a folder's arrow would be, a file the
+            // agent changed an amber one; the key restarts the fade on every new write.
+            <span className="flex w-3 shrink-0 items-center justify-center">
+              <span
+                key={`${mark.kind}-${mark.at}`}
+                data-guide="file-mark"
+                data-mark={mark.kind}
+                className={`pointer-events-none h-1.5 w-1.5 rounded-full ${
+                  mark.kind === "create" ? "bg-success" : "bg-warning"
+                } animate-[file-mark-fade_4s_ease-out_forwards]`}
+              />
+            </span>
           ) : (
             <span className="w-3 shrink-0" aria-hidden="true" />
           )}
@@ -214,8 +274,52 @@ export default function WorkspaceStorageTree({
   const [uploading, setUploading] = useState(false);
   const [selected, setSelected] = useState(null);
   const [detaching, setDetaching] = useState(false);
+  // Rows the agent just created or changed, by workspace path, until their dot fades.
+  const [marks, setMarks] = useState({});
+  const markTimersRef = useRef(new Map());
   const requestRef = useRef(0);
   const previewSeqRef = useRef(0);
+
+  const markFile = useCallback((path, kind) => {
+    if (!path || (kind !== "create" && kind !== "modify")) return;
+    setMarks((current) => {
+      // A file that is still new stays green while the agent keeps writing to it.
+      const next = current[path]?.kind === "create" ? "create" : kind;
+      return { ...current, [path]: { kind: next, at: Date.now() } };
+    });
+    const timers = markTimersRef.current;
+    const previous = timers.get(path);
+    if (previous) window.clearTimeout(previous);
+    timers.set(
+      path,
+      window.setTimeout(() => {
+        timers.delete(path);
+        setMarks((current) => {
+          if (!current[path]) return current;
+          const next = { ...current };
+          delete next[path];
+          return next;
+        });
+      }, FILE_MARK_MS),
+    );
+  }, []);
+
+  useEffect(
+    () => () => {
+      for (const timer of markTimersRef.current.values()) {
+        window.clearTimeout(timer);
+      }
+      markTimersRef.current.clear();
+    },
+    [],
+  );
+
+  // One signal for "list everything again": the root here, and every open row
+  // through `api.revision`.
+  const bumpRevision = useCallback(
+    () => setRootRevision((value) => value + 1),
+    [],
+  );
 
   const mountsRef = useRef(mounts);
   mountsRef.current = mounts;
@@ -283,6 +387,28 @@ export default function WorkspaceStorageTree({
   useEffect(() => {
     void loadRoot();
   }, [loadRoot, workspaceId, rootRevision, mountsKey, sourcesKey]);
+
+  // The agent's own writes are announced by the workspace VFS: the tree follows
+  // them, coalescing a burst of files into one re-list.
+  useEffect(() => {
+    if (!workspaceId || typeof window === "undefined") return undefined;
+    let timer = null;
+    const onChange = (event) => {
+      const changedId = event?.detail?.workspaceId;
+      if (!changedId || changedId !== workspaceId) return;
+      markFile(event.detail.path, event.detail.kind);
+      if (timer !== null) return;
+      timer = window.setTimeout(() => {
+        timer = null;
+        setRootRevision((value) => value + 1);
+      }, 200);
+    };
+    window.addEventListener(WORKSPACE_FILES_CHANGED_EVENT, onChange);
+    return () => {
+      window.removeEventListener(WORKSPACE_FILES_CHANGED_EVENT, onChange);
+      if (timer !== null) window.clearTimeout(timer);
+    };
+  }, [workspaceId, markFile]);
 
   const rootTarget = useCallback(
     () => ({
@@ -422,8 +548,13 @@ export default function WorkspaceStorageTree({
   const selectTarget = useCallback((node) => {
     setActionError("");
     // /chats and the parents of a nested mount are display-only: they exist to
-    // hold mounts, so uploads and new entries must never target them.
-    if (!node.context && !node.entry.local && !node.entry.mount) return;
+    // hold mounts, so uploads and new entries must never target them. With no
+    // folder to write into, the toolbar falls back to the workspace root — the
+    // browser's own storage, never whatever mount was last clicked.
+    if (!node.context && !node.entry.local && !node.entry.mount) {
+      setTarget(rootTarget());
+      return;
+    }
     const mount = node.context?.mount ?? node.entry.mount ?? null;
     setTarget({
       key: nodeKey(node),
@@ -439,7 +570,7 @@ export default function WorkspaceStorageTree({
       mount,
       reload: node.reload,
     });
-  }, []);
+  }, [rootTarget]);
 
   // Every row can be selected, whether or not it is an upload target: the
   // selection is what the Detach button acts on.
@@ -449,7 +580,10 @@ export default function WorkspaceStorageTree({
     // a file inside a mounted folder belongs to that folder's source.
     const mount = node.entry?.mount ?? null;
     setSelected({ key: nodeKey(node), mount: mount ?? null });
-  }, []);
+    // A file is not a place to put a file: the toolbar drops back to the root,
+    // which is the workspace's own browser storage.
+    if (node.entry?.kind !== "dir") setTarget(rootTarget());
+  }, [rootTarget]);
 
   const detachSelection = async () => {
     const mount = selected?.mount;
@@ -536,6 +670,7 @@ export default function WorkspaceStorageTree({
         files,
         (file, reason) => setActionError(`${file.name}: ${errorMessage(reason)}`),
       );
+      for (const file of files) markFile(joinPath(target.path, file.name), "create");
       await target.reload?.();
     } catch (reason) {
       setActionError(errorMessage(reason));
@@ -558,6 +693,7 @@ export default function WorkspaceStorageTree({
           await provider.mkdir(path);
         } else {
           await provider.write(path, emptyStream(), { overwrite: false });
+          markFile(joinPath(folder.path, name), "create");
         }
         await folder.reload?.();
       },
@@ -566,6 +702,14 @@ export default function WorkspaceStorageTree({
 
   const api = {
     selectedKey: selected?.key ?? null,
+    revision: rootRevision,
+    markFor: (node) => marks[node.displayPath] ?? null,
+    isExpanded: (node) => expandedSet(workspaceId).has(nodeKey(node)),
+    setExpanded: (node, value) => {
+      const set = expandedSet(workspaceId);
+      if (value) set.add(nodeKey(node));
+      else set.delete(nodeKey(node));
+    },
     badgeFor,
     labelFor,
     loadChildren,
@@ -646,7 +790,7 @@ export default function WorkspaceStorageTree({
             <button
               type="button"
               className="btn btn-ghost btn-xs btn-square"
-              onClick={() => void loadRoot()}
+              onClick={bumpRevision}
               title={t("workspace.refresh")}
               aria-label={t("workspace.refresh")}
             >
@@ -662,6 +806,13 @@ export default function WorkspaceStorageTree({
         <div
           data-guide="workspace-files"
           className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-1 py-1"
+          onClick={(event) => {
+            // A click on the empty part of the list drops the wash; a click inside a
+            // row is that row's business.
+            if (event.target.closest('[data-guide="workspace-row"]')) return;
+            if (selected) setSelected(null);
+            setTarget(rootTarget());
+          }}
         >
           {showLoading && (
             <div className="px-2 py-1 text-[10px] text-base-content/40">

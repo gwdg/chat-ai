@@ -7,7 +7,9 @@ import {
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import WorkspaceStorageTree from "../WorkspaceStorageTree";
+import WorkspaceStorageTree, {
+  resetExpandedFolders,
+} from "../WorkspaceStorageTree";
 
 const h = vi.hoisted(() => ({
   sources: [],
@@ -31,6 +33,7 @@ const h = vi.hoisted(() => ({
   confirmAction: vi.fn((options, onConfirm) => onConfirm()),
   removeMount: vi.fn(),
   listWorkspaceRoot: vi.fn(),
+  upload: vi.fn(async () => 1),
 }));
 
 vi.mock("../../../db/workspaceDb", () => ({
@@ -69,6 +72,10 @@ vi.mock("../../../workspace/listWorkspaceRoot", () => ({
   listWorkspaceRoot: h.listWorkspaceRoot,
 }));
 
+vi.mock("../../../workspace/upload", () => ({
+  uploadLocalFiles: (...args) => h.upload(...args),
+}));
+
 const entry = (path, kind = "file", extra = {}) => ({
   sourceId: "root",
   path,
@@ -91,6 +98,7 @@ const mountRow = {
 };
 
 beforeEach(() => {
+  resetExpandedFolders();
   h.sources = [];
   h.mounts = [];
   h.providers = new Map();
@@ -99,6 +107,7 @@ beforeEach(() => {
   h.confirmAction.mockClear();
   h.removeMount.mockReset();
   h.removeMount.mockResolvedValue(undefined);
+  h.upload.mockClear();
   h.rootProvider.remove.mockClear();
   h.rootProvider.connect.mockClear();
 });
@@ -380,5 +389,266 @@ describe("WorkspaceStorageTree", () => {
     expect(
       screen.queryByRole("button", { name: "Detach" }),
     ).not.toBeInTheDocument();
+  });
+
+  // The tree used to refresh only "/" — every expanded folder kept the children it
+  // had listed once, so a file the agent created inside it never showed up until the
+  // sidebar was collapsed and rebuilt.
+  it("refreshes the children of every open folder, not only the root", async () => {
+    let docs = [entry("/Docs/one.md")];
+    h.listWorkspaceRoot.mockImplementation(async ({ path }) => {
+      if (path === "/") return [entry("/Docs", "dir")];
+      if (path === "/Docs") return docs;
+      return [];
+    });
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" />);
+
+    fireEvent.click(await screen.findByText("Docs"));
+    expect(await screen.findByText("one.md")).toBeInTheDocument();
+
+    docs = [...docs, entry("/Docs/two.md")];
+    fireEvent.click(screen.getByRole("button", { name: /refresh/i }));
+
+    expect(await screen.findByText("two.md")).toBeInTheDocument();
+    expect(screen.getByText("one.md")).toBeInTheDocument();
+  });
+
+  it("lists a collapsed folder fresh after a refresh", async () => {
+    let docs = [entry("/Docs/one.md")];
+    h.listWorkspaceRoot.mockImplementation(async ({ path }) => {
+      if (path === "/") return [entry("/Docs", "dir")];
+      if (path === "/Docs") return docs;
+      return [];
+    });
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" />);
+
+    fireEvent.click(await screen.findByText("Docs"));
+    expect(await screen.findByText("one.md")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Docs"));
+    expect(screen.queryByText("one.md")).not.toBeInTheDocument();
+
+    docs = [...docs, entry("/Docs/two.md")];
+    fireEvent.click(screen.getByRole("button", { name: /refresh/i }));
+    fireEvent.click(screen.getByText("Docs"));
+
+    expect(await screen.findByText("two.md")).toBeInTheDocument();
+  });
+
+  it("follows the agent's own writes for this workspace", async () => {
+    let docs = [entry("/Docs/one.md")];
+    h.listWorkspaceRoot.mockImplementation(async ({ path }) => {
+      if (path === "/") return [entry("/Docs", "dir")];
+      if (path === "/Docs") return docs;
+      return [];
+    });
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" />);
+    fireEvent.click(await screen.findByText("Docs"));
+    expect(await screen.findByText("one.md")).toBeInTheDocument();
+
+    docs = [...docs, entry("/Docs/two.md")];
+    fireEvent(
+      window,
+      new CustomEvent("chatai:workspace-files-changed", {
+        detail: { workspaceId: "another-workspace" },
+      }),
+    );
+    expect(screen.queryByText("two.md")).not.toBeInTheDocument();
+
+    fireEvent(
+      window,
+      new CustomEvent("chatai:workspace-files-changed", {
+        detail: { workspaceId: "ws-1" },
+      }),
+    );
+    expect(await screen.findByText("two.md")).toBeInTheDocument();
+  });
+
+  const fireChange = (detail) =>
+    fireEvent(
+      window,
+      new CustomEvent("chatai:workspace-files-changed", { detail }),
+    );
+
+  const markFor = () => document.querySelector('[data-guide="file-mark"]');
+
+  const mountWithDocs = async (docs) => {
+    h.listWorkspaceRoot.mockImplementation(async ({ path }) => {
+      if (path === "/") return [entry("/Docs", "dir")];
+      if (path === "/Docs") return docs;
+      return [];
+    });
+    render(<WorkspaceStorageTree workspaceId="ws-1" />);
+    fireEvent.click(await screen.findByText("Docs"));
+    await screen.findByText("one.md");
+  };
+
+  it("marks a file the agent just created, and an edited file in amber", async () => {
+    await mountWithDocs([entry("/Docs/one.md")]);
+    expect(markFor()).toBeNull();
+
+    fireChange({ workspaceId: "ws-1", path: "/Docs/one.md", kind: "modify" });
+    await waitFor(() => expect(markFor()).toHaveAttribute("data-mark", "modify"));
+    expect(markFor().className).toContain("bg-warning");
+
+    fireChange({ workspaceId: "ws-1", path: "/Docs/one.md", kind: "create" });
+    await waitFor(() =>
+      expect(markFor().className).toContain("bg-success"),
+    );
+  });
+
+  it("keeps a brand-new file green while the agent edits it", async () => {
+    await mountWithDocs([entry("/Docs/one.md")]);
+
+    fireChange({ workspaceId: "ws-1", path: "/Docs/one.md", kind: "create" });
+    await waitFor(() => expect(markFor()).toHaveAttribute("data-mark", "create"));
+    const first = markFor();
+
+    fireChange({ workspaceId: "ws-1", path: "/Docs/one.md", kind: "modify" });
+    await waitFor(() => expect(markFor()).not.toBe(first));
+    expect(markFor()).toHaveAttribute("data-mark", "create");
+  });
+
+  it("restarts the dot when the same file changes again", async () => {
+    await mountWithDocs([entry("/Docs/one.md")]);
+
+    fireChange({ workspaceId: "ws-1", path: "/Docs/one.md", kind: "modify" });
+    await waitFor(() => expect(markFor()).not.toBeNull());
+    const first = markFor();
+
+    fireChange({ workspaceId: "ws-1", path: "/Docs/one.md", kind: "modify" });
+    // A new key remounts the dot, which is what replays the fade from the top.
+    await waitFor(() => expect(markFor()).not.toBe(first));
+  });
+
+  it("fades a mark away after a few seconds", async () => {
+    await mountWithDocs([entry("/Docs/one.md")]);
+
+    fireChange({ workspaceId: "ws-1", path: "/Docs/one.md", kind: "create" });
+    await waitFor(() => expect(markFor()).not.toBeNull());
+
+    await waitFor(() => expect(markFor()).toBeNull(), { timeout: 6000 });
+  }, 10000);
+
+  it("remembers unfolded folders when the tab is unmounted and comes back", async () => {
+    h.listWorkspaceRoot.mockImplementation(async ({ path }) => {
+      if (path === "/") return [entry("/Docs", "dir")];
+      if (path === "/Docs") return [entry("/Docs/one.md")];
+      return [];
+    });
+
+    const first = render(<WorkspaceStorageTree workspaceId="ws-1" />);
+    fireEvent.click(await screen.findByText("Docs"));
+    await screen.findByText("one.md");
+    first.unmount();
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" />);
+
+    // Doc's row still carries the disclosure and its children come back with it.
+    expect(await screen.findByText("one.md")).toBeInTheDocument();
+    expect(screen.getByText("Docs").closest("button")).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+  });
+
+  it("also remembers a folder that was folded again", async () => {
+    h.listWorkspaceRoot.mockImplementation(async ({ path }) => {
+      if (path === "/") return [entry("/Docs", "dir")];
+      if (path === "/Docs") return [entry("/Docs/one.md")];
+      return [];
+    });
+
+    const first = render(<WorkspaceStorageTree workspaceId="ws-1" />);
+    fireEvent.click(await screen.findByText("Docs"));
+    await screen.findByText("one.md");
+    fireEvent.click(screen.getByText("Docs"));
+    first.unmount();
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" />);
+
+    expect(await screen.findByText("Docs")).toBeInTheDocument();
+    expect(screen.queryByText("one.md")).not.toBeInTheDocument();
+    expect(screen.getByText("Docs").closest("button")).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+  });
+
+  it("drops the wash when the empty part of the list is clicked", async () => {
+    h.listWorkspaceRoot.mockResolvedValue([
+      entry("/notes.txt", "file"),
+      entry("/Docs", "dir"),
+    ]);
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" />);
+    fireEvent.click(await screen.findByText("notes.txt"));
+    expect(rowFor("notes.txt")).toHaveClass("bg-accent/10");
+
+    fireEvent.click(document.querySelector('[data-guide="workspace-files"]'));
+
+    expect(rowFor("notes.txt")).not.toHaveClass("bg-accent/10");
+  });
+
+  it("keeps the wash when the click lands on the row itself", async () => {
+    h.listWorkspaceRoot.mockResolvedValue([entry("/notes.txt", "file")]);
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" />);
+    fireEvent.click(await screen.findByText("notes.txt"));
+
+    fireEvent.click(document.querySelector('[data-guide="workspace-files"]'));
+    fireEvent.click(screen.getByText("notes.txt"));
+
+    expect(rowFor("notes.txt")).toHaveClass("bg-accent/10");
+  });
+
+  const addFile = (container) =>
+    fireEvent.change(container.querySelector('input[type="file"]'), {
+      target: { files: [new File(["x"], "a.txt", { type: "text/plain" })] },
+    });
+
+  it("adds a file to the browser root when nothing is selected", async () => {
+    h.listWorkspaceRoot.mockResolvedValue([entry("/Docs", "dir")]);
+
+    const { container } = render(<WorkspaceStorageTree workspaceId="ws-1" />);
+    await screen.findByText("Docs");
+
+    addFile(container);
+
+    await waitFor(() => expect(h.upload).toHaveBeenCalled());
+    const [provider, directory] = h.upload.mock.calls[0];
+    expect(provider).toBe(h.rootProvider);
+    expect(directory).toBe("/");
+  });
+
+  it("adds into a selected folder, and back to the browser root once it is cleared", async () => {
+    const provider = {
+      status: "connected",
+      connect: vi.fn(async () => {}),
+      list: vi.fn(async () => ({ entries: [] })),
+    };
+    h.sources = [{ id: "dev-1", kind: "local", label: "Phone", readOnly: false }];
+    h.mounts = [mountRow];
+    h.providers = new Map([["dev-1", provider]]);
+    h.listWorkspaceRoot.mockResolvedValue([
+      entry("/Phone", "dir", { local: false, mount: mountRow }),
+    ]);
+
+    const { container } = render(<WorkspaceStorageTree workspaceId="ws-1" />);
+    fireEvent.click(await screen.findByText("Phone"));
+
+    addFile(container);
+    await waitFor(() => expect(h.upload).toHaveBeenCalledTimes(1));
+    expect(h.upload.mock.calls[0][0]).toBe(provider);
+    expect(h.upload.mock.calls[0][1]).toBe("/Photos");
+
+    fireEvent.click(document.querySelector('[data-guide="workspace-files"]'));
+    addFile(container);
+
+    await waitFor(() => expect(h.upload).toHaveBeenCalledTimes(2));
+    expect(h.upload.mock.calls[1][0]).toBe(h.rootProvider);
+    expect(h.upload.mock.calls[1][1]).toBe("/");
   });
 });

@@ -5,6 +5,10 @@ import type { BrowserProvider } from "./providers/browser";
 import type { FileProvider } from "./providers/types";
 import { joinPath, normalizePath } from "./paths";
 import { streamOf, toBytes } from "./bytes";
+import {
+  notifyWorkspaceFilesChanged,
+  type WorkspaceFileChangeKind,
+} from "./filesChanged";
 
 type MountBinding = {
   mount: WorkspaceMountRow;
@@ -35,6 +39,11 @@ export class WorkspaceAgentVfs implements Vfs {
     private readonly root: BrowserProvider,
     private readonly mounts: MountBinding[],
   ) {}
+
+  /** The sidebar tree listens for this: a write here is a row that has to appear. */
+  private changed(path?: string, kind?: WorkspaceFileChangeKind) {
+    notifyWorkspaceFilesChanged(this.workspaceId, { path, kind });
+  }
 
   private binding(path: string): { binding: MountBinding; inner: string } | null {
     const normalized = normalizePath(path);
@@ -99,17 +108,30 @@ export class WorkspaceAgentVfs implements Vfs {
       return;
     }
     const routed = this.binding(normalized);
+    // Whether this write creates a row or changes one is the difference between the
+    // sidebar's green and amber dots, so ask before the write replaces the evidence.
+    const existed = await this.exists(normalized);
     if (routed) {
       assertWritable(routed.binding);
       await routed.binding.provider.write(routed.inner, streamOf(data), {
         overwrite: true,
       });
+      this.changed(normalized, existed ? "modify" : "create");
       return;
     }
     if (this.root.capabilities.write === false) {
       throw new Error(READ_ONLY_MESSAGE);
     }
     await this.root.write(normalized, streamOf(data), { overwrite: true });
+    this.changed(normalized, existed ? "modify" : "create");
+  }
+
+  private async exists(path: string): Promise<boolean> {
+    try {
+      return (await this.stat(path)) !== null;
+    } catch {
+      return false;
+    }
   }
 
   async mkdir(path: string): Promise<void> {
@@ -122,12 +144,14 @@ export class WorkspaceAgentVfs implements Vfs {
     if (routed) {
       assertWritable(routed.binding);
       await routed.binding.provider.mkdir(routed.inner);
+      this.changed(normalized, "create");
       return;
     }
     if (this.root.capabilities.write === false) {
       throw new Error(READ_ONLY_MESSAGE);
     }
     await this.root.mkdir(normalized);
+    this.changed(normalized, "create");
   }
 
   async readdir(path: string): Promise<Entry[]> {
@@ -190,12 +214,14 @@ export class WorkspaceAgentVfs implements Vfs {
         throw new Error(`Cannot remove the mount point ${normalized}`);
       }
       await routed.binding.provider.remove(routed.inner, { recursive: true });
+      this.changed(normalized, "remove");
       return;
     }
     if (this.root.capabilities.write === false) {
       throw new Error(READ_ONLY_MESSAGE);
     }
     await this.root.remove(normalized, { recursive: true });
+    this.changed(normalized, "remove");
   }
 
   async stamp(path: string): Promise<string | null> {
