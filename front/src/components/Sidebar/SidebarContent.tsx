@@ -997,7 +997,7 @@ export default function SidebarContent({
                   aria-label={t("folders.sort_label")}
                   title={t("folders.sort_label")}
                   data-guide="sort-chats"
-                  className="btn btn-ghost btn-sm btn-square text-base-content/70 hover:text-base-content"
+                  className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-base-content/60 transition hover:bg-base-200 hover:text-base-content"
                 >
                   {conversationGrouping === "date" ? (
                     <Calendar size={16} />
@@ -1115,7 +1115,7 @@ export default function SidebarContent({
                   })
                 }
                 data-guide="sort-organize"
-                className="btn btn-ghost btn-sm btn-square text-base-content/70 hover:text-base-content"
+                className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-base-content/60 transition hover:bg-base-200 hover:text-base-content"
                 aria-label={t("sorter.button")}
                 title={t("sorter.button")}
               >
@@ -1125,7 +1125,7 @@ export default function SidebarContent({
                 type="button"
                 onClick={openSearch}
                 data-guide="search-chats"
-                className={`flex items-center rounded-lg p-1.5 text-base-content/70 hover:text-base-content hover:bg-base-200 transition cursor-pointer ${
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-base-content/60 hover:text-base-content hover:bg-base-200 transition cursor-pointer ${
                   searchVisible ? "opacity-0 pointer-events-none" : "opacity-100"
                 }`}
                 aria-label={t("folders.search_label")}
