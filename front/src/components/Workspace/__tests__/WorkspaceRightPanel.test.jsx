@@ -51,10 +51,6 @@ vi.mock("../WorkspaceStorageTree", () => ({
   ),
 }));
 
-vi.mock("../WorkspaceAgentPanel", () => ({
-  default: () => <div data-testid="agent-panel" />,
-}));
-
 function OpenChatFile() {
   const { toggleFilePreview } = useFilePreview();
   return (
@@ -99,6 +95,12 @@ describe("WorkspaceRightPanel preview tab", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Files" }));
 
     expect(screen.queryAllByTestId("files-workspace-heading")).toHaveLength(0);
+  });
+
+  it("shows no Agents tab", () => {
+    renderPanel();
+
+    expect(screen.queryByRole("tab", { name: "Agents" })).toBeNull();
   });
 
   it("heads each workspace's files and rules a line between them", () => {

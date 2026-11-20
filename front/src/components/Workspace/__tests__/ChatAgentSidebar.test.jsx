@@ -60,12 +60,6 @@ vi.mock("../../Meta/MetaChangesPanel", () => ({
     return null;
   },
 }));
-vi.mock("../WorkspaceAgentPanel", () => ({
-  default: ({ workspaceId }) => (
-    <div data-testid={`agent-panel-${workspaceId}`} />
-  ),
-}));
-
 import ChatAgentSidebar from "../ChatAgentSidebar";
 
 const lastPanel = () => mocks.panels[mocks.panels.length - 1];
@@ -97,33 +91,12 @@ beforeEach(() => {
 });
 
 describe("ChatAgentSidebar what's new scope", () => {
-  it("adds an Agents tab that picks the agent of the chat's workspaces", () => {
+  it("offers no Agents tab next to the Files tab", () => {
     render(<ChatAgentSidebar conversationId="chat-1" />);
 
     const tabs = lastPanel().tabs;
-    expect(tabs.map((tab) => tab.id)).toEqual(["files", "agents"]);
-    const agentsTab = tabs.find((tab) => tab.id === "agents");
-    expect(agentsTab.label).toBe("Agents");
-    expect(render(agentsTab.content).getByTestId("agent-panel-ws-1")).toBeInTheDocument();
-  });
-
-  it("names every workspace when the chat is attached to several", () => {
-    mocks.chatLinks = [
-      { conversationId: "chat-1", workspaceId: "ws-1" },
-      { conversationId: "chat-1", workspaceId: "ws-2" },
-    ];
-    mocks.workspaceList = [
-      { id: "ws-1", name: "Research" },
-      { id: "ws-2", name: "Notes" },
-    ];
-    render(<ChatAgentSidebar conversationId="chat-1" />);
-
-    const tab = lastPanel().tabs.find((item) => item.id === "agents");
-    const view = render(tab.content);
-    expect(view.getByText("Research")).toBeInTheDocument();
-    expect(view.getByText("Notes")).toBeInTheDocument();
-    expect(view.getByTestId("agent-panel-ws-1")).toBeInTheDocument();
-    expect(view.getByTestId("agent-panel-ws-2")).toBeInTheDocument();
+    expect(tabs.map((tab) => tab.id)).toEqual(["files"]);
+    expect(tabs.map((tab) => tab.label)).not.toContain("Agents");
   });
 
   it("reports only the chat's workspaces, agents and attached sessions", () => {
@@ -137,12 +110,12 @@ describe("ChatAgentSidebar what's new scope", () => {
     });
   });
 
-  it("offers the same Files and Agents tabs as the workspace page", () => {
+  it("offers the same Files tab as the workspace page", () => {
     render(<ChatAgentSidebar conversationId="chat-1" />);
 
     const tabs = lastPanel().tabs ?? [];
-    expect(tabs.map((tab) => tab.id)).toEqual(["files", "agents"]);
-    expect(tabs.map((tab) => tab.label)).toEqual(["Files", "Agents"]);
+    expect(tabs.map((tab) => tab.id)).toEqual(["files"]);
+    expect(tabs.map((tab) => tab.label)).toEqual(["Files"]);
     expect(tabs.every((tab) => tab.content)).toBe(true);
   });
 

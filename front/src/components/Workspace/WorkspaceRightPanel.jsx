@@ -16,7 +16,6 @@ import { useToast } from "../../hooks/useToast";
 import { downloadBlob } from "../../utils/download";
 import MetaChangesPanel from "../Meta/MetaChangesPanel";
 import { useWorkspaceList } from "../../db/workspaceDb";
-import WorkspaceAgentPanel from "./WorkspaceAgentPanel";
 import WorkspacePreviewTab from "./WorkspacePreviewTab";
 import WorkspaceStorageTree from "./WorkspaceStorageTree";
 
@@ -24,7 +23,7 @@ const sectionHeading =
   "mb-1 truncate px-1 text-[10px] font-semibold uppercase tracking-wider text-base-content/45";
 
 /**
- * The workspace's right-hand column: What's new, Files, Agents, Preview.
+ * The workspace's right-hand column: What's new, Files, Preview.
  *
  * A workspace page and a chat attached to that workspace render this same
  * component, so the column is identical in both places. A chat may belong to
@@ -43,8 +42,7 @@ function WorkspaceFilesTab({ workspaceIds, names, onPreview }) {
     );
   }
   // Several workspaces share this tab, so each tree gets its name as a grey uppercase heading and
-  // a hairline above it — the same heading the Agents tab uses, and the only thing that tells the
-  // sections apart.
+  // a hairline above it — the only thing that tells the sections apart.
   return (
     <div className="flex min-h-0 flex-col gap-3 overflow-y-auto">
       {workspaceIds.map((workspaceId, index) => (
@@ -153,24 +151,6 @@ function WorkspacePreviewPane({ request, onClose, onBack }) {
   );
 }
 
-function WorkspaceAgentsTab({ workspaceIds, names }) {
-  if (workspaceIds.length === 1) {
-    return (
-      <WorkspaceAgentPanel workspaceId={workspaceIds[0]} framed={false} />
-    );
-  }
-  return (
-    <div className="flex flex-col gap-3">
-      {workspaceIds.map((workspaceId) => (
-        <section key={workspaceId} className="min-w-0">
-          <h3 className={sectionHeading}>{names.get(workspaceId) ?? ""}</h3>
-          <WorkspaceAgentPanel workspaceId={workspaceId} framed={false} />
-        </section>
-      ))}
-    </div>
-  );
-}
-
 export default function WorkspaceRightPanel({
   workspaceIds,
   userSettings,
@@ -275,11 +255,6 @@ export default function WorkspaceRightPanel({
           />
         ),
         contentClassName: ids.length === 1 ? "flex flex-col" : undefined,
-      },
-      {
-        id: "agents",
-        label: t("meta_chat.agents_tab"),
-        content: <WorkspaceAgentsTab workspaceIds={ids} names={names} />,
       },
     ];
     // The tab only exists while there is a file in it.
