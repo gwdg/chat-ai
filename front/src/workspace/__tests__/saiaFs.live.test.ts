@@ -40,8 +40,9 @@ run("SaiaFsProvider (live)", () => {
       move: true,
     });
 
-    // A fresh account has no folder yet; saia-fs answers "not found" for the
-    // root, which the provider shows as an empty directory.
+    // An account folder the service created on first contact lists empty; an
+    // older service answers "not found" for the root, which the provider also
+    // shows as an empty directory.
     expect(Array.isArray((await provider.list("/")).entries)).toBe(true);
 
     const base = `/chat-ai-live-${Date.now()}`;

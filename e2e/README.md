@@ -30,6 +30,7 @@ Each user scenario is its own readable file in `tests/`, so it can be run alone:
 | `agent-opencode.spec.ts` | connect a local OpenCode agent and run a shell turn (opt-in) |
 | `agent-agentic-tasks.spec.ts` | a local OpenCode agent writes, runs and edits a script (opt-in) |
 | `chat-real-model.spec.ts` | ask a real model behind your own back service (opt-in) |
+| `saia-fs.spec.ts` | browse and mount the SAIA filesystem from a real service (opt-in) |
 
 ### Setup
 
@@ -311,6 +312,47 @@ in the same folder; re-run the mode whose output you want to keep.
 
 `npm run analyze:check` probes the backend in this mode and fails with the reason when `/models`
 returns no models. The status is always 200 — even for a rejected key — so the check reads the body.
+
+### Real SAIA filesystem (opt-in)
+
+`tests/saia-fs.spec.ts` exercises the workspace's **SAIA Files** drive against a real saia-fs
+service. Chat AI probes `saiaFsEndpoint` when `front.json` sets it, otherwise `<backendPath>/saia-fs`
+(`AGENTS.md` §4.31). The deployment path needs a hop that forwards `/saia-fs/health` and
+`/saia-fs/mcp` to the SAIA registry and adds `x-auth-claim-uid`; the endpoint key is for a stack
+without one, where the browser talks to the service itself. The scenario creates a workspace, waits
+for the drive, opens the caller's account folder, asserts the listing, mounts the folder into the
+workspace in the create dialog, and then reopens the same mount through the workspace row's **Edit
+storage** entry. `/models`, `/user` and `/chat/completions` stay mocked, so no model is needed.
+
+```bash
+cd e2e
+E2E_SAIA_FS=1 npm run test:saia-fs                          # the bare service at :8003
+E2E_SAIA_FS=1 E2E_SAIA_FS_EDGE=harness npm run test:saia-fs # through the bundled edge
+E2E_SAIA_FS=1 E2E_SAIA_FS_BACKEND_URL=https://host/base npm run test:saia-fs # a real deployment
+```
+
+Without the edge the app is generated with `saiaFsEndpoint = E2E_SAIA_FS_URL` and
+`fakeAuthHeaders` carrying `x-auth-claim-uid`, because no hop stamps the identity. A failure names
+the probe URL, its status and body, a repeat request from Node (so a browser CORS refusal is
+distinguishable from a 404) and the full traffic list. With `E2E_SAIA_FS_EDGE=harness` the run also
+starts `scripts/saia-fs-edge.mjs`, a stand-in for the deployment hop that forwards to the registry's
+`/services/saia-fs/<path>` and maps `oidc_claim_uid` onto `x-auth-claim-uid`; the scenario then runs
+the whole browser → edge → registry → saia-fs path on the deployment route rather than the override.
+
+| env | default | meaning |
+| --- | --- | --- |
+| `E2E_SAIA_FS` | unset | `1` switches the run to the saia-fs mode |
+| `E2E_SAIA_FS_URL` | `http://127.0.0.1:8003`, unless a deployment base is configured | written as `saiaFsEndpoint`; the bare instance the browser talks to |
+| `E2E_SAIA_FS_BACKEND_URL` | the edge's URL with `E2E_SAIA_FS_EDGE=harness`, otherwise `http://127.0.0.1:10000/public/v1` | `backendPath`; with it the app uses `<base>/saia-fs` |
+| `E2E_SAIA_FS_EDGE` | `off` | `harness` starts the bundled edge and points the app at it |
+| `E2E_SAIA_FS_REGISTRY` | `http://127.0.0.1:5000` | registry the edge forwards to |
+| `E2E_SAIA_FS_USER` | `tester` | identity the request carries (`oidc_claim_uid` for the edge, `x-auth-claim-uid` for the bare service) |
+| `E2E_SAIA_FS_ENTRY` | `local-testing` | folder in the account root the scenario expects and mounts; empty skips that step |
+| `E2E_SAIA_FS_APP_URL` | `http://127.0.0.1:8093` | app instance to test, when you serve it yourself |
+
+The app instance is generated from `fixtures/front.e2e.json` into
+`results/front.e2e-saia-fs.json` (gitignored), like the real-model mode. It is a separate mode: do
+not combine it with `E2E_REAL_MODEL` or `E2E_OPENCODE`.
 
 ### Mocked upstream APIs and settings
 

@@ -3,6 +3,8 @@ import { dirname, resolve } from "node:path";
 
 import { defineConfig, devices, type Project } from "@playwright/test";
 
+import { SAIA_FS_TARGET } from "./src/saiaFsTarget";
+
 /**
  * Deterministic browser suite.
  *
@@ -53,6 +55,53 @@ const REAL_CONFIG_FILE = "results/front.e2e-real.json";
 const REAL_SPEC = /chat-real-model\.spec\.ts/;
 
 /**
+ * Opt-in scenario against a real SAIA filesystem: the workspace's "SAIA Files"
+ * drive. Chat AI normally reaches it at `<backendPath>/saia-fs`, which only a
+ * deployment hop can serve (AGENTS.md §4.31), so the scenario runs in one of two
+ * shapes — see `src/saiaFsTarget.ts` for how each variable is resolved:
+ *
+ * - a hop: `E2E_SAIA_FS_EDGE=harness` starts `scripts/saia-fs-edge.mjs`, a
+ *   stand-in for the deployment edge, and the app keeps the deployment path;
+ * - a bare instance: `E2E_SAIA_FS_URL` (default `http://127.0.0.1:8003`) is
+ *   written as `saiaFsEndpoint`, and `fakeAuthHeaders` carries the identity
+ *   because no hop stamps it.
+ *
+ * `/models`, `/user` and `/chat/completions` stay mocked, so no model is needed.
+ */
+const SAIA_FS_ENABLED = process.env.E2E_SAIA_FS === "1";
+const SAIA_FS_SPEC = /saia-fs\.spec\.ts/;
+const SAIA_FS_EDGE = SAIA_FS_TARGET.edge;
+const SAIA_FS_EDGE_PORT = SAIA_FS_TARGET.edgePort;
+const SAIA_FS_USER = SAIA_FS_TARGET.user;
+const SAIA_FS_BACKEND_URL = SAIA_FS_TARGET.backendUrl;
+const SAIA_FS_APP_URL =
+  process.env.E2E_SAIA_FS_APP_URL ??
+  (USE_EXTERNAL_APP ? APP_URL : "http://127.0.0.1:8093");
+const SAIA_FS_APP_PORT = new URL(SAIA_FS_APP_URL).port || "8093";
+const SAIA_FS_CONFIG_FILE = "results/front.e2e-saia-fs.json";
+
+/**
+ * Same app as the mocked matrix, built against whatever serves saia-fs.
+ * `fakeAuthHeaders` gives the deployment hop the claim it maps onto
+ * `x-auth-claim-uid`; without a hop it carries that header itself.
+ */
+function writeSaiaFsConfig(): void {
+  const base = JSON.parse(readFileSync("fixtures/front.e2e.json", "utf8"));
+
+  base.port = Number(SAIA_FS_APP_PORT);
+  base.backendPath = SAIA_FS_BACKEND_URL;
+  base.modelsPath = `${SAIA_FS_BACKEND_URL}/models`;
+  base.userDataPath = `${SAIA_FS_BACKEND_URL}/user`;
+  base.fakeAuthHeaders = SAIA_FS_TARGET.endpoint
+    ? { oidc_claim_uid: SAIA_FS_USER, "x-auth-claim-uid": SAIA_FS_USER }
+    : { oidc_claim_uid: SAIA_FS_USER };
+  if (SAIA_FS_TARGET.endpoint) base.saiaFsEndpoint = SAIA_FS_TARGET.endpoint;
+
+  mkdirSync(dirname(resolve(SAIA_FS_CONFIG_FILE)), { recursive: true });
+  writeFileSync(SAIA_FS_CONFIG_FILE, `${JSON.stringify(base, null, 2)}\n`);
+}
+
+/**
  * Point a copy of the mocked front-end config at the back service the user is
  * running. Every other key (modules, prompt defaults, title model) stays the
  * same, so the real-model scenario renders the same app.
@@ -81,10 +130,17 @@ if (REAL_MODEL_ENABLED && OPENCODE_ENABLED) {
   );
 }
 
+if (SAIA_FS_ENABLED && (REAL_MODEL_ENABLED || OPENCODE_ENABLED)) {
+  throw new Error(
+    "E2E_SAIA_FS is a separate opt-in mode with its own app instance; do not combine it with E2E_REAL_MODEL or E2E_OPENCODE.",
+  );
+}
+
 if (REAL_MODEL_ENABLED && !USE_EXTERNAL_APP) writeRealConfig();
+if (SAIA_FS_ENABLED && !USE_EXTERNAL_APP) writeSaiaFsConfig();
 
 const webServer: any[] = [];
-if (!USE_EXTERNAL_APP && !REAL_MODEL_ENABLED) {
+if (!USE_EXTERNAL_APP && !REAL_MODEL_ENABLED && !SAIA_FS_ENABLED) {
   webServer.push({
     command:
       "CONFIG_LOCATION=../e2e/fixtures/front.e2e.json npm run dev -- --port 8090 --strictPort",
@@ -131,6 +187,32 @@ if (REAL_MODEL_ENABLED && !USE_EXTERNAL_APP) {
     timeout: 180_000,
   });
 }
+if (SAIA_FS_ENABLED && SAIA_FS_EDGE) {
+  // The deployment hop chat-ai expects, for a local stack that has none.
+  webServer.push({
+    command: "node scripts/saia-fs-edge.mjs",
+    url: `http://127.0.0.1:${SAIA_FS_EDGE_PORT}/__edge/health`,
+    reuseExistingServer: false,
+    timeout: 60_000,
+    env: {
+      E2E_SAIA_FS_EDGE_PORT: SAIA_FS_EDGE_PORT,
+      E2E_SAIA_FS_USER: SAIA_FS_USER,
+      ...(process.env.E2E_SAIA_FS_REGISTRY
+        ? { E2E_SAIA_FS_REGISTRY: process.env.E2E_SAIA_FS_REGISTRY }
+        : {}),
+    },
+  });
+}
+if (SAIA_FS_ENABLED && !USE_EXTERNAL_APP) {
+  // Same front end, built against the backend that serves `/saia-fs`.
+  webServer.push({
+    command: `CONFIG_LOCATION=../e2e/${SAIA_FS_CONFIG_FILE} npm run dev -- --port ${SAIA_FS_APP_PORT} --strictPort`,
+    cwd: "../front",
+    url: SAIA_FS_APP_URL,
+    reuseExistingServer: !process.env.CI,
+    timeout: 180_000,
+  });
+}
 
 /** Chrome is the default browser for the three device classes. */
 // `browserName` is required for the iPad descriptor, which defaults to webkit.
@@ -140,7 +222,7 @@ const chrome = { browserName: "chromium", channel: "chrome" } as const;
 const deviceProjects: Project[] = [
   {
     name: "chrome-desktop",
-    testIgnore: [OPENCODE_SPEC, REAL_SPEC],
+    testIgnore: [OPENCODE_SPEC, REAL_SPEC, SAIA_FS_SPEC],
     use: {
       ...devices["Desktop Chrome"],
       ...chrome,
@@ -149,19 +231,19 @@ const deviceProjects: Project[] = [
   },
   {
     name: "chrome-tablet",
-    testIgnore: [OPENCODE_SPEC, REAL_SPEC],
+    testIgnore: [OPENCODE_SPEC, REAL_SPEC, SAIA_FS_SPEC],
     // 1194 x 834: below the app's 1280 px desktop breakpoint, so it keeps the
     // tablet layout (rail sidebar, drawer-free content) while still being wide.
     use: { ...devices["iPad Pro 11 landscape"], ...chrome },
   },
   {
     name: "chrome-phone",
-    testIgnore: [OPENCODE_SPEC, REAL_SPEC],
+    testIgnore: [OPENCODE_SPEC, REAL_SPEC, SAIA_FS_SPEC],
     use: { ...devices["Pixel 7"], ...chrome },
   },
   {
     name: "firefox-desktop",
-    testIgnore: [OPENCODE_SPEC, REAL_SPEC],
+    testIgnore: [OPENCODE_SPEC, REAL_SPEC, SAIA_FS_SPEC],
     // Same desktop class as chrome-desktop: 1280 x 720 squeezes the Meta chat
     // prompt row far enough that the model chip covers the send button.
     use: {
@@ -206,7 +288,26 @@ const realDeviceProjects: Project[] = [
   },
 ];
 
-const projects: Project[] = REAL_MODEL_ENABLED ? realDeviceProjects : deviceProjects;
+const projects: Project[] = SAIA_FS_ENABLED
+  ? []
+  : REAL_MODEL_ENABLED
+    ? realDeviceProjects
+    : deviceProjects;
+
+if (SAIA_FS_ENABLED) {
+  // One desktop run: the scenario drives the workspace Sources rail and the
+  // service round trip, not device-specific layout.
+  projects.push({
+    name: "saia-fs",
+    testMatch: SAIA_FS_SPEC,
+    use: {
+      ...devices["Desktop Chrome"],
+      ...chrome,
+      baseURL: SAIA_FS_APP_URL,
+      viewport: { width: 1440, height: 900 },
+    },
+  });
+}
 
 if (OPENCODE_ENABLED) {
   // One desktop run: the scenario drives the local agent UI and its shell turn,
@@ -228,7 +329,7 @@ if (OPENCODE_ENABLED) {
 if (!REAL_MODEL_ENABLED && !OPENCODE_ENABLED && process.env.E2E_WEBKIT === "1") {
   projects.push({
     name: "webkit-desktop",
-    testIgnore: [OPENCODE_SPEC, REAL_SPEC],
+    testIgnore: [OPENCODE_SPEC, REAL_SPEC, SAIA_FS_SPEC],
     use: { ...devices["Desktop Safari"] },
   });
 }

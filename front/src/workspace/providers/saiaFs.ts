@@ -11,12 +11,14 @@ import type { DirectoryPage, FileProvider, QuotaInfo } from "./types";
 import { WorkspaceError } from "./types";
 
 /**
- * The SAIA filesystem, reached through the deployment's `/saia-fs` route.
+ * The SAIA filesystem, reached through `saiaFsEndpoint` or, when that is unset,
+ * the deployment's `/saia-fs` route.
  *
  * saia-fs is an MCP server behind the SAIA registry's HTTP listener, which is
  * not published; the deployment forwards the MCP exchange and adds the user's
- * identity (`x-auth-claim-uid`). One account folder is shared by every
- * workspace, because the folder belongs to the user, not to a workspace.
+ * identity (`x-auth-claim-uid`). A stack without that hop configures
+ * `saiaFsEndpoint` and sends the header itself. One account folder is shared by
+ * every workspace, because the folder belongs to the user, not to a workspace.
  *
  * Its tool names and answers differ from the generic filesystem MCP servers
  * (`providers/mcp.ts`): `list` answers the text `"d  name  12b"`, `read`/`write`
@@ -247,8 +249,9 @@ export class SaiaFsProvider implements FileProvider {
   }
 
   /**
-   * A folder that does not exist yet is empty, not an error: the service creates
-   * `<root>/<user>` on the first write, so a new account lists a missing root.
+   * A folder that does not exist yet is empty, not an error: an older service
+   * creates `<root>/<user>` only on the first write, so a new account's root can
+   * be missing. Current saia-fs creates it on first contact.
    */
   private missing(path: string): DirectoryPage {
     if (path === "/") return { entries: [] };

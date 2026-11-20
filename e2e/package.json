@@ -16,7 +16,8 @@
         "test:e2e:report": "playwright show-report results/html",
         "test:opencode": "E2E_OPENCODE=1 playwright test --project=opencode-local",
         "test:opencode:agentic": "E2E_OPENCODE=1 playwright test tests/agent-agentic-tasks.spec.ts --project=opencode-local",
-    "test:real": "E2E_REAL_MODEL=1 playwright test tests/chat-real-model.spec.ts --project=chrome-desktop"
+        "test:real": "E2E_REAL_MODEL=1 playwright test tests/chat-real-model.spec.ts --project=chrome-desktop",
+        "test:saia-fs": "E2E_SAIA_FS=1 playwright test --project=saia-fs"
     },
     "dependencies": {
         "openai": "^4.104.0",

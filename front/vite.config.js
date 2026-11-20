@@ -182,6 +182,12 @@ try {
     } else if (key == "explainImageModel") {
       process.env["VITE_EXPLAIN_IMAGE_MODEL"] = value;
       console.log("Explain-image model:", value);
+    } else if (key == "saiaFsEndpoint") {
+      // Only for a stack without the deployment's `<backend>/saia-fs` hop (the
+      // local test stack reaches saia-fs on its own port). Unset keeps the
+      // deployment path; the browser then talks to that endpoint itself.
+      process.env["VITE_SAIA_FS_ENDPOINT"] = value;
+      console.log("SAIA filesystem endpoint:", value || "none (use <backend>/saia-fs)");
     } else if (key == "e2eeKeyUrl") {
       // Where the published `.pub` files of the model nodes live. The app only
       // reads it, and the compression/static pipeline does not touch it.

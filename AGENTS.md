@@ -147,6 +147,7 @@ cd e2e && npm run test:e2e             # deterministic suite against the mocked 
 cd e2e && npm run test:opencode        # opt-in: local OpenCode agent, both specs
 cd e2e && npm run test:opencode:agentic # opt-in: only the agentic scenario
 cd e2e && npm run test:real            # opt-in: real model behind a back service you started
+cd e2e && npm run test:saia-fs         # opt-in: the SAIA filesystem (`saiaFsEndpoint`, default :8003)
 ```
 
 The default suite mocks `/models`, `/user` and `/chat/completions`, and every documented step
@@ -168,6 +169,19 @@ are fixed; the execution, files and output are genuine). The two specs skip unle
 server you started, because that server has to configure the `scripted` provider itself. Each mode
 starts its own app instance, so combining `test:e2e`, `test:real` and `test:opencode` in one run is
 refused by the config instead of silently sharing ports.
+
+`tests/saia-fs.spec.ts` (`E2E_SAIA_FS=1`, `--project=saia-fs`) is the extended test for the SAIA
+filesystem drive (§4.31). It mocks only `/models`, `/user` and `/chat/completions`, mounts the
+caller's account folder into a draft workspace through the create dialog's storage browser, and
+reopens that mount through the workspace row's **Edit storage**. By default it points the app's
+`saiaFsEndpoint` at `E2E_SAIA_FS_URL` (the local stack's `http://127.0.0.1:8003`) and sends
+`x-auth-claim-uid` from `fakeAuthHeaders`, so a bare instance is enough. A failure before the drive
+appears reports the probe URL, its status and body plus a repeat request from Node, which is the
+diagnosis of a deployment that does not forward `/saia-fs`. `E2E_SAIA_FS_EDGE=harness` instead
+starts `scripts/saia-fs-edge.mjs`, a stand-in hop that forwards to the registry's `/services/saia-fs`
+and maps `oidc_claim_uid` onto `x-auth-claim-uid`, so the whole browser → edge → registry → service
+path can be exercised on a local stack that has no such edge. The shared resolution lives in
+`e2e/src/saiaFsTarget.ts`.
 
 `npm i` can rewrite `package-lock.json`. Check `git status` afterwards and keep unrelated lockfile
 churn out of your commit.
@@ -258,7 +272,7 @@ inside `db/`. UI strings and i18n keys say topic.
 `VITE_PROPOSAL_GENERATION_MODEL`, `VITE_ANNOUNCEMENT`, `VITE_USE_OPENAI_SDK`,
 `VITE_E2EE_KEY_URL`, `VITE_OPENCODE_SERVER_URL`, `VITE_OPENCODE_SERVER_USERNAME`,
 `VITE_OPENCODE_SERVER_PASSWORD`, `VITE_AGENT_SERVICE_MODE`, `VITE_AGENT_SERVICE_MODEL`,
-`VITE_BRIDGE_KEY`, `VITE_FAKE_AUTH_HEADERS`, `VITE_MODULE_*`. Consequences: **a new
+`VITE_BRIDGE_KEY`, `VITE_FAKE_AUTH_HEADERS`, `VITE_SAIA_FS_ENDPOINT`, `VITE_MODULE_*`. Consequences: **a new
 config key requires editing `front/vite.config.js` too**, and a config change requires a dev-server
 restart. Read values via `import.meta.env.VITE_*`; they arrive as strings, hence the
 `=== "true"` comparisons.
@@ -1907,27 +1921,35 @@ old row, while `saia-agent` is deliberately **kept** — it answers `/chat/compl
 including tunnel mode.
 
 Availability is therefore a real probe, not a model-list lookup: `apis/saiaFs.js#isSaiaFsAvailable`
-calls `GET <backend>/saia-fs/health`, and requires HTTP 200 with `{"status":"alive"}`. Every other
-answer — 404 (no route), 503 (no instance), 502 (unreachable), a timeout or a network failure — is
+calls `GET <base>/health`, and requires HTTP 200 with `{"status":"alive"}`. Every other answer —
+404 (no route), 503 (no instance), 502 (unreachable), a timeout or a network failure — is
 `unavailable`, because `hooks/useSaiaFsAccess` fails closed and `WorkspaceStorageManager` provisions
 the `saia-fs` source row only for `available`. The probe never throws.
 
-**The browser never addresses the service directly.** `<backend>/saia-fs` is the deployment's own
-path, built only from `backendPath`; there is no config key that points the browser at the service,
-and Chat AI proxies nothing itself (`back` has no `/saia-fs` route). The registry listener is not
-published, so that deployment path has to forward the exchange to the registry and add the caller's
-identity. Where nothing forwards it, the health probe answers 404 and no drive appears — the
-fail-closed behaviour above is the whole fallback, and a stack whose `backendPath` is the engine
-itself (as in `secrets/front-local-conf.json`) shows no drive.
+**The base is the deployment path unless `saiaFsEndpoint` names one.** By default the app builds
+`<backend>/saia-fs` from `backendPath`; Chat AI proxies nothing itself (`back` has no `/saia-fs`
+route), so that path has to forward the exchange to the registry and add the caller's identity. The
+optional `saiaFsEndpoint` key (`VITE_SAIA_FS_ENDPOINT`, mapped in `vite.config.js`, so a change needs
+a dev-server restart) replaces the base with an absolute or same-origin URL for a stack that has no
+such hop — the local test stack, where saia-fs listens on its own port. The browser then talks to
+that endpoint itself, so it must authenticate the caller: the local profile pairs it with
+`fakeAuthHeaders["x-auth-claim-uid"]`. Leave it unset in a deployment. Where nothing answers the
+probe, no drive appears — the fail-closed behaviour above is the whole fallback.
 
 **saia-fs in `--mode saia` needs the caller's identity.** It reads `x-auth-claim-uid` only, and
 answers an unhandled `IdentityError` as the bare `"Error executing tool <name>"` — MCP does not
-forward the exception text, so the folder looked empty. The deployment maps `oidc_claim_uid` to
-that header and the MCP client sends `authHeaders()`, so the backend sees the caller at all.
-`SaiaFsProvider` calls `exists("/")` once after the handshake: a failing session becomes a connect
-error on the source row (shown as the drive's tooltip) instead of a silent empty listing. A provider
-whose connect failed, or that was closed, reports the reason on `list()` — it used to answer
-`UNSUPPORTED "list"`, which said nothing.
+forward the exception text, so the folder looked empty. A deployment maps `oidc_claim_uid` to that
+header; a direct `saiaFsEndpoint` stack sends it from `fakeAuthHeaders`, because it is still the
+browser's own request. `SaiaFsProvider` calls `exists("/")` once after the handshake: a failing
+session becomes a connect error on the source row (shown as the drive's tooltip) instead of a silent
+empty listing. A provider whose connect failed, or that was closed, reports the reason on `list()` —
+it used to answer `UNSUPPORTED "list"`, which said nothing.
+
+**A fresh account is an empty folder, not "not found".** `server._user` calls
+`BaseBackend.ensure_namespace` on every tool request: `LocalBackend` creates `<root>/<username>`,
+while S3 inherits the no-op (it has no directories and already lists an unknown prefix as empty). So
+`list_json("/")`, `exists("/")` and `info("/")` answer a user who has never written anything, and the
+provider's `missing("/")` → empty page is only needed for a service older than that change.
 
 ## 5. Conventions
 

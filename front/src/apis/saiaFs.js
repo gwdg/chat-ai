@@ -1,38 +1,64 @@
-// The SAIA filesystem (saia-fs), reached through `<backend>/saia-fs`.
+// The SAIA filesystem (saia-fs), normally reached through `<backend>/saia-fs`.
 //
 // saia-fs is an MCP server that registers in the SAIA registry, and the
-// registry's HTTP listener (:5000/services/saia-fs) is not published. The
-// deployment's own `<backend>/saia-fs` path therefore forwards the MCP exchange
-// to the registry and stamps the caller's identity; Chat AI only builds that URL
-// from `backendPath`, so no config key can point the browser at the service
-// itself.
+// registry's HTTP listener is not published. In a deployment the
+// `<backend>/saia-fs` path forwards the MCP exchange to the registry and stamps
+// the caller's identity; Chat AI only builds that URL from `backendPath`, so no
+// service address is needed.
+//
+// `saiaFsEndpoint` (VITE_SAIA_FS_ENDPOINT) covers the one stack that path cannot
+// serve: one without such a hop, e.g. the local test stack where saia-fs listens
+// on its own port. It replaces the derived base; when it is unset the deployment
+// path is used. The browser then talks to that endpoint itself, so it has to
+// authenticate the caller (or the identity arrives as a fake auth header) — a
+// real deployment keeps the override unset.
 //
 // The service is not a chat model, so `/v1/models` cannot say whether a
-// deployment offers it. Availability is a real probe: the registry answers
-// `<base>/health` with `{"status":"alive"}` while an instance is registered,
-// and with 404 (no route), 503 (no instance) or a connection error otherwise.
-// Everything except that confirmed answer counts as unavailable, because the
-// workspace source must appear only while the service actually is.
+// deployment offers it. Availability is a real probe: `<base>/health` answers
+// `{"status":"alive"}` while the instance is running, and 404 (no route), 503
+// (no instance) or a connection error otherwise. Everything except that
+// confirmed answer counts as unavailable, because the workspace source must
+// appear only while the service actually is.
 import { agentEndpoint } from "./agentEndpoints";
 import { authHeaders } from "./authHeaders";
 
 const trimSlashes = (url) => url.replace(/\/+$/, "");
 
+/** The configured override, or `""` when the deployment path applies. */
+const configuredEndpoint = () => {
+  const value = import.meta.env.VITE_SAIA_FS_ENDPOINT;
+  if (typeof value !== "string") return "";
+  return trimSlashes(value.trim());
+};
+
+const absoluteUrl = (url) => {
+  try {
+    return trimSlashes(new URL(url).toString());
+  } catch {
+    // A relative override stays same-origin, like a relative `backendPath`.
+    return trimSlashes(new URL(url, window.location.origin).toString());
+  }
+};
+
 /**
- * The base URL the browser uses for saia-fs: the deployment's `<backend>/saia-fs`
- * path, which forwards it to the registry service.
+ * The base URL the browser uses for saia-fs: `saiaFsEndpoint` when the stack
+ * configures one, otherwise the deployment's `<backend>/saia-fs` path.
  */
-export const saiaFsBaseUrl = () => `${trimSlashes(agentEndpoint())}/saia-fs`;
+export const saiaFsBaseUrl = () => {
+  const override = configuredEndpoint();
+  if (override) return absoluteUrl(override);
+  return `${trimSlashes(agentEndpoint())}/saia-fs`;
+};
 
 /** The MCP endpoint of the service, as `SaiaFsProvider` expects it. */
 export const saiaFsMcpUrl = () => `${saiaFsBaseUrl()}/mcp`;
 
-/** The registry's liveness answer for the service, through the deployment. */
+/** The liveness answer for the service. */
 export const saiaFsHealthUrl = () => `${saiaFsBaseUrl()}/health`;
 
 /**
  * How long the availability probe waits before it calls the service absent.
- * The registry answers well inside this; a hanging instance must not keep the
+ * A running instance answers well inside this; a hanging one must not keep the
  * source list waiting.
  */
 export const SAIA_FS_HEALTH_TIMEOUT_MS = 5000;
