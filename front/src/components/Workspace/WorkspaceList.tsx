@@ -8,6 +8,7 @@ import {
   Bot,
   ChevronDown,
   Edit,
+  Link,
   OverflowMenuVertical,
   Pin,
   PinFilled,
@@ -542,6 +543,22 @@ export default function WorkspaceList({
                             ? "workspace.unpin_action"
                             : "workspace.pin_action",
                         )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          close();
+                          openModal("workspaceAttachAgentSession", {
+                            workspaceId: workspace.id,
+                            agents,
+                            sessionLinks,
+                          });
+                        }}
+                        data-guide="attach-agent-session-menu-item"
+                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
+                      >
+                        <Link size={14} />
+                        {t("workspace.attach_agent_session")}
                       </button>
                       <button
                         type="button"

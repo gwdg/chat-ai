@@ -512,6 +512,8 @@ export default {
         "Klappen Sie einen Agenten auf, um seine Sitzungen nach den Arbeitsbereichen gruppiert zu sehen, denen er zugeordnet ist.",
       step2:
         "Ziehen Sie eine Sitzungszeile auf eine andere Arbeitsbereichsgruppe, um sie dorthin zu verschieben. Die Sitzung wird aus dem alten Arbeitsbereich entfernt und dem neuen hinzugefügt; beide Gruppen aktualisieren sich sofort.",
+      step3:
+        "Ein Arbeitsbereich kann eine Sitzung auch selbst zuordnen: Öffnen Sie sein „…“-Menü und wählen Sie „Agentensitzung zuordnen“, dann eine Sitzung. Die Liste gruppiert die nicht zugeordneten Sitzungen nach Agent.",
     },
     agent_workspace_access: {
       title: "Einem Agenten Zugriff auf Arbeitsbereichsdateien geben",
@@ -2336,9 +2338,14 @@ export default {
     attach_agent: "Agent verknüpfen",
     attach_agent_hint:
       "Verknüpfen Sie einen Agenten mit diesem Arbeitsbereich. Der Agent kann ihn anschließend als Brücken-Arbeitsbereich verwenden.",
-    attach_agent_session: "Sitzung zuordnen",
+    attach_agent_session: "Agentensitzung zuordnen",
     attach_agent_session_hint:
       "Wählen Sie die Sitzungen dieses Agenten, die zu diesem Arbeitsbereich gehören. Andere Arbeitsbereiche behalten ihre eigene Liste.",
+    attach_agent_session_picker_hint:
+      "Wählen Sie eine Sitzung für diesen Arbeitsbereich. Ihr Agent wird ebenfalls zugeordnet, falls er noch nicht im Arbeitsbereich ist.",
+    no_unattached_sessions:
+      "Jede Sitzung ist diesem Arbeitsbereich bereits zugeordnet.",
+    session_attached: "{{name}} wurde diesem Arbeitsbereich zugeordnet.",
     no_available_agents: "Keine nicht verknüpften Agenten verfügbar.",
     agents: "Agenten",
     agent: {

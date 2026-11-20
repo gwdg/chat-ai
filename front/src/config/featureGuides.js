@@ -253,13 +253,14 @@ export const featureGuides = {
   session_workspaces: {
     titleKey: "feature_guide.session_workspaces.title",
     prompt:
-      "Move an agent session between workspaces by dragging its row onto another workspace group under the same expanded agent. The session is detached from the source workspace and attached to the target, which is the same move the session row's “…” menu offers.",
+      "Move an agent session between workspaces by dragging its row onto another workspace group under the same expanded agent. The session is detached from the source workspace and attached to the target, which is the same move the session row's “…” menu offers. A session can also be attached from the workspace's own “…” menu.",
     keywords: [
       "move session",
       "drag session",
       "drag and drop session",
       "session workspace",
       "attach session",
+      "attach agent session",
       "detach session",
     ],
     steps: [
@@ -270,6 +271,11 @@ export const featureGuides = {
       {
         target: '[data-guide="agent-session-group"]',
         textKey: "feature_guide.session_workspaces.step2",
+      },
+      {
+        target: '[data-guide="attach-agent-session-menu-item"]',
+        prepare: openWorkspaceMenu,
+        textKey: "feature_guide.session_workspaces.step3",
       },
     ],
   },

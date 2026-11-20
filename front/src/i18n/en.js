@@ -499,6 +499,8 @@ export default {
         "Expand an agent to see its sessions grouped by the workspaces the agent is attached to.",
       step2:
         "Drag a session row onto another workspace group to move it there. The session is detached from its old workspace and attached to the new one, and both groups update right away.",
+      step3:
+        "A workspace can also attach a session itself: open its “…” menu and choose Attach agent session, then pick a session. The list groups the unattached sessions by agent.",
     },
     agent_workspace_access: {
       title: "Give an agent access to workspace files",
@@ -2303,9 +2305,13 @@ export default {
     attach_agent: "Attach agent",
     attach_agent_hint:
       "Attach an agent to this workspace. The agent can then use it as a bridge workspace.",
-    attach_agent_session: "Attach session",
+    attach_agent_session: "Attach agent session",
     attach_agent_session_hint:
       "Pick the sessions of this agent that belong to this workspace. Other workspaces keep their own list.",
+    attach_agent_session_picker_hint:
+      "Pick a session to attach to this workspace. Its agent is attached too when it is not in the workspace yet.",
+    no_unattached_sessions: "Every session is already attached to this workspace.",
+    session_attached: "{{name}} attached to this workspace.",
     no_available_agents: "No unattached agents available.",
     agents: "Agents",
     agent: {
