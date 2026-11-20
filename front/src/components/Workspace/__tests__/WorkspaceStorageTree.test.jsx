@@ -33,6 +33,7 @@ const h = vi.hoisted(() => ({
   confirmAction: vi.fn((options, onConfirm) => onConfirm()),
   removeMount: vi.fn(),
   listWorkspaceRoot: vi.fn(),
+  upload: vi.fn(async () => 1),
 }));
 
 vi.mock("../../../db/workspaceDb", () => ({
@@ -71,6 +72,10 @@ vi.mock("../../../workspace/listWorkspaceRoot", () => ({
   listWorkspaceRoot: h.listWorkspaceRoot,
 }));
 
+vi.mock("../../../workspace/upload", () => ({
+  uploadLocalFiles: (...args) => h.upload(...args),
+}));
+
 const entry = (path, kind = "file", extra = {}) => ({
   sourceId: "root",
   path,
@@ -102,6 +107,7 @@ beforeEach(() => {
   h.confirmAction.mockClear();
   h.removeMount.mockReset();
   h.removeMount.mockResolvedValue(undefined);
+  h.upload.mockClear();
   h.rootProvider.remove.mockClear();
   h.rootProvider.connect.mockClear();
 });
@@ -596,5 +602,53 @@ describe("WorkspaceStorageTree", () => {
     fireEvent.click(screen.getByText("notes.txt"));
 
     expect(rowFor("notes.txt")).toHaveClass("bg-accent/10");
+  });
+
+  const addFile = (container) =>
+    fireEvent.change(container.querySelector('input[type="file"]'), {
+      target: { files: [new File(["x"], "a.txt", { type: "text/plain" })] },
+    });
+
+  it("adds a file to the browser root when nothing is selected", async () => {
+    h.listWorkspaceRoot.mockResolvedValue([entry("/Docs", "dir")]);
+
+    const { container } = render(<WorkspaceStorageTree workspaceId="ws-1" />);
+    await screen.findByText("Docs");
+
+    addFile(container);
+
+    await waitFor(() => expect(h.upload).toHaveBeenCalled());
+    const [provider, directory] = h.upload.mock.calls[0];
+    expect(provider).toBe(h.rootProvider);
+    expect(directory).toBe("/");
+  });
+
+  it("adds into a selected folder, and back to the browser root once it is cleared", async () => {
+    const provider = {
+      status: "connected",
+      connect: vi.fn(async () => {}),
+      list: vi.fn(async () => ({ entries: [] })),
+    };
+    h.sources = [{ id: "dev-1", kind: "local", label: "Phone", readOnly: false }];
+    h.mounts = [mountRow];
+    h.providers = new Map([["dev-1", provider]]);
+    h.listWorkspaceRoot.mockResolvedValue([
+      entry("/Phone", "dir", { local: false, mount: mountRow }),
+    ]);
+
+    const { container } = render(<WorkspaceStorageTree workspaceId="ws-1" />);
+    fireEvent.click(await screen.findByText("Phone"));
+
+    addFile(container);
+    await waitFor(() => expect(h.upload).toHaveBeenCalledTimes(1));
+    expect(h.upload.mock.calls[0][0]).toBe(provider);
+    expect(h.upload.mock.calls[0][1]).toBe("/Photos");
+
+    fireEvent.click(document.querySelector('[data-guide="workspace-files"]'));
+    addFile(container);
+
+    await waitFor(() => expect(h.upload).toHaveBeenCalledTimes(2));
+    expect(h.upload.mock.calls[1][0]).toBe(h.rootProvider);
+    expect(h.upload.mock.calls[1][1]).toBe("/");
   });
 });

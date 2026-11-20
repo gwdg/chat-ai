@@ -548,8 +548,13 @@ export default function WorkspaceStorageTree({
   const selectTarget = useCallback((node) => {
     setActionError("");
     // /chats and the parents of a nested mount are display-only: they exist to
-    // hold mounts, so uploads and new entries must never target them.
-    if (!node.context && !node.entry.local && !node.entry.mount) return;
+    // hold mounts, so uploads and new entries must never target them. With no
+    // folder to write into, the toolbar falls back to the workspace root — the
+    // browser's own storage, never whatever mount was last clicked.
+    if (!node.context && !node.entry.local && !node.entry.mount) {
+      setTarget(rootTarget());
+      return;
+    }
     const mount = node.context?.mount ?? node.entry.mount ?? null;
     setTarget({
       key: nodeKey(node),
@@ -565,7 +570,7 @@ export default function WorkspaceStorageTree({
       mount,
       reload: node.reload,
     });
-  }, []);
+  }, [rootTarget]);
 
   // Every row can be selected, whether or not it is an upload target: the
   // selection is what the Detach button acts on.
@@ -575,7 +580,10 @@ export default function WorkspaceStorageTree({
     // a file inside a mounted folder belongs to that folder's source.
     const mount = node.entry?.mount ?? null;
     setSelected({ key: nodeKey(node), mount: mount ?? null });
-  }, []);
+    // A file is not a place to put a file: the toolbar drops back to the root,
+    // which is the workspace's own browser storage.
+    if (node.entry?.kind !== "dir") setTarget(rootTarget());
+  }, [rootTarget]);
 
   const detachSelection = async () => {
     const mount = selected?.mount;
@@ -803,6 +811,7 @@ export default function WorkspaceStorageTree({
             // row is that row's business.
             if (event.target.closest('[data-guide="workspace-row"]')) return;
             if (selected) setSelected(null);
+            setTarget(rootTarget());
           }}
         >
           {showLoading && (
