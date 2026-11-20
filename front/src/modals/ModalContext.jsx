@@ -47,6 +47,7 @@ import HelpMCPModal from "./Help/HelpMCPModal";
 import ImportSettingsDisclaimerModal from "./Alert/ImportSettingsDisclaimerModal";
 import HelpReasoningModal from "./Help/HelpReasoningModal";
 import CreateWorkspaceModal from "./Workspace/CreateWorkspaceModal";
+import EditWorkspaceStorageModal from "./Workspace/EditWorkspaceStorageModal";
 import AddSourceModal from "./Workspace/AddSourceModal";
 import TransferConfirmModal from "./Workspace/TransferConfirmModal";
 import MoveToModal from "./Workspace/MoveToModal";
@@ -206,6 +207,13 @@ export function ModalProvider({ children }) {
       )}
       {modalType === "workspaceCreate" && (
         <CreateWorkspaceModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "workspaceEditStorage" && (
+        <EditWorkspaceStorageModal
+          isOpen
+          onClose={closeModal}
+          {...modalProps}
+        />
       )}
       {modalType === "workspaceAddSource" && (
         <AddSourceModal isOpen onClose={closeModal} {...modalProps} />

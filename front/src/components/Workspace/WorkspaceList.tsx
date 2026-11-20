@@ -7,6 +7,7 @@ import {
   Add,
   Bot,
   ChevronDown,
+  DataBase,
   Edit,
   Link,
   OverflowMenuVertical,
@@ -559,6 +560,21 @@ export default function WorkspaceList({
                       >
                         <Link size={14} />
                         {t("workspace.attach_agent_session")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          close();
+                          openModal("workspaceEditStorage", {
+                            workspaceId: workspace.id,
+                            workspaceName: workspace.name,
+                          });
+                        }}
+                        data-guide="workspace-edit-storage"
+                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
+                      >
+                        <DataBase size={14} />
+                        {t("workspace.edit_storage")}
                       </button>
                       <button
                         type="button"

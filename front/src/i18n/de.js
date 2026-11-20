@@ -445,7 +445,7 @@ export default {
     workspace_overview: {
       title: "Arbeitsbereiche",
       step1: "Das rechte Fenster gehört zum Arbeitsbereich: Zuerst öffnet sich Neuigkeiten, Dateien zeigt den gespeicherten Inhalt, Agenten die Ausführung.",
-      step2: "Quellen kommen beim Erstellen hinein: „Arbeitsbereich erstellen“ listet links Browserspeicher, dieses Gerät, Arcanas, Repositories und MCP-Server auf.",
+      step2: "Quellen können jederzeit hinzukommen: „Speicher bearbeiten“ im Optionsmenü öffnet dieselbe Leiste mit Speicherorten wie „Arbeitsbereich erstellen“.",
       step3: "Durchsuchen Sie den Baum im Reiter Dateien. Die Markierung jeder Zeile zeigt, wo der Eintrag liegt: Browser, Gerät, Arcana, MCP oder Agent.",
       step4: "Wählen Sie, wie der Agent in diesem Arbeitsbereich läuft: im Browser, über einen OpenCode-Server oder mit dem Remote-Agenten.",
     },
@@ -459,6 +459,12 @@ export default {
       title: "Ihre SAIA-Dateien in einem Arbeitsbereich",
       step1: "Erstellen Sie mit „Arbeitsbereich erstellen“ einen neuen Arbeitsbereich. In der Quellen-Leiste erhält er seine Dateien.",
       step2: "SAIA-Dateien ist Ihr Kontoordner. Er erscheint nur, solange diese Installation den Dienst saia-fs für Sie bereitstellt; öffnen Sie ihn, wählen Sie einen Ordner und fügen Sie ihn dem Arbeitsbereich hinzu.",
+    },
+    workspace_edit_storage: {
+      title: "Speicher zu einem Arbeitsbereich hinzufügen",
+      step1: "Öffnen Sie das Optionsmenü eines Arbeitsbereichs in der Seitenleiste.",
+      step2:
+        "„Speicher bearbeiten“ öffnet die Speicherorte dieses Arbeitsbereichs – derselbe Dialog wie beim Erstellen. Wählen Sie einen Ordner, hängen Sie eine Quelle ein oder fügen Sie einen lokalen Ordner, ein Repository oder einen MCP-Server hinzu; jede Änderung wird sofort gespeichert.",
     },
     workspace_clone: {
       title: "Git-Repository importieren",
@@ -2235,6 +2241,10 @@ export default {
     git_log_empty: "Keine Git-Log-Einträge gefunden.",
     root_empty_hint: "Erstellen Sie einen Ordner oder eine Datei oder hängen Sie einen Quellordner ein.",
     edit_title: "Arbeitsbereich bearbeiten",
+    edit_storage: "Speicher bearbeiten",
+    edit_storage_hint:
+      "Speicherorte von {{name}}. Jede Änderung wird sofort übernommen.",
+    edit_storage_hint_no_name: "Jede Änderung wird sofort übernommen.",
     workspace_options: "Arbeitsbereich-Optionen",
     pin_action: "Arbeitsbereich anheften",
     unpin_action: "Arbeitsbereich nicht mehr anheften",

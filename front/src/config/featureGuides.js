@@ -89,6 +89,32 @@ export const featureGuides = {
       },
     ],
   },
+  workspace_edit_storage: {
+    titleKey: "feature_guide.workspace_edit_storage.title",
+    prompt:
+      "Add or remove the storage of a workspace that already exists. Open the workspace's options menu in the sidebar and choose Edit storage: it shows the same storage locations rail as Create workspace, so you can browse browser storage, this device, Arcanas, the SAIA account folder and MCP servers, mount a folder, or add a local folder, a Git repository or an MCP server.",
+    keywords: [
+      "edit storage",
+      "workspace storage",
+      "add folder to workspace",
+      "add source to workspace",
+      "workspace sources",
+      "mount folder later",
+    ],
+    steps: [
+      {
+        target: '[data-guide="workspace-menu"]',
+        textKey: "feature_guide.workspace_edit_storage.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="workspace-edit-storage"]',
+        prepare: openWorkspaceMenu,
+        textKey: "feature_guide.workspace_edit_storage.step2",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
   workspace_clone: {
     titleKey: "feature_guide.workspace_clone.title",
     prompt:
@@ -1714,7 +1740,7 @@ export const FEATURE_CATEGORIES = {
     "summarize_conversation",
     "close_chat",
   ],
-  workspace: ["workspace_overview", "manage_chat_data", "pin_workspace", "pin_agent", "workspace_clone", "workspace_upload", "workspace_multiselect", "arcana_filesystem", "workspace_saia_fs", "attach_from_workspace", "remote_agents", "agent_recovery", "close_group_sessions", "session_workspaces", "agent_workspace_access"],
+  workspace: ["workspace_overview", "manage_chat_data", "pin_workspace", "pin_agent", "workspace_edit_storage", "workspace_clone", "workspace_upload", "workspace_multiselect", "arcana_filesystem", "workspace_saia_fs", "attach_from_workspace", "remote_agents", "agent_recovery", "close_group_sessions", "session_workspaces", "agent_workspace_access"],
   personas: ["chat_with_persona"],
   settings: [
     "settings_overview",
@@ -1782,6 +1808,7 @@ const germanGuideKeywords = {
   mcp_server: ["mcp", "mcp server", "mcp-server", "model context protocol"],
   diagram_renderers: ["graphviz", "dot", "vega", "vega-lite", "chart.js", "chartjs", "diagramm", "diagramme", "diagramm zeichnen", "chart"],
   browser_storage: ["browserspeicher", "browser speicher", "arbeitsbereich", "arbeitsfläche", "opfs", "lokale dateien"],
+  workspace_edit_storage: ["speicher bearbeit", "speicherort", "quelle hinzufüg", "quelle einhäng", "ordner hinzufüg", "speicher hinzufüg"],
   workspace_saia_fs: ["saia dateien", "saia-dateien", "saia dateisystem", "kontoordner", "saia-fs"],
   tools_overview: ["werkzeuge", "tools", "gwdg tools", "tool nutzung", "werkzeug verwend"],
   search_chats: ["chats durchsuch", "chat durchsuch", "chat such", "unterhaltung such", "chat find", "suche nach chat"],

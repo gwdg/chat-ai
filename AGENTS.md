@@ -864,6 +864,15 @@ new agent" row that opens the same `agentAdd` modal as the sidebar, preset throu
 prop (`"external"` / `"service"`; an agent being edited keeps its own mode, and on a deployment
 without direct access the external tab still degrades to the service).
 
+The rail and the browser below it are rendered by
+`components/Workspace/WorkspaceStorageManager.jsx` — the thing Create workspace and the sidebar's
+**Edit storage** entry (`modals/Workspace/EditWorkspaceStorageModal.jsx`, opened as
+`workspaceEditStorage` from the workspace row's options menu) both show. The workspace page has no
+source picker of its own: its Files tab is `WorkspaceStorageTree` over the workspace root, so adding
+a source to a workspace that already exists goes through Edit storage. The manager's
+`onOpenAddSource` exists for exactly these two dialogs: without it, Add source opens the global
+`workspaceAddSource` modal, which replaces the dialog that owns the manager.
+
 The SOURCES rail (`components/Workspace/WorkspaceSourcesPanel.tsx`, `data-guide="workspace-sources"`)
 is the "My Computer" of the workspace and is a **picker only**: three drive cards — **Your Device**
 (the workspace's `local` sources, i.e. folders picked through `pickDirectory`, plus git clones, which

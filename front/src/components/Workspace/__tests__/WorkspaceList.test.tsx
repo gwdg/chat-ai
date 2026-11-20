@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   setPinned: vi.fn(async () => {}),
   createChat: vi.fn(async () => "chat-new"),
   detachChat: vi.fn(async () => {}),
+  openModal: vi.fn(),
 }));
 
 vi.mock("../../../db", () => ({
@@ -54,7 +55,10 @@ vi.mock("../../../agents/agentSessions", async (importOriginal) => {
   };
 });
 vi.mock("../../../modals/ModalContext", () => ({
-  useModal: () => ({ openModal: vi.fn(), confirmAction: vi.fn() }),
+  useModal: () => ({
+    openModal: mocks.openModal,
+    confirmAction: vi.fn(),
+  }),
 }));
 vi.mock("../../../utils/conversationUtils", () => ({
   getDefaultConversation: () => ({
@@ -125,6 +129,7 @@ beforeEach(() => {
   mocks.setPinned.mockReset();
   mocks.createChat.mockReset().mockResolvedValue("chat-new");
   mocks.detachChat.mockReset();
+  mocks.openModal.mockReset();
 });
 
 const LocationProbe = () => (
@@ -253,6 +258,22 @@ describe("WorkspaceList pinning", () => {
     expect(store.getState().interface_settings.collapsed_topics).not.toContain(
       workspaceRowCollapseId("ws-1"),
     );
+  });
+});
+
+describe("WorkspaceList storage", () => {
+  it("opens the storage editor of the workspace from its options menu", async () => {
+    renderList(makeStore());
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Workspace options" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Edit storage" }));
+
+    expect(mocks.openModal).toHaveBeenCalledWith("workspaceEditStorage", {
+      workspaceId: "ws-1",
+      workspaceName: "Teaching",
+    });
   });
 });
 

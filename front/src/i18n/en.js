@@ -435,7 +435,7 @@ export default {
     workspace_overview: {
       title: "Workspaces",
       step1: "The right-hand panel belongs to the workspace: What's new opens first, Files shows what the workspace stores, and Agents shows how it runs.",
-      step2: "Sources join a workspace while you create it: Create workspace lists browser storage, this device, Arcanas, repositories and MCP servers on the left.",
+      step2: "Sources can join a workspace at any time: Edit storage in its options menu opens the same storage locations rail as Create workspace.",
       step3: "Browse the tree in the Files tab. The pill on each row says where that entry lives: browser, device, arcana, MCP or agent.",
       step4: "Choose how this workspace runs its agent: in the browser, through an OpenCode server, or with the Remote agent.",
     },
@@ -449,6 +449,12 @@ export default {
       title: "Your SAIA files in a workspace",
       step1: "Start a new workspace with Create workspace. Its Sources rail is where a workspace gets its files.",
       step2: "SAIA Files is your account folder. It is listed only while this deployment offers the saia-fs service to you; open it to pick a folder and add it to the workspace.",
+    },
+    workspace_edit_storage: {
+      title: "Add storage to a workspace",
+      step1: "Open the options menu of a workspace in the sidebar.",
+      step2:
+        "Edit storage opens the storage locations of this workspace — the same dialog you see while creating one. Pick a folder, mount a source, or add a local folder, a repository or an MCP server; every change is saved right away.",
     },
     workspace_clone: {
       title: "Import a Git repository",
@@ -2207,6 +2213,10 @@ export default {
     git_log_empty: "No Git log entries found.",
     root_empty_hint: "Create a folder or file, or mount a folder from a source.",
     edit_title: "Edit workspace",
+    edit_storage: "Edit storage",
+    edit_storage_hint:
+      "Storage locations of {{name}}. Every change is applied immediately.",
+    edit_storage_hint_no_name: "Every change is applied immediately.",
     workspace_options: "Workspace options",
     pin_action: "Pin workspace",
     unpin_action: "Unpin workspace",
