@@ -188,16 +188,20 @@ describe("McpServerList", () => {
     expect(toggle.parentElement.className).toContain("min-h-8");
   });
 
-  it("shows its empty state as a plain line, like the Agents section", () => {
+  it("offers an add button in its empty state, like the Workspaces section", () => {
     const servers = mocks.servers;
     mocks.servers = [];
     try {
       render(<McpServerList />);
 
-      const line = screen.getByText("No MCP servers configured yet.");
-      expect(line.tagName).toBe("P");
-      expect(line.className).toContain("text-[10px]");
-      expect(line.querySelector("svg")).toBeNull();
+      const add = screen.getByRole("button", { name: "Add an MCP server" });
+      expect(add.className).toContain("border-dashed");
+      expect(add.className).toContain("w-full");
+
+      fireEvent.click(add);
+      expect(mocks.openModal).toHaveBeenCalledWith("mcpServerEdit", {
+        server: undefined,
+      });
     } finally {
       mocks.servers = servers;
     }

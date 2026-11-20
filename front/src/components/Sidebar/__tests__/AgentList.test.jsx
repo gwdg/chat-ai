@@ -140,7 +140,9 @@ describe("AgentList", () => {
     renderAgentList();
 
     expect(screen.getByText("Agents")).toBeInTheDocument();
-    expect(screen.getByText("No agents yet.")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Add an agent" }),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Spawn agent" }));
 

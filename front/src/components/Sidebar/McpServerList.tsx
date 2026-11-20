@@ -168,9 +168,14 @@ export default function McpServerList() {
       </div>
 
       {collapsed ? null : servers.length === 0 ? (
-        <p className="px-1 py-1 text-[10px] text-base-content/50">
-          {t("mcp.empty")}
-        </p>
+        <button
+          type="button"
+          onClick={() => edit()}
+          data-guide="mcp-servers-add-empty"
+          className="flex w-full items-center gap-1.5 rounded-xl border border-dashed border-base-300 px-3 py-2 text-left text-xs text-base-content/60 transition hover:border-accent/40 hover:bg-base-200/60"
+        >
+          {t("mcp.add_empty")}
+        </button>
       ) : (
         <div className="space-y-0.5">
           {servers.map((server) => (

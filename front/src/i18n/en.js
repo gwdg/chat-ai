@@ -1880,6 +1880,7 @@ export default {
   mcp: {
     section_title: "MCP Servers",
     add: "Add MCP server",
+    add_empty: "Add an MCP server",
     edit_title: "Edit MCP server",
     empty: "No MCP servers configured yet.",
     name_label: "Name",
@@ -2031,6 +2032,7 @@ export default {
       start_failed: "Could not start the workspace bridge: {{message}}",
     },
     spawn: "Spawn agent",
+    add_empty: "Add an agent",
     add_title: "Add agent",
     name_label: "Agent name",
     name_placeholder: "e.g. Research assistant",

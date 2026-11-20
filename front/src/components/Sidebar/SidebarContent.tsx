@@ -973,11 +973,13 @@ export default function SidebarContent({
                 : ""
             }`}
           >
-          <div className="-mx-2 mb-1 flex min-h-8 items-center justify-between rounded-lg bg-base-200/70 px-3 py-1">
+          <div className="-mx-2 mb-1 flex min-h-8 items-center justify-between gap-1 rounded-lg bg-base-200/70 px-3 py-1">
             <button
               type="button"
               onClick={() => dispatch(toggleTopic("__chats__"))}
-              className="flex min-w-0 cursor-pointer items-center gap-1 rounded-md text-left text-[11px] font-semibold uppercase tracking-wide text-base-content/70 transition hover:text-base-content"
+              className={`flex min-w-0 cursor-pointer items-center gap-1 rounded-md text-left text-[11px] font-semibold uppercase tracking-wide text-base-content/70 transition hover:text-base-content ${
+                chatsCollapsed && !hasSearch ? "flex-1" : ""
+              }`}
               aria-expanded={!chatsCollapsed}
             >
               <ChevronDown
@@ -985,12 +987,22 @@ export default function SidebarContent({
                 className={`shrink-0 transition-transform ${chatsCollapsed ? "-rotate-90" : ""}`}
               />
               <Chat size={12} className="shrink-0" />
-              <span className="truncate">{t("folders.title")}</span>
+              <span
+                className={`truncate ${
+                  chatsCollapsed && !hasSearch ? "flex-1" : ""
+                }`}
+              >
+                {t("folders.title")}
+              </span>
               <span className="ml-1 font-normal tabular-nums text-base-content/35">
                 {conversations.length}
               </span>
             </button>
-            {(!chatsCollapsed || hasSearch) && (
+            {chatsCollapsed && !hasSearch ? (
+              // No actions while folded, but the count keeps the same place
+              // it holds in the other bands, four pixels before their "+".
+              <span aria-hidden="true" className="h-6 w-6 shrink-0" />
+            ) : (
             <div className="flex items-center gap-1">
               <Popover className="relative">
                 <PopoverButton
@@ -1133,7 +1145,8 @@ export default function SidebarContent({
                 <Search size={16} />
               </button>
             </div>
-            )}          </div>
+            )}
+          </div>
           {(!chatsCollapsed || hasSearch) && (
           <div
             className={`relative overflow-hidden transform-gpu transition-[max-height,opacity,transform,padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${

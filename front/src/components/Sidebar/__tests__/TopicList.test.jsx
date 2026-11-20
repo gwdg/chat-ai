@@ -139,6 +139,32 @@ describe("TopicList pinned variant", () => {
     expect(screen.queryByTestId("conv-c1")).not.toBeInTheDocument();
     expect(screen.queryByText("Pinned topic")).not.toBeInTheDocument();
   });
+
+  it("opens the options menu on a pinned topic and unpins it", () => {
+    const pinned = { ...pinnedTopic, pinned: true };
+    const onToggleTopicPinned = vi.fn();
+    render(
+      <TopicList
+        {...baseProps}
+        variant="pinned"
+        pinnedTopics={[pinned]}
+        onToggleTopicPinned={onToggleTopicPinned}
+      />,
+    );
+
+    // The pinned variant used to return before the menu was mounted, so its
+    // "…" button toggled a menu that never appeared.
+    fireEvent.click(screen.getByRole("button", { name: "Topic options" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Unpin topic" }));
+
+    expect(onToggleTopicPinned).toHaveBeenCalledWith({
+      id: "t1",
+      name: "Pinned topic",
+      color: "#B4388D",
+      icon: undefined,
+      pinned: true,
+    });
+  });
 });
 
 describe("TopicList group colours", () => {

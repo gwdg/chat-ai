@@ -472,6 +472,89 @@ export default function TopicList({
     );
   };
 
+  // One menu for both variants: the pinned section renders its own TopicList,
+  // and a folded variant that never mounted the menu left its "…" dead.
+  const renderTopicMenu = () => {
+    if (!menuTopicId) return null;
+    const topic =
+      pinnedTopics.find((item) => item.id === menuTopicId) ||
+      topics.find((item) => item.id === menuTopicId);
+    if (!topic) return null;
+    return (
+      <div
+        ref={menuRef}
+        role="menu"
+        className="fixed w-40 rounded-lg shadow-2xl ring-1 ring-black/10 dark:ring-white/10 border border-base-300"
+        style={{
+          left: `${menuPosition.x}px`,
+          top: `${menuPosition.y}px`,
+          zIndex: 999999,
+          backgroundColor: "rgb(255, 255, 255)",
+        }}
+      >
+        <div
+          className="absolute inset-0 bg-base-100 rounded-lg"
+          style={{ zIndex: -1 }}
+        />
+        <div className="p-1 bg-base-100 rounded-lg relative">
+          <button
+            type="button"
+            role="menuitem"
+            data-guide="pin-topic-menu-item"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleTopicPinned({
+                id: topic.id,
+                name: topic.name,
+                color: topic.color,
+                icon: topic.icon,
+                pinned: topic.pinned,
+              });
+              closeTopicMenu();
+            }}
+            className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-base-content transition-colors hover:bg-base-300"
+          >
+            {topic.pinned ? <PinFilled size={14} /> : <Pin size={14} />}
+            {topic.pinned
+              ? t("folders.unpin_topic_action")
+              : t("folders.pin_topic_action")}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRenameTopic({
+                id: topic.id,
+                name: topic.name,
+                color: topic.color,
+                icon: topic.icon,
+              });
+              closeTopicMenu();
+            }}
+            className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-base-content transition-colors hover:bg-base-300"
+          >
+            <Edit size={14} />
+            {t("folders.edit_title")}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteTopic({ id: topic.id, name: topic.name });
+              closeTopicMenu();
+            }}
+            className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-error transition-colors hover:bg-error/10"
+          >
+            <TrashCan size={14} />
+            {t("common.delete")}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   // Pinned topics and chats are rendered by the top-level pinned section, which
   // owns their collapse state through `PINNED_COLLAPSE_ID`.
   if (variant === "pinned") {
@@ -499,6 +582,7 @@ export default function TopicList({
             leadingDash: true,
           }),
         )}
+        {renderTopicMenu()}
       </div>
     );
   }
@@ -642,90 +726,7 @@ export default function TopicList({
         </div>
       )}
 
-      {menuTopicId &&
-        (() => {
-          const topic =
-            pinnedTopics.find((item) => item.id === menuTopicId) ||
-            topics.find((item) => item.id === menuTopicId);
-          if (!topic) return null;
-          return (
-            <div
-              ref={menuRef}
-              role="menu"
-              className="fixed w-40 rounded-lg shadow-2xl ring-1 ring-black/10 dark:ring-white/10 border border-base-300"
-              style={{
-                left: `${menuPosition.x}px`,
-                top: `${menuPosition.y}px`,
-                zIndex: 999999,
-                backgroundColor: "rgb(255, 255, 255)",
-              }}
-            >
-              <div
-                className="absolute inset-0 bg-base-100 rounded-lg"
-                style={{ zIndex: -1 }}
-              />
-              <div className="p-1 bg-base-100 rounded-lg relative">
-                <button
-                  type="button"
-                  role="menuitem"
-                  data-guide="pin-topic-menu-item"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleTopicPinned({
-                      id: topic.id,
-                      name: topic.name,
-                      color: topic.color,
-                      icon: topic.icon,
-                      pinned: topic.pinned,
-                    });
-                    closeTopicMenu();
-                  }}
-                  className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-base-content transition-colors hover:bg-base-300"
-                >
-                  {topic.pinned ? (
-                    <PinFilled size={14} />
-                  ) : (
-                    <Pin size={14} />
-                  )}
-                  {topic.pinned
-                    ? t("folders.unpin_topic_action")
-                    : t("folders.pin_topic_action")}
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRenameTopic({
-                      id: topic.id,
-                      name: topic.name,
-                      color: topic.color,
-                      icon: topic.icon,
-                    });
-                    closeTopicMenu();
-                  }}
-                  className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-base-content transition-colors hover:bg-base-300"
-                >
-                  <Edit size={14} />
-                  {t("folders.edit_title")}
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDeleteTopic({ id: topic.id, name: topic.name });
-                    closeTopicMenu();
-                  }}
-                  className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-error transition-colors hover:bg-error/10"
-                >
-                  <TrashCan size={14} />
-                  {t("common.delete")}
-                </button>
-              </div>
-            </div>
-          );
-        })()}
+      {renderTopicMenu()}
     </div>
   );
 }

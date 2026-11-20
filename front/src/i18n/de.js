@@ -1903,6 +1903,7 @@ export default {
   mcp: {
     section_title: "MCP-Server",
     add: "MCP-Server hinzufügen",
+    add_empty: "MCP-Server hinzufügen",
     edit_title: "MCP-Server bearbeiten",
     empty: "Noch keine MCP-Server konfiguriert.",
     name_label: "Name",
@@ -2057,6 +2058,7 @@ export default {
       start_failed: "Die Arbeitsbereich-Brücke konnte nicht gestartet werden: {{message}}",
     },
     spawn: "Agent starten",
+    add_empty: "Agent hinzufügen",
     add_title: "Agent hinzufügen",
     name_label: "Agentenname",
     name_placeholder: "z. B. Recherche-Assistent",
