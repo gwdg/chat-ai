@@ -168,14 +168,44 @@ describe("McpServerList", () => {
     });
   });
 
-  it("marks the section with an icon beside the collapse control", () => {
+  it("marks the section with an icon, its count and the collapse control", () => {
     render(<McpServerList />);
 
+    const toggle = screen.getByRole("button", { name: /^MCP Servers/ });
     // Two icons: the collapse chevron and the section icon, like Pinned.
-    expect(
-      screen
-        .getByRole("button", { name: "MCP Servers" })
-        .querySelectorAll("svg"),
-    ).toHaveLength(2);
+    expect(toggle.querySelectorAll("svg")).toHaveLength(2);
+    // The count closes the band, exactly like the Chats header, so every
+    // band's number sits in one right-hand column.
+    const band = toggle.parentElement;
+    expect(band.lastElementChild).toHaveTextContent("1");
+    expect(band.lastElementChild.className).toContain("tabular-nums");
+    // The label stretches, so the + lands against the count exactly as it
+    // does in the Workspaces band.
+    expect(toggle.querySelector(".flex-1.min-w-0")).not.toBeNull();
+    // The + is the Carbon glyph the other bands draw, not the larger Lucide one.
+    const add = toggle.parentElement.querySelector("button[aria-label] svg");
+    expect(add.getAttribute("viewBox")).toBe("0 0 32 32");
+    // The whole band is a target, and the header keeps one height when folded.
+    expect(toggle.className).toContain("cursor-pointer");
+    expect(toggle.parentElement.className).toContain("min-h-8");
+  });
+
+  it("offers an add button in its empty state, like the Workspaces section", () => {
+    const servers = mocks.servers;
+    mocks.servers = [];
+    try {
+      render(<McpServerList />);
+
+      const add = screen.getByRole("button", { name: "Add an MCP server" });
+      expect(add.className).toContain("border-dashed");
+      expect(add.className).toContain("w-full");
+
+      fireEvent.click(add);
+      expect(mocks.openModal).toHaveBeenCalledWith("mcpServerEdit", {
+        server: undefined,
+      });
+    } finally {
+      mocks.servers = servers;
+    }
   });
 });

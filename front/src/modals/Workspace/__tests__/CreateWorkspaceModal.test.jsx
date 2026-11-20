@@ -235,3 +235,87 @@ describe("CreateWorkspaceModal", () => {
     expect(api.deleteWorkspace).not.toHaveBeenCalled();
   });
 });
+
+describe("CreateWorkspaceModal in edit mode", () => {
+  const ROW = {
+    id: "ws-1",
+    name: "Research",
+    icon: "code",
+    color: "violet",
+  };
+
+  beforeEach(() => {
+    api.useWorkspaceList.mockReturnValue([ROW]);
+  });
+
+  const renderEditor = () =>
+    render(
+      <CreateWorkspaceModal
+        isOpen
+        onClose={api.onClose}
+        workspaceId="ws-1"
+      />,
+    );
+
+  it("fills the dialog from the workspace and needs no draft", async () => {
+    renderEditor();
+
+    await waitFor(() =>
+      expect(screen.getByTestId("storage-manager")).toHaveAttribute(
+        "data-workspace",
+        "ws-1",
+      ),
+    );
+    expect(nameInput()).toHaveValue("Research");
+    expect(api.createWorkspace).not.toHaveBeenCalled();
+    expect(screen.getByTestId("edit-workspace-apply")).toHaveTextContent(
+      "Apply Changes",
+    );
+    expect(screen.queryByTestId("create-workspace-create")).toBeNull();
+  });
+
+  it("applies name, icon and colour in one write and stays put", async () => {
+    renderEditor();
+    await waitFor(() =>
+      expect(screen.getByTestId("storage-manager")).toHaveAttribute(
+        "data-workspace",
+        "ws-1",
+      ),
+    );
+
+    typeName("Research notes");
+    fireEvent.click(screen.getByTestId("create-workspace-icon"));
+    fireEvent.click(screen.getByTestId("create-workspace-icon-rocket"));
+    fireEvent.click(screen.getByTestId("create-workspace-color-rose"));
+    fireEvent.click(screen.getByTestId("edit-workspace-apply"));
+
+    await waitFor(() =>
+      expect(api.updateWorkspace).toHaveBeenCalledWith("ws-1", {
+        name: "Research notes",
+        icon: "rocket",
+        color: "rose",
+      }),
+    );
+    // The pending choices are not written one by one, and nothing navigates.
+    expect(api.updateWorkspace).toHaveBeenCalledTimes(1);
+    expect(api.navigate).not.toHaveBeenCalled();
+    expect(api.onClose).toHaveBeenCalledTimes(1);
+    expect(api.deleteWorkspace).not.toHaveBeenCalled();
+  });
+
+  it("never deletes the workspace when it is cancelled", async () => {
+    renderEditor();
+    await waitFor(() =>
+      expect(screen.getByTestId("storage-manager")).toHaveAttribute(
+        "data-workspace",
+        "ws-1",
+      ),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() => expect(api.onClose).toHaveBeenCalledTimes(1));
+    expect(api.deleteWorkspace).not.toHaveBeenCalled();
+    expect(api.updateWorkspace).not.toHaveBeenCalled();
+  });
+});

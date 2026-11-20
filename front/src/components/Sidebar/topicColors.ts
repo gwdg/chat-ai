@@ -94,3 +94,27 @@ export function groupRowTint(
 export function groupRule(hex: string, isDark: boolean) {
   return withAlpha(hex, isDark ? 0.5 : 0.35);
 }
+
+/**
+ * Background of a chat row inside a group. Deliberately weaker than the
+ * group's own wash — about two thirds of it — so the open chat reads as a
+ * highlight inside the topic instead of competing with the topic's name.
+ */
+export function chatRowTint(
+  hex: string,
+  isDark: boolean,
+  { active = false, hover = false } = {},
+) {
+  const alpha = isDark
+    ? active
+      ? 0.1
+      : hover
+        ? 0.07
+        : 0.05
+    : active
+      ? 0.06
+      : hover
+        ? 0.04
+        : 0.03;
+  return withAlpha(hex, alpha);
+}

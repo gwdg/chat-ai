@@ -35,10 +35,31 @@ const placeholderName = (workspaces, base) => {
   return `${base} ${index}`;
 };
 
-export default function CreateWorkspaceModal({ isOpen, onClose }) {
+/**
+ * The create dialog, and — given a `workspaceId` — the editor for a workspace
+ * that already exists. Both render the same tile, the same name field and the
+ * same `WorkspaceStorageManager`, because a workspace's storage is its own row:
+ * in edit mode the manager simply points at the real one instead of a draft.
+ * Create writes the name at the end and deletes an abandoned draft; edit stages
+ * name, icon and colour and writes them on "Apply changes", while storage picks
+ * are written as they are made (that is what the manager does).
+ */
+export default function CreateWorkspaceModal({
+  isOpen,
+  onClose,
+  workspaceId = null,
+}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const workspaces = useWorkspaceList();
+  const editing = Boolean(workspaceId);
+  const titleKey = editing ? "workspace.edit_title" : "workspace.create_title";
+  const applyLabel = editing
+    ? t("workspace.apply_changes")
+    : t("workspace.create_workspace");
+  const applyingLabel = editing
+    ? t("workspace.apply_applying")
+    : t("workspace.create_applying");
 
   const [draftId, setDraftId] = useState(null);
   const [name, setName] = useState("");
@@ -54,6 +75,7 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
   const startedRef = useRef(false);
   const settledRef = useRef(false);
   const sessionRef = useRef(0);
+  const loadedRef = useRef(null);
   const pendingPatchRef = useRef({});
   const pickerSnapshotRef = useRef({
     icon: DEFAULT_WORKSPACE_ICON,
@@ -66,8 +88,10 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
     if (!isOpen) {
       startedRef.current = false;
       sessionRef.current += 1;
+      loadedRef.current = null;
       return;
     }
+    if (editing) return;
     if (startedRef.current) return;
     startedRef.current = true;
     settledRef.current = false;
@@ -96,7 +120,22 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
             : t("workspace.create_error"),
         );
       });
-  }, [isOpen, workspaces, t]);
+  }, [isOpen, editing, workspaces, t]);
+
+  // The editor reads the row it edits once per open: storage, name, icon and
+  // colour are the workspace's own, so no draft is needed.
+  useEffect(() => {
+    if (!isOpen || !workspaceId) return;
+    if (loadedRef.current === workspaceId) return;
+    const row = workspaces.find((workspace) => workspace.id === workspaceId);
+    if (!row) return;
+    loadedRef.current = workspaceId;
+    draftIdRef.current = row.id;
+    setDraftId(row.id);
+    setName(row.name ?? "");
+    setIcon(row.icon ?? DEFAULT_WORKSPACE_ICON);
+    setColor(row.color ?? TOPIC_COLORS[0].id);
+  }, [isOpen, workspaceId, workspaces]);
 
   const resetDraftState = () => {
     setName("");
@@ -108,6 +147,11 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
   };
 
   const cancel = async () => {
+    if (editing) {
+      resetDraftState();
+      onClose();
+      return;
+    }
     if (settledRef.current) return;
     settledRef.current = true;
     sessionRef.current += 1;
@@ -125,24 +169,31 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
     onClose();
   };
 
-  const create = async () => {
+  const submit = async () => {
     const id = draftIdRef.current;
     if (busy || !id || !name.trim()) return;
     setBusy(true);
     setError("");
     try {
+      if (editing) {
+        await updateWorkspace(id, { name: name.trim(), icon, color });
+        settledRef.current = true;
+        onClose();
+        return;
+      }
       await updateWorkspace(id, { name: name.trim() });
       settledRef.current = true;
       draftIdRef.current = null;
       onClose();
       navigate(`/workspace/${id}`);
     } catch (event) {
+      const message = errorMessage(event);
       setError(
-        errorMessage(event).includes("already exists")
+        message.includes("already exists")
           ? t("workspace.name_taken")
-          : errorMessage(event).includes("required")
+          : message.includes("required")
             ? t("workspace.name_required")
-            : t("workspace.create_error"),
+            : t(editing ? "workspace.update_error" : "workspace.create_error"),
       );
     } finally {
       setBusy(false);
@@ -151,6 +202,7 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
 
   const chooseIcon = (id) => {
     setIcon(id);
+    if (editing) return;
     const draft = draftIdRef.current;
     if (draft) void updateWorkspace(draft, { icon: id });
     else pendingPatchRef.current.icon = id;
@@ -158,6 +210,7 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
 
   const chooseColor = (id) => {
     setColor(id);
+    if (editing) return;
     const draft = draftIdRef.current;
     if (draft) void updateWorkspace(draft, { color: id });
     else pendingPatchRef.current.color = id;
@@ -184,7 +237,7 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
     <BaseModal
       isOpen={isOpen}
       onClose={cancel}
-      titleKey="workspace.create_title"
+      titleKey={titleKey}
       maxWidth="max-w-[min(1280px,95vw)]"
       contentClassName="flex h-[min(78vh,720px)] flex-col gap-2 p-5 pt-0 overflow-y-auto md:overflow-hidden"
     >
@@ -268,18 +321,18 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
         </button>
         <button
           type="button"
-          data-testid="create-workspace-create"
+          data-testid={editing ? "edit-workspace-apply" : "create-workspace-create"}
           className="btn btn-accent"
-          onClick={create}
+          onClick={submit}
           disabled={!name.trim() || busy || !draftId}
         >
           {busy ? (
             <>
               <span className="loading loading-spinner loading-xs" />
-              {t("workspace.create_applying")}
+              {applyingLabel}
             </>
           ) : (
-            t("workspace.create_workspace")
+            applyLabel
           )}
         </button>
       </div>

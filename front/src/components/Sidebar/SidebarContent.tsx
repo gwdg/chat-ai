@@ -83,6 +83,7 @@ import {
 } from "./chatDrop";
 import { dropAgentSessionOnWorkspace } from "./sessionDrop";
 import { rememberSidebarScroll, restoreSidebarScroll } from "./sidebarScroll";
+import { chatRowTint, topicColor } from "./topicColors";
 import PinnedSection from "./PinnedSection";
 import { showAdvancedSidebarSections } from "./sidebarVisibility";
 import SidebarUserCard from "./SidebarUserCard";
@@ -325,6 +326,24 @@ export default function SidebarContent({
       (conv) => !conv.folderId || !known.has(conv.folderId),
     );
   }, [groupableConversations, folders]);
+
+  // The colour a chat wears when it is the open one: its own topic's, or the
+  // unsorted bucket's slate. Every list — under a topic, in a pinned group, in
+  // a date bucket, in the search results — asks this map, so the selected row
+  // is never the neutral grey.
+  const topicHexByConversation = useMemo(() => {
+    const hexByFolder = new Map<string, string>();
+    folders.forEach((folder) =>
+      hexByFolder.set(folder.id, topicColor(folder).hex),
+    );
+    const unsortedHex = isDark ? "#94A3B8" : "#64748B";
+    const map = new Map<string, string>();
+    orderedConversations.forEach((conv) => {
+      const hex = conv.folderId ? hexByFolder.get(conv.folderId) : undefined;
+      map.set(conv.id, hex ?? unsortedHex);
+    });
+    return map;
+  }, [orderedConversations, folders, isDark]);
 
   const dateGroups = useMemo(
     () => groupConversationsByDate(dateGroupableConversations),
@@ -722,6 +741,19 @@ export default function SidebarContent({
     const showCreated = options.showCreated === true;
     const showDateModified = options.showModified === true;
     const leadingDash = options.leadingDash === true;
+    // A chat listed under a topic or a workspace takes that group's colour, so
+    // its selected state is a tint of the group, never the neutral grey. It
+    // also runs edge to edge between the group's two coloured rules.
+    const accentHex = options.accentHex ?? topicHexByConversation.get(id);
+    // A row inside a topic's or a workspace's four-pixel rails runs edge to
+    // edge between them; nowhere else has rules to sit between.
+    const flush = options.flush === true;
+    const accentStyle = accentHex
+      ? {
+          "--chat-tint": chatRowTint(accentHex, isDark, { active: true }),
+          "--chat-tint-hover": chatRowTint(accentHex, isDark, { hover: true }),
+        }
+      : undefined;
     const showDates =
       !showCreated &&
       (showDateModified || (isActive && options.showMetadata !== false));
@@ -755,15 +787,22 @@ export default function SidebarContent({
           onMouseLeave={() => setHoveredId(null)}
           onDragStart={(event) => handleConversationDragStart(event, id)}
           onDragEnd={handleConversationDragEnd}
-          className={`sidebar-wrapper group relative px-2 py-1 rounded-xl touch-manipulation border border-transparent ${
+          className={`sidebar-wrapper group relative px-2 py-1 touch-manipulation border border-transparent ${
+            flush ? "-mx-2" : ""
+          } ${flush || isActive ? "" : "rounded-xl"} ${
             isActive
-              ? "bg-base-200 text-base-content shadow-sm"
-              : "text-base-content hover:bg-base-200 transition-all duration-100"
+              ? accentHex
+                ? "bg-[var(--chat-tint)] text-base-content"
+                : "bg-base-200 text-base-content"
+              : accentHex
+                ? "text-base-content hover:bg-[var(--chat-tint-hover)] transition-all duration-100"
+                : "text-base-content hover:bg-base-200 transition-all duration-100"
           } ${isDragging ? "border-accent/60 bg-accent/10 dark:bg-accent/20" : ""}`}
           data-current={isActive ? "true" : "false"}
           style={{
             WebkitTapHighlightColor: "transparent",
             minHeight: "16px",
+            ...accentStyle,
           }}
         >
           {/* Title container */}
@@ -916,6 +955,24 @@ export default function SidebarContent({
         </div>
       )}
 
+      <div className="flex items-center justify-between gap-1 px-3 pb-2">
+        <NewChatButton
+          topicId={localState?.folderId}
+          variant={"sidebar"}
+          onNewConversation={handleNewConversation}
+        />
+        <div className="flex items-center justify-between gap-1">
+          <ImportPersonaButton
+            topicId={localState?.folderId}
+            variant={"sidebar"}
+          />
+          <ImportChatButton
+            topicId={localState?.folderId}
+            variant={"sidebar"}
+          />
+        </div>
+      </div>
+
       <div className="flex-1 flex flex-col overflow-hidden">
         {isFeatureEnabled("tutorials") && (
           <div className="px-3 pb-1">
@@ -949,17 +1006,17 @@ export default function SidebarContent({
             </PinnedSection>
           )}
           <div
-            className={`sticky top-0 z-20 bg-base-100 px-3 pt-2 pb-2 ${
+            className={`sticky top-0 z-20 bg-base-100 px-3 pt-2 pb-1 ${
               chatsHeaderElevated
                 ? "shadow-[0_2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.5)]"
                 : ""
             }`}
           >
-          <div className="mb-1 flex items-center justify-between rounded-lg bg-base-200/70 px-2 py-1">
+          <div className="-mx-2 mb-1 flex min-h-8 items-center gap-1 rounded-lg bg-base-200/70 px-3 py-1">
             <button
               type="button"
               onClick={() => dispatch(toggleTopic("__chats__"))}
-              className="flex min-w-0 items-center gap-1 rounded-md text-left text-[11px] font-semibold uppercase tracking-wide text-base-content/70 transition hover:text-base-content"
+              className="flex min-w-0 flex-1 cursor-pointer items-center gap-1 rounded-md text-left text-[11px] font-semibold uppercase tracking-wide text-base-content/70 transition hover:text-base-content"
               aria-expanded={!chatsCollapsed}
             >
               <ChevronDown
@@ -968,18 +1025,15 @@ export default function SidebarContent({
               />
               <Chat size={12} className="shrink-0" />
               <span className="truncate">{t("folders.title")}</span>
-              <span className="ml-1 font-normal tabular-nums text-base-content/35">
-                {conversations.length}
-              </span>
             </button>
-            {(!chatsCollapsed || hasSearch) && (
+            {!(chatsCollapsed && !hasSearch) && (
             <div className="flex items-center gap-1">
               <Popover className="relative">
                 <PopoverButton
                   aria-label={t("folders.sort_label")}
                   title={t("folders.sort_label")}
                   data-guide="sort-chats"
-                  className="btn btn-ghost btn-sm btn-square text-base-content/70 hover:text-base-content"
+                  className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-base-content/60 transition hover:bg-base-200 hover:text-base-content"
                 >
                   {conversationGrouping === "date" ? (
                     <Calendar size={16} />
@@ -1097,7 +1151,7 @@ export default function SidebarContent({
                   })
                 }
                 data-guide="sort-organize"
-                className="btn btn-ghost btn-sm btn-square text-base-content/70 hover:text-base-content"
+                className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-base-content/60 transition hover:bg-base-200 hover:text-base-content"
                 aria-label={t("sorter.button")}
                 title={t("sorter.button")}
               >
@@ -1107,7 +1161,7 @@ export default function SidebarContent({
                 type="button"
                 onClick={openSearch}
                 data-guide="search-chats"
-                className={`flex items-center rounded-lg p-1.5 text-base-content/70 hover:text-base-content hover:bg-base-200 transition cursor-pointer ${
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-base-content/60 hover:text-base-content hover:bg-base-200 transition cursor-pointer ${
                   searchVisible ? "opacity-0 pointer-events-none" : "opacity-100"
                 }`}
                 aria-label={t("folders.search_label")}
@@ -1115,16 +1169,11 @@ export default function SidebarContent({
                 <Search size={16} />
               </button>
             </div>
-            )}          </div>
-          {(!chatsCollapsed || hasSearch) && (
-          <div className="flex items-center justify-between gap-1 pb-2">
-            <NewChatButton topicId={localState?.folderId} variant={"sidebar"} onNewConversation={handleNewConversation} />
-          <div className="flex items-center justify-between gap-1">
-            <ImportPersonaButton topicId={localState?.folderId} variant={"sidebar"} />
-            <ImportChatButton topicId={localState?.folderId} variant={"sidebar"} />
+            )}
+            <span className="text-[11px] font-normal tabular-nums text-base-content/35">
+              {conversations.length}
+            </span>
           </div>
-          </div>
-          )}
           {(!chatsCollapsed || hasSearch) && (
           <div
             className={`relative overflow-hidden transform-gpu transition-[max-height,opacity,transform,padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
@@ -1183,7 +1232,7 @@ export default function SidebarContent({
 
           {/* Conversations, grouped by topic */}
           {(!chatsCollapsed || hasSearch) && (
-          <div className="pl-3 pr-2 pt-2 pb-1 space-y-1">
+          <div className="pl-3 pr-2 pb-1 space-y-1">
             {hasSearch ? (
               <div className="space-y-1">
                 {noSearchResults ? (
@@ -1206,7 +1255,6 @@ export default function SidebarContent({
             <>
               {isFeatureEnabled("workspaces") && (
                 <>
-                  <div className="mx-2 my-1.5 border-t border-base-300" />
                   <WorkspaceList
                     draggingConversationId={draggingConversationId}
                     onChatDragStart={handleWorkspaceChatDragStart}
@@ -1220,11 +1268,9 @@ export default function SidebarContent({
                 <>
                   {showAgents && (
                     <>
-                      <div className="mx-2 my-1.5 border-t border-base-300" />
                       <AgentList />
                     </>
                   )}
-                  <div className="mx-2 my-1.5 border-t border-base-300" />
                   <McpServerList />
                 </>
               )}

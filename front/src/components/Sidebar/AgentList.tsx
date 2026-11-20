@@ -449,11 +449,11 @@ export default function AgentList({
   };
 
   const header = variant === "all" && (
-    <div className="mb-1 flex items-center gap-1 rounded-lg bg-base-200/70 px-2 py-1">
+    <div className="-mx-2 mb-1 flex min-h-8 items-center gap-1 rounded-lg bg-base-200/70 px-3 py-1">
       <button
         type="button"
         onClick={() => dispatch(toggleTopic("__agents__"))}
-        className="flex min-w-0 flex-1 items-center gap-1 rounded-md text-left text-[11px] font-semibold uppercase tracking-wide text-base-content/70 transition hover:text-base-content"
+        className="flex min-w-0 flex-1 cursor-pointer items-center gap-1 rounded-md text-left text-[11px] font-semibold uppercase tracking-wide text-base-content/70 transition hover:text-base-content"
         aria-expanded={!collapsed}
       >
         <ChevronDown
@@ -461,8 +461,8 @@ export default function AgentList({
           className={`shrink-0 transition-transform ${collapsed ? "-rotate-90" : ""}`}
         />
         <Bot size={12} className="shrink-0" />
-        <Tooltip text={t("agents.tooltip")}>
-          <span className="truncate">{t("agents.section_title")}</span>
+        <Tooltip text={t("agents.tooltip")} className="min-w-0 flex-1">
+          <span className="block truncate">{t("agents.section_title")}</span>
         </Tooltip>
       </button>
       <button
@@ -475,13 +475,21 @@ export default function AgentList({
       >
         <Add size={15} />
       </button>
+      <span className="text-[11px] font-normal tabular-nums text-base-content/35">
+        {listedAgents.length}
+      </span>
     </div>
   );
 
   const body = (variant === "all" && collapsed) ? null : listedAgents.length === 0 ? (
-    <p className="px-1 py-1 text-[10px] text-base-content/50">
-      {t("agents.empty")}
-    </p>
+    <button
+      type="button"
+      onClick={spawn}
+      data-guide="agents-spawn-empty"
+      className="flex w-full items-center gap-1.5 rounded-xl border border-dashed border-base-300 px-3 py-2 text-left text-xs text-base-content/60 transition hover:border-accent/40 hover:bg-base-200/60"
+    >
+      {t("agents.add_empty")}
+    </button>
   ) : (
     <div className="space-y-0.5">
       {listedAgents.map((agent) => {

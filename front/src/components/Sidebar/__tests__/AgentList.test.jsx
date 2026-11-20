@@ -140,7 +140,9 @@ describe("AgentList", () => {
     renderAgentList();
 
     expect(screen.getByText("Agents")).toBeInTheDocument();
-    expect(screen.getByText("No agents yet.")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Add an agent" }),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Spawn agent" }));
 
@@ -619,12 +621,18 @@ describe("AgentList", () => {
     expect(group.className).not.toContain("ring-2");
   });
 
-  it("marks the section with an icon beside the collapse control", () => {
+  it("marks the section with an icon, its count and the collapse control", () => {
     renderAgentList();
 
+    const toggle = screen.getByRole("button", { name: /^Agents/ });
     // Two icons: the collapse chevron and the section icon, like Pinned.
-    expect(
-      screen.getByRole("button", { name: "Agents" }).querySelectorAll("svg"),
-    ).toHaveLength(2);
+    expect(toggle.querySelectorAll("svg")).toHaveLength(2);
+    // The count closes the band, exactly like the Chats header, so every
+    // band's number sits in one right-hand column.
+    const band = toggle.parentElement;
+    expect(band.lastElementChild.className).toContain("tabular-nums");
+    expect(band.lastElementChild).not.toBe(toggle);
+    // The label stretches, so the + lands against the count.
+    expect(toggle.querySelector(".flex-1.min-w-0")).not.toBeNull();
   });
 });

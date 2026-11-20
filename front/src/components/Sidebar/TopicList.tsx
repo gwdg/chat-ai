@@ -37,6 +37,8 @@ import {
 export const UNSORTED_TOPIC_ID = "__unsorted__";
 export const DATE_TOPIC_ID = "__by_date__";
 export const CREATED_TOPIC_ID = "__by_created__";
+/** Synthetic id that folds the single flat list of the storage-size grouping. */
+export const SIZE_TOPIC_ID = "__by_size__";
 /** Synthetic collapse id for the pinned section, stored with the topic states. */
 export const PINNED_COLLAPSE_ID = "__pinned__";
 
@@ -51,6 +53,88 @@ type DateGroup = { key: string; conversations: any[] };
 
 export const dateBucketCollapseId = (parentId: string, key: string) =>
   `${parentId}:${key}`;
+
+/**
+ * The trailing fold control of a list heading. Every Chats heading owns one so
+ * `Topics`, `All chats by date`, `… by creation date` and `… by storage size`
+ * fold their lists the same way.
+ */
+function SectionCollapseButton({
+  collapsed,
+  label,
+  onClick,
+  dataGuide,
+}: {
+  collapsed: boolean;
+  label: string;
+  onClick: () => void;
+  dataGuide?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      data-guide={dataGuide}
+      aria-label={label}
+      title={label}
+      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-base-content/60 transition-colors hover:bg-base-300 hover:text-base-content"
+    >
+      {collapsed ? <ExpandAll size={16} /> : <CollapseAll size={16} />}
+    </button>
+  );
+}
+
+/**
+ * A section label above the chats list. `Topics`, `All chats by date`,
+ * `… by creation date` and `… by storage size` all render through this so the
+ * four read the same and fold the same way.
+ */
+function GroupHeading({
+  label,
+  collapseIds,
+  collapsedIds,
+  onToggle,
+  actions,
+  expandLabel,
+  collapseLabel,
+  dataGuide,
+}: {
+  label: string;
+  collapseIds: string[];
+  collapsedIds: string[];
+  onToggle: (ids: string[], allCollapsed: boolean) => void;
+  actions?: ReactNode;
+  expandLabel?: string;
+  collapseLabel?: string;
+  dataGuide?: string;
+}) {
+  const { t } = useTranslation();
+  const allCollapsed =
+    collapseIds.length > 0 &&
+    collapseIds.every((id) => collapsedIds.includes(id));
+  return (
+    <div className="flex items-center justify-between gap-2 px-2 py-1">
+      <span className="min-w-0 truncate text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
+        {label}
+      </span>
+      <div className="flex items-center gap-0.5">
+        {actions}
+        {collapseIds.length > 0 && (
+          <SectionCollapseButton
+            collapsed={allCollapsed}
+            label={
+              allCollapsed
+                ? expandLabel ?? t("folders.expand_all_chats")
+                : collapseLabel ?? t("folders.collapse_all_chats")
+            }
+            dataGuide={dataGuide}
+            onClick={() => onToggle(collapseIds, allCollapsed)}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function TopicList({
   topics,
@@ -98,6 +182,10 @@ export default function TopicList({
       showMetadata?: boolean;
       showModified?: boolean;
       showCreated?: boolean;
+      /** Colour of the topic the chat sits under, for its selected state. */
+      accentHex?: string;
+      /** The row runs edge to edge between the topic's two rules. */
+      flush?: boolean;
     },
   ) => ReactNode;
   dateGroups: DateGroup[];
@@ -149,17 +237,20 @@ export default function TopicList({
     return ids;
   }, [pinnedTopics, topics, unsortedConversations]);
 
-  const allTopicsCollapsed =
-    topicCollapseIds.length > 0 &&
-    topicCollapseIds.every((id) => collapsedTopicIds.includes(id));
+  // The grouping headings above the dated and sized lists are the same kind of
+  // label as TOPICS, so they wear the same type and carry the same collapse-all
+  // control. Each ids list is exactly what that heading folds.
+  const bucketCollapseIds = useMemo(() => {
+    const parentId = grouping === "created" ? CREATED_TOPIC_ID : DATE_TOPIC_ID;
+    const groups = grouping === "created" ? creationDateGroups : dateGroups;
+    return groups.map((group) => dateBucketCollapseId(parentId, group.key));
+  }, [dateGroups, creationDateGroups, grouping]);
 
-  const toggleAllTopics = useCallback(() => {
-    dispatch(
-      allTopicsCollapsed
-        ? expandTopics(topicCollapseIds)
-        : collapseTopics(topicCollapseIds),
-    );
-  }, [allTopicsCollapsed, topicCollapseIds]);
+  const sizeCollapseIds = sizeConversations.length > 0 ? [SIZE_TOPIC_ID] : [];
+
+  const toggleGroup = useCallback((ids: string[], allCollapsed: boolean) => {
+    dispatch(allCollapsed ? expandTopics(ids) : collapseTopics(ids));
+  }, []);
 
   const closeTopicMenu = useCallback(() => {
     setMenuTopicId(null);
@@ -276,7 +367,7 @@ export default function TopicList({
               onOpenTopic(id);
             }
           }}
-          className={`group flex items-center gap-2 rounded-2xl px-1 py-2 text-xs transition cursor-pointer bg-[var(--group-tint)] hover:bg-[var(--group-tint-hover)] ${
+          className={`group flex min-h-10 items-center gap-2 rounded-lg px-1 text-xs transition cursor-pointer bg-[var(--group-tint)] hover:bg-[var(--group-tint-hover)] ${
             isActiveTopic ? "text-accent" : "text-base-content"
           } ${isDropTarget ? "ring-2 ring-accent/60" : ""}`}
           style={
@@ -291,27 +382,25 @@ export default function TopicList({
             } as CSSProperties
           }
         >
-          {emoji ? (
-            <span
-              aria-hidden="true"
-              className="flex-shrink-0 pointer-events-none text-sm leading-none"
-              style={{ color: hex }}
-            >
-              {emoji}
-            </span>
-          ) : Icon ? (
-            <Icon
-              size={16}
-              className="flex-shrink-0 pointer-events-none"
-              style={{ color: hex }}
-            />
-          ) : (
-            <span
-              aria-hidden="true"
-              className="h-2 w-2 rounded-full flex-shrink-0 pointer-events-none"
-              style={{ backgroundColor: withAlpha(hex, isDark ? 0.7 : 0.5) }}
-            />
-          )}
+          <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center pointer-events-none">
+            {emoji ? (
+              <span
+                aria-hidden="true"
+                className="text-sm leading-none"
+                style={{ color: hex }}
+              >
+                {emoji}
+              </span>
+            ) : Icon ? (
+              <Icon size={16} style={{ color: hex }} />
+            ) : (
+              <span
+                aria-hidden="true"
+                className="h-2 w-2 rounded-full"
+                style={{ backgroundColor: withAlpha(hex, isDark ? 0.7 : 0.5) }}
+              />
+            )}
+          </span>
 
           <span
             className="flex-1 truncate select-none pointer-events-none font-medium"
@@ -320,55 +409,57 @@ export default function TopicList({
             {label}
           </span>
 
-          <span className="text-[11px] select-none pointer-events-none font-semibold text-base-content/70">
-            {count > 999 ? "999+" : count}
-          </span>
+          <span className="flex flex-shrink-0 items-center">
+            <span className="mr-1 text-[11px] tabular-nums select-none pointer-events-none font-semibold text-base-content/70">
+              {count > 999 ? "999+" : count}
+            </span>
 
-          {topic && (
+            {topic && (
+              <button
+                type="button"
+                ref={(el) => {
+                  menuButtonRefs.current[id] = el;
+                }}
+                onClick={(e) => toggleTopicMenu(e, id)}
+                data-guide="topic-menu"
+                aria-label={t("folders.topic_options")}
+                aria-haspopup="menu"
+                aria-expanded={menuTopicId === id}
+                className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md hover:bg-base-300 transition ${
+                  menuTopicId === id || window.innerWidth < 1024
+                    ? "opacity-100"
+                    : "opacity-0 group-hover:opacity-100"
+                }`}
+              >
+                <OverflowMenuVertical
+                  size={16}
+                  className="text-base-content/70"
+                />
+              </button>
+            )}
+
             <button
               type="button"
-              ref={(el) => {
-                menuButtonRefs.current[id] = el;
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleTopicCollapse(id);
               }}
-              onClick={(e) => toggleTopicMenu(e, id)}
-              data-guide="topic-menu"
-              aria-label={t("folders.topic_options")}
-              aria-haspopup="menu"
-              aria-expanded={menuTopicId === id}
-              className={`flex-shrink-0 rounded-lg p-1 hover:bg-base-300 transition ${
-                menuTopicId === id || window.innerWidth < 1024
-                  ? "opacity-100"
-                  : "opacity-0 group-hover:opacity-100"
-              }`}
+              aria-expanded={!isCollapsed}
+              aria-label={
+                isCollapsed
+                  ? t("folders.expand_topic")
+                  : t("folders.collapse_topic")
+              }
+              className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md text-base-content/50 transition-colors hover:bg-base-300"
             >
-              <OverflowMenuVertical
-                size={16}
-                className="text-base-content/70"
+              <ChevronDown
+                size={12}
+                className={`pointer-events-none transition-transform duration-200 ${
+                  isCollapsed ? "-rotate-90" : "rotate-0"
+                }`}
               />
             </button>
-          )}
-
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleTopicCollapse(id);
-            }}
-            aria-expanded={!isCollapsed}
-            aria-label={
-              isCollapsed
-                ? t("folders.expand_topic")
-                : t("folders.collapse_topic")
-            }
-            className="flex-shrink-0 rounded-lg p-1 text-base-content/50 transition-colors hover:bg-base-300"
-          >
-            <ChevronDown
-              size={12}
-              className={`pointer-events-none transition-transform duration-200 ${
-                isCollapsed ? "-rotate-90" : "rotate-0"
-              }`}
-            />
-          </button>
+          </span>
         </div>
 
         {!isCollapsed && (
@@ -377,10 +468,95 @@ export default function TopicList({
             style={{ borderColor: groupRule(hex, isDark) }}
           >
             {count > 0 && (
-              conversations.map((conv) => renderConversationRow(conv))
+              conversations.map((conv) =>
+                renderConversationRow(conv, { accentHex: hex, flush: true }),
+              )
             ) }
           </div>
         )}
+      </div>
+    );
+  };
+
+  // One menu for both variants: the pinned section renders its own TopicList,
+  // and a folded variant that never mounted the menu left its "…" dead.
+  const renderTopicMenu = () => {
+    if (!menuTopicId) return null;
+    const topic =
+      pinnedTopics.find((item) => item.id === menuTopicId) ||
+      topics.find((item) => item.id === menuTopicId);
+    if (!topic) return null;
+    return (
+      <div
+        ref={menuRef}
+        role="menu"
+        className="fixed w-40 rounded-lg shadow-2xl ring-1 ring-black/10 dark:ring-white/10 border border-base-300"
+        style={{
+          left: `${menuPosition.x}px`,
+          top: `${menuPosition.y}px`,
+          zIndex: 999999,
+          backgroundColor: "rgb(255, 255, 255)",
+        }}
+      >
+        <div
+          className="absolute inset-0 bg-base-100 rounded-lg"
+          style={{ zIndex: -1 }}
+        />
+        <div className="p-1 bg-base-100 rounded-lg relative">
+          <button
+            type="button"
+            role="menuitem"
+            data-guide="pin-topic-menu-item"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleTopicPinned({
+                id: topic.id,
+                name: topic.name,
+                color: topic.color,
+                icon: topic.icon,
+                pinned: topic.pinned,
+              });
+              closeTopicMenu();
+            }}
+            className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-base-content transition-colors hover:bg-base-300"
+          >
+            {topic.pinned ? <PinFilled size={14} /> : <Pin size={14} />}
+            {topic.pinned
+              ? t("folders.unpin_topic_action")
+              : t("folders.pin_topic_action")}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRenameTopic({
+                id: topic.id,
+                name: topic.name,
+                color: topic.color,
+                icon: topic.icon,
+              });
+              closeTopicMenu();
+            }}
+            className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-base-content transition-colors hover:bg-base-300"
+          >
+            <Edit size={14} />
+            {t("folders.edit_title")}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteTopic({ id: topic.id, name: topic.name });
+              closeTopicMenu();
+            }}
+            className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-error transition-colors hover:bg-error/10"
+          >
+            <TrashCan size={14} />
+            {t("common.delete")}
+          </button>
+        </div>
       </div>
     );
   };
@@ -412,49 +588,40 @@ export default function TopicList({
             leadingDash: true,
           }),
         )}
+        {renderTopicMenu()}
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-1.5 pt-1" data-guide="topic-list">
+    <div className="flex flex-col gap-1.5" data-guide="topic-list">
       {grouping === "topic" && (
         <>
-          <div className={`group flex items-center gap-2 rounded-2xl px-1 py-2 text-xs transition cursor-pointer border border-transparent text-base-content hover:bg-base-200`}>
-      <button
-        type="button"
-        ref={createButtonRef}
-        onClick={() => {
-          const rect = createButtonRef.current?.getBoundingClientRect();
-          onCreateTopic({ x: rect?.right ?? 0, y: rect?.top ?? 0 });
-        }}
-        data-guide="create-topic"
-        className="flex-1 min-w-0 flex items-center text-xs text-secondary dark:text-primary font-semibold cursor-pointer"
-      >
-        <BookmarkAdd size={18} className="flex-shrink-0" />
-          <span className="truncate px-2">{t("folders.create_button")}</span>
-      </button>
-      {topicCollapseIds.length > 0 && (
-        <button
-          type="button"
-          onClick={toggleAllTopics}
-          data-guide="collapse-all-topics"
-          aria-label={t(
-            allTopicsCollapsed
-              ? "folders.expand_all_topics"
-              : "folders.collapse_all_topics",
-          )}
-          title={t(
-            allTopicsCollapsed
-              ? "folders.expand_all_topics"
-              : "folders.collapse_all_topics",
-          )}
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-base-content/60 transition-colors hover:bg-base-300 hover:text-base-content group-hover:text-base-content/80"
-        >
-          {allTopicsCollapsed ? <ExpandAll size={16} /> : <CollapseAll size={16} />}
-        </button>
-      )}
-      </div>
+          <GroupHeading
+            label={t("folders.topics_label")}
+            collapseIds={topicCollapseIds}
+            collapsedIds={collapsedTopicIds}
+            onToggle={toggleGroup}
+            expandLabel={t("folders.expand_all_topics")}
+            collapseLabel={t("folders.collapse_all_topics")}
+            dataGuide="collapse-all-topics"
+            actions={
+              <button
+                type="button"
+                ref={createButtonRef}
+                onClick={() => {
+                  const rect = createButtonRef.current?.getBoundingClientRect();
+                  onCreateTopic({ x: rect?.right ?? 0, y: rect?.top ?? 0 });
+                }}
+                data-guide="create-topic"
+                aria-label={t("folders.create_button")}
+                title={t("folders.create_button")}
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-secondary transition-colors hover:bg-base-300 dark:text-primary"
+              >
+                <BookmarkAdd size={16} />
+              </button>
+            }
+          />
       {topics.map((topic) => {
         const color = topicColor(topic);
         const emoji =
@@ -482,9 +649,14 @@ export default function TopicList({
 
       {(grouping === "date" || grouping === "created") && (
         <div className="flex flex-col gap-1">
-          <div className="px-2 pt-3 pb-1 text-[10px] font-semibold text-base-content/70">
-            {t(grouping === "created" ? "folders.by_created" : "folders.by_date")}
-          </div>
+          <GroupHeading
+            label={t(
+              grouping === "created" ? "folders.by_created" : "folders.by_date",
+            )}
+            collapseIds={bucketCollapseIds}
+            collapsedIds={collapsedTopicIds}
+            onToggle={toggleGroup}
+          />
           {(() => {
             const isCreated = grouping === "created";
             const parentId = isCreated ? CREATED_TOPIC_ID : DATE_TOPIC_ID;
@@ -507,7 +679,7 @@ export default function TopicList({
                         toggleTopicCollapse(bucketId);
                       }
                     }}
-                    className="group flex items-center gap-2 rounded-2xl px-1 py-2 text-xs transition cursor-pointer border border-transparent text-base-content hover:bg-base-200"
+                    className="group flex items-center gap-2 rounded-lg px-1 py-2 text-xs transition cursor-pointer border border-transparent text-base-content hover:bg-base-200"
                   >
                     <ParentIcon
                       size={14}
@@ -547,99 +719,20 @@ export default function TopicList({
 
       {grouping === "size" && (
         <div className="flex flex-col gap-1">
-          <div className="px-2 pt-3 pb-1 text-[10px] font-semibold text-base-content/70">
-            {t("folders.by_size")}
-          </div>
-          {sizeConversations.map((conv) =>
-            renderConversationRow(conv, { showModified: true }),
-          )}
+          <GroupHeading
+            label={t("folders.by_size")}
+            collapseIds={sizeCollapseIds}
+            collapsedIds={collapsedTopicIds}
+            onToggle={toggleGroup}
+          />
+          {!collapsedTopicIds.includes(SIZE_TOPIC_ID) &&
+            sizeConversations.map((conv) =>
+              renderConversationRow(conv, { showModified: true }),
+            )}
         </div>
       )}
 
-      {menuTopicId &&
-        (() => {
-          const topic =
-            pinnedTopics.find((item) => item.id === menuTopicId) ||
-            topics.find((item) => item.id === menuTopicId);
-          if (!topic) return null;
-          return (
-            <div
-              ref={menuRef}
-              role="menu"
-              className="fixed w-40 rounded-lg shadow-2xl ring-1 ring-black/10 dark:ring-white/10 border border-base-300"
-              style={{
-                left: `${menuPosition.x}px`,
-                top: `${menuPosition.y}px`,
-                zIndex: 999999,
-                backgroundColor: "rgb(255, 255, 255)",
-              }}
-            >
-              <div
-                className="absolute inset-0 bg-base-100 rounded-lg"
-                style={{ zIndex: -1 }}
-              />
-              <div className="p-1 bg-base-100 rounded-lg relative">
-                <button
-                  type="button"
-                  role="menuitem"
-                  data-guide="pin-topic-menu-item"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleTopicPinned({
-                      id: topic.id,
-                      name: topic.name,
-                      color: topic.color,
-                      icon: topic.icon,
-                      pinned: topic.pinned,
-                    });
-                    closeTopicMenu();
-                  }}
-                  className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-base-content transition-colors hover:bg-base-300"
-                >
-                  {topic.pinned ? (
-                    <PinFilled size={14} />
-                  ) : (
-                    <Pin size={14} />
-                  )}
-                  {topic.pinned
-                    ? t("folders.unpin_topic_action")
-                    : t("folders.pin_topic_action")}
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRenameTopic({
-                      id: topic.id,
-                      name: topic.name,
-                      color: topic.color,
-                      icon: topic.icon,
-                    });
-                    closeTopicMenu();
-                  }}
-                  className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-base-content transition-colors hover:bg-base-300"
-                >
-                  <Edit size={14} />
-                  {t("folders.edit_title")}
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDeleteTopic({ id: topic.id, name: topic.name });
-                    closeTopicMenu();
-                  }}
-                  className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-error transition-colors hover:bg-error/10"
-                >
-                  <TrashCan size={14} />
-                  {t("common.delete")}
-                </button>
-              </div>
-            </div>
-          );
-        })()}
+      {renderTopicMenu()}
     </div>
   );
 }

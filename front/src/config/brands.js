@@ -279,6 +279,12 @@ const THEME_TOKENS = {
 
 const isColor = (value) => /^#[0-9a-f]{3,8}$/i.test(String(value ?? ""));
 
+// `--chat` is only an input: `@theme` in index.css declares
+// `--color-chat: var(--chat)` once on `:root`, where the substitution happens.
+// A brand that repaints `--chat` further down therefore never reaches `bg-chat`,
+// and the user bubble keeps the light value. Emit the resolved token too.
+const CHAT_ALIAS = "--color-chat";
+
 // Named UI surfaces a brand may repaint. The sidebar is the only one today; a
 // new class (`brand-<surface>`) is the whole mechanism: the rule overrides the
 // daisyUI variables inside that subtree, so every existing utility
@@ -294,14 +300,23 @@ const SURFACE_TOKENS = {
 const declarations = (values, tokens = THEME_TOKENS) =>
   Object.entries(tokens)
     .filter(([key]) => isColor(values?.[key]))
-    .map(([key, cssVar]) => `${cssVar}: ${values[key]};`)
+    .flatMap(([key, cssVar]) =>
+      cssVar === "--chat"
+        ? [`${cssVar}: ${values[key]};`, `${CHAT_ALIAS}: ${values[key]};`]
+        : [`${cssVar}: ${values[key]};`],
+    )
     .join(" ");
 
 /**
  * The dark values must target `body.dark`, because index.css re-declares `--chat`
  * and the base colours there; a root-only rule would be shadowed on <body>.
- * Surface rules are split the same way, so a brand that defines no dark surface
- * values does not paint its light sidebar on a dark page.
+ * `<html>` carries `.dark` too (ThemeToggle and index.css both key off it), so
+ * `:root.dark` gets the same block: otherwise the light palette wins at the html
+ * level and everything inherited from there — its `color` included — stays
+ * light-mode (dark text on a dark page). The light block is scoped with
+ * `:not(.dark)` for the same reason. Surface rules are split the same way, so a
+ * brand that defines no dark surface values does not paint its light sidebar on
+ * a dark page.
  */
 export function brandCss(brand) {
   const light = declarations(brand?.theme?.light);
@@ -309,8 +324,8 @@ export function brandCss(brand) {
   const sidebarLight = declarations(brand?.surfaces?.sidebar?.light, SURFACE_TOKENS);
   const sidebarDark = declarations(brand?.surfaces?.sidebar?.dark, SURFACE_TOKENS);
   return [
-    light ? `:root { ${light} }` : "",
-    dark ? `body.dark { ${dark} }` : "",
+    light ? `:root:not(.dark) { ${light} }` : "",
+    dark ? `:root.dark, body.dark { ${dark} }` : "",
     sidebarLight ? `body:not(.dark) .brand-sidebar { ${sidebarLight} }` : "",
     sidebarDark ? `body.dark .brand-sidebar { ${sidebarDark} }` : "",
   ]

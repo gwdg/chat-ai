@@ -136,6 +136,75 @@ const LocationProbe = () => (
   <span data-testid="location">{useLocation().pathname}</span>
 );
 
+describe("WorkspaceList band shape", () => {
+  it("shows the chat count between the name and the row controls", async () => {
+    mocks.conversations.mockReturnValue([
+      { id: "chat-1", title: "Workspace chat", lastModified: 1 },
+      { id: "chat-2", title: "Second chat", lastModified: 1 },
+    ]);
+    mocks.chatLinks.mockReturnValue([
+      { workspaceId: "ws-1", conversationId: "chat-1" },
+      { workspaceId: "ws-1", conversationId: "chat-2" },
+    ]);
+    renderList(makeStore());
+
+    const row = (await screen.findByText("Teaching")).closest(
+      '[data-guide="workspace-row"]',
+    ) as HTMLElement;
+    const kids = [...row.children];
+    const count = kids.find(
+      (el) => el.textContent?.trim() === "2",
+    ) as HTMLElement;
+    expect(count).toBeTruthy();
+    expect(count.className).toContain("text-[11px]");
+    expect(count.className).toContain("tabular-nums");
+    const addIndex = kids.findIndex(
+      (el) => el.getAttribute("aria-label") === "New chat in this workspace",
+    );
+    const menuIndex = kids.findIndex((el) =>
+      el.querySelector('[aria-label="Workspace options"]'),
+    );
+    expect(kids.indexOf(count)).toBeLessThan(addIndex);
+    expect(addIndex).toBeLessThan(menuIndex);
+  });
+
+  it("uses the same band box and icon slot as a topic row", async () => {
+    renderList(makeStore());
+
+    const row = (await screen.findByText("Teaching")).closest(
+      '[data-guide="workspace-row"]',
+    ) as HTMLElement;
+    const label = row.children[0] as HTMLElement;
+    expect(row.className).toContain("min-h-10");
+    expect(row.className).toContain("px-1");
+    // The whole band offers the pointer, exactly like a topic band.
+    expect(row.className).toContain("cursor-pointer");
+    expect(label.className).toContain("self-stretch");
+    expect(label.className).not.toContain("py-1.5");
+    expect((label.firstElementChild as HTMLElement).className).toContain(
+      "h-6 w-6",
+    );
+  });
+
+  it("draws no rule between a workspace's chats and its agents", async () => {
+    mocks.conversations.mockReturnValue([
+      { id: "chat-1", title: "Workspace chat", lastModified: 1 },
+    ]);
+    mocks.chatLinks.mockReturnValue([
+      { workspaceId: "ws-1", conversationId: "chat-1" },
+    ]);
+    renderList(makeStore());
+
+    const row = (await screen.findByText("Teaching")).closest(
+      '[data-guide="workspace-row"]',
+    ) as HTMLElement;
+    expect(screen.getByText("Workspace chat")).toBeInTheDocument();
+    expect(screen.getByText("HPC agent")).toBeInTheDocument();
+    const subtree = row.nextElementSibling as HTMLElement;
+    expect(subtree.querySelector(".border-t")).toBeNull();
+  });
+});
+
 describe("WorkspaceList pinning", () => {
   it("pins a workspace from its options menu", async () => {
     renderList(makeStore());
@@ -261,19 +330,22 @@ describe("WorkspaceList pinning", () => {
   });
 });
 
-describe("WorkspaceList storage", () => {
-  it("opens the storage editor of the workspace from its options menu", async () => {
+describe("WorkspaceList manage", () => {
+  it("opens the workspace editor — name, icon, colour and storage — from its options menu", async () => {
     renderList(makeStore());
 
     fireEvent.click(
       await screen.findByRole("button", { name: "Workspace options" }),
     );
-    fireEvent.click(screen.getByRole("button", { name: "Edit storage" }));
+    fireEvent.click(screen.getByRole("button", { name: "Manage Workspace" }));
 
-    expect(mocks.openModal).toHaveBeenCalledWith("workspaceEditStorage", {
+    expect(mocks.openModal).toHaveBeenCalledWith("workspaceEdit", {
       workspaceId: "ws-1",
-      workspaceName: "Teaching",
     });
+    // One entry instead of two: the old storage-only and rename-only dialogs are gone.
+    expect(
+      screen.queryByRole("button", { name: "Edit storage" }),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -457,15 +529,24 @@ describe("WorkspaceList chat rows", () => {
 
     const chat = await screen.findByRole("button", { name: "Workspace chat" });
     const row = chat.parentElement as HTMLElement;
-    expect(row.className).toContain("rounded-xl");
+    // Selected chats wear the group's own colour edge to edge between its two
+    // rules, not a smaller grey rounded rectangle.
+    expect(row.className).toContain("-mx-2");
+    expect(row.className).toContain("bg-[var(--chat-tint)]");
+    expect(row.className).not.toContain("bg-base-200");
+    expect(row.className).not.toContain("rounded-xl");
+    expect(row.style.getPropertyValue("--chat-tint")).toContain("rgba(");
     expect(row.className).toContain("px-2");
     expect(row.className).toContain("py-1");
     expect(row.className).toContain("border");
     expect(row.className).toContain("border-transparent");
-    expect(row.className).toContain("bg-base-200");
-    expect(row.className).toContain("shadow-sm");
     expect(row.className).not.toContain("rounded-md");
 
+    // The cursor over the title is the same one a topic chat shows.
+    expect(chat.style.cursor).not.toBe("");
+    expect(chat.style.cursor).toBe(
+      window.innerWidth >= 1280 ? "text" : "pointer",
+    );
     expect(chat.className).toContain("text-xs");
     expect(chat.className).toContain("leading-relaxed");
     expect(chat.className).not.toContain("text-[11px]");
@@ -477,6 +558,29 @@ describe("WorkspaceList chat rows", () => {
     expect(detach.className).toContain("hover:bg-base-300");
     expect(detach.className).toContain("transition-all");
     expect(detach.className).toContain("duration-200");
+  });
+
+  it("indents its chat list exactly like a topic's", async () => {
+    renderList(makeStore());
+
+    const chat = await screen.findByRole("button", { name: "Workspace chat" });
+    const list = chat.closest('[data-guide="workspace-chat-row"]')
+      ?.parentElement as HTMLElement;
+    // The topic list under a topic is `ml-2 … gap-1 border-x-2 px-2`; the
+    // workspace list used to sit at `ml-8` with `gap-0.5`, which made every
+    // row 24 pixels narrower.
+    expect(list.className).toContain("ml-2");
+    expect(list.className).toContain("gap-1");
+    expect(list.className).toContain("border-x-2");
+    expect(list.className).toContain("px-2");
+    expect(list.className).not.toContain("ml-8");
+    expect(list.className).not.toContain("gap-0.5");
+
+    const section = document.querySelector(
+      '[data-guide="workspace-list"]',
+    ) as HTMLElement;
+    expect(section.className).toContain("pl-3");
+    expect(section.className).toContain("pr-2");
   });
 
   it("keeps chat navigation and detach working", async () => {
@@ -670,22 +774,42 @@ describe("WorkspaceList chat drag & drop", () => {
 });
 
 describe("WorkspaceList section header", () => {
-  it("puts the section icon first and the collapse control last", () => {
+  it("mirrors the Chats header: chevron, icon, name, count", () => {
     renderList(makeStore());
 
-    const toggle = screen.getByRole("button", { name: "Workspace" });
+    const toggle = screen.getByRole("button", { name: /^Workspaces/ });
+    expect(toggle).toHaveTextContent("Workspaces");
     const icons = toggle.querySelectorAll("svg");
-    // Two icons: the section icon leading, the collapse chevron trailing.
+    // Same order as the Chats header: the collapse chevron leads, the section
+    // icon follows.
     expect(icons).toHaveLength(2);
-    expect(icons[0].getAttribute("class")).not.toContain(
-      "transition-transform",
-    );
-    expect(icons[1].getAttribute("class")).toContain("transition-transform");
-    expect(toggle.lastElementChild).toBe(icons[1]);
+    expect(icons[0].getAttribute("class")).toContain("transition-transform");
+    expect(icons[1].getAttribute("class")).not.toContain("transition-transform");
 
-    // The trailing cluster keeps the add action as the very last element.
+    // The count closes the band, like the Chats count, so every band's number
+    // sits in one right-hand column.
+    const band = toggle.parentElement as HTMLElement;
+    const count = band.lastElementChild as HTMLElement;
+    expect(count).toHaveTextContent("1");
+    expect(count.className).toContain("tabular-nums");
+
+    // The add action sits between the label and the count.
     const add = screen.getByRole("button", { name: "New workspace" });
-    expect(add.parentElement?.lastElementChild).toBe(add);
+    expect(add.nextElementSibling).toBe(count);
+  });
+
+  it("stretches the section band to the sidebar's edges", () => {
+    const { container } = renderList(makeStore());
+
+    const band = container.querySelector(
+      '[data-guide="workspace-list"] > div',
+    ) as HTMLElement;
+    // It cancels the section's inset (pl-3 pr-2), leaving the same margin as
+    // the Chats band: 4px on both sides.
+    expect(band.className).toContain("-ml-2");
+    expect(band.className).toContain("-mr-1");
+    expect(band.className).toContain("px-3");
+    expect(band.className).toContain("rounded-lg");
   });
 });
 

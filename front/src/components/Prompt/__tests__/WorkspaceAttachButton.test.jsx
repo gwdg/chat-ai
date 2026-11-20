@@ -5,12 +5,13 @@ import WorkspaceAttachButton from "../WorkspaceAttachButton";
 
 const openModal = vi.fn();
 const navigate = vi.fn();
+const WORKSPACES = [
+  { id: "w1", name: "Research" },
+  { id: "w2", name: "Teaching" },
+];
 const dbMocks = vi.hoisted(() => ({
   links: [],
-  workspaces: [
-    { id: "w1", name: "Research" },
-    { id: "w2", name: "Teaching" },
-  ],
+  workspaces: [],
 }));
 
 vi.mock("../../../db/workspaceDb", () => ({
@@ -46,20 +47,30 @@ beforeEach(() => {
   openModal.mockClear();
   navigate.mockClear();
   dbMocks.links = [];
+  dbMocks.workspaces = WORKSPACES;
 });
 
 describe("WorkspaceAttachButton", () => {
-  it("opens the chat files from the workspace menu when no workspace is attached", async () => {
+  it("renders nothing for a chat that has no workspace", () => {
     renderButton();
-    openMenu();
 
-    fireEvent.click(await screen.findByText("Manage data"));
-
-    expect(navigate).not.toHaveBeenCalled();
-    expect(openModal).toHaveBeenCalledWith("manageData", { localState });
+    // A workspace button with no workspace behind it has nothing to show: the storage switch,
+    // the editor and the attachment list all belong to a workspace this chat does not have.
+    expect(
+      screen.queryByRole("button", { name: "Workspace" }),
+    ).not.toBeInTheDocument();
   });
 
-  it("opens the attached workspace directly instead of repeating it in Manage data", async () => {
+  it("renders nothing when there is no workspace to attach at all", () => {
+    dbMocks.workspaces = [];
+    renderButton();
+
+    expect(
+      screen.queryByRole("button", { name: "Workspace" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("opens the workspace editor when exactly one workspace is attached", () => {
     dbMocks.links = [{ workspaceId: "w1" }];
     renderButton();
     openMenu();
@@ -67,24 +78,84 @@ describe("WorkspaceAttachButton", () => {
     expect(
       screen.getByText(/This chat is attached to Research/),
     ).toBeInTheDocument();
-    fireEvent.click(await screen.findByText("Manage data in Research"));
+    const row = document.querySelector('[data-guide="manage-workspace"]');
+    expect(row).toHaveTextContent("Manage Workspace");
+    fireEvent.click(row);
 
-    expect(navigate).toHaveBeenCalledWith("/workspace/w1");
-    expect(openModal).not.toHaveBeenCalled();
+    // Nothing to choose between, so it goes straight to the editor — no list page.
+    expect(
+      document.querySelector('[data-guide="manage-workspace-list"]'),
+    ).toBeNull();
+    // The editor is Create workspace in edit mode: name, icon, colour and the storage rail.
+    expect(openModal).toHaveBeenCalledWith("workspaceEdit", {
+      workspaceId: "w1",
+    });
+    expect(navigate).not.toHaveBeenCalled();
   });
 
-  it("asks which workspace to open when several are attached", async () => {
+  it("replaces the settings with the attached workspaces when several are attached", () => {
     dbMocks.links = [{ workspaceId: "w1" }, { workspaceId: "w2" }];
     renderButton();
     openMenu();
 
-    fireEvent.click(await screen.findByText("Manage data"));
+    const row = document.querySelector('[data-guide="manage-workspace"]');
+    expect(
+      document.querySelectorAll('[data-guide="manage-workspace-option"]'),
+    ).toHaveLength(0);
+
+    fireEvent.click(row);
+
+    // The same menu, now showing just the list — no second dialog, and no settings around it.
+    expect(openModal).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole("checkbox", { name: "Access storage" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Back" })).toBeInTheDocument();
+    const options = [
+      ...document.querySelectorAll('[data-guide="manage-workspace-option"]'),
+    ];
+    expect(options.map((option) => option.textContent)).toEqual([
+      "Research",
+      "Teaching",
+    ]);
+  });
+
+  it("returns to the workspace settings with the back arrow", () => {
+    dbMocks.links = [{ workspaceId: "w1" }, { workspaceId: "w2" }];
+    renderButton();
+    openMenu();
+
+    fireEvent.click(document.querySelector('[data-guide="manage-workspace"]'));
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+
+    expect(
+      screen.getByRole("checkbox", { name: "Access storage" }),
+    ).toBeInTheDocument();
+    expect(
+      document.querySelectorAll('[data-guide="manage-workspace-option"]'),
+    ).toHaveLength(0);
+    expect(openModal).not.toHaveBeenCalled();
+  });
+
+  it("opens the editor for the workspace picked from the list", () => {
+    dbMocks.links = [{ workspaceId: "w1" }, { workspaceId: "w2" }];
+    renderButton();
+    openMenu();
+
+    fireEvent.click(document.querySelector('[data-guide="manage-workspace"]'));
+    const options = [
+      ...document.querySelectorAll('[data-guide="manage-workspace-option"]'),
+    ];
+    fireEvent.click(options[1]);
 
     expect(navigate).not.toHaveBeenCalled();
-    expect(openModal).toHaveBeenCalledWith("manageData", { localState });
+    expect(openModal).toHaveBeenCalledWith("workspaceEdit", {
+      workspaceId: "w2",
+    });
   });
 
   it("puts access storage first and writes it to the conversation", () => {
+    dbMocks.links = [{ workspaceId: "w1" }];
     const setLocalState = vi.fn((updater) => updater(localState));
     renderButton(setLocalState);
     openMenu();
@@ -97,15 +168,6 @@ describe("WorkspaceAttachButton", () => {
     const next = setLocalState.mock.results[0].value;
     expect(next.settings.tools.browser_storage).toBe(false);
     expect(next.flush).toBe(true);
-  });
-
-  it("offers the write switch only for a chat with an attached workspace", () => {
-    renderButton();
-    openMenu();
-
-    expect(
-      screen.queryByRole("checkbox", { name: "Allow write" }),
-    ).not.toBeInTheDocument();
   });
 
   it("toggles writing for the attached workspace right under access storage", () => {

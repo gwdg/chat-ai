@@ -132,7 +132,7 @@ export function openWorkspaceMenu() {
 }
 
 export function openChatWorkspaces() {
-  if (!find('[data-guide="manage-data"]')) {
+  if (!find('[data-guide="manage-workspace"]')) {
     click('[data-guide="chat-workspaces"]');
   }
 }

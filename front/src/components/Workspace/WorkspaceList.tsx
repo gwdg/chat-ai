@@ -7,7 +7,6 @@ import {
   Add,
   Bot,
   ChevronDown,
-  DataBase,
   Edit,
   Link,
   OverflowMenuVertical,
@@ -59,7 +58,13 @@ import { useToast } from "../../hooks/useToast";
 import { activeSessionIdFor, useOpenAgent } from "../../hooks/useOpenAgent";
 import { topicIconById } from "../Sidebar/topicIcons";
 import { pinnedStateId } from "../Sidebar/pinnedState";
-import { groupRowTint, groupRule, topicColor, withAlpha } from "../Sidebar/topicColors";
+import {
+  chatRowTint,
+  groupRowTint,
+  groupRule,
+  topicColor,
+  withAlpha,
+} from "../Sidebar/topicColors";
 import {
   isChatDrag,
   readChatDrag,
@@ -70,6 +75,7 @@ import {
   readAgentSessionDrag,
 } from "../Sidebar/sessionDrop";
 import { useDelayedSingleClick } from "../../hooks/useDelayedSingleClick";
+import { useWindowSize } from "../../hooks/useWindowSize";
 import { workspaceAgentCollapseId } from "../Sidebar/sessionGroupCollapse";
 import { getDefaultConversation } from "../../utils/conversationUtils";
 
@@ -177,6 +183,7 @@ export default function WorkspaceList({
   );
   const collapsedTopicIds = useSelector(selectCollapsedTopics) ?? [];
   const isDark = useSelector(selectDarkMode);
+  const { isDesktop } = useWindowSize();
   const userSettings = useSelector(selectUserSettings);
   // Opening a workspace mounts another sidebar and destroys this row, so wait
   // out a possible second click before navigating.
@@ -378,21 +385,21 @@ export default function WorkspaceList({
   };
 
   const header = variant === "all" && (
-    <div className="mb-1 flex items-center gap-1 rounded-lg bg-base-200/70 px-2 py-1">
+    <div className="-ml-2 -mr-1 mb-1 flex min-h-8 items-center gap-1 rounded-lg bg-base-200/70 px-3 py-1">
       <button
         type="button"
         onClick={() => dispatch(toggleTopic("__workspaces__"))}
-        className="flex min-w-0 flex-1 items-center gap-1 rounded-md text-left text-[11px] font-semibold uppercase tracking-wide text-base-content/70 transition hover:text-base-content"
+        className="flex min-w-0 flex-1 cursor-pointer items-center gap-1 rounded-md text-left text-[11px] font-semibold uppercase tracking-wide text-base-content/70 transition hover:text-base-content"
         aria-expanded={!collapsed}
       >
-        <Workspace size={12} className="shrink-0" />
-        <span className="min-w-0 flex-1 truncate">
-          {t("workspace.sidebar_title")}
-        </span>
         <ChevronDown
           size={12}
           className={`shrink-0 transition-transform ${collapsed ? "-rotate-90" : ""}`}
         />
+        <Workspace size={12} className="shrink-0" />
+        <span className="min-w-0 flex-1 truncate">
+          {t("workspace.sidebar_title")}
+        </span>
       </button>
       <button
         type="button"
@@ -404,6 +411,9 @@ export default function WorkspaceList({
       >
         <Add size={15} />
       </button>
+      <span className="text-[11px] font-normal tabular-nums text-base-content/35">
+        {listedWorkspaces.length}
+      </span>
     </div>
   );
 
@@ -438,7 +448,7 @@ export default function WorkspaceList({
                 handleWorkspaceDragLeave(event, workspace.id)
               }
               onDrop={(event) => handleWorkspaceDrop(event, workspace.id)}
-              className={`group flex items-center rounded-xl transition bg-[var(--group-tint)] hover:bg-[var(--group-tint-hover)] ${
+              className={`group flex min-h-10 cursor-pointer items-center rounded-lg px-1 transition bg-[var(--group-tint)] hover:bg-[var(--group-tint-hover)] ${
                 active ? "text-accent" : "text-base-content"
               } ${
                 dragOverWorkspaceId === workspace.id
@@ -475,10 +485,10 @@ export default function WorkspaceList({
                   cancelOpenWorkspace();
                   toggleWorkspaceCollapse(workspace.id, expandable);
                 }}
-                className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left"
+                className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 self-stretch text-left"
               >
                 <span
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md"
                   style={{
                     color: workspaceColor.hex,
                     backgroundColor: withAlpha(
@@ -493,6 +503,9 @@ export default function WorkspaceList({
                   {workspace.name}
                 </span>
               </button>
+              <span className="mx-1 shrink-0 text-[11px] tabular-nums font-semibold text-base-content/70">
+                {chats.length > 999 ? "999+" : chats.length}
+              </span>
               <button
                 type="button"
                 disabled={creatingChat === workspace.id}
@@ -565,32 +578,15 @@ export default function WorkspaceList({
                         type="button"
                         onClick={() => {
                           close();
-                          openModal("workspaceEditStorage", {
+                          openModal("workspaceEdit", {
                             workspaceId: workspace.id,
-                            workspaceName: workspace.name,
                           });
                         }}
-                        data-guide="workspace-edit-storage"
-                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
-                      >
-                        <DataBase size={14} />
-                        {t("workspace.edit_storage")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          close();
-                          openModal("workspaceRename", {
-                            workspaceId: workspace.id,
-                            initialName: workspace.name,
-                            initialIcon: workspace.icon,
-                            initialColor: workspaceColor.id,
-                          });
-                        }}
+                        data-guide="workspace-manage"
                         className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
                       >
                         <Edit size={14} />
-                        {t("common.edit")}
+                        {t("workspace.manage_workspace")}
                       </button>
                       <button
                         type="button"
@@ -615,7 +611,7 @@ export default function WorkspaceList({
                   )
                 }
                 disabled={!expandable}
-                className={`mr-1 flex h-5 w-5 shrink-0 items-center justify-center rounded text-base-content/40 ${
+                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-base-content/40 ${
                   expandable
                     ? "hover:text-base-content"
                     : "cursor-default opacity-40"
@@ -631,7 +627,7 @@ export default function WorkspaceList({
             </div>
             {expanded && expandable && (
               <div
-                className="mb-1 ml-8 flex flex-col gap-0.5 border-x-2 px-2"
+                className="ml-2 flex flex-col gap-1 border-x-2 px-2"
                 style={{
                   borderColor: groupRule(workspaceColor.hex, isDark),
                 }}
@@ -649,15 +645,27 @@ export default function WorkspaceList({
                         onChatDragStart?.(chat.id, workspace.id);
                       }}
                       onDragEnd={() => onChatDragEnd?.()}
-                      className={`group/chat relative flex items-center gap-1 rounded-xl border border-transparent px-2 py-1 ${
+                      className={`group/chat relative -mx-2 flex items-center gap-1 border border-transparent px-2 py-1 ${
                         chatActive
-                          ? "bg-base-200 text-base-content shadow-sm"
-                          : "text-base-content hover:bg-base-200 transition-all duration-100"
+                          ? "bg-[var(--chat-tint)] text-base-content"
+                          : "text-base-content hover:bg-[var(--chat-tint-hover)] transition-all duration-100"
                       } ${
                         chatDragging
                           ? "border-accent/60 bg-accent/10 dark:bg-accent/20"
                           : ""
                       }`}
+                      style={{
+                        "--chat-tint": chatRowTint(
+                          workspaceColor.hex,
+                          isDark,
+                          { active: true },
+                        ),
+                        "--chat-tint-hover": chatRowTint(
+                          workspaceColor.hex,
+                          isDark,
+                          { hover: true },
+                        ),
+                      } as CSSProperties}
                     >
                       <button
                         type="button"
@@ -667,6 +675,7 @@ export default function WorkspaceList({
                         }}
                         aria-current={chatActive ? "page" : undefined}
                         className="min-w-0 flex-1 truncate text-left text-xs leading-relaxed"
+                        style={{ cursor: isDesktop ? "text" : "pointer" }}
                       >
                         {chat.title || t("conversation.untitled")}
                       </button>
@@ -684,9 +693,6 @@ export default function WorkspaceList({
                     </div>
                     );
                 })}
-                {chats.length > 0 && attachedAgents.length > 0 && (
-                  <div className="my-1 border-t border-base-300/70" />
-                )}
                 {attachedAgents.map((agent) => {
                   const sessionIds = workspaceSessionIds(
                     sessionLinks,
@@ -851,7 +857,7 @@ export default function WorkspaceList({
   }
 
   return (
-    <div className="px-3 pt-3 pb-1" data-guide="workspace-list">
+    <div className="pl-3 pr-2 pt-3 pb-1" data-guide="workspace-list">
       {header}
       {body}
     </div>

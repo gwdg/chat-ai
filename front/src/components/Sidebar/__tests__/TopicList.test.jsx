@@ -1,6 +1,13 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import TopicList, { PINNED_COLLAPSE_ID, UNSORTED_TOPIC_ID } from "../TopicList";
+import TopicList, {
+  CREATED_TOPIC_ID,
+  DATE_TOPIC_ID,
+  PINNED_COLLAPSE_ID,
+  SIZE_TOPIC_ID,
+  UNSORTED_TOPIC_ID,
+  dateBucketCollapseId,
+} from "../TopicList";
 import {
   collapseTopics,
   expandTopics,
@@ -28,6 +35,8 @@ const renderConversationRow = (conv, options = {}) => (
   <div
     data-testid={`conv-${conv.id}`}
     data-leading-dash={options.leadingDash === true ? "true" : "false"}
+    data-accent={options.accentHex ?? ""}
+    data-flush={options.flush === true ? "true" : "false"}
   >
     {conv.title}
   </div>
@@ -132,6 +141,32 @@ describe("TopicList pinned variant", () => {
     expect(screen.queryByTestId("conv-c1")).not.toBeInTheDocument();
     expect(screen.queryByText("Pinned topic")).not.toBeInTheDocument();
   });
+
+  it("opens the options menu on a pinned topic and unpins it", () => {
+    const pinned = { ...pinnedTopic, pinned: true };
+    const onToggleTopicPinned = vi.fn();
+    render(
+      <TopicList
+        {...baseProps}
+        variant="pinned"
+        pinnedTopics={[pinned]}
+        onToggleTopicPinned={onToggleTopicPinned}
+      />,
+    );
+
+    // The pinned variant used to return before the menu was mounted, so its
+    // "…" button toggled a menu that never appeared.
+    fireEvent.click(screen.getByRole("button", { name: "Topic options" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Unpin topic" }));
+
+    expect(onToggleTopicPinned).toHaveBeenCalledWith({
+      id: "t1",
+      name: "Pinned topic",
+      color: "#B4388D",
+      icon: undefined,
+      pinned: true,
+    });
+  });
 });
 
 describe("TopicList group colours", () => {
@@ -178,6 +213,25 @@ describe("TopicList group colours", () => {
     );
     expect(rulesFor().style.borderRightColor).toBe(
       "rgba(124, 58, 237, 0.5)",
+    );
+  });
+
+  it("gives its chats its own colour to wear when one is open", () => {
+    render(<TopicList {...props} variant="pinned" />);
+
+    // Under the topic: the topic's colour, running between its two rules.
+    expect(screen.getByTestId("conv-c2")).toHaveAttribute(
+      "data-accent",
+      "#7C3AED",
+    );
+    expect(screen.getByTestId("conv-c2")).toHaveAttribute(
+      "data-flush",
+      "true",
+    );
+    // A pinned chat has no rules to fill, so it keeps its own rounded shape.
+    expect(screen.getByTestId("conv-c1")).toHaveAttribute(
+      "data-flush",
+      "false",
     );
   });
 
@@ -255,6 +309,93 @@ describe("TopicList collapse all", () => {
   });
 });
 
+describe("TopicList grouping headings", () => {
+  const chat = { id: "c6", title: "Grouped chat", lastModified: 1 };
+  const dateGroup = { key: "today", conversations: [chat] };
+  const button = (name) => screen.getByRole("button", { name });
+
+  it("wears the all-caps section type of the by-date and by-size labels", () => {
+    render(
+      <TopicList
+        {...baseProps}
+        topics={[{ id: "t6", name: "Named topic", color: "violet" }]}
+      />,
+    );
+
+    const label = screen.getByText("Topics");
+    expect(label.className).toContain("text-[10px]");
+    expect(label.className).toContain("font-semibold");
+    expect(label.className).toContain("uppercase");
+    expect(label.className).toContain("tracking-wider");
+    expect(label.className).toContain("text-base-content/45");
+  });
+
+  it("folds every date bucket from the by-date heading", () => {
+    render(
+      <TopicList {...baseProps} grouping="date" dateGroups={[dateGroup]} />,
+    );
+
+    expect(screen.getByText("By date")).toBeInTheDocument();
+    fireEvent.click(button("Collapse all chats"));
+
+    expect(reduxMocks.dispatch).toHaveBeenCalledWith(
+      collapseTopics([dateBucketCollapseId(DATE_TOPIC_ID, "today")]),
+    );
+  });
+
+  it("folds the creation-date buckets under their own parent id", () => {
+    render(
+      <TopicList
+        {...baseProps}
+        grouping="created"
+        creationDateGroups={[dateGroup]}
+      />,
+    );
+
+    fireEvent.click(button("Collapse all chats"));
+
+    expect(reduxMocks.dispatch).toHaveBeenCalledWith(
+      collapseTopics([dateBucketCollapseId(CREATED_TOPIC_ID, "today")]),
+    );
+  });
+
+  it("expands the buckets again once all of them are folded", () => {
+    reduxMocks.collapsed = [dateBucketCollapseId(DATE_TOPIC_ID, "today")];
+    render(
+      <TopicList {...baseProps} grouping="date" dateGroups={[dateGroup]} />,
+    );
+
+    fireEvent.click(button("Expand all chats"));
+
+    expect(reduxMocks.dispatch).toHaveBeenCalledWith(
+      expandTopics([dateBucketCollapseId(DATE_TOPIC_ID, "today")]),
+    );
+  });
+
+  it("folds the single storage-size list and hides its chats", () => {
+    reduxMocks.collapsed = [SIZE_TOPIC_ID];
+    render(
+      <TopicList {...baseProps} grouping="size" sizeConversations={[chat]} />,
+    );
+
+    expect(screen.getByText("By storage size")).toBeInTheDocument();
+    expect(screen.queryByTestId("conv-c6")).not.toBeInTheDocument();
+    fireEvent.click(button("Expand all chats"));
+
+    expect(reduxMocks.dispatch).toHaveBeenCalledWith(
+      expandTopics([SIZE_TOPIC_ID]),
+    );
+  });
+
+  it("draws no control when a heading has nothing to fold", () => {
+    render(<TopicList {...baseProps} grouping="date" dateGroups={[]} />);
+
+    expect(
+      screen.queryByRole("button", { name: /all chats/ }),
+    ).not.toBeInTheDocument();
+  });
+});
+
 describe("TopicList row controls", () => {
   it("puts the disclosure arrow at the trailing edge of the topic row", () => {
     const topic = { id: "t4", name: "Trailing topic", color: "violet" };
@@ -270,11 +411,39 @@ describe("TopicList row controls", () => {
 
     const row = screen.getByText("Trailing topic").closest('[role="button"]');
     const toggle = row.querySelector('button[aria-label="Collapse topic"]');
+    const tail = row.lastElementChild;
 
-    expect(row.lastElementChild).toBe(toggle);
+    expect(tail.contains(toggle)).toBe(true);
+    expect(tail.lastElementChild).toBe(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
     // The emoji/icon slot and the label keep their leading positions.
     expect(row.firstElementChild).not.toBe(toggle);
+  });
+
+  it("keeps the count and both controls in one flush tail group", () => {
+    const topic = { id: "t4", name: "Trailing topic", color: "violet" };
+    render(
+      <TopicList
+        {...baseProps}
+        topics={[topic]}
+        conversationsByTopic={
+          new Map([["t4", [{ id: "c4", title: "Topic chat", lastModified: 1 }]]])
+        }
+      />,
+    );
+
+    const row = screen.getByText("Trailing topic").closest('[role="button"]');
+    const tail = row.lastElementChild;
+    // The count leads the group; no gap utility, so the controls sit flush.
+    expect(tail.firstElementChild.textContent).toBe("1");
+    expect([...tail.querySelectorAll("button")].map((b) => b.ariaLabel)).toEqual(
+      ["Topic options", "Collapse topic"],
+    );
+    expect(tail.className).not.toContain("gap-");
+    // The band is the same 40px box as a workspace band.
+    expect(row.className).toContain("min-h-10");
+    expect(row.className).toContain("px-1");
+    expect(row.className).not.toContain("py-2");
   });
 });
 
