@@ -31,7 +31,9 @@ export default function WorkspaceStorageManager({
 }) {
   const { t } = useTranslation();
   const { openModal } = useModal();
-  const [target, setTarget] = useState(null);
+  // Both dialogs open on Your Device: it is where a folder is picked from, so the
+  // browser pane starts on the device drive instead of an empty prompt.
+  const [target, setTarget] = useState({ drive: "device" });
   const [adding, setAdding] = useState(false);
   const [addProgress, setAddProgress] = useState(null);
   const saiaFsAccess = useSaiaFsAccess();
