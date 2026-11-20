@@ -177,6 +177,12 @@ describe("McpServerList", () => {
     // The count closes the button, exactly like the Chats header.
     expect(toggle.lastElementChild).toHaveTextContent("1");
     expect(toggle.lastElementChild.className).toContain("tabular-nums");
+    // The label stretches, so the count lands against the trailing + button
+    // exactly as it does in the Workspaces band.
+    expect(toggle.querySelector(".flex-1.min-w-0")).not.toBeNull();
+    // The + is the Carbon glyph the other bands draw, not the larger Lucide one.
+    const add = toggle.parentElement.querySelector("button[aria-label] svg");
+    expect(add.getAttribute("viewBox")).toBe("0 0 32 32");
     // The whole band is a target, and the header keeps one height when folded.
     expect(toggle.className).toContain("cursor-pointer");
     expect(toggle.parentElement.className).toContain("min-h-8");

@@ -267,7 +267,7 @@ describe("TopicList grouping headings", () => {
   const dateGroup = { key: "today", conversations: [chat] };
   const button = (name) => screen.getByRole("button", { name });
 
-  it("wears the same type as the by-date and by-size labels", () => {
+  it("wears the all-caps section type of the by-date and by-size labels", () => {
     render(
       <TopicList
         {...baseProps}
@@ -278,9 +278,9 @@ describe("TopicList grouping headings", () => {
     const label = screen.getByText("Topics");
     expect(label.className).toContain("text-[10px]");
     expect(label.className).toContain("font-semibold");
-    expect(label.className).toContain("text-base-content/70");
-    expect(label.className).not.toContain("uppercase");
-    expect(label.className).not.toContain("tracking-wider");
+    expect(label.className).toContain("uppercase");
+    expect(label.className).toContain("tracking-wider");
+    expect(label.className).toContain("text-base-content/45");
   });
 
   it("folds every date bucket from the by-date heading", () => {
@@ -288,7 +288,7 @@ describe("TopicList grouping headings", () => {
       <TopicList {...baseProps} grouping="date" dateGroups={[dateGroup]} />,
     );
 
-    expect(screen.getByText("All chats by date")).toBeInTheDocument();
+    expect(screen.getByText("By date")).toBeInTheDocument();
     fireEvent.click(button("Collapse all chats"));
 
     expect(reduxMocks.dispatch).toHaveBeenCalledWith(
@@ -331,7 +331,7 @@ describe("TopicList grouping headings", () => {
       <TopicList {...baseProps} grouping="size" sizeConversations={[chat]} />,
     );
 
-    expect(screen.getByText("All chats by storage size")).toBeInTheDocument();
+    expect(screen.getByText("By storage size")).toBeInTheDocument();
     expect(screen.queryByTestId("conv-c6")).not.toBeInTheDocument();
     fireEvent.click(button("Expand all chats"));
 

@@ -114,7 +114,7 @@ function GroupHeading({
     collapseIds.every((id) => collapsedIds.includes(id));
   return (
     <div className="flex items-center justify-between gap-2 px-2 py-1">
-      <span className="min-w-0 truncate text-[10px] font-semibold text-base-content/70">
+      <span className="min-w-0 truncate text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
         {label}
       </span>
       <div className="flex items-center gap-0.5">

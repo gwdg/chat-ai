@@ -627,5 +627,7 @@ describe("AgentList", () => {
     expect(toggle.querySelectorAll("svg")).toHaveLength(2);
     // The count closes the button, exactly like the Chats header.
     expect(toggle.lastElementChild.className).toContain("tabular-nums");
+    // The label stretches, so the count lands against the trailing + button.
+    expect(toggle.querySelector(".flex-1.min-w-0")).not.toBeNull();
   });
 });

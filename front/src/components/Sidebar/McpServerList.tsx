@@ -7,12 +7,13 @@ import {
   PopoverPanel,
 } from "@headlessui/react";
 import {
+  Add,
   Edit,
   OverflowMenuVertical,
   ServerDns,
   TrashCan,
 } from "@carbon/icons-react";
-import { ChevronDown, Info, Plus, Server, TriangleAlert } from "lucide-react";
+import { ChevronDown, Info, Server, TriangleAlert } from "lucide-react";
 
 import Tooltip from "../Others/Tooltip";
 
@@ -147,8 +148,8 @@ export default function McpServerList() {
             className={`shrink-0 transition-transform ${collapsed ? "-rotate-90" : ""}`}
           />
           <ServerDns size={12} className="shrink-0" />
-          <Tooltip text={t("mcp.tooltip")}>
-            <span className="truncate">{t("mcp.section_title")}</span>
+          <Tooltip text={t("mcp.tooltip")} className="min-w-0 flex-1">
+            <span className="block truncate">{t("mcp.section_title")}</span>
           </Tooltip>
           <span className="ml-1 font-normal tabular-nums text-base-content/35">
             {servers.length}
@@ -162,7 +163,7 @@ export default function McpServerList() {
           title={t("mcp.add")}
           aria-label={t("mcp.add")}
         >
-          <Plus size={15} />
+          <Add size={15} />
         </button>
       </div>
 
