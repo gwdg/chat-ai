@@ -101,6 +101,7 @@ Supported setting keys and values:
 - html_render_mode: "render", "code", or "off"
 - html_sanitization: "strict" or "relaxed"
 - document_conversion_mode: "server", "browser", or "choice"
+- mcp_tool_policy: "ask", "always", or "never" (whether chat turns may call tools of the user's MCP servers; "never" leaves the app's own file and workspace tools available)
 - send_with_enter: true, false, or null
 - timeout: milliseconds (5000-900000)
 

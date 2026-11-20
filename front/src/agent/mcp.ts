@@ -21,6 +21,9 @@ export interface GlobalMcpServer {
   headers?: Record<string, string>;
 }
 
+/** How the advanced setting lets chat turns call tools of user-added MCP servers. */
+export type McpToolPolicy = "ask" | "always" | "never";
+
 const selectedIds = (value: unknown): string[] =>
   Array.isArray(value)
     ? value
@@ -37,7 +40,16 @@ const selectedIds = (value: unknown): string[] =>
 /** Per-chat settings with legacy server entries plus the globally configured selections. */
 export function resolveMcpServers(settings: any, globals: GlobalMcpServer[] = []) {
   const legacy = mcpServers(settings);
-  const localIds = new Set(selectedIds(settings?.mcp_local_server_ids));
+  const configuredIds = selectedIds(settings?.mcp_local_server_ids);
+  // Turning MCP support on without ever choosing a server means "all configured servers"; an
+  // explicit selection (including an empty one) or legacy per-chat entries wins over that.
+  // The key is absent until the picker is used, so `[]` means the user cleared the selection.
+  const hasSelection = Array.isArray(settings?.mcp_local_server_ids);
+  const localIds = new Set(
+    !hasSelection && legacy.length === 0 && settings?.tools?.mcp === true
+      ? (globals ?? []).map((server) => server.id).filter(Boolean)
+      : configuredIds,
+  );
   // Once a chat selects globally configured servers, those definitions win over legacy per-chat
   // entries; this keeps the connection on the address stored in the global settings.
   const legacyLocal = localIds.size ? [] : legacy;
@@ -397,6 +409,11 @@ export interface McpConnectOptions {
    * Return true to connect and accept the new name; false to skip the server for this turn.
    */
   onNameMismatch?: (server: McpServer, actualName: string) => Promise<boolean>;
+  /**
+   * False skips the per-call confirmation and runs the tool directly. Used when the
+   * advanced MCP tool policy is "always"; the default asks the user for every call.
+   */
+  confirm?: boolean;
 }
 
 /**
@@ -444,20 +461,22 @@ export async function connectMcpServers(
         description: `${tool.description ?? ""} (MCP server ${server.url})`.trim(),
         parameters: (tool.inputSchema ?? { type: "object", properties: {} }) as any,
         execute: async (toolCallId, args, signal) => {
-          const allowed = await requestMcpConfirmation(
-            {
-              id: String(toolCallId),
-              server: server.url,
-              tool: tool.name,
-              callName: name,
-              args: args ?? {},
-            },
-            signal,
-          );
-          if (!allowed) {
-            throw new Error(
-              i18n.t("mcp_confirmation.denied", { tool: tool.name, server: server.url }),
+          if (options.confirm !== false) {
+            const allowed = await requestMcpConfirmation(
+              {
+                id: String(toolCallId),
+                server: server.url,
+                tool: tool.name,
+                callName: name,
+                args: args ?? {},
+              },
+              signal,
             );
+            if (!allowed) {
+              throw new Error(
+                i18n.t("mcp_confirmation.denied", { tool: tool.name, server: server.url }),
+              );
+            }
           }
           let result;
           try {

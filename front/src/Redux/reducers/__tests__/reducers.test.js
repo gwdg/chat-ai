@@ -32,6 +32,8 @@ import userSettingsReducer, {
   setShowTimestamps,
   selectAdvancedMode,
   setAdvancedMode,
+  selectMcpToolPolicy,
+  setMcpToolPolicy,
   addE2eeKey,
   updateE2eeKey,
   removeE2eeKey,
@@ -268,6 +270,31 @@ describe("user settings reducer", () => {
       importUserSettings({ advanced_mode: false }),
     );
     expect(selectAdvancedMode({ user_settings: state })).toBe(false);
+  });
+
+  it("validates the MCP tool policy and falls back to ask", () => {
+    let state = init(userSettingsReducer);
+    expect(selectMcpToolPolicy({ user_settings: state })).toBe("ask");
+
+    state = userSettingsReducer(state, setMcpToolPolicy("always"));
+    expect(selectMcpToolPolicy({ user_settings: state })).toBe("always");
+
+    state = userSettingsReducer(state, setMcpToolPolicy("sometimes"));
+    expect(selectMcpToolPolicy({ user_settings: state })).toBe("always");
+
+    state = userSettingsReducer(
+      state,
+      importUserSettings({ mcp_tool_policy: "never" }),
+    );
+    expect(state.mcp_tool_policy).toBe("never");
+
+    state = userSettingsReducer(
+      state,
+      importUserSettings({ mcp_tool_policy: "bogus" }),
+    );
+    expect(state.mcp_tool_policy).toBe("never");
+
+    expect(selectMcpToolPolicy({ user_settings: {} })).toBe("ask");
   });
 
   it("toggles diagram rendering preferences and imports them", () => {

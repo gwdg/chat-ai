@@ -59,6 +59,20 @@ describe("Meta chat action markers", () => {
     ]);
   });
 
+  it("parses a valid MCP tool policy and drops an invalid one", () => {
+    const valid = getMetaActionProposals(
+      '[[SET_SETTING:{"key":"mcp_tool_policy","value":"never"}]]',
+    );
+    expect(valid).toEqual([
+      { type: "setting", key: "mcp_tool_policy", value: "never" },
+    ]);
+
+    const invalid = getMetaActionProposals(
+      '[[SET_SETTING:{"key":"mcp_tool_policy","value":"sometimes"}]]',
+    );
+    expect(invalid).toEqual([]);
+  });
+
   it("drops a legacy gateway server proposal", () => {
     const proposals = getMetaActionProposals(
       '[[MCP_SERVER:{"op":"add","server":"remote","target":"all","serverId":"server-1"}]]',

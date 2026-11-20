@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { configureStore } from "@reduxjs/toolkit";
 import { describe, expect, it, vi } from "vitest";
@@ -13,11 +13,13 @@ vi.mock("../../ModalContext", () => ({
 vi.mock("../../../hooks/useToast", () => ({
   useToast: () => ({ notifySuccess: vi.fn(), notifyError: vi.fn() }),
 }));
-// Suggestions only render when the choices module is on; this test checks the
-// layout, so force it on and keep every other module accessor as it is.
+// Suggestions only render when the choices module is on and the MCP policy only
+// when the tools module is on; this test checks the layout, so force both on and
+// keep every other module accessor as it is.
 vi.mock("../../../utils/modules", async (importOriginal) => ({
   ...(await importOriginal()),
   isChoicesEnabled: () => true,
+  isToolsEnabled: () => true,
 }));
 // The model list is unrelated to the preferences under test.
 vi.mock("../DefaultModelSelector", () => ({
@@ -131,6 +133,27 @@ describe("User settings tabs", () => {
 
     expect(store.getState().user_settings.advanced_mode).toBe(true);
     expect(advancedSwitch).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("offers the MCP tool policy in the advanced tab", () => {
+    const store = renderTab("advanced");
+    const group = screen.getByRole("group", {
+      name: "MCP tool calls in chats",
+    });
+
+    expect(store.getState().user_settings.mcp_tool_policy).toBe("ask");
+
+    fireEvent.click(within(group).getByRole("button", { name: "Always" }));
+    expect(store.getState().user_settings.mcp_tool_policy).toBe("always");
+
+    fireEvent.click(within(group).getByRole("button", { name: "Never" }));
+    expect(store.getState().user_settings.mcp_tool_policy).toBe("never");
+
+    expect(
+      screen.getByText(
+        "This setting only covers your MCP servers; Chat AI's own read, write and workspace tools are always available.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("shows the usage tab with an honest empty state when the account has no limits", () => {

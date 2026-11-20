@@ -3,13 +3,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import ToolsContainer from "../ToolsContainer";
 
 const agentMocks = vi.hoisted(() => ({ agent: false, gateway: true }));
-const mcpMocks = vi.hoisted(() => ({ servers: [] }));
+const mcpMocks = vi.hoisted(() => ({ servers: [], policy: "ask" }));
 
 vi.mock("react-redux", () => ({
   useDispatch: () => vi.fn(),
   useSelector: (selector) =>
     selector({
-      user_settings: { mcp_servers: mcpMocks.servers },
+      user_settings: {
+        mcp_servers: mcpMocks.servers,
+        mcp_tool_policy: mcpMocks.policy,
+      },
       interface_settings: { agree_web_search: true },
     }),
 }));
@@ -26,6 +29,7 @@ beforeEach(() => {
   agentMocks.agent = false;
   agentMocks.gateway = true;
   mcpMocks.servers = [];
+  mcpMocks.policy = "ask";
 });
 
 const stateWith = (tools) => ({
@@ -63,6 +67,98 @@ describe("ToolsContainer MCP selector", () => {
     expect(next.settings.tools.mcp).toBe(true);
     expect("mcp_remote" in next.settings.tools).toBe(false);
     expect(document.querySelector('[data-guide="tools-grid"]')).toBeInTheDocument();
+  });
+
+  it("selects every configured server when MCP is turned on without a selection", () => {
+    mcpMocks.servers = [
+      { id: "l1", name: "Files", url: "http://localhost:9000/mcp" },
+      { id: "l2", url: "http://localhost:9100/mcp" },
+    ];
+    const localState = stateWith({ mcp: false });
+    const setLocalState = vi.fn((updater) => updater(localState));
+    render(<ToolsContainer localState={localState} setLocalState={setLocalState} />);
+
+    fireEvent.click(screen.getByRole("switch", { name: /mcp servers/i }));
+
+    const next = setLocalState.mock.results[0].value;
+    expect(next.settings.tools.mcp).toBe(true);
+    expect(next.settings.mcp_local_server_ids).toEqual(["l1", "l2"]);
+  });
+
+  it("keeps an explicit MCP server selection when MCP is turned on again", () => {
+    mcpMocks.servers = [
+      { id: "l1", name: "Files", url: "http://localhost:9000/mcp" },
+      { id: "l2", url: "http://localhost:9100/mcp" },
+    ];
+    const localState = {
+      settings: {
+        enable_tools: true,
+        model: { id: "test-model", name: "Test Model" },
+        tools: { mcp: false },
+        mcp_local_server_ids: ["l2"],
+      },
+    };
+    const setLocalState = vi.fn((updater) => updater(localState));
+    render(<ToolsContainer localState={localState} setLocalState={setLocalState} />);
+
+    fireEvent.click(screen.getByRole("switch", { name: /mcp servers/i }));
+
+    const next = setLocalState.mock.results[0].value;
+    expect(next.settings.mcp_local_server_ids).toEqual(["l2"]);
+  });
+
+  it("selects every configured server from Enable all as well", () => {
+    mcpMocks.servers = [
+      { id: "l1", name: "Files", url: "http://localhost:9000/mcp" },
+    ];
+    const localState = stateWith({});
+    const setLocalState = vi.fn((updater) => updater(localState));
+    render(<ToolsContainer localState={localState} setLocalState={setLocalState} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /enable all/i }));
+
+    const next = setLocalState.mock.results.at(-1).value;
+    expect(next.settings.mcp_local_server_ids).toEqual(["l1"]);
+  });
+
+  it("does not select the global servers for a chat with legacy per-chat servers", () => {
+    mcpMocks.servers = [
+      { id: "l1", name: "Files", url: "http://localhost:9000/mcp" },
+    ];
+    const localState = {
+      settings: {
+        enable_tools: true,
+        model: { id: "test-model", name: "Test Model" },
+        tools: { mcp: false },
+        mcp_servers: [{ url: "http://localhost:9200/mcp", enabled: true }],
+      },
+    };
+    const setLocalState = vi.fn((updater) => updater(localState));
+    render(<ToolsContainer localState={localState} setLocalState={setLocalState} />);
+
+    fireEvent.click(screen.getByRole("switch", { name: /mcp servers/i }));
+
+    const next = setLocalState.mock.results[0].value;
+    expect(next.settings.tools.mcp).toBe(true);
+    expect(next.settings.mcp_local_server_ids).toBeUndefined();
+  });
+
+  it("explains that MCP servers are not used while the policy is never", () => {
+    mcpMocks.policy = "never";
+    mcpMocks.servers = [
+      { id: "l1", name: "Files", url: "http://localhost:9000/mcp" },
+    ];
+    render(
+      <ToolsContainer localState={stateWith({ mcp: true })} setLocalState={vi.fn()} />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "MCP Servers settings" }),
+    );
+
+    expect(
+      document.querySelector('[data-guide="mcp-tool-policy-notice"]'),
+    ).toBeInTheDocument();
   });
 
   it("lists the configured servers by name or address", () => {

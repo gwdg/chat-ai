@@ -125,6 +125,7 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
             .join(", ")
         : "none"
     }`,
+    `- MCP tool calls in chats: ${userSettings.mcp_tool_policy ?? "ask"} (ask, always, or never; only the user's MCP servers are affected)`,
     `- Default memory group: ${memoryGroupName(userSettings, userSettings.default_memory_group)} (id: ${userSettings.default_memory_group ?? "default"})`,
     `- Request timeout: ${Math.round((userSettings.timeout ?? 300000) / 1000)} seconds`,
     `- End-to-end encryption: ${e2eeKeys.length} key${e2eeKeys.length === 1 ? "" : "s"} configured; encrypted models: ${keyedModels.length ? keyedModels.join(", ") : "none"}`,

@@ -655,6 +655,8 @@ export default {
       details:
         "Double-click a configured server, or open its options menu and choose Details, to see the name, version, protocol version, capabilities and tools it reports.",
       step3: "Open GWDG Tools, enable MCP Servers, and select the configured server.",
+      policy:
+        "In Settings → Advanced, choose whether chat turns may call tools of your MCP servers: Ask (the default, confirm each call), Always, or Never. This only affects your MCP servers; Chat AI's own file, workspace and agent tools stay available.",
     },
     tools_overview: {
       title: "Use GWDG Tools",
@@ -1405,6 +1407,29 @@ export default {
             "Show Agents and MCP servers in the sidebar. When this is off, the sidebar shows only chats and workspaces.",
         },
       },
+      mcp_tools: {
+        label: "MCP tool calls in chats",
+        description:
+          "Choose whether the assistant may call tools of the MCP servers you added. The app's own file, workspace and agent tools are not affected.",
+        note: "This setting only covers your MCP servers; Chat AI's own read, write and workspace tools are always available.",
+        options: {
+          ask: {
+            label: "Ask",
+            description:
+              "Ask before each MCP tool call. You can allow a tool for the current chat.",
+          },
+          always: {
+            label: "Always",
+            description:
+              "Run MCP tools without asking. Only use this with servers you trust.",
+          },
+          never: {
+            label: "Never",
+            description:
+              "Do not offer tools of your MCP servers in chats. The app's own tools stay available.",
+          },
+        },
+      },
       messages: {
         timestamps: {
           label: "Show message timestamps",
@@ -1853,6 +1878,8 @@ export default {
     options: "MCP server options",
     tooltip: "MCP servers expose extra tools and files to the assistant through the Model Context Protocol. This app connects to them directly from this device.",
     configured: "Configured MCP Servers",
+    policy_never_notice:
+      "MCP tool calls in chats are set to Never in Settings → Advanced, so these servers are not used in chats. Your selection is kept and applies again when you switch the setting. Chat AI's own file and workspace tools stay available.",
     invalid_url: "Invalid MCP server URL. Edit the server to fix it.",
     status_unchecked: "Not tested — click to test",
     status_checking: "Testing connection",

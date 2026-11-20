@@ -13,6 +13,7 @@ import {
   selectSetTitleOnce,
   selectSuggestUserPrompts,
   selectTimeout,
+  selectMcpToolPolicy,
 } from "../Redux/reducers/userSettingsReducer";
 
 export function useSendMessage() {
@@ -27,6 +28,7 @@ export function useSendMessage() {
   const memoryMode = useSelector(selectMemoryMode);
   const suggestUserPrompts = useSelector(selectSuggestUserPrompts);
   const setTitleOnce = useSelector(selectSetTitleOnce);
+  const mcpToolPolicy = useSelector(selectMcpToolPolicy);
   const metaSendMessage = useContext(MetaChatSendContext);
 
   if (metaSendMessage) return metaSendMessage;
@@ -61,6 +63,7 @@ export function useSendMessage() {
         setLocalState,
         memories: groupMemories,
         globalMcpServers,
+        mcpToolPolicy,
         dispatch,
         openModal,
         notifyError,

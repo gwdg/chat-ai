@@ -8,6 +8,10 @@ import {
   agreeWebSearch,
 } from "../../Redux/reducers/interfaceSettingsSlice";
 import {
+  selectGlobalMcpServers,
+  selectMcpToolPolicy,
+} from "../../Redux/reducers/userSettingsReducer";
+import {
   BookOpen,
   CircleHelp,
   Globe,
@@ -26,6 +30,7 @@ import ArcanaContainer from "./ArcanaContainer";
 import McpServerPicker from "./McpServerPicker";
 import Tooltip from "../Others/Tooltip";
 import { agentGatewayTools, isAgentEnabled, modelSupportsTools } from "../../apis/agentEndpoints";
+import { mcpServers } from "../../agent/mcp";
 import { isArcanasEnabled } from "../../utils/modules";
 
 // Tools the agent has no counterpart for
@@ -53,6 +58,8 @@ export default function ToolsContainer({ localState, setLocalState }) {
   const { openModal } = useModal();
   const dispatch = useDispatch();
   const agreedWebSearch = useSelector(selectAgreeWebSearch);
+  const globalMcpServers = useSelector(selectGlobalMcpServers);
+  const mcpToolPolicy = useSelector(selectMcpToolPolicy);
   
   const settings = localState?.settings || {};
   const modelName = settings?.model?.name;
@@ -144,21 +151,43 @@ export default function ToolsContainer({ localState, setLocalState }) {
     setTools({ [toolKey]: nextValue });
   };
 
+  // Turning MCP support on without picking a server means "all configured servers", so the
+  // picker shows every server ticked. An explicit selection, or a chat that still carries
+  // legacy per-chat server entries, keeps what it has.
+  const withAllMcpServers = (prev) => {
+    const selected = Array.isArray(prev.settings?.mcp_local_server_ids)
+      ? prev.settings.mcp_local_server_ids
+      : [];
+    if (selected.length > 0 || mcpServers(prev.settings).length > 0) return prev;
+    const allIds = globalMcpServers.map((server) => server.id).filter(Boolean);
+    if (!allIds.length) return prev;
+    return {
+      ...prev,
+      settings: {
+        ...prev.settings,
+        mcp_local_server_ids: allIds,
+      },
+    };
+  };
+
   const handleEnableAll = () => {
     const patch = { fetch_url: true };
     TOOL_DEFS.forEach(({ key }) => {
       patch[key] = true;
     });
     const apply = () =>
-      setLocalState((prev) => ({
-        ...prev,
-        settings: {
-          ...prev.settings,
-          ...(agentMode ? {} : { enable_tools: true }),
-          tools: { ...prev.settings?.tools, ...patch },
-        },
-        flush: true,
-      }));
+      setLocalState((prev) => {
+        const next = withAllMcpServers(prev);
+        return {
+          ...next,
+          settings: {
+            ...next.settings,
+            ...(agentMode ? {} : { enable_tools: true }),
+            tools: { ...next.settings?.tools, ...patch },
+          },
+          flush: true,
+        };
+      });
     if (!agreedWebSearch) {
       openModal("disclaimerWebSearch", {
         onAgree: () => {
@@ -200,7 +229,21 @@ export default function ToolsContainer({ localState, setLocalState }) {
     toggleTool("arcana", nextValue);
   };
   const handleToggleMcp = (nextValue) => {
-    toggleTool("mcp", nextValue);
+    if (!nextValue) {
+      toggleTool("mcp", false);
+      return;
+    }
+    setLocalState((prev) => {
+      const next = withAllMcpServers(prev);
+      return {
+        ...next,
+        settings: {
+          ...next.settings,
+          tools: { ...next.settings?.tools, mcp: true },
+        },
+        flush: true,
+      };
+    });
   };
 
   const getToolState = (key) => {
@@ -383,10 +426,20 @@ export default function ToolsContainer({ localState, setLocalState }) {
                 setLocalState={setLocalState}
               />
             ) : (
-              <McpServerPicker
-                localState={localState}
-                setLocalState={setLocalState}
-              />
+              <div className="space-y-3">
+                {mcpToolPolicy === "never" && (
+                  <p
+                    className="rounded-lg border border-base-300 bg-base-200 px-3 py-2 text-xs leading-relaxed text-base-content/80"
+                    data-guide="mcp-tool-policy-notice"
+                  >
+                    {t("mcp.policy_never_notice")}
+                  </p>
+                )}
+                <McpServerPicker
+                  localState={localState}
+                  setLocalState={setLocalState}
+                />
+              </div>
             )
           ) : (
             <p className="text-sm text-base-content/70">

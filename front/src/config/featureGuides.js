@@ -681,6 +681,11 @@ export const featureGuides = {
         prepare: () => ensureTool("mcp"),
         textKey: "feature_guide.mcp_server.step3",
       },
+      {
+        target: '[data-guide="mcp-tool-policy"]',
+        prepare: () => selectSettingsTab("advanced"),
+        textKey: "feature_guide.mcp_server.policy",
+      },
     ],
   },
   tools_overview: {

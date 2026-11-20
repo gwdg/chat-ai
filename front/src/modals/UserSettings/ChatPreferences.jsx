@@ -36,7 +36,10 @@ import {
   setSendWithEnter,
   selectAdvancedMode,
   setAdvancedMode,
+  selectMcpToolPolicy,
+  setMcpToolPolicy,
 } from "../../Redux/reducers/userSettingsReducer";
+import { isToolsEnabled } from "../../utils/modules";
 import { useModal } from "../ModalContext";
 import { useSendWithEnter } from "../../hooks/useSendWithEnter";
 import ProfilePreferenceSwitch from "./ProfilePreferenceSwitch";
@@ -62,6 +65,12 @@ const DOCUMENT_CONVERSION_OPTIONS = [
   { value: "server", key: "server" },
   { value: "browser", key: "browser" },
   { value: "choice", key: "choice" },
+];
+
+const MCP_TOOL_POLICY_OPTIONS = [
+  { value: "ask", key: "ask" },
+  { value: "always", key: "always" },
+  { value: "never", key: "never" },
 ];
 
 export function AdvancedModePreference() {
@@ -391,6 +400,42 @@ export function DocumentConversionPreference() {
         value={documentConversionMode}
         onChange={(value) => dispatch(setDocumentConversionMode(value))}
       />
+    </section>
+  );
+}
+
+export function McpToolPolicyPreference() {
+  const dispatch = useDispatch();
+  const { t } = useTranslation();
+  const policy = useSelector(selectMcpToolPolicy);
+
+  // The policy only concerns the MCP servers the user added; without the tools module
+  // there is no MCP UI at all.
+  if (!isToolsEnabled()) return null;
+
+  const selectedOption =
+    MCP_TOOL_POLICY_OPTIONS.find((option) => option.value === policy) ??
+    MCP_TOOL_POLICY_OPTIONS[0];
+
+  return (
+    <section className="flex flex-col gap-2" data-guide="mcp-tool-policy">
+      <SegmentedPreference
+        label={t("user_settings.chat_preferences.mcp_tools.label")}
+        description={t(
+          `user_settings.chat_preferences.mcp_tools.options.${selectedOption.key}.description`,
+        )}
+        options={MCP_TOOL_POLICY_OPTIONS.map((option) => ({
+          value: option.value,
+          label: t(
+            `user_settings.chat_preferences.mcp_tools.options.${option.key}.label`,
+          ),
+        }))}
+        value={policy}
+        onChange={(value) => dispatch(setMcpToolPolicy(value))}
+      />
+      <p className="px-2 text-xs text-base-content/70">
+        {t("user_settings.chat_preferences.mcp_tools.note")}
+      </p>
     </section>
   );
 }

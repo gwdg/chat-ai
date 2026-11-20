@@ -27,6 +27,9 @@ const initialState = {
   advanced_mode: false,
   // null = device default (Enter on desktop, Shift+Enter on mobile).
   send_with_enter: null,
+  // Ask before each call of a user-added MCP server tool; "always" runs them directly and
+  // "never" leaves them out of chat turns. The agent's own file tools are never affected.
+  mcp_tool_policy: "ask",
   // End-to-end encryption: published model public keys, and model → key bindings.
   e2ee_keys: [],
   e2ee_models: {},
@@ -36,6 +39,7 @@ const MEMORY_MODES = [0, 1, 2];
 const RENDER_MODES = ["render", "code", "off"];
 const SANITIZATION_MODES = ["strict", "relaxed"];
 const DOCUMENT_CONVERSION_MODES = ["server", "browser", "choice"];
+const MCP_TOOL_POLICIES = ["ask", "always", "never"];
 
 function ensureMemoryState(state) {
   if (!Array.isArray(state.memories)) state.memories = [];
@@ -197,6 +201,9 @@ function importUserSettingsState(state, incoming) {
   }
   if (typeof incoming.send_with_enter === "boolean" || incoming.send_with_enter === null) {
     state.send_with_enter = incoming.send_with_enter;
+  }
+  if (MCP_TOOL_POLICIES.includes(incoming.mcp_tool_policy)) {
+    state.mcp_tool_policy = incoming.mcp_tool_policy;
   }
   if (incoming.model !== undefined) state.model = incoming.model;
 }
@@ -421,6 +428,11 @@ const userSettingsSlice = createSlice({
       state.send_with_enter = Boolean(action.payload);
     },
 
+    setMcpToolPolicy: (state, action) => {
+      const policy = action.payload;
+      if (MCP_TOOL_POLICIES.includes(policy)) state.mcp_tool_policy = policy;
+    },
+
     addE2eeKey: (state, action) => {
       ensureE2eeState(state);
       const key = action.payload;
@@ -554,7 +566,7 @@ export const {
   setCollapseReasoningWhileStreaming, setDocumentConversionMode,
   setConversationSummaries, setShowTimestamps,
   setAdvancedMode,
-  setSendWithEnter, importUserSettings
+  setSendWithEnter, setMcpToolPolicy, importUserSettings
 } = userSettingsSlice.actions;
 
 // Selectors
@@ -614,6 +626,11 @@ export const selectAdvancedMode = (state) =>
 // null means "use the device default", resolved in the prompt component.
 export const selectSendWithEnter = (state) =>
   state.user_settings.send_with_enter ?? null;
+// Whether chat turns may call tools of the user's MCP servers: "ask" (default), "always", "never".
+export const selectMcpToolPolicy = (state) => {
+  const policy = state.user_settings.mcp_tool_policy;
+  return MCP_TOOL_POLICIES.includes(policy) ? policy : "ask";
+};
 export const selectUserSettings = (state) => state.user_settings;
 export const selectE2eeKeys = (state) => state.user_settings?.e2ee_keys ?? [];
 export const selectE2eeModels = (state) => state.user_settings?.e2ee_models ?? {};

@@ -75,6 +75,7 @@ const getDefaultState = () => {
       show_timestamps: false,
       advanced_mode: false,
       send_with_enter: null,
+      mcp_tool_policy: "ask",
       e2ee_keys: [],
       e2ee_models: {},
     },

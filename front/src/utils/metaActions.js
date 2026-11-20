@@ -22,6 +22,7 @@ const SUPPORTED_SETTING_KEYS = new Set([
   "conversation_summaries",
   "show_timestamps",
   "send_with_enter",
+  "mcp_tool_policy",
   "timeout",
 ]);
 
@@ -218,6 +219,12 @@ export function getMetaActionProposals(text) {
     if (type === "SET_SETTING") {
       const key = String(payload.key || "").trim();
       if (!SUPPORTED_SETTING_KEYS.has(key)) continue;
+      if (
+        key === "mcp_tool_policy" &&
+        !["ask", "always", "never"].includes(payload.value)
+      ) {
+        continue;
+      }
       if (!Object.prototype.hasOwnProperty.call(payload, "value")) continue;
       proposals.set(`setting:${key}`, {
         type: "setting",

@@ -320,6 +320,7 @@ const sendMessage = async ({
   memoryMode = 0,
   memoryGroupId = "default",
   globalMcpServers = [],
+  mcpToolPolicy = "ask",
   suggestUserPrompts = false,
   formSubmission = null,
   setTitleOnce = true,
@@ -707,6 +708,7 @@ const sendMessage = async ({
         uiMessages: localState.messages,
         systemPrompt: systemPromptAPI,
         settings: { ...localState.settings, mcp_servers: effectiveMcpServers },
+        mcpToolPolicy,
         onUpdate: showTurn,
         onMcpNameMismatch: handleMcpNameMismatch,
       });

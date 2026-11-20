@@ -670,6 +670,8 @@ export default {
       details:
         "Doppelklicken Sie auf einen konfigurierten Server oder wählen Sie in seinem Optionsmenü „Details“, um Name, Version, Protokollversion, Fähigkeiten und Werkzeuge zu sehen, die er meldet.",
       step3: "Öffnen Sie die GWDG-Tools, aktivieren Sie MCP-Server und wählen Sie den konfigurierten Server aus.",
+      policy:
+        "Wählen Sie unter Einstellungen → Erweitert, ob Chat-Turns Werkzeuge Ihrer MCP-Server aufrufen dürfen: Fragen (Standard, jeder Aufruf wird bestätigt), Immer oder Nie. Dies betrifft nur Ihre MCP-Server; die eigenen Datei-, Arbeitsbereichs- und Agentenwerkzeuge von Chat AI bleiben verfügbar.",
     },
     tools_overview: {
       title: "GWDG Tools verwenden",
@@ -1427,6 +1429,29 @@ export default {
             "Zeigt Agenten und MCP-Server in der Seitenleiste. Ausgeschaltet zeigt die Seitenleiste nur Chats und Arbeitsbereiche.",
         },
       },
+      mcp_tools: {
+        label: "MCP-Werkzeugaufrufe in Chats",
+        description:
+          "Legt fest, ob der Assistent Werkzeuge der von Ihnen hinzugefügten MCP-Server aufrufen darf. Die eigenen Datei-, Arbeitsbereichs- und Agentenwerkzeuge der App sind nicht betroffen.",
+        note: "Diese Einstellung betrifft nur Ihre MCP-Server; die Lese-, Schreib- und Arbeitsbereichswerkzeuge von Chat AI bleiben immer verfügbar.",
+        options: {
+          ask: {
+            label: "Fragen",
+            description:
+              "Vor jedem MCP-Werkzeugaufruf nachfragen. Ein Werkzeug kann für den aktuellen Chat erlaubt werden.",
+          },
+          always: {
+            label: "Immer",
+            description:
+              "MCP-Werkzeuge ohne Nachfrage ausführen. Nur bei Servern verwenden, denen Sie vertrauen.",
+          },
+          never: {
+            label: "Nie",
+            description:
+              "Werkzeuge Ihrer MCP-Server in Chats nicht anbieten. Die eigenen Werkzeuge der App bleiben verfügbar.",
+          },
+        },
+      },
       messages: {
         timestamps: {
           label: "Zeitstempel für Nachrichten anzeigen",
@@ -1876,6 +1901,8 @@ export default {
     options: "MCP-Server-Optionen",
     tooltip: "MCP-Server stellen dem Assistenten über das Model Context Protocol zusätzliche Werkzeuge und Dateien bereit. Diese App verbindet sich direkt von diesem Gerät aus mit ihnen.",
     configured: "Konfigurierte MCP-Server",
+    policy_never_notice:
+      "MCP-Werkzeugaufrufe in Chats stehen in Einstellungen → Erweitert auf „Nie“, daher werden diese Server in Chats nicht verwendet. Ihre Auswahl bleibt gespeichert und gilt wieder, sobald Sie die Einstellung ändern. Die eigenen Datei- und Arbeitsbereichswerkzeuge von Chat AI bleiben verfügbar.",
     invalid_url: "Ungültige MCP-Server-URL. Bearbeiten Sie den Server, um sie zu korrigieren.",
     status_unchecked: "Nicht getestet – zum Testen klicken",
     status_checking: "Verbindung wird getestet",

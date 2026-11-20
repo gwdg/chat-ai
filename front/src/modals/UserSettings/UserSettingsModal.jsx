@@ -23,6 +23,7 @@ import {
   AdvancedModePreference,
   ConversationSummaryPreference,
   DocumentConversionPreference,
+  McpToolPolicyPreference,
   MemoryPreference,
   MessageDisplayPreference,
   RenderingPreferences,
@@ -36,7 +37,7 @@ import ImportChatButton from "../../components/Sidebar/Buttons/ImportChatButton"
 import StorageStatus from "./StorageStatus";
 import UsageSettings from "./UsageSettings";
 import EncryptionSettings from "./EncryptionSettings";
-import { isChoicesEnabled } from "../../utils/modules";
+import { isChoicesEnabled, isToolsEnabled } from "../../utils/modules";
 import { isFeatureEnabled } from "../../config/deployment";
 
 const PROFILE_TABS = [
@@ -174,6 +175,11 @@ export default function UserSettingsModal({
       return (
         <div className="flex flex-col gap-5">
           <AdvancedModePreference />
+          {isToolsEnabled() && (
+            <div className="border-t border-base-300 pt-5">
+              <McpToolPolicyPreference />
+            </div>
+          )}
           <div className="border-t border-base-300 pt-5" data-guide="rendering-preference">
             <RenderingPreferences />
           </div>

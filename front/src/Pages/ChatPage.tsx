@@ -32,7 +32,7 @@ import {
 import { resetMcpConfirmationSession } from "../agent/mcpConfirmation";
 import { isAgentEnabled } from "../apis/agentEndpoints";
 import { setLastConversation } from "../Redux/reducers/lastConversationSlice";
-import { selectGlobalMcpServers } from "../Redux/reducers/userSettingsReducer";
+import { selectGlobalMcpServers, selectMcpToolPolicy } from "../Redux/reducers/userSettingsReducer";
 
 import { useNavigate } from "react-router";
 import AnnouncementBar from "../components/Header/AnnouncementBar";
@@ -58,6 +58,7 @@ export default function ChatPage() {
   const userData = useUpdateUserData();
   const sendMessage = useSendMessage();
   const globalMcpServers = useSelector(selectGlobalMcpServers);
+  const mcpToolPolicy = useSelector(selectMcpToolPolicy);
 
   useSettingsDeepLink({ localState, userData, modelsData });
 
@@ -71,7 +72,7 @@ export default function ChatPage() {
   // Connect to the conversation's MCP servers before the first message, so a turn does not
   // wait for it. Debounced, as the list changes with every keystroke while a URL is typed.
   const mcpServers = JSON.stringify(
-    isAgentEnabled()
+    isAgentEnabled() && mcpToolPolicy !== "never"
       ? activeMcpServers({
           ...localState?.settings,
           mcp_servers: resolveMcpServers(

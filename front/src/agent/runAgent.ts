@@ -18,7 +18,7 @@ import { addGatewayFields, gatewayFetch, gatewayRequestFields, nameResults, toAg
 import { e2eeFetch } from "../e2ee/fetch";
 import { attachmentsNote, hasReadableText, type AttachmentEntry } from "./attachmentContext";
 import i18n from "../i18n";
-import { activeMcpServers, connectMcpServers, McpUnavailableError, type McpServer, type McpTools } from "./mcp";
+import { activeMcpServers, connectMcpServers, McpUnavailableError, type McpServer, type McpToolPolicy, type McpTools } from "./mcp";
 import { beginMcpConfirmationSession } from "./mcpConfirmation";
 import { createTools } from "./tools";
 import { createConnectedAgentTools, type ConnectedAgentContext } from "./connectedAgentTools";
@@ -252,6 +252,7 @@ export async function runAgentTurn({
   uiMessages,
   systemPrompt,
   settings,
+  mcpToolPolicy = "ask",
   onUpdate,
   onMcpNameMismatch,
 }: {
@@ -259,6 +260,8 @@ export async function runAgentTurn({
   uiMessages: any[];
   systemPrompt: string;
   settings: any;
+  /** Advanced setting: "ask" (default), "always", or "never" for user MCP servers. */
+  mcpToolPolicy?: McpToolPolicy;
   onUpdate: (update: TurnUpdate) => void;
   onMcpNameMismatch?: (server: McpServer, actualName: string) => Promise<boolean>;
 }): Promise<TurnResult> {
@@ -423,13 +426,17 @@ export async function runAgentTurn({
         console.warn("Could not load connected agent tools", error);
       }
     }
-    // An enabled MCP server that cannot be reached stops the turn: the user turns it off or starts it
-    const servers = useTools ? activeMcpServers(settings) : [];
+    // An enabled MCP server that cannot be reached stops the turn: the user turns it off or starts it.
+    // With the advanced policy set to "never", the user's MCP servers are not contacted at all;
+    // the agent's own file and workspace tools are unaffected.
+    const servers =
+      useTools && mcpToolPolicy !== "never" ? activeMcpServers(settings) : [];
     let mcp: McpTools | undefined;
     if (servers.length) {
       try {
         mcp = await connectMcpServers(servers, new Set(tools.map((tool) => tool.name)), {
           onNameMismatch: onMcpNameMismatch,
+          confirm: mcpToolPolicy !== "always",
         });
       } catch (error) {
         if (!(error instanceof McpUnavailableError)) throw error;

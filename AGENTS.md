@@ -1222,6 +1222,22 @@ the bridge forwards it as the tool result, which is the only way a user can tell
 server on or off; enabling it reveals the selector, which lists every configured server by name or
 URL and never shows URL/id/auth fields.
 
+Turning that switch on without a selected server means "all configured servers": `ToolsContainer`
+writes every global id into `mcp_local_server_ids` (on the switch and on Enable all), and
+`resolveMcpServers` applies the same rule when the key is **absent**, which covers imported and
+Meta-created chats. An explicit `[]` is different and must stay meaningful — unticking the last
+server writes `[]`, so the fallback keys on `Array.isArray(mcp_local_server_ids)`, not on length; a
+length check would silently reconnect every server the user just cleared. Legacy per-chat
+`settings.mcp_servers` entries also suppress the fallback.
+
+`user_settings.mcp_tool_policy` (`"ask"` default, `"always"`, `"never"`) controls only the **user's**
+MCP servers in chat turns; the app's own file, workspace and agent tools are offered in every mode.
+`runAgentTurn` skips `activeMcpServers` for `"never"` and passes `confirm: policy !== "always"` to
+`connectMcpServers`, which otherwise asks per call through `mcpConfirmation.ts`. `ChatPage` skips the
+idle prefetch for `"never"`. The OpenCode agent page's bridge relay keeps its own switch and is not
+governed by this setting. The policy is read by the Meta chat (`get_user_settings`, `SET_SETTING`)
+and proposed through `MetaActionCard` like every other setting.
+
 The add dialog starts with a local scan (`agent/mcpScan.ts`, button
 `data-guide="mcp-scan"`). It probes `GET http://localhost:<port>/mcp` on every port above 5000,
 64 at a time, and adds each port that answers like an MCP endpoint as it is found. Only a

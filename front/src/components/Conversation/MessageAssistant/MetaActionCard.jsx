@@ -369,6 +369,7 @@ export default function MetaActionCard({
       "user_settings.chat_preferences.reasoning_streaming.label",
     document_conversion_mode:
       "user_settings.chat_preferences.document_conversion.label",
+    mcp_tool_policy: "user_settings.chat_preferences.mcp_tools.label",
     timeout: "user_settings.timeout.title",
     temperature: "meta_chat.setting_temperature",
     top_p: "meta_chat.setting_top_p",
@@ -413,6 +414,12 @@ export default function MetaActionCard({
       return t(`user_settings.chat_preferences.submission.options.${name}.label`, {
         defaultValue: String(value),
       });
+    }
+    if (key === "mcp_tool_policy") {
+      return t(
+        `user_settings.chat_preferences.mcp_tools.options.${value}.label`,
+        { defaultValue: String(value) },
+      );
     }
     if (key === "timeout") {
       return `${Math.round(Number(value) / 1000)} ${t(

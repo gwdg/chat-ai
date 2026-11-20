@@ -56,6 +56,9 @@ vi.mock("@modelcontextprotocol/sdk/client/index.js", () => ({
         ],
       };
     }
+    async callTool() {
+      return { content: [{ type: "text", text: "ok" }] };
+    }
     async close() {}
   },
 }));
@@ -69,6 +72,12 @@ vi.mock("@modelcontextprotocol/sdk/client/streamableHttp.js", () => ({
     }
   },
 }));
+
+vi.mock("../mcpConfirmation", () => ({
+  requestMcpConfirmation: vi.fn(async () => true),
+}));
+
+import { requestMcpConfirmation } from "../mcpConfirmation";
 
 const local = { url: "http://localhost:9000/mcp", enabled: true };
 
@@ -92,6 +101,48 @@ describe("MCP server entries", () => {
     expect(resolved).toEqual([
       expect.objectContaining({ url: "http://localhost:9000/mcp" }),
       expect.objectContaining({ url: "http://localhost:9100/mcp", name: "Notes" }),
+    ]);
+  });
+
+  it("resolves every configured server when MCP is on without a selection", () => {
+    const globals = [
+      { id: "g-files", name: "Files", url: "http://localhost:9000/mcp" },
+      { id: "g-notes", name: "Notes", url: "http://localhost:9100/mcp" },
+    ];
+    const resolved = resolveMcpServers({ tools: { mcp: true } }, globals);
+    expect(resolved).toEqual([
+      expect.objectContaining({ url: "http://localhost:9000/mcp" }),
+      expect.objectContaining({ url: "http://localhost:9100/mcp" }),
+    ]);
+  });
+
+  it("keeps MCP servers off while the tool is disabled", () => {
+    const globals = [
+      { id: "g-files", name: "Files", url: "http://localhost:9000/mcp" },
+    ];
+    expect(resolveMcpServers({ tools: { mcp: false } }, globals)).toEqual([]);
+    expect(resolveMcpServers({}, globals)).toEqual([]);
+  });
+
+  it("respects an explicitly cleared selection", () => {
+    const globals = [
+      { id: "g-files", name: "Files", url: "http://localhost:9000/mcp" },
+    ];
+    expect(
+      resolveMcpServers({ tools: { mcp: true }, mcp_local_server_ids: [] }, globals),
+    ).toEqual([]);
+  });
+
+  it("does not fall back to every server when legacy entries exist", () => {
+    const resolved = resolveMcpServers(
+      {
+        tools: { mcp: true },
+        mcp_servers: [{ url: "http://legacy.test/mcp", enabled: true }],
+      },
+      [{ id: "g-files", name: "Files", url: "http://localhost:9000/mcp" }],
+    );
+    expect(resolved).toEqual([
+      expect.objectContaining({ url: "http://legacy.test/mcp" }),
     ]);
   });
 
@@ -224,6 +275,38 @@ describe("MCP server name changes", () => {
 
     expect(onNameMismatch).not.toHaveBeenCalled();
     expect(tools).toHaveLength(2);
+  });
+});
+
+describe("MCP tool confirmation", () => {
+  it("runs a tool directly when the policy is always", async () => {
+    sdk.names.set("http://always.test/mcp", "Always Server");
+    const { tools } = await connectMcpServers(
+      [{ url: "http://always.test/mcp", enabled: true }],
+      new Set(),
+      { confirm: false },
+    );
+
+    expect(tools).toHaveLength(1);
+    await tools[0].execute("call-1", { text: "hi" }, undefined);
+
+    expect(requestMcpConfirmation).not.toHaveBeenCalled();
+  });
+
+  it("asks before a tool call by default", async () => {
+    vi.mocked(requestMcpConfirmation).mockClear();
+    sdk.names.set("http://ask.test/mcp", "Ask Server");
+    const { tools } = await connectMcpServers(
+      [{ url: "http://ask.test/mcp", enabled: true }],
+      new Set(),
+    );
+
+    await tools[0].execute("call-2", { text: "hi" }, undefined);
+
+    expect(requestMcpConfirmation).toHaveBeenCalledWith(
+      expect.objectContaining({ server: "http://ask.test/mcp", tool: "echo" }),
+      undefined,
+    );
   });
 });
 
