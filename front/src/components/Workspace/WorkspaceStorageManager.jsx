@@ -19,7 +19,10 @@ import {
 import { useModal } from "../../modals/ModalContext";
 import { useSaiaFsAccess, SAIA_FS_AVAILABLE } from "../../hooks/useSaiaFsAccess";
 import { addSelectionToWorkspace } from "../../workspace/addSelectionToWorkspace";
-import { addLocalSource, pickDirectory } from "../../workspace/localWorkspace";
+import {
+  addLocalSourceToWorkspace,
+  pickDirectory,
+} from "../../workspace/localWorkspace";
 
 export default function WorkspaceStorageManager({ workspaceId, onOpenAddSource }) {
   const { t } = useTranslation();
@@ -159,7 +162,7 @@ export default function WorkspaceStorageManager({ workspaceId, onOpenAddSource }
     } catch {
       // The handle stays readable; writing asks for permission again when it is needed.
     }
-    await addLocalSource({ workspaceId, handle });
+    await addLocalSourceToWorkspace({ workspaceId, handle });
   };
 
   // Clicking the device pane's empty state goes straight to the folder picker: no second dialog,
@@ -172,7 +175,7 @@ export default function WorkspaceStorageManager({ workspaceId, onOpenAddSource }
         insecureMessage: t("workspace.local_insecure"),
         unsupportedMessage: t("workspace.local_unsupported"),
       });
-      await addLocalSource({ workspaceId, handle });
+      await addLocalSourceToWorkspace({ workspaceId, handle });
       return "";
     } catch (error) {
       if (error && error.name === "AbortError") return "";

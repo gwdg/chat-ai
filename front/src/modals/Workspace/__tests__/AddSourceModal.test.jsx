@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const api = vi.hoisted(() => ({
   addSource: vi.fn(),
+  addWorkspaceMount: vi.fn(),
+  listWorkspaceMounts: vi.fn(),
   cloneIntoWorkspace: vi.fn(),
   agents: [],
   settings: { tools: { mcp: false }, mcp_servers: [] },
@@ -10,6 +12,8 @@ const api = vi.hoisted(() => ({
 
 vi.mock("../../../db/workspaceDb", () => ({
   addSource: (...args) => api.addSource(...args),
+  addWorkspaceMount: (...args) => api.addWorkspaceMount(...args),
+  listWorkspaceMounts: (...args) => api.listWorkspaceMounts(...args),
 }));
 
 // The modal only reads whether local MCP servers are configured.
@@ -53,6 +57,10 @@ const chooseGit = () => chooseKind("git");
 beforeEach(() => {
   api.addSource.mockReset();
   api.addSource.mockResolvedValue("source-1");
+  api.addWorkspaceMount.mockReset();
+  api.addWorkspaceMount.mockResolvedValue("mount-1");
+  api.listWorkspaceMounts.mockReset();
+  api.listWorkspaceMounts.mockResolvedValue([]);
   api.cloneIntoWorkspace.mockReset();
   api.agents = [];
   api.settings.tools.mcp = false;
@@ -90,6 +98,16 @@ describe("AddSourceModal local folder", () => {
       kind: "local",
       label: "project",
       handle,
+    });
+    // The folder is mounted at the workspace root in the same step.
+    await waitFor(() =>
+      expect(api.addWorkspaceMount).toHaveBeenCalledTimes(1),
+    );
+    expect(api.addWorkspaceMount.mock.calls[0][0]).toMatchObject({
+      workspaceId: "ws-1",
+      sourceId: "source-1",
+      sourcePath: "/",
+      path: "/project",
     });
   });
 
