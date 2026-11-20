@@ -182,6 +182,10 @@ export default function TopicList({
       showMetadata?: boolean;
       showModified?: boolean;
       showCreated?: boolean;
+      /** Colour of the topic the chat sits under, for its selected state. */
+      accentHex?: string;
+      /** The row runs edge to edge between the topic's two rules. */
+      flush?: boolean;
     },
   ) => ReactNode;
   dateGroups: DateGroup[];
@@ -464,7 +468,9 @@ export default function TopicList({
             style={{ borderColor: groupRule(hex, isDark) }}
           >
             {count > 0 && (
-              conversations.map((conv) => renderConversationRow(conv))
+              conversations.map((conv) =>
+                renderConversationRow(conv, { accentHex: hex, flush: true }),
+              )
             ) }
           </div>
         )}

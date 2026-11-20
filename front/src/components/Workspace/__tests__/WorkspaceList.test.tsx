@@ -460,15 +460,24 @@ describe("WorkspaceList chat rows", () => {
 
     const chat = await screen.findByRole("button", { name: "Workspace chat" });
     const row = chat.parentElement as HTMLElement;
-    expect(row.className).toContain("rounded-xl");
+    // Selected chats wear the group's own colour edge to edge between its two
+    // rules, not a smaller grey rounded rectangle.
+    expect(row.className).toContain("-mx-2");
+    expect(row.className).toContain("bg-[var(--chat-tint)]");
+    expect(row.className).not.toContain("bg-base-200");
+    expect(row.className).not.toContain("rounded-xl");
+    expect(row.style.getPropertyValue("--chat-tint")).toContain("rgba(");
     expect(row.className).toContain("px-2");
     expect(row.className).toContain("py-1");
     expect(row.className).toContain("border");
     expect(row.className).toContain("border-transparent");
-    expect(row.className).toContain("bg-base-200");
-    expect(row.className).toContain("shadow-sm");
     expect(row.className).not.toContain("rounded-md");
 
+    // The cursor over the title is the same one a topic chat shows.
+    expect(chat.style.cursor).not.toBe("");
+    expect(chat.style.cursor).toBe(
+      window.innerWidth >= 1280 ? "text" : "pointer",
+    );
     expect(chat.className).toContain("text-xs");
     expect(chat.className).toContain("leading-relaxed");
     expect(chat.className).not.toContain("text-[11px]");

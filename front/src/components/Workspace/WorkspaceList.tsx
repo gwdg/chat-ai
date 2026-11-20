@@ -69,6 +69,7 @@ import {
   readAgentSessionDrag,
 } from "../Sidebar/sessionDrop";
 import { useDelayedSingleClick } from "../../hooks/useDelayedSingleClick";
+import { useWindowSize } from "../../hooks/useWindowSize";
 import { workspaceAgentCollapseId } from "../Sidebar/sessionGroupCollapse";
 import { getDefaultConversation } from "../../utils/conversationUtils";
 
@@ -176,6 +177,7 @@ export default function WorkspaceList({
   );
   const collapsedTopicIds = useSelector(selectCollapsedTopics) ?? [];
   const isDark = useSelector(selectDarkMode);
+  const { isDesktop } = useWindowSize();
   const userSettings = useSelector(selectUserSettings);
   // Opening a workspace mounts another sidebar and destroys this row, so wait
   // out a possible second click before navigating.
@@ -634,15 +636,27 @@ export default function WorkspaceList({
                         onChatDragStart?.(chat.id, workspace.id);
                       }}
                       onDragEnd={() => onChatDragEnd?.()}
-                      className={`group/chat relative flex items-center gap-1 rounded-xl border border-transparent px-2 py-1 ${
+                      className={`group/chat relative -mx-2 flex items-center gap-1 border border-transparent px-2 py-1 ${
                         chatActive
-                          ? "bg-base-200 text-base-content shadow-sm"
-                          : "text-base-content hover:bg-base-200 transition-all duration-100"
+                          ? "bg-[var(--chat-tint)] text-base-content"
+                          : "text-base-content hover:bg-[var(--chat-tint-hover)] transition-all duration-100"
                       } ${
                         chatDragging
                           ? "border-accent/60 bg-accent/10 dark:bg-accent/20"
                           : ""
                       }`}
+                      style={{
+                        "--chat-tint": groupRowTint(
+                          workspaceColor.hex,
+                          isDark,
+                          { active: true },
+                        ),
+                        "--chat-tint-hover": groupRowTint(
+                          workspaceColor.hex,
+                          isDark,
+                          { hover: true },
+                        ),
+                      } as CSSProperties}
                     >
                       <button
                         type="button"
@@ -652,6 +666,7 @@ export default function WorkspaceList({
                         }}
                         aria-current={chatActive ? "page" : undefined}
                         className="min-w-0 flex-1 truncate text-left text-xs leading-relaxed"
+                        style={{ cursor: isDesktop ? "text" : "pointer" }}
                       >
                         {chat.title || t("conversation.untitled")}
                       </button>

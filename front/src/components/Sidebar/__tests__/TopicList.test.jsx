@@ -35,6 +35,8 @@ const renderConversationRow = (conv, options = {}) => (
   <div
     data-testid={`conv-${conv.id}`}
     data-leading-dash={options.leadingDash === true ? "true" : "false"}
+    data-accent={options.accentHex ?? ""}
+    data-flush={options.flush === true ? "true" : "false"}
   >
     {conv.title}
   </div>
@@ -211,6 +213,25 @@ describe("TopicList group colours", () => {
     );
     expect(rulesFor().style.borderRightColor).toBe(
       "rgba(124, 58, 237, 0.5)",
+    );
+  });
+
+  it("gives its chats its own colour to wear when one is open", () => {
+    render(<TopicList {...props} variant="pinned" />);
+
+    // Under the topic: the topic's colour, running between its two rules.
+    expect(screen.getByTestId("conv-c2")).toHaveAttribute(
+      "data-accent",
+      "#7C3AED",
+    );
+    expect(screen.getByTestId("conv-c2")).toHaveAttribute(
+      "data-flush",
+      "true",
+    );
+    // A pinned chat has no rules to fill, so it keeps its own rounded shape.
+    expect(screen.getByTestId("conv-c1")).toHaveAttribute(
+      "data-flush",
+      "false",
     );
   });
 

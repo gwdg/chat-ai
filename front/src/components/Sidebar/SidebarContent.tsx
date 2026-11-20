@@ -83,6 +83,7 @@ import {
 } from "./chatDrop";
 import { dropAgentSessionOnWorkspace } from "./sessionDrop";
 import { rememberSidebarScroll, restoreSidebarScroll } from "./sidebarScroll";
+import { groupRowTint, topicColor } from "./topicColors";
 import PinnedSection from "./PinnedSection";
 import { showAdvancedSidebarSections } from "./sidebarVisibility";
 import SidebarUserCard from "./SidebarUserCard";
@@ -325,6 +326,24 @@ export default function SidebarContent({
       (conv) => !conv.folderId || !known.has(conv.folderId),
     );
   }, [groupableConversations, folders]);
+
+  // The colour a chat wears when it is the open one: its own topic's, or the
+  // unsorted bucket's slate. Every list — under a topic, in a pinned group, in
+  // a date bucket, in the search results — asks this map, so the selected row
+  // is never the neutral grey.
+  const topicHexByConversation = useMemo(() => {
+    const hexByFolder = new Map<string, string>();
+    folders.forEach((folder) =>
+      hexByFolder.set(folder.id, topicColor(folder).hex),
+    );
+    const unsortedHex = isDark ? "#94A3B8" : "#64748B";
+    const map = new Map<string, string>();
+    orderedConversations.forEach((conv) => {
+      const hex = conv.folderId ? hexByFolder.get(conv.folderId) : undefined;
+      map.set(conv.id, hex ?? unsortedHex);
+    });
+    return map;
+  }, [orderedConversations, folders, isDark]);
 
   const dateGroups = useMemo(
     () => groupConversationsByDate(dateGroupableConversations),
@@ -722,6 +741,19 @@ export default function SidebarContent({
     const showCreated = options.showCreated === true;
     const showDateModified = options.showModified === true;
     const leadingDash = options.leadingDash === true;
+    // A chat listed under a topic or a workspace takes that group's colour, so
+    // its selected state is a tint of the group, never the neutral grey. It
+    // also runs edge to edge between the group's two coloured rules.
+    const accentHex = options.accentHex ?? topicHexByConversation.get(id);
+    // A row inside a topic's or a workspace's four-pixel rails runs edge to
+    // edge between them; nowhere else has rules to sit between.
+    const flush = options.flush === true;
+    const accentStyle = accentHex
+      ? {
+          "--chat-tint": groupRowTint(accentHex, isDark, { active: true }),
+          "--chat-tint-hover": groupRowTint(accentHex, isDark, { hover: true }),
+        }
+      : undefined;
     const showDates =
       !showCreated &&
       (showDateModified || (isActive && options.showMetadata !== false));
@@ -755,15 +787,22 @@ export default function SidebarContent({
           onMouseLeave={() => setHoveredId(null)}
           onDragStart={(event) => handleConversationDragStart(event, id)}
           onDragEnd={handleConversationDragEnd}
-          className={`sidebar-wrapper group relative px-2 py-1 rounded-xl touch-manipulation border border-transparent ${
+          className={`sidebar-wrapper group relative px-2 py-1 touch-manipulation border border-transparent ${
+            flush ? "-mx-2" : ""
+          } ${flush || isActive ? "" : "rounded-xl"} ${
             isActive
-              ? "bg-base-200 text-base-content shadow-sm"
-              : "text-base-content hover:bg-base-200 transition-all duration-100"
+              ? accentHex
+                ? "bg-[var(--chat-tint)] text-base-content"
+                : "bg-base-200 text-base-content"
+              : accentHex
+                ? "text-base-content hover:bg-[var(--chat-tint-hover)] transition-all duration-100"
+                : "text-base-content hover:bg-base-200 transition-all duration-100"
           } ${isDragging ? "border-accent/60 bg-accent/10 dark:bg-accent/20" : ""}`}
           data-current={isActive ? "true" : "false"}
           style={{
             WebkitTapHighlightColor: "transparent",
             minHeight: "16px",
+            ...accentStyle,
           }}
         >
           {/* Title container */}
