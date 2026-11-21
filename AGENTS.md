@@ -12,7 +12,7 @@ OpenAI-compatible API endpoint. It is one of three repos in the wider architectu
 | Repo | Contents |
 | --- | --- |
 | **this one** (`gwdg/chat-ai`) | web interface: `front` + `back` |
-| `gwdg/saia-hub` | API gateway, SSH proxy |
+| `gwdg/saia-hub` | OpenAI-compatible API gateway (SAIA) |
 | `gwdg/saia-hpc` | Slurm scheduler + HPC scripts |
 
 Two services, no monorepo tooling — each has its own `package.json` and is installed separately:
