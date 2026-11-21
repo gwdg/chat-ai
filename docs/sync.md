@@ -149,7 +149,7 @@ and no dialog blocks the sync.
 
 ## 6. Who runs it
 
-* **Opt-in.** The Data tab of the profile modal gains a *Server copy* section. Nothing is written
+* **Opt-in.** The Data tab of the profile modal gains a *Server synchronization* section. Nothing is written
   until the user reads the encryption note, sets a passphrase and presses *Create encrypted
   copy*. This is stored as `user_settings.sync.enabled`; the passphrase, the vault key and the
   device id are never stored in Redux.

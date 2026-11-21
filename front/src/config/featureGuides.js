@@ -21,6 +21,7 @@ import {
   openWorkspaceFiles,
   openUserSettings,
   searchHasQuery,
+  selectDataSection,
   selectSettingsTab,
   toolsAreEnabled,
   topicNameEntered,
@@ -1352,7 +1353,7 @@ export const featureGuides = {
       },
       {
         target: '[data-guide="export-data"]',
-        prepare: () => selectSettingsTab("data"),
+        prepare: () => selectDataSection("manage"),
         textKey: "feature_guide.data_management.step3",
         completeOnTargetClick: true,
       },
@@ -1361,13 +1362,13 @@ export const featureGuides = {
   sync_setup: {
     titleKey: "feature_guide.sync_setup.title",
     prompt:
-      "Keep settings, conversations, workspaces and agents in step across devices with an encrypted copy on your SAIA filesystem. Open user settings, choose the Data tab, switch the encrypted server copy on, and create it with a passphrase you can remember (or unlock the copy another device already created). Everything is encrypted in this browser before it is uploaded, and the passphrase is never stored.",
+      "Keep settings, conversations, workspaces and agents in step across devices with an encrypted copy on your SAIA filesystem. Open user settings, choose the Data tab, switch the encrypted server synchronization on, and create it with a passphrase you can remember (or unlock the copy another device already created). Everything is encrypted in this browser before it is uploaded, and the passphrase is never stored.",
     keywords: [
       "sync",
       "synchronization",
       "synchronisation",
       "encrypted copy",
-      "server copy",
+      "server synchronization",
       "multi device",
       "verschlüsselte kopie",
       "synchronisieren",
@@ -1385,8 +1386,14 @@ export const featureGuides = {
         completeOnTargetClick: true,
       },
       {
-        target: '[data-guide="sync-settings"]',
+        target: '[data-guide="data-subtab-sync"]',
         prepare: () => selectSettingsTab("data"),
+        textKey: "feature_guide.sync_setup.subtab",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="sync-settings"]',
+        prepare: () => selectDataSection("sync"),
         textKey: "feature_guide.sync_setup.step3",
         completeOnTargetClick: true,
       },
@@ -1424,8 +1431,14 @@ export const featureGuides = {
         completeOnTargetClick: true,
       },
       {
-        target: '[data-guide="backup-settings"]',
+        target: '[data-guide="data-subtab-backup"]',
         prepare: () => selectSettingsTab("data"),
+        textKey: "feature_guide.backup_create.subtab",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="backup-settings"]',
+        prepare: () => selectDataSection("backup"),
         textKey: "feature_guide.backup_create.step3",
         completeOnTargetClick: true,
       },

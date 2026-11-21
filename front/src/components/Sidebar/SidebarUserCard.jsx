@@ -58,7 +58,7 @@ export default function SidebarUserCard({ localState, userData, modelsData }) {
             localState,
             userData,
             modelsData,
-            initialTab: "data",
+            initialTab: "data/sync",
           })
         }
       />

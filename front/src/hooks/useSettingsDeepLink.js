@@ -10,6 +10,9 @@ const SETTINGS_TABS = new Set([
   "memories",
   "encryption",
   "data",
+  "data/manage",
+  "data/backup",
+  "data/sync",
 ]);
 
 export function useSettingsDeepLink({ localState, userData, modelsData }) {

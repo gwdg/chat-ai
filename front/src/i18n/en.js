@@ -853,18 +853,20 @@ export default {
         "Export local data or clear chats, memories, settings, and attachments.",
     },
     sync_setup: {
-      title: "Encrypted server copy",
+      title: "Encrypted server synchronization",
       step1: "Open your user settings.",
       step2: "Choose the Data tab.",
+      subtab: "Open the Server synchronization section.",
       step3:
-        "The encrypted server copy keeps settings, conversations, workspaces and agents in step across your devices. Everything is encrypted in this browser before it is uploaded, and the passphrase is never stored.",
+        "The encrypted server synchronization keeps settings, conversations, workspaces and agents in step across your devices. Everything is encrypted in this browser before it is uploaded, and the passphrase is never stored.",
       step4:
-        "Switch the server copy on, then create it with a passphrase you can remember, or unlock the copy another device already created for this account.",
+        "Switch the server synchronization on, then create it with a passphrase you can remember, or unlock the copy another device already created for this account.",
     },
     backup_create: {
       title: "Create an encrypted backup",
       step1: "Open your user settings.",
       step2: "Choose the Data tab.",
+      subtab: "Open the Encrypted backup section.",
       step3:
         "Under Encrypted backup, one file carries all chats, topics, settings, workspaces and agents. It is encrypted in this browser and stamped with the date and time.",
       step4:
@@ -1355,7 +1357,8 @@ export default {
       data: {
         label: "Data",
         title: "Data and privacy",
-        description: "Export or remove data stored in this browser.",
+        description:
+          "Manage local data, download an encrypted backup, and keep your devices in step with encrypted server synchronization.",
       },
     },
     account: {
@@ -1604,6 +1607,12 @@ export default {
       title: "Manage Data",
       description:
         "Export a copy of your local data or permanently remove chats, memories, settings, and attachments from this browser.",
+      sections: {
+        label: "Data sections",
+        manage: "Manage data",
+        backup: "Encrypted backup",
+        sync: "Server synchronization",
+      },
       export_success: "Local data exported successfully.",
       export_error: "Local data could not be exported.",
       storage_title: "Browser storage",
@@ -1658,7 +1667,7 @@ export default {
         unknown_namespaces: "Data from a newer version was skipped: {{namespaces}}.",
       },
       sync: {
-        title: "Encrypted server copy",
+        title: "Encrypted server synchronization",
         description:
           "Keep conversations, settings, workspaces and agents in step across your devices by storing an encrypted copy on your SAIA filesystem.",
         notice:
@@ -1714,7 +1723,7 @@ export default {
           "Deletes record revisions and attachments that no device index references any more.",
         cleanup_done: "Removed {{records}} revisions and {{assets}} attachments.",
         disable_hint:
-          "Turning the server copy off stops syncing and locks the vault. The encrypted files stay on your filesystem until you clean them up or delete them there.",
+          "Turning the server synchronization off stops syncing and locks the vault. The encrypted files stay on your filesystem until you clean them up or delete them there.",
         missing_passphrase: "Enter the passphrase.",
         mismatch: "The passphrases do not match.",
         session_expired: "The vault was locked. Enter the passphrase again.",

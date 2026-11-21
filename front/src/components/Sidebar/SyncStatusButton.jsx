@@ -8,7 +8,7 @@ import { isSyncEnabled } from "../../utils/modules";
 
 /**
  * Quick action next to the user name in the sidebar footer. It only exists on
- * deployments that offer the encrypted server copy, and it does nothing while
+ * deployments that offer the encrypted server synchronization, and it does nothing while
  * the vault is locked (an unlock needs the passphrase, which lives in the Data
  * tab). With the vault open it runs one pass instead of waiting for the timer.
  */

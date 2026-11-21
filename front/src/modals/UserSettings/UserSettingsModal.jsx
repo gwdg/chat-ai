@@ -1,19 +1,15 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useSelector } from "react-redux";
 import {
   Brain,
   ChartColumn,
   Database,
-  Download,
   Lock,
   Settings2,
   SlidersHorizontal,
-  Trash2,
   UserRound,
 } from "lucide-react";
 
-import { useModal } from "../ModalContext";
 import BaseModal from "../BaseModal";
 import DefaultModelSelector from "./DefaultModelSelector";
 import UserInfoContainer from "./UserInfoContainer";
@@ -30,16 +26,10 @@ import {
   SubmissionPreference,
   SuggestionPreference,
 } from "./ChatPreferences";
-import { getExportData } from "../../utils/conversationUtils";
-import { useToast } from "../../hooks/useToast";
-import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
-import ImportChatButton from "../../components/Sidebar/Buttons/ImportChatButton";
-import StorageStatus from "./StorageStatus";
+import DataSettings from "./DataSettings";
 import UsageSettings from "./UsageSettings";
 import EncryptionSettings from "./EncryptionSettings";
-import SyncSettings from "./SyncSettings";
-import BackupSettings from "./BackupSettings";
-import { isChoicesEnabled, isSyncEnabled, isToolsEnabled } from "../../utils/modules";
+import { isChoicesEnabled, isToolsEnabled } from "../../utils/modules";
 import { isFeatureEnabled } from "../../config/deployment";
 
 const PROFILE_TABS = [
@@ -94,15 +84,14 @@ const PROFILE_TABS = [
   },
 ];
 
-const generateFileName = (extension, username = "user") => {
-  const date = new Date();
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hour = String(date.getHours()).padStart(2, "0");
-  const minute = String(date.getMinutes()).padStart(2, "0");
-  const second = String(date.getSeconds()).padStart(2, "0");
-  return `${username}-chat-ai-${year}${month}${day}-${hour}${minute}${second}.${extension}`;
+const DATA_SUBSECTIONS = new Set(["manage", "backup", "sync"]);
+
+/** `"data"` opens the Data tab; `"data/backup"` also picks a section. */
+const parseInitialTab = (tab) => {
+  if (typeof tab !== "string") return { tab: null, section: null };
+  if (!tab.startsWith("data/")) return { tab, section: null };
+  const section = tab.slice("data/".length);
+  return { tab: "data", section: DATA_SUBSECTIONS.has(section) ? section : null };
 };
 
 export default function UserSettingsModal({
@@ -114,49 +103,31 @@ export default function UserSettingsModal({
   initialTab = null,
 }) {
   const { t } = useTranslation();
-  const { openModal } = useModal();
-  const { notifySuccess, notifyError } = useToast();
-  const userSettings = useSelector(selectUserSettings);
   const choicesModule = isChoicesEnabled();
   const availableTabs = PROFILE_TABS.filter(
     (tab) => tab.id !== "encryption" || isFeatureEnabled("e2ee"),
   );
   const resolveTab = (tab) =>
     availableTabs.some((entry) => entry.id === tab) ? tab : "profile";
-  const [activeTab, setActiveTab] = useState(() => resolveTab(initialTab));
+  const initialSelection = parseInitialTab(initialTab);
+  const [activeTab, setActiveTab] = useState(() =>
+    resolveTab(initialSelection.tab),
+  );
+  const [dataSection, setDataSection] = useState(initialSelection.section);
   const [highlightActiveTab, setHighlightActiveTab] = useState(false);
   const activeTabConfig =
     availableTabs.find((tab) => tab.id === activeTab) ?? availableTabs[0];
 
   useEffect(() => {
     if (!isOpen) return undefined;
-    setActiveTab(resolveTab(initialTab));
+    const selection = parseInitialTab(initialTab);
+    setActiveTab(resolveTab(selection.tab));
+    setDataSection(selection.section);
     setHighlightActiveTab(Boolean(initialTab));
     if (!initialTab) return undefined;
     const timer = setTimeout(() => setHighlightActiveTab(false), 1800);
     return () => clearTimeout(timer);
   }, [isOpen, initialTab]);
-
-  const handleExportData = async () => {
-    try {
-      const exportData = await getExportData();
-      exportData.user_settings = userSettings;
-      const content = JSON.stringify(exportData, null, 2);
-      const file = new Blob([content], { type: "application/json" });
-      const link = document.createElement("a");
-      const objectUrl = URL.createObjectURL(file);
-      link.download = generateFileName("json", userData?.username);
-      link.href = objectUrl;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
-      notifySuccess(t("user_settings.data.export_success"));
-    } catch (error) {
-      console.error("Failed to export local data", error);
-      notifyError(t("user_settings.data.export_error"));
-    }
-  };
 
   const renderTabContent = () => {
     if (activeTab === "profile") {
@@ -228,49 +199,13 @@ export default function UserSettingsModal({
       return <EncryptionSettings modelsData={modelsData} />;
     }
 
-    return (
-      <div className="flex flex-col gap-5">
-        <div>
-          <h3 className="text-sm font-medium text-base-content">
-            {t("user_settings.data.title")}
-          </h3>
-          <p className="mt-1 text-xs leading-relaxed text-base-content/70">
-            {t("user_settings.data.description")}
-          </p>
-        </div>
-        <StorageStatus />
-        <div className="grid gap-3 sm:grid-cols-3">
-          <ImportChatButton
-            variant={"userData"}
-          />
-          <button
-            type="button"
-            onClick={handleExportData}
-            className="btn w-full"
-            data-guide="export-data"
-          >
-            <Download className="h-4 w-4" aria-hidden="true" />
-            {t("user_settings.export_data_button")}
-          </button>
-          <button
-            type="button"
-            onClick={() => openModal("clearCache")}
-            className="btn btn-error btn-outline"
-          >
-            <Trash2 className="h-4 w-4" aria-hidden="true" />
-            {t("user_settings.clear_data_button")}
-          </button>
-        </div>
-        <div className="border-t border-base-300 pt-5">
-          <BackupSettings />
-        </div>
-        {isSyncEnabled() && (
-          <div className="border-t border-base-300 pt-5">
-            <SyncSettings />
-          </div>
-        )}
-      </div>
-    );
+    if (activeTab === "data") {
+      return (
+        <DataSettings userData={userData} initialSection={dataSection} />
+      );
+    }
+
+    return null;
   };
 
   return (

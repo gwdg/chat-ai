@@ -612,7 +612,8 @@ For navigation and message search, the model calls `search_messages`; results in
 conversation and message ids. It cites messages as
 `/chat/<conversation id>?message=<message id>`; `Conversation` reads that query parameter, scrolls
 to the message, and highlights it briefly. `MarkdownLink` routes `/chat/...`, `/topic/...`, and
-`/settings/<tab>` internally; settings links dispatch `chatai:open-settings`, handled by
+`/settings/<tab>` (or `/settings/data/<section>`) internally; settings links dispatch
+`chatai:open-settings`, handled by
 `useSettingsDeepLink` in `ChatPage`/`MetaChatPage`, and `UserSettingsModal` opens the requested tab
 with a brief highlight. Its tabs are Profile, Usage (`UsageSettings.jsx` — the monthly and
 organization limits plus the sidebar switch), Chat, Advanced (`AdvancedModePreference` and
@@ -2059,7 +2060,7 @@ while S3 inherits the no-op (it has no directories and already lists an unknown 
 `list_json("/")`, `exists("/")` and `info("/")` answer a user who has never written anything, and the
 provider's `missing("/")` → empty page is only needed for a service older than that change.
 
-### 4.32 The encrypted server copy is opt-in and lives in `front/src/sync/`
+### 4.32 The encrypted server synchronization is opt-in and lives in `front/src/sync/`
 
 Users can keep conversations, topics, settings, workspaces and agents in step across devices by
 storing an **encrypted** copy on their SAIA filesystem. The design document is `docs/sync.md`; this
@@ -2157,7 +2158,8 @@ must not import `Redux/store/store` statically**: `SyncSettings` is reachable fr
 so a static store import constructs `redux-state-sync` (and its `BroadcastChannel`) in any test that
 renders a sidebar or a modal, and jsdom does not provide one. The settings namespace imports the store
 lazily inside `read`/`apply`; keep it that way. The section itself is
-`modals/UserSettings/SyncSettings.jsx` (Data tab, `data-guide="sync-settings"` / `"sync-enable"`) and
+`modals/UserSettings/SyncSettings.jsx` (Data tab → Server synchronization,
+`data-guide="sync-settings"` / `"sync-enable"`) and
 covers create, unlock, lock, sync now, auto, change passphrase, rotate and cleanup.
 
 **Storage.** Dexie v18 adds `sync_meta` (device id, cached header, last summary, merge bases) and
@@ -2202,16 +2204,22 @@ restored profile keeps the validation of the settings import. The UI requires an
 confirmation checkbox before it restores, and it opens a file dialog instead of touching the DB on
 selection.
 
-**UI.** `modals/UserSettings/BackupSettings.jsx` is mounted in the Data tab above `SyncSettings` and
-is always rendered (no module flag). Its feature guide is `backup_create` (category `settings`); the
-`data-guide` hooks are `backup-settings`, `backup-create` and `backup-restore`.
+**UI.** `modals/UserSettings/DataSettings.jsx` splits the Data tab into three sections so the
+screen is not one long scroll: **Manage data** (storage status, import, JSON export, clear),
+**Encrypted backup** (`BackupSettings.jsx`, always rendered, no module flag) and **Server synchronization**
+(`SyncSettings.jsx`, only while `isSyncEnabled()`). The strip buttons carry
+`data-guide="data-subtab-<section>"`; the panels carry `data-guide="data-section-<section>"`. The
+backup guide is `backup_create` (category `settings`) with the hooks `backup-settings`,
+`backup-create` and `backup-restore`. `initialTab` accepts `"data/<section>"` (`manage`, `backup`,
+`sync`) in addition to `"data"`, which is how a link or the sidebar shortcut lands on a section;
+`useSettingsDeepLink`/`MarkdownLink` accept `/settings/data/<section>` for the same reason.
 
 **Sidebar shortcut.** `Sidebar/SyncStatusButton.jsx` is rendered next to the user name in
 `SidebarUserCard` only while `isSyncEnabled()`. With the vault unlocked it calls `syncNow()` and
-reports the pulled/pushed counts; while locked it opens the Data tab, because the passphrase cannot
-be entered from the sidebar. It mounts `useSyncEngine()` a second time, which is safe: the hook's
-mount counter keeps the timer alive until the last instance unmounts, and `startAutoSync()` is
-idempotent.
+reports the pulled/pushed counts; while locked it opens the Data tab's Server synchronization section
+(`initialTab: "data/sync"`), because the passphrase can only be entered there. It mounts
+`useSyncEngine()` a second time, which is safe: the hook's mount counter keeps the timer alive until
+the last instance unmounts, and `startAutoSync()` is idempotent.
 
 ## 5. Conventions
 

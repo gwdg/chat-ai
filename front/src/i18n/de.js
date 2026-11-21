@@ -868,18 +868,20 @@ export default {
         "Exportieren Sie lokale Daten oder löschen Sie Chats, Erinnerungen, Einstellungen und Anhänge.",
     },
     sync_setup: {
-      title: "Verschlüsselte Serverkopie",
+      title: "Verschlüsselte Serversynchronisierung",
       step1: "Öffnen Sie Ihre Benutzereinstellungen.",
       step2: "Wählen Sie den Tab Daten.",
+      subtab: "Öffnen Sie den Bereich Serversynchronisierung.",
       step3:
-        "Die verschlüsselte Serverkopie hält Einstellungen, Unterhaltungen, Workspaces und Agenten auf Ihren Geräten aktuell. Alles wird in diesem Browser verschlüsselt, bevor es hochgeladen wird, und die Passphrase wird nie gespeichert.",
+        "Die verschlüsselte Serversynchronisierung hält Einstellungen, Unterhaltungen, Workspaces und Agenten auf Ihren Geräten aktuell. Alles wird in diesem Browser verschlüsselt, bevor es hochgeladen wird, und die Passphrase wird nie gespeichert.",
       step4:
-        "Schalten Sie die Serverkopie ein und erstellen Sie sie mit einer Passphrase, die Sie sich merken können, oder entsperren Sie die Kopie, die ein anderes Gerät bereits für dieses Konto erstellt hat.",
+        "Schalten Sie die Serversynchronisierung ein und erstellen Sie sie mit einer Passphrase, die Sie sich merken können, oder entsperren Sie die Kopie, die ein anderes Gerät bereits für dieses Konto erstellt hat.",
     },
     backup_create: {
       title: "Verschlüsselte Sicherung erstellen",
       step1: "Öffnen Sie Ihre Benutzereinstellungen.",
       step2: "Wählen Sie den Tab Daten.",
+      subtab: "Öffnen Sie den Bereich Verschlüsselte Sicherung.",
       step3:
         "Unter Verschlüsselte Sicherung enthält eine Datei alle Chats, Themen, Einstellungen, Workspaces und Agenten. Sie wird in diesem Browser verschlüsselt und mit Datum und Uhrzeit versehen.",
       step4:
@@ -1373,7 +1375,7 @@ export default {
         label: "Daten",
         title: "Daten und Datenschutz",
         description:
-          "Exportieren oder entfernen Sie die in diesem Browser gespeicherten Daten.",
+          "Verwalten Sie lokale Daten, laden Sie eine verschlüsselte Sicherung herunter und halten Sie Ihre Geräte mit verschlüsselter Serversynchronisierung aktuell.",
       },
     },
     account: {
@@ -1626,6 +1628,12 @@ export default {
       title: "Daten verwalten",
       description:
         "Exportieren Sie eine Kopie Ihrer lokalen Daten oder entfernen Sie Unterhaltungen, Erinnerungen, Einstellungen und Anhänge dauerhaft aus diesem Browser.",
+      sections: {
+        label: "Datenbereiche",
+        manage: "Daten verwalten",
+        backup: "Verschlüsselte Sicherung",
+        sync: "Serversynchronisierung",
+      },
       export_success: "Lokale Daten wurden erfolgreich exportiert.",
       export_error: "Lokale Daten konnten nicht exportiert werden.",
       storage_title: "Browserspeicher",
@@ -1680,7 +1688,7 @@ export default {
         unknown_namespaces: "Daten aus einer neueren Version wurden übersprungen: {{namespaces}}.",
       },
       sync: {
-        title: "Verschlüsselte Serverkopie",
+        title: "Verschlüsselte Serversynchronisierung",
         description:
           "Halten Sie Unterhaltungen, Einstellungen, Workspaces und Agenten auf Ihren Geräten aktuell, indem Sie eine verschlüsselte Kopie in Ihrem SAIA-Dateisystem speichern.",
         notice:
@@ -1736,7 +1744,7 @@ export default {
           "Löscht Revisionen und Anhänge, auf die kein Geräteindex mehr verweist.",
         cleanup_done: "{{records}} Revisionen und {{assets}} Anhänge entfernt.",
         disable_hint:
-          "Wenn Sie die Serverkopie ausschalten, stoppt die Synchronisierung und der Tresor wird gesperrt. Die verschlüsselten Dateien bleiben in Ihrem Dateisystem, bis Sie sie aufräumen oder dort löschen.",
+          "Wenn Sie die Serversynchronisierung ausschalten, stoppt die Synchronisierung und der Tresor wird gesperrt. Die verschlüsselten Dateien bleiben in Ihrem Dateisystem, bis Sie sie aufräumen oder dort löschen.",
         missing_passphrase: "Geben Sie die Passphrase ein.",
         mismatch: "Die Passphrasen stimmen nicht überein.",
         session_expired: "Der Tresor wurde gesperrt. Geben Sie die Passphrase erneut ein.",

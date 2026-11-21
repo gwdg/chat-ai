@@ -1,7 +1,8 @@
 # Encrypted backup file
 
 Status: implemented, available in **User settings → Data → Encrypted backup** on every deployment
-(no module flag).
+(no module flag). The Data tab is split into three sections — Manage data, Encrypted backup and
+Server synchronization — so the backup is its own screen rather than a block below the export buttons.
 
 A backup is a single downloadable file that carries the browser's history — conversations with
 their attachments, topics, user settings, workspaces and agents — encrypted with a passphrase the
@@ -104,5 +105,7 @@ overwritten. Restoration does not need the sync module, a SAIA account or the ne
 `front/src/backup/__tests__/backup.test.ts` covers the round trip with attachments, the wrong
 passphrase, a tampered payload, an unknown namespace, skipped files, the passphrase minimum and the
 dated file name. `front/src/modals/UserSettings/__tests__/BackupSettings.test.jsx` covers the UI
-flow (create, mismatch, inspect, confirm-before-restore, invalid file). Tests use cheap Argon2id
-parameters; the production defaults stay at the values above.
+flow (create, mismatch, inspect, confirm-before-restore, invalid file).
+`front/src/modals/UserSettings/__tests__/DataSettings.test.jsx` covers the section strip, the
+deep-link section and the hidden Server synchronization section when the sync module is off. Tests use cheap
+Argon2id parameters; the production defaults stay at the values above.

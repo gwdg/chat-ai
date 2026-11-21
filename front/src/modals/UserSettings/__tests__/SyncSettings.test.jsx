@@ -69,7 +69,7 @@ describe("SyncSettings", () => {
     expect(view.container).toBeEmptyDOMElement();
   });
 
-  it("shows the encryption notice and switches the server copy on", () => {
+  it("shows the encryption notice and switches the server synchronization on", () => {
     const { store } = renderSection();
     expect(screen.getByText(/cannot read the copy/i)).toBeInTheDocument();
 

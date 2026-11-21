@@ -13,7 +13,7 @@ import { downloadText } from "../../utils/download";
 /**
  * Data tab → encrypted backup.
  *
- * Unlike the encrypted server copy this needs no module flag and no account:
+ * Unlike the encrypted server synchronization this needs no module flag and no account:
  * it builds one file from the local database, encrypts it in this browser and
  * hands it to the download. Restore goes through the same namespaces, so the
  * result is the same shape a sync pull would produce.

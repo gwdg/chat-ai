@@ -34,7 +34,7 @@ import { isSyncEnabled } from "../../utils/modules";
 import ProfilePreferenceSwitch from "./ProfilePreferenceSwitch";
 
 /**
- * Data tab → encrypted server copy.
+ * Data tab → encrypted server synchronization.
  *
  * Nothing is written until the user has read the encryption note, chosen a
  * passphrase and pressed Create (or unlocked a copy another device created).

@@ -41,7 +41,7 @@ export const AUTO_SYNC_INTERVAL_MS = 5 * 60 * 1000;
 const SYNC_LOCK_NAME = "chatai-sync";
 
 export type SyncStatus = {
-  /** The user switched the server copy on. */
+  /** The user switched the server synchronization on. */
   enabled: boolean;
   /** A vault header is known (locally or remotely). */
   configured: boolean;
@@ -255,7 +255,7 @@ export async function hasRemoteVault(): Promise<boolean> {
   }
 }
 
-/** Turn the server copy on by creating a new vault on the filesystem. */
+/** Turn the server synchronization on by creating a new vault on the filesystem. */
 export async function createSyncVault(
   passphrase: string,
   options: { replace?: boolean } = {},
