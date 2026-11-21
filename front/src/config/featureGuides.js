@@ -1237,6 +1237,30 @@ export const featureGuides = {
       },
     ],
   },
+  advanced_mode: {
+    titleKey: "feature_guide.advanced_mode.title",
+    prompt:
+      "Show the Agents and MCP Servers sections in the sidebar. Open user settings, choose the Advanced tab, and switch Advanced mode on; with it off the sidebar keeps chats, topics and workspaces only.",
+    keywords: ["advanced mode", "sidebar sections", "show agents", "show mcp"],
+    steps: [
+      {
+        target: ['[data-guide="user-settings"]', ".user-profile-button", ".user-profile-block"],
+        textKey: "feature_guide.advanced_mode.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="settings-tab-advanced"]',
+        prepare: openUserSettings,
+        textKey: "feature_guide.advanced_mode.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="profile-advanced-mode-preference"]',
+        textKey: "feature_guide.advanced_mode.step3",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
   message_timestamps: {
     titleKey: "feature_guide.message_timestamps.title",
     prompt:
@@ -1456,6 +1480,45 @@ export const featureGuides = {
       {
         target: '[data-guide="backup-create"]',
         textKey: "feature_guide.backup_create.step4",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
+  backup_restore: {
+    titleKey: "feature_guide.backup_restore.title",
+    prompt:
+      "Restore an encrypted backup file into this browser. Open user settings, choose the Data tab and the Encrypted backup section, pick the file, and type the passphrase it was created with.",
+    keywords: [
+      "backup",
+      "restore",
+      "import backup",
+      "move chats",
+      "new device",
+      "wiederherstellen",
+      "sicherung",
+    ],
+    steps: [
+      {
+        target: ['[data-guide="user-settings"]', ".user-profile-button", ".user-profile-block"],
+        textKey: "feature_guide.backup_restore.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="settings-tab-data"]',
+        prepare: openUserSettings,
+        textKey: "feature_guide.backup_restore.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="data-subtab-backup"]',
+        prepare: () => selectSettingsTab("data"),
+        textKey: "feature_guide.backup_restore.subtab",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="backup-restore"]',
+        prepare: () => selectDataSection("backup"),
+        textKey: "feature_guide.backup_restore.step3",
         completeOnTargetClick: true,
       },
     ],
@@ -1831,6 +1894,7 @@ export const FEATURE_GUIDE_AVAILABILITY = {
   feedback: () => isFeedbackEnabled(),
   speech_output: () => isSpeechEnabled(),
   e2ee: () => isFeatureEnabled("e2ee"),
+  advanced_mode: () => isAgentsEnabled() || isFeatureEnabled("mcp_servers"),
   sync_setup: () => isSyncEnabled(),
   meta_chat_usage: metaChatAvailable,
   meta_chat_catalogs: metaChatAvailable,
@@ -1905,7 +1969,9 @@ export const FEATURE_CATEGORIES = {
     "e2ee",
     "sync_setup",
     "backup_create",
+    "backup_restore",
     "chat_preferences",
+    "advanced_mode",
     "message_timestamps",
     "memories",
     "rendering",
@@ -1985,6 +2051,8 @@ const germanGuideKeywords = {
   settings_overview: ["einstellung", "benutzereinstellung", "einstellungen änder", "datenschutzeinstellung"],
   memories: ["erinnerung", "gedächtnis", "merken", "gemerkt", "gespeicherte erinnerung"],
   chat_preferences: ["chat einstellung", "chat-einstellung", "benutzereinstellung", "präferenzen"],
+  advanced_mode: ["erweiterter modus", "fortgeschritten", "erweiterte ansicht", "agenten in der seitenleiste", "mcp in der seitenleiste"],
+  backup_restore: ["sicherung wiederherstell", "sicherung einlesen", "backup wiederherstell", "backup importier", "auf neues gerät", "chats übertrag"],
   rendering: ["typst", "latex", "darstellung", "rendern", "code rendern"],
   document_conversion: ["dokumentkonvertierung", "dokument konvertieren", "dokument umwandeln", "konvertierung", "browser konvertierung", "server konvertierung"],
   data_management: ["daten verwalt", "datenverwaltung", "datenschutz", "daten lösch", "cache lösch", "daten exportier"],

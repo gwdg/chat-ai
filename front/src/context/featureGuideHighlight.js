@@ -46,3 +46,18 @@ export function isTargetCovered(target, rect, options = {}) {
   // that still means the target itself is on top.
   return !(hit === target || target.contains(hit));
 }
+
+/**
+ * Pick the element a step should point at when a selector matches several
+ * copies. The sidebar keeps a compact rail and an expanded panel with the same
+ * user-settings button, so the first copy is usually behind the other one; the
+ * ring would hide (it is covered) and the step's click completion listens on an
+ * element the user cannot reach. The first reachable copy wins.
+ *
+ * When every copy is covered — a target below the fold, for example — the first
+ * one is returned so the caller can still scroll it into view.
+ */
+export function selectGuideTarget(candidates, isCovered = () => false) {
+  const list = Array.from(candidates ?? []).filter(Boolean);
+  return list.find((candidate) => !isCovered(candidate)) ?? list[0] ?? null;
+}

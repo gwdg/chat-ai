@@ -830,6 +830,13 @@ export default {
       step2:
         "Wählen Sie den Tab Chat, um Standardmodell, Sendetaste, Zusammenfassungen, Zeitstempel und Dokumentkonvertierung zu ändern; die Darstellung liegt im Tab Erweitert.",
     },
+    advanced_mode: {
+      title: "Agenten und MCP-Server in der Seitenleiste zeigen",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Tab Erweitert.",
+      step3:
+        "Schalten Sie den erweiterten Modus ein, um die Bereiche Agenten und MCP-Server in der Seitenleiste zu zeigen. Ausgeblendet enthält die Seitenleiste nur Chats, Themen und Workspaces.",
+    },
     e2ee: {
       title: "Ein Modell Ende-zu-Ende verschlüsseln",
       step1: "Öffnen Sie Ihre Benutzereinstellungen.",
@@ -896,6 +903,14 @@ export default {
         "Unter Verschlüsselte Sicherung enthält eine Datei alle Chats, Themen, Einstellungen, Workspaces und Agenten. Sie wird in diesem Browser verschlüsselt und mit Datum und Uhrzeit versehen.",
       step4:
         "Erstellen Sie sie mit einer Passphrase, die Sie sich merken können. Dieselbe Passphrase stellt die Datei später wieder her; passende Einträge werden überschrieben, nichts wird gelöscht.",
+    },
+    backup_restore: {
+      title: "Verschlüsselte Sicherung wiederherstellen",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Tab Daten.",
+      subtab: "Öffnen Sie den Bereich Verschlüsselte Sicherung.",
+      step3:
+        "Wählen Sie die Sicherungsdatei und geben Sie die Passphrase ein, mit der sie erstellt wurde. Bestätigen Sie das Überschreiben, und stellen Sie dann wieder her: Einträge mit derselben ID werden ersetzt, neue hinzugefügt, nichts wird gelöscht.",
     },
     dark_mode: {
       title: "Design wechseln",
@@ -1086,6 +1101,16 @@ export default {
       description: "Lassen Sie eine Assistentenantwort über die Sprachschaltfläche vorlesen.",
       step1: "Klicken Sie auf das Lautsprecher-Symbol unter einer Assistenten-Nachricht.",
       step2: "Beenden Sie die Wiedergabe jederzeit mit der Stopp-Schaltfläche.",
+    },
+    backup_migration: {
+      title: "Chats auf ein neues Gerät übertragen",
+      description:
+        "Nehmen Sie Chats, Themen, Einstellungen, Workspaces und Agenten mit einer verschlüsselten Sicherungsdatei in einen anderen Browser mit.",
+      step1:
+        "Erstellen Sie die Sicherung unter Verschlüsselte Sicherung mit einer Passphrase, die Sie sich merken können.",
+      step2: "Kopieren Sie die heruntergeladene Datei auf das andere Gerät oder in den anderen Browser.",
+      step3:
+        "Stellen Sie sie dort mit derselben Passphrase wieder her. Passende Einträge werden überschrieben, neue hinzugefügt, nichts wird gelöscht.",
     },
   },
   // Settings panel

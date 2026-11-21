@@ -190,4 +190,28 @@ describe("feature guide availability", () => {
     expect(isUseCaseAvailable("find_chat")).toBe(false);
     expect(buildUseCaseGuide("find_chat")).toBeNull();
   });
+
+  it("offers the advanced-mode guide only while it reveals a section", () => {
+    expect(isFeatureGuideAvailable("advanced_mode")).toBe(true);
+
+    state.agents = false;
+    // The MCP Servers section does not depend on the Agents module.
+    expect(isFeatureGuideAvailable("advanced_mode")).toBe(true);
+
+    state.features = { mcp_servers: false };
+    expect(isFeatureGuideAvailable("advanced_mode")).toBe(false);
+
+    state.features = {};
+    expect(isFeatureGuideAvailable("advanced_mode")).toBe(true);
+  });
+
+  it("keeps the backup guides and walkthrough ungated", () => {
+    expect(isFeatureGuideAvailable("backup_create")).toBe(true);
+    expect(isFeatureGuideAvailable("backup_restore")).toBe(true);
+
+    const guide = buildUseCaseGuide("backup_migration");
+    expect(guide).not.toBeNull();
+    expect(guide.steps).toHaveLength(4);
+    expect(buildUseCasePrompt()).toContain("backup_migration:");
+  });
 });

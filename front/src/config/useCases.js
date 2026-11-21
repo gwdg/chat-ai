@@ -8,6 +8,7 @@ import {
   openConversationMenu,
   openConversationSettings,
   openUserSettings,
+  selectDataSection,
   selectSettingsTab,
 } from "./featureGuideActions.js";
 import {
@@ -356,6 +357,48 @@ export const useCases = {
       },
     ],
   },
+  backup_migration: {
+    category: "workflows",
+    prompt:
+      "Move your chats to another browser or device with one encrypted backup file: create it here, then restore it there with the same passphrase.",
+    keywords: [
+      "move chats",
+      "new device",
+      "new browser",
+      "encrypted backup",
+      "restore",
+      "migrate",
+    ],
+    steps: [
+      {
+        textKey: "use_cases.common.start_new_chat",
+        completeOnTargetClick: true,
+        target: '[data-guide="new-chat"]',
+      },
+      {
+        textKey: "use_cases.backup_migration.step1",
+        completeOnTargetClick: true,
+        target: ['[data-guide="user-settings"]', ".user-profile-button", ".user-profile-block"],
+        tutorialId: "backup_create",
+      },
+      {
+        textKey: "use_cases.backup_migration.step2",
+        completeOnTargetClick: true,
+        target: '[data-guide="data-subtab-backup"]',
+        prepare: () => {
+          openUserSettings();
+          selectSettingsTab("data");
+        },
+      },
+      {
+        textKey: "use_cases.backup_migration.step3",
+        completeOnTargetClick: true,
+        target: '[data-guide="backup-restore"]',
+        prepare: () => selectDataSection("backup"),
+        tutorialId: "backup_restore",
+      },
+    ],
+  },
 };
 
 export const USE_CASE_CATEGORIES = {
@@ -367,6 +410,7 @@ export const USE_CASE_CATEGORIES = {
     "local_conversion",
     "memories",
     "read_aloud",
+    "backup_migration",
   ],
 };
 

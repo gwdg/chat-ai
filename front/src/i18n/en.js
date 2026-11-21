@@ -815,6 +815,13 @@ export default {
       step2:
         "Choose the Chat tab to change the default model, send key, summaries, timestamps and document conversion; rendering is in the Advanced tab.",
     },
+    advanced_mode: {
+      title: "Show agents and MCP servers in the sidebar",
+      step1: "Open your user settings.",
+      step2: "Choose the Advanced tab.",
+      step3:
+        "Turn on Advanced mode to add the Agents and MCP Servers sections to the sidebar. With it off the sidebar shows chats, topics and workspaces only.",
+    },
     e2ee: {
       title: "Encrypt a model end to end",
       step1: "Open your user settings.",
@@ -881,6 +888,14 @@ export default {
         "Under Encrypted backup, one file carries all chats, topics, settings, workspaces and agents. It is encrypted in this browser and stamped with the date and time.",
       step4:
         "Create it with a passphrase you can remember. The same passphrase restores the file later; matching items are overwritten and nothing is deleted.",
+    },
+    backup_restore: {
+      title: "Restore an encrypted backup",
+      step1: "Open your user settings.",
+      step2: "Choose the Data tab.",
+      subtab: "Open the Encrypted backup section.",
+      step3:
+        "Choose the backup file and type the passphrase it was created with. Confirm that matching items may be overwritten, then restore: items with the same id are replaced, new ones are added, and nothing is deleted.",
     },
     dark_mode: {
       title: "Switch theme",
@@ -1070,6 +1085,16 @@ export default {
       description: "Use the speech button to have an assistant answer read aloud.",
       step1: "Click the speaker icon under an assistant message.",
       step2: "Use the stop button to end playback at any time.",
+    },
+    backup_migration: {
+      title: "Move your chats to a new device",
+      description:
+        "Carry chats, topics, settings, workspaces and agents to another browser with one encrypted backup file.",
+      step1:
+        "Create the backup under Encrypted backup, with a passphrase you can remember.",
+      step2: "Copy the downloaded file to the other device or browser.",
+      step3:
+        "Restore it there with the same passphrase. Matching items are overwritten, new ones are added, and nothing is deleted.",
     },
   },
   // Chat settings

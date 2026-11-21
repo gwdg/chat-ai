@@ -16,7 +16,7 @@ import {
   isFeatureGuideAvailable,
 } from "../config/featureGuides";
 import { buildUseCaseGuide } from "../config/useCases";
-import { isTargetCovered } from "./featureGuideHighlight";
+import { isTargetCovered, selectGuideTarget } from "./featureGuideHighlight";
 import {
   markTutorialCompleted,
   markUseCaseCompleted,
@@ -349,12 +349,20 @@ export function FeatureGuideProvider({ children }) {
     let cancelled = false;
     let currentTarget = null;
 
-    const findTarget = () =>
-      selectors
+    const findTarget = () => {
+      const candidates = selectors
         .flatMap((selector) =>
           Array.from(document.querySelectorAll(selector)),
         )
-        .find(isVisible);
+        .filter(isVisible);
+      // A selector can match several copies of the same control (the sidebar
+      // rail and its expanded panel both carry `data-guide="user-settings"`).
+      // Point at the copy the user can reach, or the step's click completion
+      // would listen on a button that is hidden behind another one.
+      return selectGuideTarget(candidates, (candidate) =>
+        isTargetCovered(candidate, candidate.getBoundingClientRect()),
+      );
+    };
 
     const measure = () => {
       if (cancelled) return;
