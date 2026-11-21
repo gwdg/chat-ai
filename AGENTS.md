@@ -2212,7 +2212,11 @@ tab asks again.
 
 Nothing overwrites another device's file: a revision name contains its revision and writer, and the
 merged view is the union of all fragments. The engine (`sync/engine.ts`) derives `rev` as
-`max(now, remoteRev + 1)`, so it always increases. `hashPayload` is SHA-256 over canonical JSON, and
+`max(now, remoteRev + 1)`, so it always increases. It writes the record files first and this
+device's fragment last, and commits the local base rows (`sync_records`) only after that fragment
+was written: a pass interrupted before publication is therefore repeated on the next run, instead of
+the engine mistaking its own unpublished revision for an older remote one and pulling that over a
+newer local edit. `hashPayload` is SHA-256 over canonical JSON, and
 the merge is **hash-based, not timestamp-based**:
 
 - no base yet (two independent archives): check the namespace's `extends` (a conversation fast-forwards
@@ -2237,6 +2241,14 @@ records reference. A normal `runSync` must never delete data it did not write.
   beside the state because `keepsBase` is set. `memories`, `memory_groups`, `e2ee_keys` and
   `mcp_servers` are additionally merged by element id, `e2ee_models` by key, so two devices that add
   a memory keep both. It applies through `importUserSettings`, which already validates every field.
+- **interface_settings** is the second account-wide record and uses the same per-key merge, so a new
+  device inherits the theme, sort/grouping, warning choices and completed tours. It lists through
+  `accountPayload`, which drops `DEVICE_ONLY_INTERFACE_SETTINGS` (`show_sidebar`, `show_settings`,
+  `collapsed_topics`, `expanded_agents`, `count_hallucination`, `count_announcement`,
+  `agree_web_search`, `sync_onboarding_dismissed`): window state, counters, the web-search consent
+  and the first-run offer stay on the device that owns them, and `importInterfaceSettings` ignores
+  them even when a payload carries them. Register the namespace after `settings`; a restore applies
+  the account-wide preferences before the records that refer to them.
 - **workspaces** are one record: row, sources, mounts, chat/agent links and the shape of the
   workspace tree. The tree is applied **additively** — a pull never deletes a file the record does
   not carry (too large, added after the last sync). A divergent workspace is applied as a copy with
@@ -2261,8 +2273,15 @@ and re-push on every sync.
 
 **Service and UI.** `sync/service.ts` owns the vault lifecycle, the status store, the
 one-run-at-a-time `navigator.locks("chatai-sync")` guard and the five-minute auto-sync. The timer is a
-no-op while the key is not in memory, and `auto` is a preference, so a reload never syncs by itself.
-`hooks/useSyncEngine.ts` is mounted by `ChatPage`; it reads `user_settings.sync` with `useSelector` and
+no-op while the key is not in memory, while `auto` is off, and **while this tab is hidden**
+(`document.visibilityState !== "visible"`): several tabs share one profile and one archive, so only
+the active tab runs the background pass. Returning to a tab catches up only when the interval has
+elapsed since `lastRunAt`, which is why a quick tab switch does not trigger a pass. An unlock in the
+visible tab runs a due pass through `runSyncIfDue()` instead of waiting for the next tick. Explicit
+`syncNow()` (the sidebar button, *Sync now*, and the pass after create/rotate) is never gated, and a
+run that started while visible finishes even if the tab becomes hidden mid-pass.
+`hooks/useSyncEngine.ts`
+is mounted by `ChatPage`; it reads `user_settings.sync` with `useSelector` and
 feeds it to `setSyncPreferences`, then starts the timer. **`sync/service.ts` and the settings namespace
 must not import `Redux/store/store` statically**: `SyncSettings` is reachable from the modal context,
 so a static store import constructs `redux-state-sync` (and its `BroadcastChannel`) in any test that
@@ -2271,6 +2290,56 @@ lazily inside `read`/`apply`; keep it that way. The section itself is
 `modals/UserSettings/SyncSettings.jsx` (Data tab → Server synchronization,
 `data-guide="sync-settings"` / `"sync-enable"`) and
 covers create, unlock, lock, sync now, auto, change passphrase, rotate and cleanup.
+
+**A passkey can hold the vault key on one device.** `sync/passkey.ts` uses WebAuthn's PRF extension:
+the authenticator derives a stable secret from a per-binding salt, that secret becomes the AES-GCM key
+that wraps the three `VaultKeys`, and `sync_meta` stores only the binding (`passkey-binding`: credential
+id, salt, wrapped blob, `vaultId`, label). The passphrase, the vault key and the PRF secret are never
+persisted, and the binding must never enter the sync archive or a backup because another device cannot
+use it. A binding is valid only for the `vaultId` it was created with: replacing or rotating the vault
+clears `sync_meta` and drops it, and a mismatch is refused before any prompt. The `CASSYNC1` envelope
+is reused with the AAD `chatai-sync/v1/passkey/<vaultId>`, not a record/asset slot. The PRF result is
+usually missing at creation, so enrolment falls back to one immediate assertion. The hint that this
+browser session already used the passkey is `sessionStorage["chatai.sync.passkey-session"]`, which
+holds only the `vaultId`. It is **display state** now, not a precondition: it selects the sentence
+under the unlock button, and an explicit lock or a vault replacement clears it. Because
+`credentials.get()` may require user activation, the automatic attempt is best-effort and silent; the
+explicit "Unlock with passkey" button and the passphrase remain the fallbacks. It is attempted in two
+places — `hooks/useSyncEngine` asks once per mount at app start, and `SyncSettings` repeats it once
+per vault in the panel — whenever the vault is locked, a local binding exists **and the automatic
+synchronization is on** (`sync.auto`), in any tab or browser session. A paused automatic sync asks
+nothing on load, because nothing would run with the key; the sidebar's "Sync now" then unlocks on
+demand (a click is a user gesture, so it is not suppressed by "Lock now") and runs the pass, and
+switching `sync.auto` back on lets the panel and the next mount ask again. `sync/service.ts` holds
+one in-flight `passkeyUnlock` promise so concurrent callers share a single authenticator prompt
+instead of opening two. **An explicit "Lock now" sticks for the
+rest of the app session**: `lockSyncVault()` sets a module flag
+(`autoUnlockSuppressed`) that makes a `silent` attempt refuse without touching WebAuthn, while the
+visible button (no `silent`) still unlocks; every successful unlock, and switching the
+synchronization off and on again (`setSyncPreferences`), clears it. A reload is a fresh module, so it
+asks again — that is the point of the passkey. **The automatic request runs only while
+`user_settings.sync.enabled` is on** (and a binding exists for the current vault), so a profile with
+the synchronization switched off never gets a passkey prompt; the passkey UI lives inside the same
+enabled-only panel.
+
+**The first-run offer is a one-time prompt, not a second settings screen.**
+`components/Others/SyncOnboardingWatcher.jsx` (mounted in `App.jsx` inside the `ModalProvider`, and
+only while `isSyncEnabled()`) shows `modals/UserSettings/SyncOnboardingModal.jsx` when the SAIA
+filesystem probe answers `available` (`hooks/useSaiaFsAccess`), `user_settings.sync.enabled` is off
+and `interface_settings.sync_onboarding_dismissed` is still false. The dismissal flag is a persisted
+`interface_settings` key (device-local, deliberately not in `user_settings`, so it is never synced and
+another device still gets its own offer); a missing key reads as `false`, so no migration is needed.
+Before opening the dialog it calls `hasRemoteVault()` once: when another device already created the
+copy, the modal uses the `existing` wording and offers to set *that* copy up here instead of
+suggesting a second one. A failed check falls back to the create wording, and `SyncSettings` checks
+again when it opens, so a copy it does find still gets the unlock form. The one dismissal flag covers
+both wordings — a copy that appears after a dismissal does not bring the dialog back on that device.
+Accepting dispatches `setSyncEnabled(true)` and the dismissal, then opens the `userSettings` modal on
+`data/sync`; the copy itself is only created or unlocked there, after a passphrase is typed, and the
+passkey is the "Add a passkey" card in the unlocked panel. Declining — including Escape or a backdrop
+click —
+only records the dismissal. The watcher closes over `userData` through a ref because the profile
+usually arrives after the health probe.
 
 **Storage.** Dexie v18 adds `sync_meta` (device id, cached header, last summary, merge bases) and
 `sync_records` (`[namespace+id]`). `db/syncState.ts` is the `SyncStateStore`; `db/syncAdapters.ts`
@@ -2326,10 +2395,21 @@ backup guide is `backup_create` (category `settings`) with the hooks `backup-set
 
 **Sidebar shortcut.** `Sidebar/SyncStatusButton.jsx` is rendered next to the user name in
 `SidebarUserCard` only while `isSyncEnabled()`. With the vault unlocked it calls `syncNow()` and
-reports the pulled/pushed counts; while locked it opens the Data tab's Server synchronization section
-(`initialTab: "data/sync"`), because the passphrase can only be entered there. It mounts
+reports the pulled/pushed counts; while locked it unlocks first through `unlockSyncVaultWithPasskey()`
+when this device holds one (the click is the user gesture the authenticator needs), runs the pass and
+only falls back to the Data tab's Server synchronization section (`initialTab: "data/sync"`) when
+there is no passkey or it is refused — that section is where the passphrase is typed. It mounts
 `useSyncEngine()` a second time, which is safe: the hook's mount counter keeps the timer alive until
-the last instance unmounts, and `startAutoSync()` is idempotent.
+the last instance unmounts, and `startAutoSync()` is idempotent. Once the synchronization is switched
+on **and** a vault is configured (`status.enabled && status.configured`), a small `toggle toggle-xs`
+sits underneath it (`flex-col`) and dispatches `setSyncAuto`, so the automatic passes can be paused
+without leaving the page and without locking the vault; the manual button keeps working while it is
+off. The switch
+is green (`toggle-success`) while automatic sync is on and red (`toggle-error`) while it is paused,
+and the sync button carries the same state in its colour: green only while automatic sync is on
+**and** the vault is unlocked (a cancelled passkey prompt, a refused authenticator or a failed
+unlock leaves it blue, because no automatic pass can run), blue (`text-info`) while it is set up but
+not running on its own (paused or still locked), gray while nothing is set up.
 
 ## 5. Conventions
 
@@ -2351,7 +2431,10 @@ the last instance unmounts, and `startAutoSync()` is idempotent.
 - **i18n:** user-facing strings go through `react-i18next` `t()`. `i18n/en.js` and `i18n/de.js`
   currently have identical top-level key sets — add every new key to **both**.
 - **Modals** are opened through the `useModal()` hook from `modals/ModalContext.jsx` and built on
-  `BaseModal.jsx`; that is the pattern every existing modal in the repo follows.
+  `BaseModal.jsx`; that is the pattern every existing modal in the repo follows. `BaseModal` ignores
+  its overlay/Escape dismissal for 300 ms after opening, because the second click of the double click
+  that opened a dialog lands on the newly mounted overlay and would close it again. The close button
+  and footer buttons call `onClose` directly and close at once.
 - **Upstream calls** each get their own file in `apis/`. Components, hooks and modals import them
   directly — there is no enforced layer between them.
 - **Redux persistence storage:** import `redux-persist/es/storage`, not
