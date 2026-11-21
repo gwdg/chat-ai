@@ -12,6 +12,7 @@ import {
   SYNC_RECORDS_DIR,
 } from "../engine";
 import { MemorySyncStore } from "../storage/memoryStore";
+import type { SyncStore } from "../storage/types";
 import { MemoryStateStore } from "./memoryStateStore";
 
 /**
@@ -76,6 +77,29 @@ const sync = (
     deviceId,
     now,
   });
+
+/**
+ * The same store, except that publishing the device fragment fails: the case of
+ * a browser closed — or a connection lost — after the record files were uploaded
+ * but before the index fragment that references them was written.
+ */
+const withFailingPublish = (store: MemorySyncStore): SyncStore => {
+  let remaining = 1;
+  return {
+    list: (dir) => store.list(dir),
+    read: (path) => store.read(path),
+    write: async (path, bytes) => {
+      if (path.startsWith(SYNC_INDEX_DIR) && remaining > 0) {
+        remaining -= 1;
+        throw new Error("The network went away.");
+      }
+      return store.write(path, bytes);
+    },
+    remove: (path) => store.remove(path),
+    ensureDir: (dir) => store.ensureDir(dir),
+    exists: (path) => store.exists(path),
+  };
+};
 
 describe("sync engine", () => {
   it("pushes a record and pulls it on another device", async () => {
@@ -315,6 +339,62 @@ describe("sync engine", () => {
     expect(store.paths()).toContain(
       `${SYNC_RECORDS_DIR}/chats/${recordFileName("c1", 1000, "dev-a")}`,
     );
+  });
+
+  it("re-pushes a record when the fragment write failed after the upload", async () => {
+    const keys = makeKeys();
+    const store = new MemorySyncStore();
+    const stateA = new MemoryStateStore();
+    const a = fakeOf([["c1", { title: "One" }]]);
+
+    await sync(store, keys, stateA, "dev-a", a, 1000);
+    a.data.set("c1", { title: "Two" });
+
+    // The record file is uploaded, then publishing this device's fragment
+    // fails: a closed browser or a dropped connection at exactly that moment.
+    await expect(
+      sync(withFailingPublish(store), keys, stateA, "dev-a", a, 2000),
+    ).rejects.toThrow("The network went away.");
+
+    // The base still describes the pass that was actually published, so the
+    // unpublished revision is not mistaken for an older remote one.
+    expect(await stateA.get("chats", "c1")).toMatchObject({ rev: 1000 });
+
+    const repaired = await sync(store, keys, stateA, "dev-a", a, 3000);
+    expect(repaired.pushed).toBe(1);
+    // Crucially, the newer local edit is not pulled back to "One".
+    expect(a.data.get("c1")).toEqual({ title: "Two" });
+
+    const b = fakeOf();
+    await sync(store, keys, new MemoryStateStore(), "dev-b", b, 4000);
+    expect(b.data.get("c1")).toEqual({ title: "Two" });
+  });
+
+  it("keeps a deletion when the fragment write failed after removing it locally", async () => {
+    const keys = makeKeys();
+    const store = new MemorySyncStore();
+    const stateA = new MemoryStateStore();
+    const stateB = new MemoryStateStore();
+    const a = fakeOf([["c1", { title: "One" }]]);
+    const b = fakeOf();
+
+    await sync(store, keys, stateA, "dev-a", a, 1000);
+    await sync(store, keys, stateB, "dev-b", b, 2000);
+    a.data.delete("c1");
+
+    await expect(
+      sync(withFailingPublish(store), keys, stateA, "dev-a", a, 3000),
+    ).rejects.toThrow("The network went away.");
+
+    // The base row survived the failed publish, so the next pass still knows to
+    // publish a tombstone instead of pulling the record back.
+    const repaired = await sync(store, keys, stateA, "dev-a", a, 4000);
+    expect(repaired.deleted).toBe(1);
+    expect(a.data.has("c1")).toBe(false);
+
+    const pull = await sync(store, keys, stateB, "dev-b", b, 5000);
+    expect(pull.deleted).toBe(1);
+    expect(b.data.has("c1")).toBe(false);
   });
 
   it("reports a record that cannot be read without abandoning the run", async () => {

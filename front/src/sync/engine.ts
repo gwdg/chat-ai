@@ -252,6 +252,39 @@ export async function runSync(options: RunSyncOptions): Promise<SyncSummary> {
   const nextRecords: Record<string, FragmentEntry> = {};
   const nextDeleted: Record<string, number> = {};
 
+  // The local base rows are the engine's only record of "what the remote already
+  // has". They are therefore committed *after* this device's fragment is
+  // published (see the end of the function): if the fragment write fails, the
+  // state still describes the last published pass, so the next run redoes the
+  // work instead of mistaking its own unpublished revision for an older remote
+  // one and pulling that back over a newer local edit.
+  type StateWrite =
+    | {
+        kind: "put";
+        entry: RecordState;
+        base?: { payload?: any; keep?: boolean };
+      }
+    | { kind: "remove"; namespace: string; id: string };
+  const stateWrites: StateWrite[] = [];
+  const commitState = async () => {
+    for (const write of stateWrites) {
+      if (write.kind === "remove") {
+        await state.remove(write.namespace, write.id);
+        await state
+          .deleteMeta(baseKeyOf(write.namespace, write.id))
+          .catch(() => undefined);
+        continue;
+      }
+      await state.put(write.entry);
+      if (write.base?.keep) {
+        await state.setMeta(
+          baseKeyOf(write.entry.namespace, write.entry.id),
+          { hash: write.entry.hash, payload: write.base.payload },
+        );
+      }
+    }
+  };
+
   const putState = async (
     namespace: string,
     id: string,
@@ -260,19 +293,12 @@ export async function runSync(options: RunSyncOptions): Promise<SyncSummary> {
     base?: { payload?: any; keep?: boolean },
   ) => {
     const entry: RecordState = { namespace, id, rev, hash };
-    await state.put(entry);
+    stateWrites.push({ kind: "put", entry, base });
     nextRecords[recordKey(namespace, id)] = { rev, hash, deviceId };
-    if (base?.keep) {
-      await state.setMeta(baseKeyOf(namespace, id), {
-        hash,
-        payload: base.payload,
-      });
-    }
   };
 
   const removeState = async (namespace: string, id: string) => {
-    await state.remove(namespace, id);
-    await state.deleteMeta(baseKeyOf(namespace, id)).catch(() => undefined);
+    stateWrites.push({ kind: "remove", namespace, id });
     delete nextRecords[recordKey(namespace, id)];
   };
 
@@ -551,6 +577,10 @@ export async function runSync(options: RunSyncOptions): Promise<SyncSummary> {
     toBytes(JSON.stringify(fragment)),
   );
   await store.write(`${SYNC_INDEX_DIR}/${deviceId}.bin`, sealed);
+
+  // Only now do the base rows follow: the fragment above is what every other
+  // device and the next pass read, and it is written last on purpose.
+  await commitState();
 
   onProgress?.({ phase: "done", done: 1, total: 1 });
   return summary;
