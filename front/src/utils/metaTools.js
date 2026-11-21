@@ -16,6 +16,7 @@ import {
   isAgentsEnabled,
   isChoicesEnabled,
   isFeedbackEnabled,
+  isSyncEnabled,
   isToolsEnabled,
 } from "./modules";
 import { usableKey } from "../e2ee/registry";
@@ -129,6 +130,7 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
     `- Default memory group: ${memoryGroupName(userSettings, userSettings.default_memory_group)} (id: ${userSettings.default_memory_group ?? "default"})`,
     `- Request timeout: ${Math.round((userSettings.timeout ?? 300000) / 1000)} seconds`,
     `- End-to-end encryption: ${e2eeKeys.length} key${e2eeKeys.length === 1 ? "" : "s"} configured; encrypted models: ${keyedModels.length ? keyedModels.join(", ") : "none"}`,
+    `- Encrypted server synchronization (settings sync): ${userSettings.sync?.enabled === true ? "enabled" : "disabled"}; automatic sync: ${userSettings.sync?.auto !== false ? "on" : "off"}. The vault key and passphrase are never available to the Meta chat; creating or unlocking the copy happens in Data settings.`,
     `- Suggest follow-up prompts: ${yesNo(userSettings.suggest_user_prompts)}`,
     `- Set title only on first prompt: ${yesNo(userSettings.set_title_once)}`,
     `- Conversation summaries: ${yesNo(userSettings.conversation_summaries)}`,
@@ -144,7 +146,7 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
     `- Render Chart.js: ${yesNo(userSettings.render_chartjs ?? false)}`,
     `- Keep reasoning collapsed while streaming: ${yesNo(userSettings.collapse_reasoning_while_streaming)}`,
     `- Document conversion: ${documentConversion}`,
-    `- Modules: tools ${isToolsEnabled() ? "enabled" : "disabled"}, feedback ${isFeedbackEnabled() ? "enabled" : "disabled"}, choices ${isChoicesEnabled() ? "enabled" : "disabled"}, agent ${isAgentEnabled() ? "enabled" : "disabled"}, arcanas ${isArcanasEnabled() ? "enabled" : "disabled"}, agents ${isAgentsEnabled() ? "enabled" : "disabled"}, speech ${getSpeechModule() ? "enabled" : "disabled"}`,
+    `- Modules: tools ${isToolsEnabled() ? "enabled" : "disabled"}, feedback ${isFeedbackEnabled() ? "enabled" : "disabled"}, choices ${isChoicesEnabled() ? "enabled" : "disabled"}, agent ${isAgentEnabled() ? "enabled" : "disabled"}, arcanas ${isArcanasEnabled() ? "enabled" : "disabled"}, agents ${isAgentsEnabled() ? "enabled" : "disabled"}, sync ${isSyncEnabled() ? "enabled" : "disabled"}, speech ${getSpeechModule() ? "enabled" : "disabled"}`,
     `- Dark mode: ${yesNo(interfaceSettings.dark_mode)}`,
     `- Show usage in sidebar: ${yesNo(interfaceSettings.show_usage_in_sidebar)}`,
     `- Chat sorting: ${interfaceSettings.conversation_sort ?? "created_desc"}`,

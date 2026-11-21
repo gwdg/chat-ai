@@ -83,6 +83,11 @@ export default {
     rename_tooltip: "Umbenennen: {{title}}",
     shortcut_new_conversation: "Strg + Shift + O",
     user_section: "Benutzer",
+    sync_now: "Jetzt synchronisieren",
+    sync_running: "Synchronisierung…",
+    sync_settings: "Synchronisierungs-Einstellungen öffnen",
+    sync_done: "Synchronisierung abgeschlossen: {{pulled}} übernommen, {{pushed}} hochgeladen.",
+    sync_failed: "Synchronisierung fehlgeschlagen: {{error}}",
   },
   folders: {
     title: "Chats",
@@ -862,6 +867,26 @@ export default {
       step3:
         "Exportieren Sie lokale Daten oder löschen Sie Chats, Erinnerungen, Einstellungen und Anhänge.",
     },
+    sync_setup: {
+      title: "Verschlüsselte Serversynchronisierung",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Tab Daten.",
+      subtab: "Öffnen Sie den Bereich Serversynchronisierung.",
+      step3:
+        "Die verschlüsselte Serversynchronisierung hält Einstellungen, Unterhaltungen, Workspaces und Agenten auf Ihren Geräten aktuell. Alles wird in diesem Browser verschlüsselt, bevor es hochgeladen wird, und die Passphrase wird nie gespeichert.",
+      step4:
+        "Schalten Sie die Serversynchronisierung ein und erstellen Sie sie mit einer Passphrase, die Sie sich merken können, oder entsperren Sie die Kopie, die ein anderes Gerät bereits für dieses Konto erstellt hat.",
+    },
+    backup_create: {
+      title: "Verschlüsselte Sicherung erstellen",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Tab Daten.",
+      subtab: "Öffnen Sie den Bereich Verschlüsselte Sicherung.",
+      step3:
+        "Unter Verschlüsselte Sicherung enthält eine Datei alle Chats, Themen, Einstellungen, Workspaces und Agenten. Sie wird in diesem Browser verschlüsselt und mit Datum und Uhrzeit versehen.",
+      step4:
+        "Erstellen Sie sie mit einer Passphrase, die Sie sich merken können. Dieselbe Passphrase stellt die Datei später wieder her; passende Einträge werden überschrieben, nichts wird gelöscht.",
+    },
     dark_mode: {
       title: "Design wechseln",
       step1:
@@ -1350,7 +1375,7 @@ export default {
         label: "Daten",
         title: "Daten und Datenschutz",
         description:
-          "Exportieren oder entfernen Sie die in diesem Browser gespeicherten Daten.",
+          "Verwalten Sie lokale Daten, laden Sie eine verschlüsselte Sicherung herunter und halten Sie Ihre Geräte mit verschlüsselter Serversynchronisierung aktuell.",
       },
     },
     account: {
@@ -1603,6 +1628,12 @@ export default {
       title: "Daten verwalten",
       description:
         "Exportieren Sie eine Kopie Ihrer lokalen Daten oder entfernen Sie Unterhaltungen, Erinnerungen, Einstellungen und Anhänge dauerhaft aus diesem Browser.",
+      sections: {
+        label: "Datenbereiche",
+        manage: "Daten verwalten",
+        backup: "Verschlüsselte Sicherung",
+        sync: "Serversynchronisierung",
+      },
       export_success: "Lokale Daten wurden erfolgreich exportiert.",
       export_error: "Lokale Daten konnten nicht exportiert werden.",
       storage_title: "Browserspeicher",
@@ -1621,6 +1652,104 @@ export default {
       storage_request_unsupported:
         "Dieser Browser unterstützt das Anfordern dauerhaften Speichers nicht.",
       storage_request_failed: "Anfordern von dauerhaftem Speicher fehlgeschlagen: {{error}}",
+      backup: {
+        title: "Verschlüsselte Sicherung",
+        description:
+          "Laden Sie eine verschlüsselte Datei mit allen Chats, Themen, Einstellungen, Workspaces und Agenten herunter und stellen Sie sie später mit derselben Passphrase wieder her.",
+        notice:
+          "Die Sicherung wird in diesem Browser verschlüsselt, bevor sie heruntergeladen wird. Die Passphrase wird nie gespeichert und kann nicht wiederhergestellt werden; ohne sie lässt sich die Datei nicht öffnen. Bewahren Sie Datei und Passphrase sicher auf.",
+        create_title: "Sicherung erstellen",
+        create_description:
+          "Die Datei wird mit dem aktuellen Datum und der Uhrzeit versehen. Dateien über 8 MB werden ausgelassen und gemeldet.",
+        passphrase: "Passphrase",
+        passphrase_confirm: "Passphrase wiederholen",
+        passphrase_hint: "Mindestens {{count}} Zeichen.",
+        create_button: "Sicherung erstellen und herunterladen",
+        creating: "Sicherung wird erstellt…",
+        created: "Sicherung {{file}} heruntergeladen ({{records}} Einträge).",
+        missing_passphrase: "Geben Sie eine Passphrase ein.",
+        mismatch: "Die Passphrasen stimmen nicht überein.",
+        create_error: "Die Sicherung konnte nicht erstellt werden: {{error}}",
+        restore_title: "Sicherung wiederherstellen",
+        restore_description:
+          "Wählen Sie eine Sicherungsdatei und geben Sie ihre Passphrase ein. Die Sicherung wird in diesen Browser eingefügt: Einträge mit derselben ID werden überschrieben, nichts wird gelöscht.",
+        choose_file: "Sicherungsdatei",
+        choose_file_first: "Wählen Sie zuerst eine Sicherungsdatei.",
+        file_summary: "Sicherung vom {{date}} · {{records}} Einträge",
+        inspect_error: "Dies ist keine lesbare Chat-AI-Sicherung: {{error}}",
+        restore_passphrase: "Passphrase der Sicherung",
+        restore_confirm:
+          "Mir ist klar, dass passende Chats, Themen, Workspaces, Agenten und Einstellungen überschrieben werden.",
+        confirm_required: "Bestätigen Sie, dass passende Einträge überschrieben werden dürfen.",
+        restore_button: "Sicherung wiederherstellen",
+        restoring: "Sicherung wird wiederhergestellt…",
+        restored: "Sicherung wiederhergestellt: {{records}} Einträge.",
+        restore_error: "Die Sicherung konnte nicht wiederhergestellt werden: {{error}}",
+        unknown_namespaces: "Daten aus einer neueren Version wurden übersprungen: {{namespaces}}.",
+      },
+      sync: {
+        title: "Verschlüsselte Serversynchronisierung",
+        description:
+          "Halten Sie Unterhaltungen, Einstellungen, Workspaces und Agenten auf Ihren Geräten aktuell, indem Sie eine verschlüsselte Kopie in Ihrem SAIA-Dateisystem speichern.",
+        notice:
+          "Alles wird in diesem Browser verschlüsselt, bevor es hochgeladen wird. Die Passphrase verlässt Ihr Gerät nie, der Server kann die Kopie nicht lesen, und ohne die Passphrase sind die Daten nicht wiederherstellbar. Verwenden Sie eine Passphrase, die Sie sich merken können, und bewahren Sie sie sicher auf.",
+        enable_label: "Verschlüsselte Kopie in meinem SAIA-Dateisystem speichern",
+        enable_description:
+          "Standardmäßig aus. Es wird nichts hochgeladen, bis Sie unten die Kopie erstellen oder entsperren.",
+        create_title: "Verschlüsselte Kopie erstellen",
+        create_description:
+          "Die Passphrase schützt den Schlüssel, der das Archiv verschlüsselt. Ohne sie ist die Kopie nicht mehr zugänglich.",
+        unlock_title: "Vorhandene Kopie entsperren",
+        unlock_description:
+          "Ein anderes Gerät hat für dieses Konto bereits eine Kopie erstellt. Geben Sie deren Passphrase ein, um sie hier zu verwenden.",
+        passphrase: "Passphrase",
+        passphrase_confirm: "Passphrase wiederholen",
+        passphrase_hint: "Mindestens {{count}} Zeichen.",
+        create_button: "Verschlüsselte Kopie erstellen",
+        unlock_button: "Entsperren",
+        checking: "Server wird geprüft…",
+        check_again: "Erneut prüfen",
+        exists_hint:
+          "Es existiert bereits eine Kopie. Entsperren Sie sie oder ersetzen Sie sie durch einen neuen Tresor und laden Sie alles erneut hoch.",
+        replace_warning:
+          "Beim Ersetzen des Tresors wird jede hochgeladene Datei unlesbar. Dieses Gerät lädt seine Daten erneut hoch.",
+        replace_button: "Tresor ersetzen",
+        unlocked_title: "Verbunden",
+        vault: "Tresor",
+        device: "Dieses Gerät",
+        last_sync: "Letzte Synchronisierung",
+        never: "Noch nicht synchronisiert",
+        conflicts: "Konflikte",
+        skipped: "Übersprungene Dateien",
+        skipped_hint:
+          "Dateien über 8 MB werden nicht hochgeladen. Der Chat oder Workspace behält einen Platzhalter.",
+        conflict_hint:
+          "Bei Konflikten bleiben beide Versionen erhalten. Eine Unterhaltung wird als „ (conflict copy)“ im Titel kopiert.",
+        sync_now: "Jetzt synchronisieren",
+        syncing: "Synchronisierung…",
+        lock: "Tresor sperren",
+        auto_label: "Automatisch synchronisieren",
+        auto_description:
+          "Läuft alle fünf Minuten, solange dieser Tab offen und der Tresor entsperrt ist.",
+        change_title: "Passphrase ändern",
+        change_button: "Passphrase ändern",
+        changed: "Die Passphrase wurde geändert. Das Archiv wurde nicht neu verschlüsselt.",
+        rotate_title: "Tresor ersetzen",
+        rotate_description:
+          "Erzeugt einen neuen Tresorschlüssel und ein neues Salz für die Schlüsselableitung. Jede hochgeladene Datei wird unlesbar; anschließend lädt dieses Gerät seine Daten erneut hoch. Damit können Sie ein Gerät aussperren.",
+        rotate_button: "Tresor ersetzen und erneut hochladen",
+        rotated: "Der Tresor wurde ersetzt. Führen Sie eine Synchronisierung aus, um dieses Gerät erneut hochzuladen.",
+        cleanup: "Remote-Dateien aufräumen",
+        cleanup_description:
+          "Löscht Revisionen und Anhänge, auf die kein Geräteindex mehr verweist.",
+        cleanup_done: "{{records}} Revisionen und {{assets}} Anhänge entfernt.",
+        disable_hint:
+          "Wenn Sie die Serversynchronisierung ausschalten, stoppt die Synchronisierung und der Tresor wird gesperrt. Die verschlüsselten Dateien bleiben in Ihrem Dateisystem, bis Sie sie aufräumen oder dort löschen.",
+        missing_passphrase: "Geben Sie die Passphrase ein.",
+        mismatch: "Die Passphrasen stimmen nicht überein.",
+        session_expired: "Der Tresor wurde gesperrt. Geben Sie die Passphrase erneut ein.",
+        error: "Synchronisierung fehlgeschlagen: {{error}}",
+      },
     },
     clear_data_button: "Alle lokalen Daten löschen",
     import_data_button: "Daten importieren",

@@ -612,7 +612,8 @@ For navigation and message search, the model calls `search_messages`; results in
 conversation and message ids. It cites messages as
 `/chat/<conversation id>?message=<message id>`; `Conversation` reads that query parameter, scrolls
 to the message, and highlights it briefly. `MarkdownLink` routes `/chat/...`, `/topic/...`, and
-`/settings/<tab>` internally; settings links dispatch `chatai:open-settings`, handled by
+`/settings/<tab>` (or `/settings/data/<section>`) internally; settings links dispatch
+`chatai:open-settings`, handled by
 `useSettingsDeepLink` in `ChatPage`/`MetaChatPage`, and `UserSettingsModal` opens the requested tab
 with a brief highlight. Its tabs are Profile, Usage (`UsageSettings.jsx` — the monthly and
 organization limits plus the sidebar switch), Chat, Advanced (`AdvancedModePreference` and
@@ -2059,6 +2060,167 @@ while S3 inherits the no-op (it has no directories and already lists an unknown 
 `list_json("/")`, `exists("/")` and `info("/")` answer a user who has never written anything, and the
 provider's `missing("/")` → empty page is only needed for a service older than that change.
 
+### 4.32 The encrypted server synchronization is opt-in and lives in `front/src/sync/`
+
+Users can keep conversations, topics, settings, workspaces and agents in step across devices by
+storing an **encrypted** copy on their SAIA filesystem. The design document is `docs/sync.md`; this
+section is the part that constrains edits.
+
+**Gate.** The feature is `VITE_MODULE_SYNC` from `modules.sync` (opt-in, default off) and is read
+through `utils/modules.js#isSyncEnabled()` like every other module. The `chat-ai` deployment profile
+does not set the key (so `front.json` decides), `minimal` sets `sync: false`, and
+`secrets/front.json.sample` lists `"sync": false`. With the module off, the Data tab renders no sync
+section and the Meta chat neither reports nor proposes it (`buildFeatureGuidePrompt` and
+`TutorialCatalog` hide the `sync_setup` guide).
+
+**Crypto is separate from `src/e2ee/`.** `e2ee/` seals a model request in transit for one keyed
+model (`back` sees only ciphertext). `src/sync/crypto/` encrypts an archive at rest under a
+user-chosen passphrase. Do not merge the two modules or reuse their keys. The scheme:
+
+- passphrase → **Argon2id** (`t=3`, `m=65536` KiB, `p=1`, 32-byte key, salt in the header) → KEK that
+  wraps one random **32-byte vault key** in `vault.json`;
+- HKDF splits the vault key into a record key and an asset key;
+- every blob is AES-256-GCM with a fresh 12-byte IV, a `CASSYNC1` container (magic | flags | IV |
+  ciphertext), optional gzip, and an AAD that names its slot
+  (`chatai-sync/v1/record/<ns>/<id>/<rev>`, `.../asset/<sha256>`, `.../index/<deviceId>`,
+  `chatai-sync/v1/vault/<vaultId>`), so a blob cannot be replayed into another slot.
+
+A passphrase change re-wraps the same vault key, so nothing is re-encrypted; "rotate" makes a new
+salt, a new vault key and a new `vaultId` and re-uploads everything (that is how a device is
+revoked). The minimum passphrase length is 10. **The passphrase and the vault key are never
+persisted**: the key is module state in `sync/service.ts`, so a reload locks the vault and the Data
+tab asks again.
+
+**Remote layout** (`SyncStore` in `sync/storage/`, `SaiaFsSyncStore` in production):
+
+```
+/.chat-ai-sync/v1/vault.json                    cleartext header (no key material)
+/.chat-ai-sync/v1/index/<deviceId>.bin          one sealed fragment per device
+/.chat-ai-sync/v1/records/<ns>/<id>.<rev>-<dev>.bin   immutable revisions
+/.chat-ai-sync/v1/assets/<sha256>.bin           content-addressed blobs
+```
+
+Nothing overwrites another device's file: a revision name contains its revision and writer, and the
+merged view is the union of all fragments. The engine (`sync/engine.ts`) derives `rev` as
+`max(now, remoteRev + 1)`, so it always increases. `hashPayload` is SHA-256 over canonical JSON, and
+the merge is **hash-based, not timestamp-based**:
+
+- no base yet (two independent archives): check the namespace's `extends` (a conversation fast-forwards
+  when the remote message ids are a prefix of the local ones and only additions follow), then
+  `merge` (settings), otherwise record a conflict and call `duplicate` + push the local copy;
+- `localUnchanged` (hash == base hash) → pull; `remoteUnchanged` → push; both changed → `merge` if the
+  namespace has one, else `extends`, else duplicate + push.
+
+Deletes are **tombstones** (`index/<device>.bin`), kept 90 days: a local delete writes one, and a
+remote edit newer than the deletion resurrects the record. Deletions of records without a base are
+not invented. `collectGarbage` is the only routine that deletes remote files and runs only from
+"Clean up remote" — it keeps exactly the revision the merged index names and the assets the live
+records reference. A normal `runSync` must never delete data it did not write.
+
+**Namespaces** (`sync/namespaces/`, one factory call per run) implement `list` / `apply` / `merge` /
+`duplicate` / `extends` / `remove` / `keepsBase` / `takeSkipped` / `takeConflicts` / `titleOf`:
+
+- **conversations** carry the whole chat with message ids (rewritten attachments become assets). A
+  divergence duplicates both (`<title> (conflict copy)`), it never shows a blocking dialog.
+  `meta-chat` is excluded, like `getExportData()` excludes it.
+- **settings** is one record, three-way merged per key against the common ancestor the engine stores
+  beside the state because `keepsBase` is set. `memories`, `memory_groups`, `e2ee_keys` and
+  `mcp_servers` are additionally merged by element id, `e2ee_models` by key, so two devices that add
+  a memory keep both. It applies through `importUserSettings`, which already validates every field.
+- **workspaces** are one record: row, sources, mounts, chat/agent links and the shape of the
+  workspace tree. The tree is applied **additively** — a pull never deletes a file the record does
+  not carry (too large, added after the last sync). A divergent workspace is applied as a copy with
+  a new id.
+- **agents** are the local metadata plus a bounded cached session history, so a second device can
+  read a conversation while the agent server is down. `applyAgentFromSync` keeps the record's
+  `updatedAt` (a pull must not look like a local edit) and the device's own `sessionId`.
+- **folders** (topics in the UI, see §4.4) travel with their conversations; the record's `createdAt`
+  is authoritative.
+
+**A pull must hash back to the record**, or every device pushes forever. That is why: conversation
+payloads omit `lastModified`; an empty `feedback` is normalised away (the store always writes `{}`);
+`createdAt` is preserved (`createConversation` takes an optional `createdAt`); the persona is written
+through `setConversationPersonaForSync` because `updateConversation` does not carry it; a folder's
+`createdAt` comes from the record; a workspace source's `status`/`error` are device-local and excluded
+(apply keeps the local status, default `"offline"`).
+
+**Large files are skipped, visibly.** `sync/namespaces/assets.ts` caps one file at 8 MiB and one
+record at 500 files. A skipped attachment or workspace file is left out of the payload and named in
+`summary.skipped` — it is never a placeholder, because a placeholder would differ on the other device
+and re-push on every sync.
+
+**Service and UI.** `sync/service.ts` owns the vault lifecycle, the status store, the
+one-run-at-a-time `navigator.locks("chatai-sync")` guard and the five-minute auto-sync. The timer is a
+no-op while the key is not in memory, and `auto` is a preference, so a reload never syncs by itself.
+`hooks/useSyncEngine.ts` is mounted by `ChatPage`; it reads `user_settings.sync` with `useSelector` and
+feeds it to `setSyncPreferences`, then starts the timer. **`sync/service.ts` and the settings namespace
+must not import `Redux/store/store` statically**: `SyncSettings` is reachable from the modal context,
+so a static store import constructs `redux-state-sync` (and its `BroadcastChannel`) in any test that
+renders a sidebar or a modal, and jsdom does not provide one. The settings namespace imports the store
+lazily inside `read`/`apply`; keep it that way. The section itself is
+`modals/UserSettings/SyncSettings.jsx` (Data tab → Server synchronization,
+`data-guide="sync-settings"` / `"sync-enable"`) and
+covers create, unlock, lock, sync now, auto, change passphrase, rotate and cleanup.
+
+**Storage.** Dexie v18 adds `sync_meta` (device id, cached header, last summary, merge bases) and
+`sync_records` (`[namespace+id]`). `db/syncState.ts` is the `SyncStateStore`; `db/syncAdapters.ts`
+performs the raw-table applies (folders, workspace bundles, the agent session cache) and keeps that
+access inside `db/` per §4.2. `MemorySyncStore` / `MemoryStateStore` are the test doubles.
+
+**Meta chat.** `get_user_settings` reports `sync_enabled` / `sync_auto`, and `SET_SETTING` proposes
+them through `MetaActionCard` like any other setting. The Meta chat never receives the passphrase or
+the vault key and cannot create or unlock the vault — that stays in Data settings.
+
+### 4.33 The encrypted backup is one self-contained file in `front/src/backup/`
+
+User settings → Data → **Encrypted backup** produces one downloadable file of the whole browser
+history and restores it with the same passphrase. It is **not** gated by `isSyncEnabled()` and needs
+no SAIA account: the package is built, encrypted and downloaded entirely in the browser.
+`docs/backup.md` is the format reference.
+
+**Crypto is its own domain.** `backup/crypto.ts` derives a 32-byte key from the passphrase with
+Argon2id (`t=3`, `m=65536`, `p=1`) and HKDF info `backup` under domain `chatai-backup/v1`, then seals
+the archive with the shared `CASSYNC1` envelope (`src/sync/crypto/envelope.ts`). The AAD is
+`chatai-backup/v1/<createdAt>`, so the header's date is authenticated; a different key domain keeps
+a backup from ever being replayed as a sync record. Salt and KDF parameters sit in the cleartext
+header, the passphrase and key are never persisted, and KDF values read from a file are bounded
+(`m ≤ 1 MiB`, `t ≤ 10`, `p ≤ 4`) before Argon2 runs. The passphrase minimum is the shared
+`MIN_PASSPHRASE_LENGTH` (10), re-exported as `MIN_BACKUP_PASSPHRASE_LENGTH`.
+
+**One definition of the history.** `backup/package.ts` builds the archive from the same
+`createDefaultNamespaces()` sync uses (settings, folders, workspaces, agents, conversations), with
+attachments deduplicated by SHA-256 into one `assets` map. `meta-chat` stays excluded because the
+conversations namespace excludes it. The sync limits apply unchanged (`MAX_SYNC_FILE_BYTES` 8 MiB,
+`MAX_SYNC_FILES_PER_RECORD` 500); oversized or unreadable files are listed in the package and in the
+UI, never replaced by placeholders. `ArrayBuffer.isView`, not `instanceof Uint8Array`, decides
+whether an asset carries bytes: assets can cross a realm (worker, jsdom) and are still valid.
+
+**Restore replays the sync write path.** `restoreBackup()` validates the container, decrypts it, and
+applies records through `SyncNamespace.apply` in namespace order (settings → folders → workspaces →
+agents → conversations), with `readAsset` served from the package's map. Existing rows with the same
+id are overwritten and nothing is deleted; a namespace the build does not know is reported in
+`unknownNamespaces` rather than guessed at. Because settings travel through `importUserSettings`, a
+restored profile keeps the validation of the settings import. The UI requires an explicit
+confirmation checkbox before it restores, and it opens a file dialog instead of touching the DB on
+selection.
+
+**UI.** `modals/UserSettings/DataSettings.jsx` splits the Data tab into three sections so the
+screen is not one long scroll: **Manage data** (storage status, import, JSON export, clear),
+**Encrypted backup** (`BackupSettings.jsx`, always rendered, no module flag) and **Server synchronization**
+(`SyncSettings.jsx`, only while `isSyncEnabled()`). The strip buttons carry
+`data-guide="data-subtab-<section>"`; the panels carry `data-guide="data-section-<section>"`. The
+backup guide is `backup_create` (category `settings`) with the hooks `backup-settings`,
+`backup-create` and `backup-restore`. `initialTab` accepts `"data/<section>"` (`manage`, `backup`,
+`sync`) in addition to `"data"`, which is how a link or the sidebar shortcut lands on a section;
+`useSettingsDeepLink`/`MarkdownLink` accept `/settings/data/<section>` for the same reason.
+
+**Sidebar shortcut.** `Sidebar/SyncStatusButton.jsx` is rendered next to the user name in
+`SidebarUserCard` only while `isSyncEnabled()`. With the vault unlocked it calls `syncNow()` and
+reports the pulled/pushed counts; while locked it opens the Data tab's Server synchronization section
+(`initialTab: "data/sync"`), because the passphrase can only be entered there. It mounts
+`useSyncEngine()` a second time, which is safe: the hook's mount counter keeps the timer alive until
+the last instance unmounts, and `startAutoSync()` is idempotent.
+
 ## 5. Conventions
 
 - **Gradual TypeScript.** `.jsx` and `.tsx` coexist. `front/tsconfig.json` is `strict: false`,
@@ -2135,6 +2297,9 @@ provider's `missing("/")` → empty page is only needed for a service older than
 - [ ] new feature switch → route + entry point + behaviour, and the feature guide respects it
 - [ ] new brand → `config/branding/<folder>/brand.json` + its images + a `brands.test.js` case
 - [ ] conversation write → `lastModified` threaded through and `-1` handled
+- [ ] touched sync (§4.32) → a pulled record must hash back to itself (no `lastModified`, keep
+      `createdAt`, device-local fields like source `status` excluded), and `sync/service.ts` plus the
+      settings namespace must not import `Redux/store/store` statically
 - [ ] behaviour exercised in a browser, not just compiled
 
 ## 8. Maintaining this file

@@ -21,11 +21,12 @@ import {
   openWorkspaceFiles,
   openUserSettings,
   searchHasQuery,
+  selectDataSection,
   selectSettingsTab,
   toolsAreEnabled,
   topicNameEntered,
 } from "./featureGuideActions.js";
-import { isAgentsEnabled } from "../utils/modules.js";
+import { isAgentsEnabled, isSyncEnabled } from "../utils/modules.js";
 
 export const featureGuides = {
   workspace_overview: {
@@ -1352,8 +1353,98 @@ export const featureGuides = {
       },
       {
         target: '[data-guide="export-data"]',
-        prepare: () => selectSettingsTab("data"),
+        prepare: () => selectDataSection("manage"),
         textKey: "feature_guide.data_management.step3",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
+  sync_setup: {
+    titleKey: "feature_guide.sync_setup.title",
+    prompt:
+      "Keep settings, conversations, workspaces and agents in step across devices with an encrypted copy on your SAIA filesystem. Open user settings, choose the Data tab, switch the encrypted server synchronization on, and create it with a passphrase you can remember (or unlock the copy another device already created). Everything is encrypted in this browser before it is uploaded, and the passphrase is never stored.",
+    keywords: [
+      "sync",
+      "synchronization",
+      "synchronisation",
+      "encrypted copy",
+      "server synchronization",
+      "multi device",
+      "verschlüsselte kopie",
+      "synchronisieren",
+    ],
+    steps: [
+      {
+        target: ['[data-guide="user-settings"]', ".user-profile-button", ".user-profile-block"],
+        textKey: "feature_guide.sync_setup.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="settings-tab-data"]',
+        prepare: openUserSettings,
+        textKey: "feature_guide.sync_setup.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="data-subtab-sync"]',
+        prepare: () => selectSettingsTab("data"),
+        textKey: "feature_guide.sync_setup.subtab",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="sync-settings"]',
+        prepare: () => selectDataSection("sync"),
+        textKey: "feature_guide.sync_setup.step3",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="sync-enable"]',
+        textKey: "feature_guide.sync_setup.step4",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
+  backup_create: {
+    titleKey: "feature_guide.backup_create.title",
+    prompt:
+      "Download one encrypted file of your whole browser history — chats, topics, settings, workspaces and agents — and restore it later with the same passphrase. Open user settings, choose the Data tab, and create the backup under Encrypted backup. The file is encrypted in this browser and stamped with the date and time; the passphrase is never stored.",
+    keywords: [
+      "backup",
+      "back up",
+      "encrypted backup",
+      "restore",
+      "export",
+      "sicherung",
+      "sicherungskopie",
+      "wiederherstellen",
+    ],
+    steps: [
+      {
+        target: ['[data-guide="user-settings"]', ".user-profile-button", ".user-profile-block"],
+        textKey: "feature_guide.backup_create.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="settings-tab-data"]',
+        prepare: openUserSettings,
+        textKey: "feature_guide.backup_create.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="data-subtab-backup"]',
+        prepare: () => selectSettingsTab("data"),
+        textKey: "feature_guide.backup_create.subtab",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="backup-settings"]',
+        prepare: () => selectDataSection("backup"),
+        textKey: "feature_guide.backup_create.step3",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="backup-create"]',
+        textKey: "feature_guide.backup_create.step4",
         completeOnTargetClick: true,
       },
     ],
@@ -1739,6 +1830,8 @@ export const FEATURE_CATEGORIES = {
   settings: [
     "settings_overview",
     "e2ee",
+    "sync_setup",
+    "backup_create",
     "chat_preferences",
     "message_timestamps",
     "memories",
@@ -1912,7 +2005,11 @@ export function findFeatureGuideForText(text) {
 
 export function buildFeatureGuidePrompt() {
   return Object.entries(featureGuides)
-    .filter(([featureId]) => featureId !== "remote_agents" || isAgentsEnabled())
+    .filter(([featureId]) => {
+      if (featureId === "remote_agents") return isAgentsEnabled();
+      if (featureId === "sync_setup") return isSyncEnabled();
+      return true;
+    })
     .map(([featureId, guide]) => `- ${featureId}: ${guide.prompt}`)
     .join("\n");
 }

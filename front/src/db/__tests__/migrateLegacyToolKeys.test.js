@@ -57,7 +57,7 @@ const seedV16 = async (rows) => {
 const openUpgraded = async () => {
   const appDb = new AppDB();
   await appDb.open();
-  expect(appDb.verno).toBe(17);
+  expect(appDb.verno).toBe(18);
   return appDb;
 };
 

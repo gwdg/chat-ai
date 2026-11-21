@@ -104,6 +104,19 @@ export function selectSettingsTab(tabId) {
   });
 }
 
+/** The Data tab's own strip: `manage`, `backup` or `sync`. */
+export function selectDataSection(section) {
+  selectSettingsTab("data");
+  retry(() => {
+    const tab = find(`[data-guide="data-subtab-${section}"]`);
+    if (!tab) return false;
+    if (tab.getAttribute("aria-selected") !== "true") {
+      tab.click();
+    }
+    return true;
+  });
+}
+
 export function openConversationSettings() {
   if (!find('[data-guide="conversation-settings-panel"]')) {
     click(".settings-toggle");

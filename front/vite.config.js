@@ -212,6 +212,7 @@ try {
         process.env["VITE_MODULE_AGENTS"] = value?.agents ?? true;
         process.env["VITE_MODULE_ARCANAS"] = value?.arcanas ?? true;
         process.env["VITE_MODULE_SPEECH"] = JSON.stringify(value?.speech) || false;
+        process.env["VITE_MODULE_SYNC"] = value?.sync ?? false;
       } catch (e) {
         console.log("Error while parsing modules: ", e)
       }

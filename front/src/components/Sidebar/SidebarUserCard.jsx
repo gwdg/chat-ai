@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useModal } from "../../modals/ModalContext";
 import UserContainer from "../Header/UserContainer";
+import SyncStatusButton from "./SyncStatusButton";
 
 export default function SidebarUserCard({ localState, userData, modelsData }) {
   const { openModal } = useModal();
@@ -51,6 +52,16 @@ export default function SidebarUserCard({ localState, userData, modelsData }) {
           )}
         </div>
       )}
+      <SyncStatusButton
+        onOpenSettings={() =>
+          openModal("userSettings", {
+            localState,
+            userData,
+            modelsData,
+            initialTab: "data/sync",
+          })
+        }
+      />
     </div>
   );
 }

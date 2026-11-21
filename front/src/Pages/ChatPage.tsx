@@ -11,6 +11,7 @@ import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
 import { useUpdateUserData } from "../hooks/useUpdateUserData";
 import { useWindowSize } from "../hooks/useWindowSize";
 import { useSettingsDeepLink } from "../hooks/useSettingsDeepLink";
+import { useSyncEngine } from "../hooks/useSyncEngine";
 
 import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
 import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
@@ -58,6 +59,9 @@ export default function ChatPage() {
   const mcpToolPolicy = useSelector(selectMcpToolPolicy);
 
   useSettingsDeepLink({ localState, userData, modelsData });
+  // Restores the stored sync status and keeps the five-minute timer alive. The
+  // timer does nothing until the vault is unlocked in this tab.
+  useSyncEngine();
 
   // Sync localState conversation with IndexedDB
   useSyncConversation({
