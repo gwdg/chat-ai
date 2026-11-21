@@ -1228,6 +1228,22 @@ fence renderers (mermaid, typst, latex, highlighted code) look identical; empty 
 `<pre>` fallback. Because it reads Redux and uses `useNavigate` for internal links, tests that
 preview markdown need a `react-redux` mock and a router (`MemoryRouter`).
 
+An image preview also offers **Describe** (`DocumentPanel/DescribeImageButton.jsx`, left of Download
+in both headers — `FilePreviewPanel` and `WorkspacePreviewTab`). It asks the deployment's vision
+model (`apis/agentEndpoints.ts#explainImage`, model from `EXPLAIN_IMAGE_MODEL()`) and saves the
+answer as `<name>-description.md`. `apis/visionModel.js#isVisionModelAvailable` decides whether the
+button is enabled: it stays visible but greyed out unless `/models` lists that model (the list is
+cached for five minutes; a failed lookup is not cached, so a transient error does not disable it for
+the session). A host that can write beside the image hands over `preview.saveDescription` — the
+workspace tree writes through its provider, `useOpencodeFilePreview` through `writeOpencodeFile` —
+and every other host (a chat attachment) downloads the Markdown instead. A host that can look beside
+the image also passes `preview.descriptionExists(fileName)` and `preview.openDescription(fileName)`
+(the workspace tree stats through its provider, the agent preview lists the parent folder). When the
+description is already there, Describe opens it — selected — instead of paying for another model call
+and overwriting a file the user may have edited. A newly written description is opened and selected
+the same way, so the preview shows the text rather than the picture it just described. Never hide the
+button when no model is available; the greyed state is what explains why the action cannot be used.
+
 Switching to another file must not reuse the previous one's bytes: `FilePreviewPanel` keys the
 content by the preview's own key (`fileId` for chat), media is only rendered once `url` belongs to
 the current file, and `useFileMeta` / `useFile` / `useFileBase64` / `useFileContent` reset their

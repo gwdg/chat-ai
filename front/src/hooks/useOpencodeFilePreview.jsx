@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { readOpencodeFile } from "../apis/opencodeAgents";
+import { listOpencodeFiles, readOpencodeFile, writeOpencodeFile } from "../apis/opencodeAgents";
 
 const TEXT_EXT =
   /\.(md|markdown|txt|csv|tsv|json|xml|ya?ml|html?|css|jsx?|tsx?|py|sh|toml|ini|log|typ|tex|rs|go|java|c|h|cpp|cs|rb|php|swift|kt|sql|dockerfile|env)$/i;
@@ -55,7 +55,55 @@ export function useOpencodeFilePreview(agent) {
         }
         const url = URL.createObjectURL(blob);
         previewUrlRef.current = url;
-        setPreview({ entry: fileEntry, loading: false, url });
+        // An image can be described: the description is written beside it in the
+        // agent's own project filesystem, so the agent finds it with the picture.
+        // Any image can tell whether that file is already there and open it; only
+        // a reachable server can create it.
+        const dir = entry.path.split("/").slice(0, -1).join("/");
+        const descriptionPath = (fileName) =>
+          dir ? `${dir}/${fileName}` : fileName;
+        const openDescription = (fileName) =>
+          openFile({
+            ...entry,
+            path: descriptionPath(fileName),
+            name: fileName,
+            mime: "text/markdown",
+            kind: "file",
+          });
+        const descriptionExists = async (fileName) => {
+          try {
+            const files = await listOpencodeFiles(agent, dir);
+            return files.some((file) => file.name === fileName);
+          } catch {
+            // An unreachable server is not a "yes": the button then asks the model
+            // again, which reports the real problem instead of silently opening
+            // nothing.
+            return false;
+          }
+        };
+        const saveDescription =
+          mime.startsWith("image/")
+            ? async (text, fileName) => {
+                const target = descriptionPath(fileName);
+                await writeOpencodeFile(
+                  agent,
+                  target,
+                  new Blob([text], { type: "text/markdown" }),
+                  "text/markdown",
+                );
+                // Show the description at once instead of leaving the image behind.
+                void openDescription(fileName);
+                return target;
+              }
+            : undefined;
+        setPreview({
+          entry: fileEntry,
+          loading: false,
+          url,
+          descriptionExists,
+          openDescription,
+          saveDescription,
+        });
       } catch (reason) {
         setPreview({
           entry,

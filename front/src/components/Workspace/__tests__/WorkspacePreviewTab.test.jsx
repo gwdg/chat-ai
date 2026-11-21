@@ -1,6 +1,19 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+// The Describe button only depends on this hook; its own behaviour is covered by
+// DescribeImageButton.test.jsx. Here it answers "no vision model", so the button
+// must be present (greyed out) rather than asking the network.
+vi.mock("../../../hooks/useVisionModelAvailable", () => ({
+  useVisionModelAvailable: () => false,
+}));
+
+// The shared Describe button reads the toast helper from Redux; only its disabled
+// state matters here, so the toast is stubbed out.
+vi.mock("../../../hooks/useToast", () => ({
+  useToast: () => ({ notifySuccess: vi.fn(), notifyError: vi.fn() }),
+}));
+
 import WorkspacePreviewTab from "../WorkspacePreviewTab";
 
 const preview = {
@@ -56,5 +69,30 @@ describe("WorkspacePreviewTab", () => {
     expect(
       screen.queryByRole("button", { name: "Download" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("offers Describe left of Download for an image", () => {
+    renderTab({
+      preview: {
+        entry: { name: "chart.png", mime: "image/png", size: 12 },
+        url: "blob:chart",
+      },
+      onDownload: vi.fn(),
+    });
+
+    const describe = screen.getByTestId("describe-image");
+    const download = screen.getByRole("button", { name: "Download" });
+    expect(
+      describe.compareDocumentPosition(download) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    // No vision model in this deployment, so the action stays greyed out.
+    expect(describe).toBeDisabled();
+  });
+
+  it("offers no Describe action for a text file", () => {
+    renderTab();
+
+    expect(screen.queryByTestId("describe-image")).not.toBeInTheDocument();
   });
 });

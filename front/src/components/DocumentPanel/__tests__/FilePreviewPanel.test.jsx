@@ -9,6 +9,11 @@ vi.mock("react-redux", () => ({
     selector({ user_settings: {}, interface_settings: {} }),
 }));
 
+// The image header asks whether a vision model exists; here it must not touch the network.
+vi.mock("../../../hooks/useVisionModelAvailable", () => ({
+  useVisionModelAvailable: () => false,
+}));
+
 import FilePreviewPanel from "../FilePreviewPanel";
 
 // Workspace, agent and chat previews all render this panel, so the shared renderer has
@@ -59,6 +64,8 @@ describe("FilePreviewPanel", () => {
       "blob:chart",
     );
     expect(screen.queryByText(/Failed to load image/)).not.toBeInTheDocument();
+    // An image also offers Describe, next to its Download.
+    expect(screen.getByTestId("describe-image")).toBeInTheDocument();
   });
 
   it("hands the entry to the caller's download action", () => {
