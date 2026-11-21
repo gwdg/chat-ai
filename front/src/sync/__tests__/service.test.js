@@ -15,6 +15,7 @@ import {
   lockSyncVault,
   remoteVaultSummary,
   resetSyncServiceForTests,
+  rotateSyncVault,
   setSyncPreferences,
   subscribeSyncStatus,
   syncNow,
@@ -95,6 +96,41 @@ describe("sync service", () => {
     const header = await readVaultHeader(store);
     expect(header?.vaultId).not.toBe(vault.header.vaultId);
   });
+
+  it(
+    "rotates the vault and re-uploads under the new key",
+    async () => {
+      const { store } = await setup();
+      const vault = await createVault(PASSPHRASE, {
+        argon: { t: 1, m: 1024, p: 1 },
+      });
+      await writeVaultHeader(store, vault.header);
+      await unlockSyncVault(PASSPHRASE);
+      const first = await readVaultHeader(store);
+      await syncNow();
+      expect((await remoteVaultSummary())?.fragments).toBe(1);
+
+      const rotated = await rotateSyncVault("a different long passphrase");
+      expect(rotated.unlocked).toBe(true);
+      const second = await readVaultHeader(store);
+      expect(second?.vaultId).not.toBe(first?.vaultId);
+
+      await syncNow();
+      // The old index fragment is still on the filesystem but no longer opens.
+      expect(await remoteVaultSummary()).toMatchObject({
+        fragments: 1,
+        unreadable: 1,
+      });
+
+      lockSyncVault();
+      await expect(unlockSyncVault(PASSPHRASE)).rejects.toMatchObject({
+        code: "WRONG_PASSPHRASE",
+      });
+      await unlockSyncVault("a different long passphrase");
+      expect(getSyncStatus().unlocked).toBe(true);
+    },
+    15000,
+  );
 
   it("changes the passphrase without re-encrypting the archive", async () => {
     const { store } = await setup();

@@ -70,9 +70,9 @@ export default function SyncSettings() {
   }, []);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || status.unlocked) return;
     void refreshRemote();
-  }, [enabled, refreshRemote]);
+  }, [enabled, status.unlocked, refreshRemote]);
 
   if (!isSyncEnabled()) return null;
 
@@ -287,9 +287,23 @@ export default function SyncSettings() {
               <p className="mt-2 text-[11px] leading-relaxed text-base-content/80">
                 {t("user_settings.data.sync.replace_warning")}
               </p>
+              <label
+                className="mt-3 block text-xs font-medium"
+                htmlFor="sync-replace-confirm"
+              >
+                {t("user_settings.data.sync.passphrase_confirm")}
+              </label>
+              <input
+                id="sync-replace-confirm"
+                type="password"
+                autoComplete="new-password"
+                className="input input-bordered mt-1 w-full"
+                value={confirm}
+                onChange={(event) => setConfirm(event.target.value)}
+              />
               <button
                 type="button"
-                className="btn btn-warning btn-outline btn-sm mt-2"
+                className="btn btn-warning btn-outline btn-sm mt-3"
                 disabled={busy}
                 onClick={() => create(true)}
               >

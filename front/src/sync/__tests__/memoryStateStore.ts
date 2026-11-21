@@ -41,4 +41,9 @@ export class MemoryStateStore implements SyncStateStore {
   async deleteMeta(key: string): Promise<void> {
     this.meta.delete(key);
   }
+
+  async clear(): Promise<void> {
+    this.records.clear();
+    this.meta.clear();
+  }
 }

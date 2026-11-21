@@ -107,6 +107,8 @@ export interface SyncStateStore {
   getMeta<T = any>(key: string): Promise<T | undefined>;
   setMeta(key: string, value: any): Promise<void>;
   deleteMeta(key: string): Promise<void>;
+  /** Drop every merge base and every meta row (a replaced vault starts over). */
+  clear(): Promise<void>;
 }
 
 export type SyncProgress = {

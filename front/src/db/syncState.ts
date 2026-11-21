@@ -36,12 +36,15 @@ export const syncState: SyncStateStore = {
   async deleteMeta(key) {
     await db.sync_meta.delete(key);
   },
+  async clear() {
+    await db.transaction("rw", [db.sync_meta, db.sync_records], async () => {
+      await db.sync_meta.clear();
+      await db.sync_records.clear();
+    });
+  },
 };
 
 /** Drop every sync bookkeeping row (used when the remote archive is reset). */
 export async function clearSyncState(): Promise<void> {
-  await db.transaction("rw", [db.sync_meta, db.sync_records], async () => {
-    await db.sync_meta.clear();
-    await db.sync_records.clear();
-  });
+  await syncState.clear();
 }

@@ -19,13 +19,8 @@ const service = vi.hoisted(() => ({
   runSyncIfUnlocked: vi.fn(),
   syncNow: vi.fn(),
 }));
-
-vi.mock("../../../utils/modules", () => ({
-  isSyncEnabled: modules.isSyncEnabled,
-}));
-vi.mock("../../../sync/service", () => service);
-vi.mock("../../../hooks/useSyncEngine", () => ({
-  useSyncEngine: () => ({
+const engine = vi.hoisted(() => ({
+  status: {
     enabled: true,
     configured: false,
     unlocked: false,
@@ -39,7 +34,15 @@ vi.mock("../../../hooks/useSyncEngine", () => ({
     skipped: 0,
     error: null,
     progress: null,
-  }),
+  },
+}));
+
+vi.mock("../../../utils/modules", () => ({
+  isSyncEnabled: modules.isSyncEnabled,
+}));
+vi.mock("../../../sync/service", () => service);
+vi.mock("../../../hooks/useSyncEngine", () => ({
+  useSyncEngine: () => engine.status,
 }));
 
 const makeStore = () =>
@@ -56,6 +59,7 @@ const renderSection = (store = makeStore()) => {
 
 beforeEach(() => {
   modules.isSyncEnabled.mockReturnValue(true);
+  engine.status.unlocked = false;
   service.hasRemoteVault.mockReset();
   service.hasRemoteVault.mockResolvedValue(false);
   service.createSyncVault.mockReset();
@@ -99,6 +103,53 @@ describe("SyncSettings", () => {
 
     await waitFor(() =>
       expect(screen.getByRole("button", { name: /unlock/i })).toBeInTheDocument(),
+    );
+  });
+
+  it("lets a locked account replace the vault with a confirmed passphrase", async () => {
+    service.hasRemoteVault.mockResolvedValue(true);
+    const { store } = renderSection();
+    store.dispatch({ type: "user_settings/setSyncEnabled", payload: true });
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /unlock/i })).toBeInTheDocument(),
+    );
+
+    fireEvent.change(screen.getByLabelText(/^passphrase$/i), {
+      target: { value: "a new long passphrase" },
+    });
+    fireEvent.change(screen.getByLabelText(/repeat passphrase/i), {
+      target: { value: "a new long passphrase" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /replace the vault/i }));
+
+    await waitFor(() =>
+      expect(service.createSyncVault).toHaveBeenCalledWith(
+        "a new long passphrase",
+        { replace: true },
+      ),
+    );
+  });
+
+  it("checks the remote again after the vault locks", async () => {
+    engine.status.unlocked = true;
+    const { store, view } = renderSection();
+    store.dispatch({ type: "user_settings/setSyncEnabled", payload: true });
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /sync now/i })).toBeInTheDocument(),
+    );
+    expect(service.hasRemoteVault).not.toHaveBeenCalled();
+
+    engine.status.unlocked = false;
+    view.rerender(
+      <Provider store={store}>
+        <SyncSettings />
+      </Provider>,
+    );
+
+    await waitFor(() =>
+      expect(service.hasRemoteVault).toHaveBeenCalledTimes(1),
     );
   });
 });

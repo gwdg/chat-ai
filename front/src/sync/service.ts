@@ -1,4 +1,4 @@
-import { clearSyncState, syncState } from "../db/syncState";
+import { syncState } from "../db/syncState";
 import type { SyncStateStore } from "./types";
 import type { SyncStore } from "./storage/types";
 import { SaiaFsSyncStore } from "./storage/saiaFsStore";
@@ -269,7 +269,7 @@ export async function createSyncVault(
       );
     }
     if (existing && options.replace) {
-      await clearSyncState().catch(() => undefined);
+      await deps.state.clear().catch(() => undefined);
     }
     const created = await createVault(passphrase);
     await writeVaultHeader(getStore(), created.header);
@@ -343,7 +343,7 @@ export async function rotateSyncVault(passphrase: string): Promise<SyncStatus> {
   try {
     if (!keys) throw new VaultError("PASSPHRASE_REQUIRED", "Unlock the vault first.");
     const created = await createVault(passphrase);
-    await clearSyncState();
+    await deps.state.clear();
     await writeVaultHeader(getStore(), created.header);
     await cacheHeader(created.header);
     keys = created.keys;
