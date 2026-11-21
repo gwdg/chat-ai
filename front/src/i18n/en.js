@@ -847,6 +847,15 @@ export default {
       step3:
         "Export local data or clear chats, memories, settings, and attachments.",
     },
+    sync_setup: {
+      title: "Encrypted server copy",
+      step1: "Open your user settings.",
+      step2: "Choose the Data tab.",
+      step3:
+        "The encrypted server copy keeps settings, conversations, workspaces and agents in step across your devices. Everything is encrypted in this browser before it is uploaded, and the passphrase is never stored.",
+      step4:
+        "Switch the server copy on, then create it with a passphrase you can remember, or unlock the copy another device already created for this account.",
+    },
     dark_mode: {
       title: "Switch theme",
       step1: "Use the theme toggle in the footer to switch between light and dark mode.",
@@ -1599,6 +1608,69 @@ export default {
       storage_request_unsupported:
         "This browser does not support requesting persistent storage.",
       storage_request_failed: "Persistent storage request failed: {{error}}",
+      sync: {
+        title: "Encrypted server copy",
+        description:
+          "Keep conversations, settings, workspaces and agents in step across your devices by storing an encrypted copy on your SAIA filesystem.",
+        notice:
+          "Everything is encrypted in this browser before it is uploaded. The passphrase never leaves your device, the server cannot read the copy, and without the passphrase the data cannot be recovered. Use a passphrase you can remember and keep it safe.",
+        enable_label: "Store an encrypted copy on my SAIA filesystem",
+        enable_description:
+          "Off by default. Nothing is uploaded until you create or unlock the copy below.",
+        create_title: "Create the encrypted copy",
+        create_description:
+          "The passphrase protects the key that encrypts the archive. Losing it means losing access to the copy.",
+        unlock_title: "Unlock the existing copy",
+        unlock_description:
+          "Another device already created a copy for this account. Enter its passphrase to use it here.",
+        passphrase: "Passphrase",
+        passphrase_confirm: "Repeat passphrase",
+        passphrase_hint: "At least {{count}} characters.",
+        create_button: "Create encrypted copy",
+        unlock_button: "Unlock",
+        checking: "Checking the server…",
+        check_again: "Check again",
+        exists_hint:
+          "A copy already exists. Unlock it, or replace it with a new vault and re-upload everything.",
+        replace_warning:
+          "Replacing the vault makes every uploaded file unreadable. This device uploads its data again.",
+        replace_button: "Replace the vault",
+        unlocked_title: "Connected",
+        vault: "Vault",
+        device: "This device",
+        last_sync: "Last sync",
+        never: "Not synced yet",
+        conflicts: "Conflicts",
+        skipped: "Skipped files",
+        skipped_hint:
+          "Files larger than 8 MB are not uploaded. The chat or workspace keeps a placeholder.",
+        conflict_hint:
+          "Conflicts keep both versions. A conversation is copied with “ (conflict copy)” in its title.",
+        sync_now: "Sync now",
+        syncing: "Syncing…",
+        lock: "Lock vault",
+        auto_label: "Sync automatically",
+        auto_description:
+          "Runs every five minutes while this tab is open and the vault is unlocked.",
+        change_title: "Change the passphrase",
+        change_button: "Change passphrase",
+        changed: "The passphrase was changed. The archive was not re-encrypted.",
+        rotate_title: "Replace the vault",
+        rotate_description:
+          "Creates a new vault key and a new key derivation salt. Every uploaded file becomes unreadable, then this device uploads its data again. Use this to revoke a device that should no longer read the copy.",
+        rotate_button: "Replace vault and re-upload",
+        rotated: "The vault was replaced. Run a sync to upload this device again.",
+        cleanup: "Clean up remote files",
+        cleanup_description:
+          "Deletes record revisions and attachments that no device index references any more.",
+        cleanup_done: "Removed {{records}} revisions and {{assets}} attachments.",
+        disable_hint:
+          "Turning the server copy off stops syncing and locks the vault. The encrypted files stay on your filesystem until you clean them up or delete them there.",
+        missing_passphrase: "Enter the passphrase.",
+        mismatch: "The passphrases do not match.",
+        session_expired: "The vault was locked. Enter the passphrase again.",
+        error: "Sync failed: {{error}}",
+      },
     },
     clear_data_button: "Delete All Local Data",
     import_data_button: "Import Data",

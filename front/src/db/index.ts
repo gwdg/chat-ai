@@ -36,7 +36,9 @@ import type {
   AgentSessionMessageRow,
   WorkspaceNodeRow,
   WorkspaceBlobRow,
-  WorkspaceFileReferenceRow
+  WorkspaceFileReferenceRow,
+  SyncMetaRow,
+  SyncRecordRow
 } from "./dbTypes"
 
 // ---------- Dexie DB ----------
@@ -61,6 +63,8 @@ export class AppDB extends Dexie {
   workspace_nodes!: Table<WorkspaceNodeRow, string>
   workspace_blobs!: Table<WorkspaceBlobRow, string>
   workspace_file_references!: Table<WorkspaceFileReferenceRow, string>
+  sync_meta!: Table<SyncMetaRow, string>
+  sync_records!: Table<SyncRecordRow, [string, string]>
 
   constructor() {
     super('app-conversations-db')
@@ -364,6 +368,14 @@ export class AppDB extends Dexie {
     // every other row value exactly as it is. The version stays registered so PR builds that
     // already opened as v17 do not hit a downgrade error.
     this.version(17).stores({}).upgrade(preserveStorageConsent);
+
+    // Encrypted sync bookkeeping: the vault header cache, the per-device id and
+    // the last remote revision each local record agreed on. None of it is
+    // exported and none of it holds key material — only `{rev, hash}` pairs.
+    this.version(18).stores({
+      sync_meta: 'key',
+      sync_records: '[namespace+id], namespace',
+    });
   }
 }
 
@@ -581,9 +593,15 @@ export async function createConversation(params: {
   hasFirstPrompt?: boolean
   isMetaChat?: boolean
   persona?: PersonaInfo | null
+  /** Import/sync: keep the original creation time instead of stamping `now`. */
+  createdAt?: number
 }) {
   const id = params?.id ?? newId()
   const now = Date.now()
+  const createdAt =
+    Number.isFinite(params.createdAt) && params.createdAt! > 0
+      ? params.createdAt!
+      : now
   const title = params.title
   const settings = params.settings
   const messages = params.messages ?? []
@@ -594,7 +612,7 @@ export async function createConversation(params: {
     await db.conversations.add({
       id,
       title,
-      createdAt: now,
+      createdAt,
       lastModified: now,
       settings,
       messageCount: 0,

@@ -862,6 +862,15 @@ export default {
       step3:
         "Exportieren Sie lokale Daten oder löschen Sie Chats, Erinnerungen, Einstellungen und Anhänge.",
     },
+    sync_setup: {
+      title: "Verschlüsselte Serverkopie",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Tab Daten.",
+      step3:
+        "Die verschlüsselte Serverkopie hält Einstellungen, Unterhaltungen, Workspaces und Agenten auf Ihren Geräten aktuell. Alles wird in diesem Browser verschlüsselt, bevor es hochgeladen wird, und die Passphrase wird nie gespeichert.",
+      step4:
+        "Schalten Sie die Serverkopie ein und erstellen Sie sie mit einer Passphrase, die Sie sich merken können, oder entsperren Sie die Kopie, die ein anderes Gerät bereits für dieses Konto erstellt hat.",
+    },
     dark_mode: {
       title: "Design wechseln",
       step1:
@@ -1621,6 +1630,69 @@ export default {
       storage_request_unsupported:
         "Dieser Browser unterstützt das Anfordern dauerhaften Speichers nicht.",
       storage_request_failed: "Anfordern von dauerhaftem Speicher fehlgeschlagen: {{error}}",
+      sync: {
+        title: "Verschlüsselte Serverkopie",
+        description:
+          "Halten Sie Unterhaltungen, Einstellungen, Workspaces und Agenten auf Ihren Geräten aktuell, indem Sie eine verschlüsselte Kopie in Ihrem SAIA-Dateisystem speichern.",
+        notice:
+          "Alles wird in diesem Browser verschlüsselt, bevor es hochgeladen wird. Die Passphrase verlässt Ihr Gerät nie, der Server kann die Kopie nicht lesen, und ohne die Passphrase sind die Daten nicht wiederherstellbar. Verwenden Sie eine Passphrase, die Sie sich merken können, und bewahren Sie sie sicher auf.",
+        enable_label: "Verschlüsselte Kopie in meinem SAIA-Dateisystem speichern",
+        enable_description:
+          "Standardmäßig aus. Es wird nichts hochgeladen, bis Sie unten die Kopie erstellen oder entsperren.",
+        create_title: "Verschlüsselte Kopie erstellen",
+        create_description:
+          "Die Passphrase schützt den Schlüssel, der das Archiv verschlüsselt. Ohne sie ist die Kopie nicht mehr zugänglich.",
+        unlock_title: "Vorhandene Kopie entsperren",
+        unlock_description:
+          "Ein anderes Gerät hat für dieses Konto bereits eine Kopie erstellt. Geben Sie deren Passphrase ein, um sie hier zu verwenden.",
+        passphrase: "Passphrase",
+        passphrase_confirm: "Passphrase wiederholen",
+        passphrase_hint: "Mindestens {{count}} Zeichen.",
+        create_button: "Verschlüsselte Kopie erstellen",
+        unlock_button: "Entsperren",
+        checking: "Server wird geprüft…",
+        check_again: "Erneut prüfen",
+        exists_hint:
+          "Es existiert bereits eine Kopie. Entsperren Sie sie oder ersetzen Sie sie durch einen neuen Tresor und laden Sie alles erneut hoch.",
+        replace_warning:
+          "Beim Ersetzen des Tresors wird jede hochgeladene Datei unlesbar. Dieses Gerät lädt seine Daten erneut hoch.",
+        replace_button: "Tresor ersetzen",
+        unlocked_title: "Verbunden",
+        vault: "Tresor",
+        device: "Dieses Gerät",
+        last_sync: "Letzte Synchronisierung",
+        never: "Noch nicht synchronisiert",
+        conflicts: "Konflikte",
+        skipped: "Übersprungene Dateien",
+        skipped_hint:
+          "Dateien über 8 MB werden nicht hochgeladen. Der Chat oder Workspace behält einen Platzhalter.",
+        conflict_hint:
+          "Bei Konflikten bleiben beide Versionen erhalten. Eine Unterhaltung wird als „ (conflict copy)“ im Titel kopiert.",
+        sync_now: "Jetzt synchronisieren",
+        syncing: "Synchronisierung…",
+        lock: "Tresor sperren",
+        auto_label: "Automatisch synchronisieren",
+        auto_description:
+          "Läuft alle fünf Minuten, solange dieser Tab offen und der Tresor entsperrt ist.",
+        change_title: "Passphrase ändern",
+        change_button: "Passphrase ändern",
+        changed: "Die Passphrase wurde geändert. Das Archiv wurde nicht neu verschlüsselt.",
+        rotate_title: "Tresor ersetzen",
+        rotate_description:
+          "Erzeugt einen neuen Tresorschlüssel und ein neues Salz für die Schlüsselableitung. Jede hochgeladene Datei wird unlesbar; anschließend lädt dieses Gerät seine Daten erneut hoch. Damit können Sie ein Gerät aussperren.",
+        rotate_button: "Tresor ersetzen und erneut hochladen",
+        rotated: "Der Tresor wurde ersetzt. Führen Sie eine Synchronisierung aus, um dieses Gerät erneut hochzuladen.",
+        cleanup: "Remote-Dateien aufräumen",
+        cleanup_description:
+          "Löscht Revisionen und Anhänge, auf die kein Geräteindex mehr verweist.",
+        cleanup_done: "{{records}} Revisionen und {{assets}} Anhänge entfernt.",
+        disable_hint:
+          "Wenn Sie die Serverkopie ausschalten, stoppt die Synchronisierung und der Tresor wird gesperrt. Die verschlüsselten Dateien bleiben in Ihrem Dateisystem, bis Sie sie aufräumen oder dort löschen.",
+        missing_passphrase: "Geben Sie die Passphrase ein.",
+        mismatch: "Die Passphrasen stimmen nicht überein.",
+        session_expired: "Der Tresor wurde gesperrt. Geben Sie die Passphrase erneut ein.",
+        error: "Synchronisierung fehlgeschlagen: {{error}}",
+      },
     },
     clear_data_button: "Alle lokalen Daten löschen",
     import_data_button: "Daten importieren",

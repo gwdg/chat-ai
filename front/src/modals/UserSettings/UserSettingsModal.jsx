@@ -37,7 +37,8 @@ import ImportChatButton from "../../components/Sidebar/Buttons/ImportChatButton"
 import StorageStatus from "./StorageStatus";
 import UsageSettings from "./UsageSettings";
 import EncryptionSettings from "./EncryptionSettings";
-import { isChoicesEnabled, isToolsEnabled } from "../../utils/modules";
+import SyncSettings from "./SyncSettings";
+import { isChoicesEnabled, isSyncEnabled, isToolsEnabled } from "../../utils/modules";
 import { isFeatureEnabled } from "../../config/deployment";
 
 const PROFILE_TABS = [
@@ -259,6 +260,11 @@ export default function UserSettingsModal({
             {t("user_settings.clear_data_button")}
           </button>
         </div>
+        {isSyncEnabled() && (
+          <div className="border-t border-base-300 pt-5">
+            <SyncSettings />
+          </div>
+        )}
       </div>
     );
   };

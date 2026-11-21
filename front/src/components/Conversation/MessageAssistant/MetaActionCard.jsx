@@ -76,6 +76,13 @@ const readConversationSetting = (settings, key) =>
     ? settings?.tools?.[key]
     : settings?.[key];
 
+/** `user_settings` values a Meta proposal can read and write. */
+const readUserSetting = (settings, key) => {
+  if (key === "sync_enabled") return settings?.sync?.enabled === true;
+  if (key === "sync_auto") return settings?.sync?.auto !== false;
+  return settings?.[key];
+};
+
 const readMcpServers = (settings) => {
   const raw = settings?.mcp_servers;
   if (Array.isArray(raw)) {
@@ -371,6 +378,8 @@ export default function MetaActionCard({
       "user_settings.chat_preferences.document_conversion.label",
     mcp_tool_policy: "user_settings.chat_preferences.mcp_tools.label",
     timeout: "user_settings.timeout.title",
+    sync_enabled: "user_settings.data.sync.enable_label",
+    sync_auto: "user_settings.data.sync.auto_label",
     temperature: "meta_chat.setting_temperature",
     top_p: "meta_chat.setting_top_p",
     reasoning_effort: "settings.reasoning_effort.title",
@@ -1027,7 +1036,10 @@ export default function MetaActionCard({
         settings: Object.fromEntries(
           Object.entries(settingUpdates).map(([key, expected]) => [
             key,
-            { previous: userSettings[key], expected },
+            {
+              previous: readUserSetting(userSettings, key),
+              expected,
+            },
           ]),
         ),
         memories: updatedMemories
@@ -1340,7 +1352,7 @@ export default function MetaActionCard({
       }
 
       for (const [key, values] of Object.entries(snapshot.settings)) {
-        if (!valuesEqual(userSettings[key], values.expected)) {
+        if (!valuesEqual(readUserSetting(userSettings, key), values.expected)) {
           throw new Error("Setting changed");
         }
       }

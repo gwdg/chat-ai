@@ -25,7 +25,7 @@ import {
   toolsAreEnabled,
   topicNameEntered,
 } from "./featureGuideActions.js";
-import { isAgentsEnabled } from "../utils/modules.js";
+import { isAgentsEnabled, isSyncEnabled } from "../utils/modules.js";
 
 export const featureGuides = {
   workspace_overview: {
@@ -1358,6 +1358,45 @@ export const featureGuides = {
       },
     ],
   },
+  sync_setup: {
+    titleKey: "feature_guide.sync_setup.title",
+    prompt:
+      "Keep settings, conversations, workspaces and agents in step across devices with an encrypted copy on your SAIA filesystem. Open user settings, choose the Data tab, switch the encrypted server copy on, and create it with a passphrase you can remember (or unlock the copy another device already created). Everything is encrypted in this browser before it is uploaded, and the passphrase is never stored.",
+    keywords: [
+      "sync",
+      "synchronization",
+      "synchronisation",
+      "encrypted copy",
+      "server copy",
+      "multi device",
+      "verschlüsselte kopie",
+      "synchronisieren",
+    ],
+    steps: [
+      {
+        target: ['[data-guide="user-settings"]', ".user-profile-button", ".user-profile-block"],
+        textKey: "feature_guide.sync_setup.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="settings-tab-data"]',
+        prepare: openUserSettings,
+        textKey: "feature_guide.sync_setup.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="sync-settings"]',
+        prepare: () => selectSettingsTab("data"),
+        textKey: "feature_guide.sync_setup.step3",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="sync-enable"]',
+        textKey: "feature_guide.sync_setup.step4",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
   dark_mode: {
     titleKey: "feature_guide.dark_mode.title",
     prompt:
@@ -1739,6 +1778,7 @@ export const FEATURE_CATEGORIES = {
   settings: [
     "settings_overview",
     "e2ee",
+    "sync_setup",
     "chat_preferences",
     "message_timestamps",
     "memories",
@@ -1912,7 +1952,11 @@ export function findFeatureGuideForText(text) {
 
 export function buildFeatureGuidePrompt() {
   return Object.entries(featureGuides)
-    .filter(([featureId]) => featureId !== "remote_agents" || isAgentsEnabled())
+    .filter(([featureId]) => {
+      if (featureId === "remote_agents") return isAgentsEnabled();
+      if (featureId === "sync_setup") return isSyncEnabled();
+      return true;
+    })
     .map(([featureId, guide]) => `- ${featureId}: ${guide.prompt}`)
     .join("\n");
 }

@@ -36,6 +36,10 @@ function baseInitialState() {
     // End-to-end encryption: published model public keys, and model → key bindings.
     e2ee_keys: [],
     e2ee_models: {},
+    // Encrypted copy on the user's SAIA filesystem. `enabled` is opt-in and the
+    // Data tab explains the encryption before it is switched on; `auto` runs a
+    // pass every five minutes while the vault is unlocked in this tab.
+    sync: { enabled: false, auto: true },
   };
 }
 
@@ -210,6 +214,18 @@ function importUserSettingsState(state, incoming) {
     state.mcp_tool_policy = incoming.mcp_tool_policy;
   }
   if (incoming.model !== undefined) state.model = incoming.model;
+  if (incoming.sync && typeof incoming.sync === "object" && !Array.isArray(incoming.sync)) {
+    state.sync = {
+      enabled: incoming.sync.enabled === true,
+      auto: incoming.sync.auto !== false,
+    };
+  }
+  if (typeof incoming.sync_enabled === "boolean") {
+    state.sync = { enabled: incoming.sync_enabled, auto: state.sync?.auto !== false };
+  }
+  if (typeof incoming.sync_auto === "boolean") {
+    state.sync = { enabled: state.sync?.enabled === true, auto: incoming.sync_auto };
+  }
 }
 
 // Deployment defaults from front.json (`userSettings` → VITE_USER_SETTINGS). The value is
@@ -466,6 +482,20 @@ const userSettingsSlice = createSlice({
       if (MCP_TOOL_POLICIES.includes(policy)) state.mcp_tool_policy = policy;
     },
 
+    setSyncEnabled: (state, action) => {
+      state.sync = {
+        enabled: Boolean(action.payload),
+        auto: state.sync?.auto !== false,
+      };
+    },
+
+    setSyncAuto: (state, action) => {
+      state.sync = {
+        enabled: state.sync?.enabled === true,
+        auto: Boolean(action.payload),
+      };
+    },
+
     addE2eeKey: (state, action) => {
       ensureE2eeState(state);
       const key = action.payload;
@@ -599,7 +629,8 @@ export const {
   setCollapseReasoningWhileStreaming, setDocumentConversionMode,
   setConversationSummaries, setShowTimestamps,
   setAdvancedMode,
-  setSendWithEnter, setMcpToolPolicy, importUserSettings
+  setSendWithEnter, setMcpToolPolicy, importUserSettings,
+  setSyncEnabled, setSyncAuto
 } = userSettingsSlice.actions;
 
 // Selectors

@@ -390,3 +390,20 @@ export type WorkspaceFileReferenceRow = {
   path?: string
   createdAt: number
 }
+
+/**
+ * Encrypted-sync bookkeeping. `sync_records` stores the remote revision and
+ * content hash a local record last agreed on, which is what turns "did this
+ * change?" into a hash comparison instead of a timestamp guess.
+ */
+export type SyncRecordRow = {
+  namespace: string
+  id: string
+  rev: number
+  hash: string
+}
+
+export type SyncMetaRow = {
+  key: string
+  value: any
+}
