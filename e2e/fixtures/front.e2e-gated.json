@@ -1,0 +1,33 @@
+{
+    "mode": "dev",
+    "port": 8094,
+    "backendPath": "http://127.0.0.1:8091",
+    "modelsPath": "http://127.0.0.1:8091/models",
+    "userDataPath": "http://127.0.0.1:8091/user",
+    "agentGatewayTools": false,
+    "titleGenerationModel": "deepseek-v4.1-flash-1017",
+    "memoryGenerationModel": "deepseek-v4.1-flash-1017",
+    "proposalGenerationModel": "deepseek-v4.1-flash-1017",
+    "feedbackMode": false,
+    "modules": {
+        "tools": false,
+        "feedback": false,
+        "choices": false,
+        "agent": false,
+        "agents": false,
+        "arcanas": false,
+        "sync": false
+    },
+    "default": {
+        "model": {
+            "id": "deepseek-v4.1-flash-1017",
+            "name": "Alpha Mock Model"
+        },
+        "messages": [
+            { "role": "system", "content": "You are a helpful assistant" }
+        ],
+        "top_p": 0.5,
+        "temperature": 0.5
+    },
+    "announcement": ""
+}

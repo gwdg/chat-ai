@@ -16,6 +16,19 @@ import { SAIA_FS_TARGET } from "./src/saiaFsTarget";
 const APP_URL = process.env.E2E_APP_URL ?? "http://127.0.0.1:8090";
 const USE_EXTERNAL_APP = Boolean(process.env.E2E_APP_URL);
 
+/**
+ * A second mocked instance with the same upstreams but a lean deployment:
+ * tools, feedback, choices, the browser agent, agents, Arcanas and sync are off
+ * (`fixtures/front.e2e-gated.json`). The tutorial and use-case catalogs have to
+ * omit exactly the guides those modules carry and keep the ungated ones. It
+ * needs its own Vite server because every `VITE_MODULE_*` value is compiled in
+ * at startup, so the default app cannot be reconfigured per test.
+ */
+const GATED_APP_URL =
+  process.env.E2E_GATED_APP_URL ?? "http://127.0.0.1:8094";
+const GATED_APP_PORT = new URL(GATED_APP_URL).port || "8094";
+const GATED_SPEC = /tutorial-catalog-gated\.spec\.ts/;
+
 /** Opt-in integration scenario against a local `opencode serve` instance. */
 const OPENCODE_ENABLED = process.env.E2E_OPENCODE === "1";
 const OPENCODE_URL = (process.env.E2E_OPENCODE_URL ?? "http://127.0.0.1:4096").replace(/\/$/, "");
@@ -139,6 +152,18 @@ if (SAIA_FS_ENABLED && (REAL_MODEL_ENABLED || OPENCODE_ENABLED)) {
 if (REAL_MODEL_ENABLED && !USE_EXTERNAL_APP) writeRealConfig();
 if (SAIA_FS_ENABLED && !USE_EXTERNAL_APP) writeSaiaFsConfig();
 
+/**
+ * The lean instance belongs to the default mocked mode. The opt-in modes start
+ * their own app instance, and `E2E_APP_URL` (an app you already run) has an
+ * unknown module set, so the gated project only exists when a gated URL is
+ * given explicitly or the suite starts the server itself.
+ */
+const GATED_ENABLED =
+  !REAL_MODEL_ENABLED &&
+  !SAIA_FS_ENABLED &&
+  !OPENCODE_ENABLED &&
+  (!USE_EXTERNAL_APP || Boolean(process.env.E2E_GATED_APP_URL));
+
 const webServer: any[] = [];
 if (!USE_EXTERNAL_APP && !REAL_MODEL_ENABLED && !SAIA_FS_ENABLED) {
   webServer.push({
@@ -146,6 +171,16 @@ if (!USE_EXTERNAL_APP && !REAL_MODEL_ENABLED && !SAIA_FS_ENABLED) {
       "CONFIG_LOCATION=../e2e/fixtures/front.e2e.json npm run dev -- --port 8090 --strictPort",
     cwd: "../front",
     url: APP_URL,
+    reuseExistingServer: !process.env.CI,
+    timeout: 180_000,
+  });
+}
+if (GATED_ENABLED && !process.env.E2E_GATED_APP_URL) {
+  // Same upstreams, different modules: the catalogs have to follow the build.
+  webServer.push({
+    command: `CONFIG_LOCATION=../e2e/fixtures/front.e2e-gated.json npm run dev -- --port ${GATED_APP_PORT} --strictPort`,
+    cwd: "../front",
+    url: GATED_APP_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
   });
@@ -222,7 +257,7 @@ const chrome = { browserName: "chromium", channel: "chrome" } as const;
 const deviceProjects: Project[] = [
   {
     name: "chrome-desktop",
-    testIgnore: [OPENCODE_SPEC, REAL_SPEC, SAIA_FS_SPEC],
+    testIgnore: [OPENCODE_SPEC, REAL_SPEC, SAIA_FS_SPEC, GATED_SPEC],
     use: {
       ...devices["Desktop Chrome"],
       ...chrome,
@@ -231,19 +266,19 @@ const deviceProjects: Project[] = [
   },
   {
     name: "chrome-tablet",
-    testIgnore: [OPENCODE_SPEC, REAL_SPEC, SAIA_FS_SPEC],
+    testIgnore: [OPENCODE_SPEC, REAL_SPEC, SAIA_FS_SPEC, GATED_SPEC],
     // 1194 x 834: below the app's 1280 px desktop breakpoint, so it keeps the
     // tablet layout (rail sidebar, drawer-free content) while still being wide.
     use: { ...devices["iPad Pro 11 landscape"], ...chrome },
   },
   {
     name: "chrome-phone",
-    testIgnore: [OPENCODE_SPEC, REAL_SPEC, SAIA_FS_SPEC],
+    testIgnore: [OPENCODE_SPEC, REAL_SPEC, SAIA_FS_SPEC, GATED_SPEC],
     use: { ...devices["Pixel 7"], ...chrome },
   },
   {
     name: "firefox-desktop",
-    testIgnore: [OPENCODE_SPEC, REAL_SPEC, SAIA_FS_SPEC],
+    testIgnore: [OPENCODE_SPEC, REAL_SPEC, SAIA_FS_SPEC, GATED_SPEC],
     // Same desktop class as chrome-desktop: 1280 x 720 squeezes the Meta chat
     // prompt row far enough that the model chip covers the send button.
     use: {
@@ -263,6 +298,7 @@ const realApp = { baseURL: REAL_APP_URL, mockUpstream: false } as const;
 const realDeviceProjects: Project[] = [
   {
     name: "chrome-desktop",
+    testIgnore: [GATED_SPEC],
     use: {
       ...devices["Desktop Chrome"],
       ...chrome,
@@ -272,14 +308,17 @@ const realDeviceProjects: Project[] = [
   },
   {
     name: "chrome-tablet",
+    testIgnore: [GATED_SPEC],
     use: { ...devices["iPad Pro 11 landscape"], ...chrome, ...realApp },
   },
   {
     name: "chrome-phone",
+    testIgnore: [GATED_SPEC],
     use: { ...devices["Pixel 7"], ...chrome, ...realApp },
   },
   {
     name: "firefox-desktop",
+    testIgnore: [GATED_SPEC],
     use: {
       ...devices["Desktop Firefox"],
       ...realApp,
@@ -293,6 +332,21 @@ const projects: Project[] = SAIA_FS_ENABLED
   : REAL_MODEL_ENABLED
     ? realDeviceProjects
     : deviceProjects;
+
+if (GATED_ENABLED) {
+  // One desktop run: the scenario compares catalog contents against the module
+  // set in `fixtures/front.e2e-gated.json`, not device-specific layout.
+  projects.push({
+    name: "tutorial-gated",
+    testMatch: GATED_SPEC,
+    use: {
+      ...devices["Desktop Chrome"],
+      ...chrome,
+      baseURL: GATED_APP_URL,
+      viewport: { width: 1440, height: 900 },
+    },
+  });
+}
 
 if (SAIA_FS_ENABLED) {
   // One desktop run: the scenario drives the workspace Sources rail and the
@@ -329,7 +383,7 @@ if (OPENCODE_ENABLED) {
 if (!REAL_MODEL_ENABLED && !OPENCODE_ENABLED && process.env.E2E_WEBKIT === "1") {
   projects.push({
     name: "webkit-desktop",
-    testIgnore: [OPENCODE_SPEC, REAL_SPEC, SAIA_FS_SPEC],
+    testIgnore: [OPENCODE_SPEC, REAL_SPEC, SAIA_FS_SPEC, GATED_SPEC],
     use: { ...devices["Desktop Safari"] },
   });
 }

@@ -42,7 +42,7 @@ test.describe("tutorial: select a model", () => {
         system:
           "The model picker opens and the tutorial recognises the click as the completed step.",
         shows:
-          "the Meta chat page with a model selector showing Alpha Mock Model",
+          "the Meta chat page with a model selector chip visible",
       },
       async () => {
         // The overlay drawer would cover the selector on small screens.
