@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { downloadProviderEntry } from "../download";
+import {
+  canPickDownloadDirectory,
+  downloadProviderEntry,
+  pickDownloadDirectory,
+  saveProviderEntriesToDirectory,
+} from "../download";
 import type { FileProvider } from "../providers/types";
 import { captureDownloads } from "../../test/downloads";
 
@@ -113,5 +118,173 @@ describe("downloadProviderEntry", () => {
       "offline",
     );
     expect(downloads.blobs).toEqual([]);
+  });
+});
+
+type FakeDirectory = FileSystemDirectoryHandle & {
+  files: Map<string, Uint8Array>;
+  aborts: string[];
+};
+
+const fakeDirectory = (
+  options: { existing?: string[]; failWrite?: string[] } = {},
+): FakeDirectory => {
+  const files = new Map<string, Uint8Array>();
+  const handles = new Set(options.existing ?? []);
+  const aborts: string[] = [];
+
+  const directory = {
+    name: "Downloads",
+    files,
+    aborts,
+    getFileHandle: vi.fn(
+      async (name: string, createOptions?: { create?: boolean }) => {
+        if (!handles.has(name) && !createOptions?.create) {
+          const error = new Error(
+            "A requested file or directory could not be found.",
+          );
+          error.name = "NotFoundError";
+          throw error;
+        }
+        handles.add(name);
+        return {
+          name,
+          createWritable: vi.fn(async () => {
+            let buffer = new Uint8Array();
+            return {
+              write: vi.fn(async (data: Uint8Array) => {
+                if (options.failWrite?.includes(name)) {
+                  throw new Error("Disk full");
+                }
+                buffer = data;
+              }),
+              close: vi.fn(async () => {
+                files.set(name, buffer);
+              }),
+              abort: vi.fn(async () => {
+                aborts.push(name);
+              }),
+            };
+          }),
+        };
+      },
+    ),
+  };
+
+  return directory as unknown as FakeDirectory;
+};
+
+describe("saveProviderEntriesToDirectory", () => {
+  const item = (provider: FileProvider, name: string) => ({
+    provider,
+    entry: entry({ name, path: `/${name}` }),
+  });
+
+  it("writes every entry into the folder under its own name", async () => {
+    const directory = fakeDirectory();
+    const first = providerWith({ read: vi.fn(async () => streamOf([65])) });
+    const second = providerWith({ read: vi.fn(async () => streamOf([66])) });
+
+    const failures = await saveProviderEntriesToDirectory(directory, [
+      item(first, "a.txt"),
+      item(second, "b.txt"),
+    ]);
+
+    expect(failures).toEqual([]);
+    expect([...directory.files.keys()]).toEqual(["a.txt", "b.txt"]);
+    expect(directory.files.get("a.txt")).toEqual(new Uint8Array([65]));
+  });
+
+  it("never overwrites a file that is already in the folder", async () => {
+    const directory = fakeDirectory({ existing: ["report.pdf"] });
+
+    await saveProviderEntriesToDirectory(directory, [
+      item(providerWith(), "report.pdf"),
+    ]);
+
+    expect(directory.files.has("report.pdf")).toBe(false);
+    expect(directory.files.has("report (2).pdf")).toBe(true);
+  });
+
+  it("keeps two same-named files from different folders apart", async () => {
+    const directory = fakeDirectory();
+
+    await saveProviderEntriesToDirectory(directory, [
+      item(providerWith(), "notes.txt"),
+      item(providerWith(), "notes.txt"),
+    ]);
+
+    expect([...directory.files.keys()]).toEqual([
+      "notes.txt",
+      "notes (2).txt",
+    ]);
+  });
+
+  it("connects a provider that is not connected yet", async () => {
+    const directory = fakeDirectory();
+    const provider = providerWith({ status: "needs-permission" });
+
+    await saveProviderEntriesToDirectory(directory, [
+      item(provider, "a.txt"),
+    ]);
+
+    expect(provider.connect).toHaveBeenCalledTimes(1);
+    expect(directory.files.has("a.txt")).toBe(true);
+  });
+
+  it("reports a failed write by name and keeps saving the rest", async () => {
+    const directory = fakeDirectory({ failWrite: ["b.txt"] });
+
+    const failures = await saveProviderEntriesToDirectory(directory, [
+      item(providerWith(), "a.txt"),
+      item(providerWith(), "b.txt"),
+      item(providerWith(), "c.txt"),
+    ]);
+
+    expect(failures).toEqual([{ name: "b.txt", message: "Disk full" }]);
+    expect([...directory.files.keys()]).toEqual(["a.txt", "c.txt"]);
+    // A half-written file is aborted instead of closed.
+    expect(directory.aborts).toEqual(["b.txt"]);
+  });
+});
+
+describe("pickDownloadDirectory", () => {
+  afterEach(() => {
+    delete (window as unknown as { showDirectoryPicker?: unknown })
+      .showDirectoryPicker;
+  });
+
+  it("reports the picker as unavailable without the browser API", async () => {
+    expect(canPickDownloadDirectory()).toBe(false);
+    await expect(pickDownloadDirectory()).resolves.toBeNull();
+  });
+
+  it("returns the folder the user picked", async () => {
+    const picked = { name: "Downloads" } as FileSystemDirectoryHandle;
+    (window as unknown as { showDirectoryPicker: unknown }).showDirectoryPicker =
+      vi.fn(async () => picked);
+
+    expect(canPickDownloadDirectory()).toBe(true);
+    await expect(pickDownloadDirectory()).resolves.toBe(picked);
+  });
+
+  it("treats a cancelled picker as no folder", async () => {
+    const cancelled = new Error("The user aborted a request.");
+    cancelled.name = "AbortError";
+    (window as unknown as { showDirectoryPicker: unknown }).showDirectoryPicker =
+      vi.fn(async () => {
+        throw cancelled;
+      });
+
+    await expect(pickDownloadDirectory()).resolves.toBeNull();
+  });
+
+  it("rethrows a picker that failed for another reason", async () => {
+    (window as unknown as { showDirectoryPicker: unknown }).showDirectoryPicker =
+      vi.fn(async () => {
+        throw new Error("No permission");
+      });
+
+    await expect(pickDownloadDirectory()).rejects.toThrow("No permission");
   });
 });

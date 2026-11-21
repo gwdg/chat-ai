@@ -2708,6 +2708,7 @@ export default {
     retry: "Erneut versuchen",
     refresh: "Aktualisieren",
     empty_folder: "Dieser Ordner ist leer.",
+    folder_open_failed: "„{{name}}“ konnte nicht geöffnet werden",
     drop_hint: "Dateien hier ablegen, um sie in diese Quelle zu kopieren.",
     load_more: "Mehr laden",
     select_all: "Alle auswählen",
@@ -2715,6 +2716,7 @@ export default {
     selected_count_one: "{{count}} Element ausgewählt",
     selected_count_other: "{{count}} Elemente ausgewählt",
     download: "Herunterladen",
+    downloading: "Dateien werden gespeichert…",
     preview_too_large: "Diese Datei ist zu groß für die Vorschau.",
     preview_unavailable: "Für diesen Dateityp gibt es keine Vorschau.",
     remove_source: "Quelle entfernen",
@@ -2751,6 +2753,10 @@ export default {
     transfer_success_one: "{{count}} Element übertragen.",
     transfer_success_other: "{{count}} Elemente übertragen.",
     transfer_blocked: "Diese Übertragung kann nicht gestartet werden.",
+    transfer_conflict: "„{{name}}“ existiert am Ziel bereits.",
+    transfer_conflict_many:
+      "{{count}} Elemente existieren am Ziel bereits.",
+    transfer_multiple_sources: "mehreren Quellen",
   },
 
   // Landing page

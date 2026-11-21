@@ -3,13 +3,18 @@ import { useTranslation } from "react-i18next";
 import {
   ChevronDown,
   ChevronRight,
+  Close,
   Document,
   DocumentAdd,
+  Download,
+  Edit,
   Folder,
   FolderAdd,
   Locked,
   Renew,
+  TrashCan,
   Upload,
+  WarningAlt,
 } from "@carbon/icons-react";
 
 import { useConversationList } from "../../db";
@@ -22,11 +27,30 @@ import {
 import { useModal } from "../../modals/ModalContext";
 import { chatFolderLabel } from "../../workspace/chatFolderName";
 import { listWorkspaceRoot } from "../../workspace/listWorkspaceRoot";
-import { joinPath } from "../../workspace/paths";
+import {
+  isWithinPath,
+  joinPath,
+  normalizePath,
+  parentPath,
+} from "../../workspace/paths";
+import { renameProviderEntry } from "../../workspace/entries";
+import {
+  canPickDownloadDirectory,
+  downloadProviderEntry,
+  pickDownloadDirectory,
+  saveProviderEntriesToDirectory,
+} from "../../workspace/download";
+import { WorkspaceError } from "../../workspace/providers/types";
+import { streamOf } from "../../workspace/bytes";
+import { runTransfer } from "../../workspace/transfer";
+import { planTransfer } from "../../workspace/transferPlanner";
 import { readProviderPreview } from "../../workspace/filePreview";
 import { uploadLocalFiles } from "../../workspace/upload";
 import { useWorkspaceProviders } from "../../workspace/useWorkspaceProviders";
-import { WORKSPACE_FILES_CHANGED_EVENT } from "../../workspace/filesChanged";
+import {
+  WORKSPACE_FILES_CHANGED_EVENT,
+  notifyWorkspaceFilesChanged,
+} from "../../workspace/filesChanged";
 import {
   createWorkspaceRootProvider,
   emptyStream,
@@ -42,6 +66,14 @@ const nodeKey = (node) =>
   node.context
     ? `${node.context.mount?.id ?? node.context.provider.sourceId}:${node.context.sourcePath}`
     : node.displayPath;
+
+// The payload of a row drag. It carries the provider-relative entry, which is what
+// `runTransfer` needs; the sidebar's own chat/session drag types stay separate, so
+// only a row of this tree lights a folder up as a drop target.
+const WORKSPACE_DRAG_TYPE = "application/x-chat-ai-workspace";
+// The open folder's own background is the workspace root. A folder row has a key of
+// its own, so the two never highlight at the same time.
+const ROOT_DROP_KEY = "__workspace_root__";
 
 // The Files tab is unmounted while another tab is showing, and with it every row's open
 // state. Which folders are unfolded belongs to the workspace, not to the mount, so it is
@@ -79,18 +111,36 @@ function StorageRow({ node, depth, api }) {
   const [children, setChildren] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  // A folder a provider cannot list is reported once and then left alone. Without
+  // this flag the auto-load effect below retries forever: a failed attempt ends with
+  // `children === null` and `loading === false`, which is exactly the state it waits
+  // for, so its own dependency change starts the next attempt. Only an explicit
+  // action — opening the row again or a refresh — clears the flag.
+  const failedRef = useRef(false);
 
+  const rowKey = nodeKey(node);
   const isDir = node.entry.kind === "dir";
-  const isSelected = api.selectedKey === nodeKey(node);
+  const isSelected = api.isSelected?.(node) ?? false;
   const mark = isDir ? null : api.markFor?.(node);
+  const draggable = api.canDrag?.(node) ?? false;
+  const isDropTarget = api.isDropTarget?.(node) ?? false;
+
+  // A shift-click can extend the selection across rows that were never clicked, so
+  // the tree needs every rendered row, not only the one the user pressed.
+  useEffect(() => {
+    api.registerRow?.(rowKey, node);
+    return () => api.unregisterRow?.(rowKey);
+  }, [api.registerRow, api.unregisterRow, rowKey, node]);
 
   const loadChildren = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
       const next = await api.loadChildren(node);
+      failedRef.current = false;
       setChildren(next);
     } catch (reason) {
+      failedRef.current = true;
       setError(errorMessage(reason));
       setChildren(null);
     } finally {
@@ -99,12 +149,16 @@ function StorageRow({ node, depth, api }) {
   }, [api, node]);
 
   const reload = useCallback(async () => {
+    failedRef.current = false;
     await loadChildren();
   }, [loadChildren]);
 
   // A row that comes back unfolded (after a tab switch) has nothing underneath it yet.
   useEffect(() => {
     if (!open || children !== null || loading) return;
+    // Not available is an answer, not something to keep asking: the user opens the
+    // row again (or refreshes) to try once more.
+    if (failedRef.current) return;
     void loadChildren();
   }, [open, children, loading, loadChildren]);
 
@@ -116,6 +170,8 @@ function StorageRow({ node, depth, api }) {
     if (revisionRef.current === revision) return;
     revisionRef.current = revision;
     if (open) {
+      // A refresh is an explicit request, so a folder that failed may be tried again.
+      failedRef.current = false;
       void loadChildren();
       return;
     }
@@ -124,8 +180,14 @@ function StorageRow({ node, depth, api }) {
     setError("");
   }, [api.revision, open, loadChildren]);
 
-  const toggle = () => {
-    api.selectNode?.(node);
+  const toggle = (event) => {
+    const extending = Boolean(
+      event?.shiftKey || event?.metaKey || event?.ctrlKey,
+    );
+    api.selectNode?.(node, event);
+    // Shift or Ctrl adds to the selection instead of opening: only a plain click
+    // unfolds a folder or sends a file to the preview.
+    if (extending) return;
     if (!isDir) {
       api.openFile?.(node);
       return;
@@ -134,7 +196,11 @@ function StorageRow({ node, depth, api }) {
     if (!open) {
       setOpen(true);
       api.setExpanded?.(node, true);
-      if (children === null && !loading) void loadChildren();
+      if (children === null && !loading) {
+        // Clicking the row again is the user's own retry, so it clears the flag.
+        failedRef.current = false;
+        void loadChildren();
+      }
       return;
     }
     setOpen(false);
@@ -145,13 +211,34 @@ function StorageRow({ node, depth, api }) {
   const label = api.labelFor(node);
   const readOnly = api.isReadOnly?.(node) ?? false;
   const childDepth = depth + 1;
+  // A provider usually reports a missing folder with its own path as the message.
+  // The sentence already names that folder, so only a real detail is appended.
+  const errorDetail =
+    error && normalizePath(error) === normalizePath(node.displayPath)
+      ? ""
+      : error;
 
   return (
     <div>
       <div
         data-guide="workspace-row"
+        data-row-key={rowKey}
+        draggable={draggable}
+        onDragStart={
+          draggable ? (event) => api.onDragStart?.(node, event) : undefined
+        }
+        onDragEnd={draggable ? () => api.onDragEnd?.() : undefined}
+        onDragOver={
+          isDir ? (event) => api.onDragOverNode?.(node, event) : undefined
+        }
+        onDragLeave={
+          isDir ? (event) => api.onDragLeaveNode?.(node, event) : undefined
+        }
+        onDrop={isDir ? (event) => api.onDropNode?.(node, event) : undefined}
         className={`group flex items-center gap-1 rounded pr-1 text-[11px] ${
           isSelected ? "bg-accent/10" : "hover:bg-base-200/70"
+        } ${
+          isDropTarget ? "bg-accent/15 ring-1 ring-inset ring-primary" : ""
         }`}
         style={{ paddingLeft: 4 + depth * 10 }}
       >
@@ -214,7 +301,11 @@ function StorageRow({ node, depth, api }) {
         </button>
       </div>
       {isDir && open && (
-        <div>
+        <div
+          onDragOver={(event) => api.onDragOverNode?.(node, event)}
+          onDragLeave={(event) => api.onDragLeaveNode?.(node, event)}
+          onDrop={(event) => api.onDropNode?.(node, event)}
+        >
           {loading && (
             <div
               className="py-0.5 text-[10px] text-base-content/40"
@@ -225,10 +316,21 @@ function StorageRow({ node, depth, api }) {
           )}
           {!loading && error && (
             <div
-              className="break-words py-0.5 text-[10px] text-error"
+              data-guide="workspace-folder-error"
+              className="flex items-start gap-1 py-0.5 text-[10px] text-error"
               style={{ paddingLeft: 18 + childDepth * 10 }}
             >
-              {error}
+              <WarningAlt
+                size={12}
+                className="mt-px shrink-0 text-warning"
+                aria-hidden="true"
+              />
+              <span className="break-words">
+                {t("workspace.folder_open_failed", {
+                  name: node.entry.name || node.displayPath,
+                })}
+                {errorDetail ? `: ${errorDetail}` : null}
+              </span>
             </div>
           )}
           {!loading &&
@@ -273,13 +375,37 @@ export default function WorkspaceStorageTree({
   const [rootRevision, setRootRevision] = useState(0);
   const [actionError, setActionError] = useState("");
   const [uploading, setUploading] = useState(false);
-  const [selected, setSelected] = useState(null);
+  // A file manager selects more than one row: a shift-click picks a range, Ctrl
+  // or Cmd toggles single rows. `selection` holds one entry per selected row —
+  // everything a button needs about it — and `selected` is the single-row read
+  // (rename, detach) that cannot mean anything for a set.
+  const [selection, setSelection] = useState([]);
+  const selected = selection.length === 1 ? selection[0] : null;
+  const selectedKeys = useMemo(
+    () => new Set(selection.map((item) => item.key)),
+    [selection],
+  );
+  // The row a shift-click extends from: the last row clicked without a modifier.
+  const anchorKeyRef = useRef(null);
+  // Every rendered row by key, so a shift-click can select rows it never touched.
+  const rowNodesRef = useRef(new Map());
+  const listRef = useRef(null);
   const [detaching, setDetaching] = useState(false);
+  // The row being dragged, the folder it is currently over, and whether a transfer
+  // is running: a row moved by drag and drop goes through the same planner and
+  // journal as every other workspace transfer.
+  const [dragging, setDragging] = useState(null);
+  const [dropKey, setDropKey] = useState(null);
+  const [transferring, setTransferring] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   // Rows the agent just created or changed, by workspace path, until their dot fades.
   const [marks, setMarks] = useState({});
   const markTimersRef = useRef(new Map());
   const requestRef = useRef(0);
   const previewSeqRef = useRef(0);
+  // `openFile` is defined below the description writer that uses it; the ref keeps
+  // the writer from closing over an uninitialized const.
+  const openFileRef = useRef(null);
 
   const markFile = useCallback((path, kind) => {
     if (!path || (kind !== "create" && kind !== "modify")) return;
@@ -382,7 +508,8 @@ export default function WorkspaceStorageTree({
 
   useEffect(() => {
     setRootEntries(null);
-    setSelected(null);
+    setSelection([]);
+    anchorKeyRef.current = null;
   }, [workspaceId]);
 
   useEffect(() => {
@@ -486,6 +613,339 @@ export default function WorkspaceStorageTree({
     [mountForPath, sourceForMount],
   );
 
+  // --- drag and drop: moving a row onto a folder ----------------------------
+  const providerForNode = (node) => {
+    if (node.context) return node.context.provider;
+    if (node.entry?.mount) {
+      return providersRef.current.get(node.entry.mount.sourceId) ?? null;
+    }
+    return rootProvider;
+  };
+
+  const providerPathForNode = (node) =>
+    node.context
+      ? node.context.sourcePath
+      : node.entry?.mount
+        ? node.entry.mount.sourcePath
+        : (node.entry?.path ?? "/");
+
+  const entryForNode = (node) => ({
+    sourceId: providerForNode(node)?.sourceId ?? node.entry?.sourceId,
+    path: providerPathForNode(node),
+    name: node.entry?.name ?? "",
+    kind: node.entry?.kind === "dir" ? "dir" : "file",
+    size: node.entry?.size,
+    mime: node.entry?.mime,
+  });
+
+  // A folder row, a mount point and the open children below either are drop targets;
+  // the synthetic /chats row and the display-only parents of a nested mount are not,
+  // because neither stands for a directory a provider could write into.
+  const dropTargetForNode = (node) => {
+    if (!node || node.entry?.kind !== "dir") return null;
+    if (!node.context && node.entry.local !== true && !node.entry.mount) {
+      return null;
+    }
+    const provider = providerForNode(node);
+    if (!provider) return null;
+    const dir = providerPathForNode(node);
+    if (!dir || readOnlyFor(node)) return null;
+    return { provider, dir, displayDir: node.displayPath };
+  };
+
+  const rootDropTarget = rootProvider
+    ? { provider: rootProvider, dir: "/", displayDir: "/" }
+    : null;
+
+  const isNoopDrop = (from, entry, target) =>
+    from.sourceId === target.provider.sourceId &&
+    joinPath(target.dir, entry.name) === normalizePath(entry.path);
+
+  // A folder cannot be moved into itself or one of its own descendants.
+  const isForbiddenDrop = (entry, target) =>
+    entry.kind === "dir" && isWithinPath(target.dir, entry.path);
+
+  const canDragNode = (node) => {
+    if (!workspaceId || transferring || !node?.entry) return false;
+    if (node.entry.mount) return false;
+    // Only an entry of a real provider moves: mounts, `/chats` and the parents of a
+    // nested mount belong to no folder that could give them up.
+    if (!node.context && node.entry.local !== true) return false;
+    return !readOnlyFor(node);
+  };
+
+  const labelForProvider = (provider) => {
+    if (!provider) return "";
+    const source = sourcesRef.current.find(
+      (item) => item.id === provider.sourceId,
+    );
+    if (source?.label) return source.label;
+    return provider === rootProvider
+      ? t("workspace.workspace_root")
+      : provider.sourceId;
+  };
+
+  // Shift-click selects a range, and dragging any of it carries the whole set:
+  // one drop moves every selected row, the way a file manager does. Rows that a
+  // provider would not give up (a mount, a read-only source) are left out.
+  const dragItemsFor = (node) => {
+    const info = describeNode(node);
+    const selectedForDrag = selectedKeys.has(info.key)
+      ? selection.filter((item) => item.writable && item.provider)
+      : [];
+    if (selectedForDrag.length > 1) {
+      return selectedForDrag.map((item) => ({
+        provider: item.provider,
+        entry: {
+          sourceId: item.provider.sourceId,
+          path: item.sourcePath,
+          name: item.name,
+          kind: item.kind,
+          size: item.size,
+          mime: item.mime,
+        },
+      }));
+    }
+    const provider = providerForNode(node);
+    return provider ? [{ provider, entry: entryForNode(node) }] : [];
+  };
+
+  const performMove = async (draggedItems, target) => {
+    const to = target?.provider;
+    const items = (draggedItems ?? []).filter(
+      (item) => item?.provider && item?.entry,
+    );
+    if (!workspaceId || !to || items.length === 0) return;
+    // A row dropped on the folder it already lives in has nowhere to go.
+    const movable = items.filter(
+      (item) => !isNoopDrop(item.provider, item.entry, target),
+    );
+    if (movable.length === 0) return;
+    if (movable.some((item) => isForbiddenDrop(item.entry, target))) {
+      setActionError(t("workspace.transfer_blocked"));
+      return;
+    }
+    setActionError("");
+    try {
+      for (const item of movable) {
+        if (item.provider.status !== "connected") await item.provider.connect();
+      }
+      if (to.status !== "connected") await to.connect();
+      // Never merge into, or silently rename over, something already there: a drag
+      // that lands on an occupied name is reported instead of guessed at.
+      const conflicts = [];
+      for (const item of movable) {
+        const targetPath = joinPath(target.dir, item.entry.name);
+        try {
+          await to.stat(targetPath);
+          conflicts.push(item.entry.name);
+        } catch (reason) {
+          if (!(reason instanceof WorkspaceError && reason.code === "NOT_FOUND")) {
+            throw reason;
+          }
+        }
+      }
+      if (conflicts.length === 1) {
+        setActionError(
+          t("workspace.transfer_conflict", { name: conflicts[0] }),
+        );
+        return;
+      }
+      if (conflicts.length > 1) {
+        setActionError(
+          t("workspace.transfer_conflict_many", { count: conflicts.length }),
+        );
+        return;
+      }
+      const from = movable[0].provider;
+      const plan = planTransfer({
+        intent: "auto",
+        sameSource: movable.every(
+          (item) => item.provider.sourceId === to.sourceId,
+        ),
+        sourceKind: from.kind,
+        targetKind: to.kind,
+        entries: movable.map((item) => item.entry),
+        // A batch has one folder-to-its-own-descendant check per row, done above,
+        // so the planner's single-path check is not given a path to trip over.
+        sourcePath: "",
+        targetPath: "",
+        sourceCapabilities: from.capabilities ?? {},
+        targetCapabilities: to.capabilities ?? {},
+      });
+      if (plan.blocked) {
+        setActionError(plan.warnings[0] || t("workspace.transfer_blocked"));
+        return;
+      }
+      const run = async () => {
+        setTransferring(true);
+        const failures = [];
+        const movedKeys = new Set();
+        try {
+          for (const item of movable) {
+            const targetPath = joinPath(target.dir, item.entry.name);
+            try {
+              await runTransfer({
+                workspaceId,
+                from: item.provider,
+                to,
+                entry: item.entry,
+                // A folder lands as target/name/**, a file as target/name.
+                targetDir:
+                  item.entry.kind === "dir" ? targetPath : target.dir,
+                strategy: "move",
+              });
+              movedKeys.add(`${item.provider.sourceId}:${item.entry.path}`);
+              // The same change feed the agent's writes use: every open folder
+              // re-lists and the moved row is marked as new where it landed.
+              notifyWorkspaceFilesChanged(workspaceId, {
+                path: joinPath(target.displayDir, item.entry.name),
+                kind: "create",
+              });
+            } catch (reason) {
+              failures.push(`${item.entry.name}: ${errorMessage(reason)}`);
+            }
+          }
+        } finally {
+          setTransferring(false);
+        }
+        // A row that moved is not here any more, so it leaves the selection; a
+        // failed one stays selected for a second attempt.
+        setSelection((current) =>
+          current.filter(
+            (item) =>
+              !movedKeys.has(`${item.provider?.sourceId}:${item.sourcePath}`),
+          ),
+        );
+        setActionError(failures.join(" · "));
+      };
+      if (plan.requiresConfirmation) {
+        openModal("workspaceTransfer", {
+          plan,
+          fromLabel:
+            movable.length > 1 &&
+            new Set(movable.map((item) => item.provider.sourceId)).size > 1
+              ? t("workspace.transfer_multiple_sources")
+              : labelForProvider(from),
+          toLabel: labelForProvider(to),
+          onConfirm: () => {
+            // The confirmed transfer runs after the dialog closed, so a failure
+            // lands in the tree's own error line.
+            void run();
+          },
+        });
+        return;
+      }
+      await run();
+    } catch (reason) {
+      setActionError(errorMessage(reason));
+    }
+  };
+
+  const dropDragged = (target) => {
+    const dragged = dragging;
+    setDragging(null);
+    setDropKey(null);
+    if (dragged && target) void performMove(dragged.items, target);
+  };
+
+  const dragStartNode = (node, event) => {
+    if (!canDragNode(node)) return;
+    const items = dragItemsFor(node);
+    if (items.length === 0) return;
+    setActionError("");
+    setDragging({ items });
+    event.dataTransfer?.setData(
+      WORKSPACE_DRAG_TYPE,
+      JSON.stringify({
+        sourceId: items[0].provider.sourceId,
+        entry: items[0].entry,
+        entries: items.map((item) => item.entry),
+      }),
+    );
+    if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
+  };
+
+  // A selected folder cannot receive the set it belongs to.
+  const dropsOntoDraggedEntry = (target) =>
+    Boolean(dragging) &&
+    dragging.items.some(
+      (item) =>
+        item.provider.sourceId === target.provider.sourceId &&
+        normalizePath(item.entry.path) === normalizePath(target.dir),
+    );
+
+  const dragOverNode = (node, event) => {
+    if (!dragging) return;
+    const target = dropTargetForNode(node);
+    if (!target) return;
+    if (dropsOntoDraggedEntry(target)) return;
+    const movable = dragging.items.filter(
+      (item) => !isNoopDrop(item.provider, item.entry, target),
+    );
+    // Every row of the set must be able to land here, or the drop is refused.
+    const accepts =
+      movable.length > 0 &&
+      movable.every((item) => !isForbiddenDrop(item.entry, target));
+    if (!accepts) return;
+    event.preventDefault();
+    // The folder wins over the list behind it, which is the workspace root.
+    event.stopPropagation();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+    setDropKey(nodeKey(node));
+  };
+
+  const dragLeaveNode = (node, event) => {
+    if (event?.currentTarget?.contains?.(event.relatedTarget)) return;
+    setDropKey((current) => (current === nodeKey(node) ? null : current));
+  };
+
+  const dropOnNode = (node, event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const target = dropTargetForNode(node);
+    if (!target || dropsOntoDraggedEntry(target)) return;
+    dropDragged(target);
+  };
+
+  const dragOverRoot = (event) => {
+    if (!dragging || !rootDropTarget) return;
+    const accepts = dragging.items.some(
+      (item) => !isNoopDrop(item.provider, item.entry, rootDropTarget),
+    );
+    if (!accepts) return;
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+    setDropKey(ROOT_DROP_KEY);
+  };
+
+  const dragLeaveRoot = (event) => {
+    if (event?.currentTarget?.contains?.(event.relatedTarget)) return;
+    setDropKey((current) => (current === ROOT_DROP_KEY ? null : current));
+  };
+
+  const dropOnRoot = (event) => {
+    if (!dragging) return;
+    event.preventDefault();
+    dropDragged(rootDropTarget);
+  };
+
+  // The root row is a drop target of its own: the list background below the rows
+  // also moves to the root, but a listing that fills the pane leaves no background
+  // to hit. Stopping the event keeps the list handler from dropping twice.
+  const rootRowDragOver = (event) => {
+    dragOverRoot(event);
+    event.stopPropagation();
+  };
+  const rootRowDragLeave = (event) => {
+    dragLeaveRoot(event);
+    event.stopPropagation();
+  };
+  const rootRowDrop = (event) => {
+    dropOnRoot(event);
+    event.stopPropagation();
+  };
+
   const badgeFor = useCallback(
     (node) => {
       if (node.context) {
@@ -574,17 +1034,280 @@ export default function WorkspaceStorageTree({
   }, [rootTarget]);
 
   // Every row can be selected, whether or not it is an upload target: the
-  // selection is what the Detach button acts on.
-  const selectNode = useCallback((node) => {
+  // selection is what the rename, detach, download and delete buttons act on.
+  // What a row is — its provider, its path there, what may be done to it — is
+  // read once here and carried with the selection, so a button never has to
+  // resolve it again.
+  const describeNode = useCallback(
+    (node) => {
+      // Only a row that is itself mounted into the workspace can be detached —
+      // a file inside a mounted folder belongs to that folder's source.
+      const mount = node.entry?.mount ?? null;
+      const context = node.context ?? null;
+      const provider = context
+        ? context.provider
+        : mount
+          ? (providersRef.current.get(mount.sourceId) ?? null)
+          : rootProvider;
+      // A rename is in place, so the row needs an entry of its own in a
+      // provider: the synthetic /chats folder and the parents of nested mounts
+      // are display-only, and a mount point stands for someone else's folder.
+      // Delete follows the same rule; a mount is detached instead.
+      const ownEntry = Boolean(context) || node.entry?.local === true;
+      const writable =
+        Boolean(provider) && !mount && ownEntry && !readOnlyFor(node);
+      const kind = node.entry?.kind === "dir" ? "dir" : "file";
+      const renamable = writable && provider.capabilities?.rename === true;
+      const deletable = writable && provider.capabilities?.delete === true;
+      // A file's bytes can always be saved when the provider can read them: a
+      // read-only source still lets you take a copy out.
+      const downloadable =
+        Boolean(provider) &&
+        kind === "file" &&
+        provider.capabilities?.read === true;
+      return {
+        key: nodeKey(node),
+        mount: mount ?? null,
+        provider,
+        sourcePath: context
+          ? context.sourcePath
+          : (mount?.sourcePath ?? node.displayPath),
+        displayPath: node.displayPath,
+        name: node.entry?.name ?? "",
+        kind,
+        mime: node.entry?.mime,
+        size: node.entry?.size,
+        writable,
+        renamable,
+        deletable,
+        downloadable,
+      };
+    },
+    [readOnlyFor, rootProvider],
+  );
+
+  // The keys of the rows as they are painted, top to bottom: a folder comes
+  // before the children it holds, exactly as they are rendered. That order is
+  // what a shift-click selects along, and the DOM already knows it.
+  const visibleRowKeys = () => {
+    const list = listRef.current;
+    if (!list) return [];
+    return Array.from(list.querySelectorAll("[data-row-key]")).map(
+      (element) => element.getAttribute("data-row-key") ?? "",
+    );
+  };
+
+  const selectNode = useCallback(
+    (node, event) => {
+      setActionError("");
+      const info = describeNode(node);
+      // Shift grows the selection from the row clicked last; Ctrl/Cmd toggles one
+      // row in and out of it. Neither opens anything, unlike a plain click.
+      const extending = Boolean(event?.shiftKey);
+      const toggling = Boolean(event?.metaKey || event?.ctrlKey);
+      if (extending) {
+        const keys = visibleRowKeys();
+        const from = keys.indexOf(anchorKeyRef.current ?? "");
+        const to = keys.indexOf(info.key);
+        if (from === -1 || to === -1) {
+          setSelection([info]);
+          anchorKeyRef.current = info.key;
+        } else {
+          const [start, end] = from <= to ? [from, to] : [to, from];
+          const range = [];
+          for (const key of keys.slice(start, end + 1)) {
+            const rangeNode = rowNodesRef.current.get(key);
+            if (rangeNode) range.push(describeNode(rangeNode));
+          }
+          setSelection(range.length ? range : [info]);
+        }
+      } else if (toggling) {
+        setSelection((current) =>
+          current.some((item) => item.key === info.key)
+            ? current.filter((item) => item.key !== info.key)
+            : [...current, info],
+        );
+        anchorKeyRef.current = info.key;
+      } else {
+        setSelection([info]);
+        anchorKeyRef.current = info.key;
+      }
+      // A file is not a place to put a file: the toolbar drops back to the root,
+      // which is the workspace's own browser storage.
+      if (node.entry?.kind !== "dir") setTarget(rootTarget());
+    },
+    [describeNode, rootTarget],
+  );
+
+  // Folders (and their rows) come and go with every listing, so each rendered
+  // row registers itself: a shift-click has to reach rows nobody has clicked.
+  const registerRow = useCallback((key, node) => {
+    rowNodesRef.current.set(key, node);
+  }, []);
+  const unregisterRow = useCallback((key) => {
+    rowNodesRef.current.delete(key);
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelection([]);
+    anchorKeyRef.current = null;
+  }, []);
+
+  // A rename keeps the entry where it is and only changes its name. The dialog is
+  // the shared entry modal, so the name rules (no slashes) are the same as for a
+  // new file; a host dialog owns the nested instance for the same reason
+  // `createEntry` does.
+  const renameSelection = () => {
+    const current = selected;
+    if (!current?.renamable) return;
+    const folder = parentPath(current.displayPath);
+    const request = {
+      kind: current.kind,
+      path: folder,
+      initialName: current.name,
+      titleKey: "workspace.rename_entry",
+      confirmKey: "common.rename",
+      introKey: "workspace.rename_in",
+      onCreate: async (name) => {
+        const provider = current.provider;
+        if (!provider) throw new Error("Source is not available");
+        if (name === current.name) return;
+        await provider.connect();
+        await renameProviderEntry(provider, current.sourcePath, name);
+        setSelection([]);
+        anchorKeyRef.current = null;
+        // Re-list through the change feed, which also marks the new row.
+        notifyWorkspaceFilesChanged(workspaceId, {
+          path: joinPath(folder, name),
+          kind: "create",
+        });
+      },
+    };
+    if (onCreateEntry) {
+      onCreateEntry(request);
+      return;
+    }
+    openModal("workspaceCreateEntry", request);
+  };
+
+  // Save every selected file to the user's disk. A single file is an ordinary
+  // browser download. A set asks once for a destination folder: the browser's
+  // download dialog cannot take one, so the files go through the File System
+  // Access API, one at a time and without overwriting anything. Where that API
+  // is missing (an insecure page, an older browser), every file is downloaded
+  // on its own instead.
+  const downloadSelection = async () => {
+    const files = selection.filter(
+      (item) => item.downloadable && item.kind === "file" && item.provider,
+    );
+    if (files.length === 0) return;
     setActionError("");
-    // Only a row that is itself mounted into the workspace can be detached —
-    // a file inside a mounted folder belongs to that folder's source.
-    const mount = node.entry?.mount ?? null;
-    setSelected({ key: nodeKey(node), mount: mount ?? null });
-    // A file is not a place to put a file: the toolbar drops back to the root,
-    // which is the workspace's own browser storage.
-    if (node.entry?.kind !== "dir") setTarget(rootTarget());
-  }, [rootTarget]);
+    const items = files.map((file) => ({
+      provider: file.provider,
+      entry: {
+        name: file.name,
+        path: file.sourcePath,
+        kind: "file",
+        size: file.size,
+        mime: file.mime,
+      },
+    }));
+
+    if (items.length > 1 && canPickDownloadDirectory()) {
+      let directory = null;
+      try {
+        directory = await pickDownloadDirectory();
+      } catch (reason) {
+        setActionError(errorMessage(reason));
+        return;
+      }
+      // A cancelled picker leaves the files alone: it must not fall back to
+      // dropping them somewhere the user did not choose.
+      if (!directory) return;
+      setDownloading(true);
+      try {
+        const failures = await saveProviderEntriesToDirectory(directory, items);
+        if (failures.length) {
+          setActionError(
+            failures.map((item) => `${item.name}: ${item.message}`).join(" · "),
+          );
+        }
+      } finally {
+        setDownloading(false);
+      }
+      return;
+    }
+
+    const failures = [];
+    for (const { provider, entry } of items) {
+      try {
+        await downloadProviderEntry(provider, entry);
+      } catch (reason) {
+        failures.push(`${entry.name}: ${errorMessage(reason)}`);
+      }
+    }
+    if (failures.length) setActionError(failures.join(" · "));
+  };
+
+  // Deleting is the one destructive action here, so it always asks first: the
+  // confirmation is the shared dialog, never a "don't show this again" switch.
+  // A set is deleted one row after another, and the rows that failed stay
+  // selected so a second attempt is one click.
+  const deleteSelection = () => {
+    const items = selection.filter((item) => item.deletable && item.provider);
+    if (items.length === 0) return;
+    const multiple = items.length > 1;
+    openModal("confirmAction", {
+      messageKey: multiple
+        ? "workspace.delete_selection_confirm"
+        : items[0].kind === "dir"
+          ? "workspace.delete_folder_confirm"
+          : "workspace.delete_file_confirm",
+      messageValues: multiple
+        ? { count: items.length }
+        : { name: items[0].name },
+      confirmKey: "common.delete",
+      danger: true,
+      showDontShowAgain: false,
+      onConfirm: () => {
+        void (async () => {
+          const failures = [];
+          const failed = [];
+          let targetGone = false;
+          for (const item of items) {
+            try {
+              const provider = item.provider;
+              if (provider.status !== "connected") await provider.connect();
+              await provider.remove(item.sourcePath, {
+                recursive: item.kind === "dir",
+              });
+              // A folder that was the upload target is gone: the toolbar must
+              // not keep writing into it.
+              if (
+                item.kind === "dir" &&
+                (target.path === item.displayPath ||
+                  target.path.startsWith(`${item.displayPath}/`))
+              ) {
+                targetGone = true;
+              }
+              // Re-list every open folder through the change feed, no mark.
+              notifyWorkspaceFilesChanged(workspaceId, {
+                path: item.displayPath,
+                kind: "remove",
+              });
+            } catch (reason) {
+              failed.push(item);
+              failures.push(`${item.name}: ${errorMessage(reason)}`);
+            }
+          }
+          setSelection(failed);
+          if (failed.length === 0) anchorKeyRef.current = null;
+          if (targetGone) setTarget(rootTarget());
+          setActionError(failures.join(" · "));
+        })();
+      },
+    });
+  };
 
   const detachSelection = async () => {
     const mount = selected?.mount;
@@ -593,7 +1316,8 @@ export default function WorkspaceStorageTree({
     setActionError("");
     try {
       await removeWorkspaceMount(workspaceId, mount.id);
-      setSelected(null);
+      setSelection([]);
+      anchorKeyRef.current = null;
       setTarget(rootTarget());
     } catch (reason) {
       setActionError(errorMessage(reason));
@@ -636,6 +1360,60 @@ export default function WorkspaceStorageTree({
       const sourcePath = node.context
         ? node.context.sourcePath
         : node.displayPath;
+      // An image preview offers "Describe": the description is `<name>-description.md`
+      // beside the image. Any provider can tell whether it is already there and open
+      // it; only a writable one can create it.
+      const descriptionTarget = (fileName) =>
+        joinPath(parentPath(sourcePath), fileName);
+      const openDescription = (fileName, size) => {
+        const target = descriptionTarget(fileName);
+        const descriptionNode = {
+          entry: {
+            ...node.entry,
+            path: target,
+            name: fileName,
+            kind: "file",
+            mime: "text/markdown",
+            size,
+          },
+          context: node.context
+            ? { ...node.context, sourcePath: target }
+            : null,
+          displayPath: joinPath(parentPath(node.displayPath), fileName),
+        };
+        setSelection([describeNode(descriptionNode)]);
+        anchorKeyRef.current = nodeKey(descriptionNode);
+        openFileRef.current?.(descriptionNode);
+        return target;
+      };
+      const descriptionExists = async (fileName) => {
+        try {
+          if (provider.status !== "connected") await provider.connect();
+          await provider.stat(descriptionTarget(fileName));
+          return true;
+        } catch {
+          return false;
+        }
+      };
+      const saveDescription =
+        !readOnlyFor(node) && provider.capabilities?.write === true
+          ? async (text, fileName) => {
+              if (provider.status !== "connected") await provider.connect();
+              const target = descriptionTarget(fileName);
+              const data = new TextEncoder().encode(text);
+              await provider.write(target, streamOf(data), {
+                size: data.byteLength,
+                overwrite: true,
+              });
+              notifyWorkspaceFilesChanged(workspaceId, {
+                path: target,
+                kind: "create",
+              });
+              // Leave the image and show its description, selected, so the result
+              // is what the user is looking at.
+              return openDescription(fileName, data.byteLength);
+            }
+          : undefined;
       try {
         if (provider.status !== "connected") await provider.connect();
         const result = await readProviderPreview(provider, {
@@ -647,14 +1425,27 @@ export default function WorkspaceStorageTree({
           result.release?.();
           return;
         }
-        onPreview(result);
+        if ("error" in result) {
+          onPreview(result);
+        } else {
+          onPreview({
+            ...result,
+            descriptionExists,
+            openDescription,
+            ...(saveDescription ? { saveDescription } : {}),
+          });
+        }
       } catch (reason) {
         if (sequence !== previewSeqRef.current) return;
         onPreview({ entry, error: errorMessage(reason) });
       }
     },
-    [onPreview, rootProvider],
+    [onPreview, rootProvider, readOnlyFor, workspaceId, describeNode],
   );
+
+  useEffect(() => {
+    openFileRef.current = openFile;
+  }, [openFile]);
 
   const uploadFiles = async (event) => {
     const files = Array.from(event.target.files || []);
@@ -709,7 +1500,7 @@ export default function WorkspaceStorageTree({
   };
 
   const api = {
-    selectedKey: selected?.key ?? null,
+    isSelected: (node) => selectedKeys.has(nodeKey(node)),
     revision: rootRevision,
     markFor: (node) => marks[node.displayPath] ?? null,
     isExpanded: (node) => expandedSet(workspaceId).has(nodeKey(node)),
@@ -718,9 +1509,21 @@ export default function WorkspaceStorageTree({
       if (value) set.add(nodeKey(node));
       else set.delete(nodeKey(node));
     },
+    canDrag: canDragNode,
+    isDropTarget: (node) => dropKey === nodeKey(node),
+    onDragStart: dragStartNode,
+    onDragEnd: () => {
+      setDragging(null);
+      setDropKey(null);
+    },
+    onDragOverNode: dragOverNode,
+    onDragLeaveNode: dragLeaveNode,
+    onDropNode: dropOnNode,
     badgeFor,
     labelFor,
     loadChildren,
+    registerRow,
+    unregisterRow,
     selectTarget,
     selectNode,
     openFile,
@@ -776,6 +1579,63 @@ export default function WorkspaceStorageTree({
             {t("workspace.new_file")}
           </button>
           <div className="ml-auto flex items-center gap-1">
+            {selection.length > 1 && (
+              <div className="flex shrink-0 items-center gap-0.5">
+                <span
+                  data-guide="workspace-selected-count"
+                  className="whitespace-nowrap text-[10px] text-base-content/60"
+                >
+                  {t("workspace.selected_count", { count: selection.length })}
+                </span>
+                <button
+                  type="button"
+                  data-guide="workspace-clear-selection"
+                  onClick={clearSelection}
+                  title={t("workspace.clear_selection")}
+                  aria-label={t("workspace.clear_selection")}
+                  className="btn btn-ghost btn-xs btn-square"
+                >
+                  <Close size={14} />
+                </button>
+              </div>
+            )}
+            {selected?.renamable && (
+              <button
+                type="button"
+                data-guide="workspace-rename"
+                onClick={renameSelection}
+                title={t("workspace.rename_entry")}
+                className="btn btn-ghost btn-xs shrink-0 gap-1"
+              >
+                <Edit size={14} />
+                <span className="truncate">{t("common.rename")}</span>
+              </button>
+            )}
+            {selection.some((item) => item.downloadable) && (
+              <button
+                type="button"
+                data-guide="workspace-download"
+                onClick={() => void downloadSelection()}
+                title={t("workspace.download")}
+                className="btn btn-ghost btn-xs shrink-0 gap-1"
+              >
+                <Download size={14} />
+                <span className="truncate">{t("workspace.download")}</span>
+              </button>
+            )}
+            {selection.length > 0 &&
+              selection.every((item) => item.deletable && item.provider) && (
+              <button
+                type="button"
+                data-guide="workspace-delete"
+                onClick={deleteSelection}
+                title={t("common.delete")}
+                className="btn btn-ghost btn-xs shrink-0 gap-1 text-error"
+              >
+                <TrashCan size={14} />
+                <span className="truncate">{t("common.delete")}</span>
+              </button>
+            )}
             {allowDetach && selected && (
               <button
                 type="button"
@@ -811,20 +1671,65 @@ export default function WorkspaceStorageTree({
             {actionError}
           </div>
         )}
+        {transferring && (
+          <div className="px-3 py-1 text-[10px] text-base-content/60">
+            {t("workspace.transferring")}
+          </div>
+        )}
+        {downloading && (
+          <div className="px-3 py-1 text-[10px] text-base-content/60">
+            {t("workspace.downloading")}
+          </div>
+        )}
         <div
+          ref={listRef}
           data-guide="workspace-files"
-          className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-1 py-1"
+          className={`min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-1 py-1 ${
+            dragging && dropKey === ROOT_DROP_KEY
+              ? "ring-1 ring-inset ring-primary"
+              : ""
+          }`}
+          onDragOver={dragOverRoot}
+          onDragLeave={dragLeaveRoot}
+          onDrop={dropOnRoot}
           onClick={(event) => {
             // A click on the empty part of the list drops the wash; a click inside a
             // row is that row's business.
             if (event.target.closest('[data-guide="workspace-row"]')) return;
-            if (selected) setSelected(null);
+            clearSelection();
             setTarget(rootTarget());
           }}
         >
           {showLoading && (
             <div className="px-2 py-1 text-[10px] text-base-content/40">
               {t("common.loading")}
+            </div>
+          )}
+          {!showLoading && (
+            <div
+              data-guide="workspace-root-row"
+              title={t("workspace.workspace_root")}
+              onClick={(event) => {
+                // Selecting the root is not a row operation; it only points the
+                // New file/folder and upload actions back at the workspace root.
+                event.stopPropagation();
+                clearSelection();
+                setTarget(rootTarget());
+              }}
+              onDragOver={rootRowDragOver}
+              onDragLeave={rootRowDragLeave}
+              onDrop={rootRowDrop}
+              className={`flex cursor-pointer items-center gap-1 rounded px-1 text-[11px] ${
+                dragging && dropKey === ROOT_DROP_KEY
+                  ? "bg-accent/15 ring-1 ring-inset ring-primary"
+                  : "hover:bg-base-200/70"
+              }`}
+              style={{ paddingLeft: 4 }}
+            >
+              <Folder size={13} className="shrink-0 text-accent" />
+              <span className="min-w-0 flex-1 truncate font-mono text-base-content">
+                /
+              </span>
             </div>
           )}
           {!showLoading && rootError && (

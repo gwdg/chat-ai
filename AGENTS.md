@@ -247,13 +247,14 @@ into the nested shape the UI uses. Raw table access (`db.messages`, `db.content_
 
 ### 4.3 Dexie migrations
 
-`db/index.ts` is at **version 17**. A new *indexed* field needs a new `this.version(n).stores({...})`
+`db/index.ts` is at **version 19**. A new *indexed* field needs a new `this.version(n).stores({...})`
 block plus an `.upgrade()` that backfills existing rows — this is how `folderId` (v3),
 `hasFirstPrompt` (v4), `lastOpenedAt` (v5), the workspace tables (v6-v8),
 `workspace_file_references` (v9), the default Arcana filesystem source (v10), the default
 browser source with the shared browser tree (v11), the `arcana_v2` → `arcana_tools` tool-toggle
-rename (v15), the per-workspace browser tree (v16), and the `tools.browser_storage` default flip
-(v17) were added. A field that is only stored and never
+rename (v15), the per-workspace browser tree (v16), the `tools.browser_storage` default flip
+(v17), the encrypted-sync bookkeeping tables (v18), and the workspace-tree duplicate collapse
+(v19) were added. A field that is only stored and never
 queried needs **no** version bump; Dexie keeps unindexed properties on the row as-is. A version
 bump and `.upgrade()` are still appropriate when existing rows need a backfill. Never edit an
 existing version block: users have live databases.
@@ -919,7 +920,12 @@ row. A card whose sources include one with `status` `error` or `needs-permission
 circled exclamation (`AlertCircle`, `data-guide="workspace-source-broken"`) whose tooltip names the
 source and repeats its stored `error`, because a failed provider cannot be browsed even though the
 card still draws. It owns no browsing state; it takes `activeTarget` / `onOpenTarget` with a `SourceTarget` of
-`{drive:"device",sourceId?}` / `{drive:"chats",conversationId?}` / `{drive:"arcanas"}`.
+`{drive:"device",sourceId?}` / `{drive:"chats",conversationId?}` / `{drive:"arcanas"}`. An optional
+`onOpenDevice` replaces the Your Device card's browse action; `WorkspaceStorageManager` (the
+Manage/Create dialog) uses it to **always** open the Add source dialog on Local folder, because that
+dialog is where a workspace's folders are picked — even when the browser already holds granted
+folders. Without the handler (no other host passes one today) the card opens the device drive as
+usual.
 
 Browsing lives inside that same Sources card, next to the rail
 (`components/Workspace/WorkspaceSourceBrowser.tsx`, `data-guide="workspace-source-pane"`): the page
@@ -991,9 +997,27 @@ empty placeholder cannot prune sources, and it deletes the derived source when t
 or no longer exists (a source for a bridged-only agent is kept). It uses the same `/fs/list` and
 `/fs/read` endpoints as the agent file panel. Providers declare `capabilities`, and the UI must offer
 only what a provider reports.
-`WorkspaceSourceRow.readOnly` wraps the provider in `ReadOnlyProvider` (writes, deletes, mkdir,
-move and copy throw `PERMISSION_DENIED`), and `WorkspaceMountRow.readOnly` blocks writes/moves
-through that mount while still allowing reads and copies out. A read-only row is also passed to
+`append(path, data)` and `rename(path, newName)` are optional `FileProvider` methods with their own
+`capabilities.append` / `capabilities.rename` flags, because not every backend can do them natively.
+`rename` is **in place and takes a plain name** (mirroring saia-fs) — relocating within a provider
+stays `move`, and a rename never overwrites (`CONFLICT`): `workspace/entries.ts#renameProviderEntry`
+uses a native `rename` when there is one, and otherwise pre-checks the target before calling `move`.
+Only saia-fs has a native `rename`; browser, local, chat and Arcana go through `move`, which is
+copy-then-delete, so a rename or move that **crosses a filesystem boundary is always a copy first,
+then a delete of the old filesystem** — never a delete first. `appendToProvider` in the same file uses
+a native `append` or reads the existing bytes and writes the concatenation; browser and Arcana
+implement it as read-join-write, local and chat append through OPFS
+`createWritable({keepExistingData:true})` + `seek(size)`, and saia-fs's native `append` is UTF-8 text
+(with a `read_base64`/`write_base64` whole-file rewrite for binary input). `WorkspaceStorageTree`
+offers Rename on a selected
+row only when the row is a real entry (not a mount point or the synthetic `/chats` parent), the
+provider reports `capabilities.rename`, and the row is not read-only; the dialog is the shared
+`CreateEntryModal` with `titleKey`/`confirmKey`/`introKey`, and the tree re-lists through
+`notifyWorkspaceFilesChanged`.
+`WorkspaceSourceRow.readOnly` wraps the provider in `ReadOnlyProvider` (writes, appends, renames,
+deletes, mkdir, move and copy throw `PERMISSION_DENIED`), and `WorkspaceMountRow.readOnly` blocks
+writes/appends/moves through that mount while still allowing reads and copies out. A read-only row
+is also passed to
 `LocalProvider`, which then queries and requests only `read` permission, and `AddSourceModal` asks
 the picker for `mode: "read"`; otherwise a browser write guard blocks a folder that is never
 written to. `AddSourceModal` surfaces the picker's `AbortError` in the dialog instead of treating it
@@ -1017,7 +1041,8 @@ always on. When a chat has a workspace link, `runAgent` uses
 `workspace_list` (sources, mounts and attached agents of every workspace linked to the chat),
 `workspace_list_agents` (agents attached to a workspace, with session counts, plus the configured
 agents that are not attached and therefore inaccessible), and `workspace_files` /
-`workspace_read_file` / `workspace_write_file` / `workspace_fetch_file`. Those accept a workspace
+`workspace_read_file` / `workspace_write_file` / `workspace_fetch_file` /
+`workspace_append_file` / `workspace_rename`. Those accept a workspace
 id or name plus a `source` id, label or mount path, so they reach sources that are not mounted and
 workspaces other than the first `workspace_chats` link, which is the only one `getChatWorkspaceBundle`
 puts into the chat VFS. They are registered whenever the chat has a `workspace_chats` link and the
@@ -1162,10 +1187,17 @@ rows offer no delete or read-only toggle either; only `agent` keeps add-folder.
 
 Transfers are orchestrated in the browser: `workspace/transferPlanner.ts` always moves on drag and
 drop, regardless of source; an explicit "copy" intent is the only copy path. It blocks read-only
-targets, folder-into-descendant moves and over-quota transfers. The workspace root
-browser uses the same drag-and-drop flow as source folders, but mounted folder rows are not
-draggable (the workspace root provider is resolved by `providerFor` for both drag source and drop
-target). `workspace/transfer.ts` streams the copy, verifies SHA-256, then deletes the source for a
+targets, folder-into-descendant moves and over-quota transfers. `WorkspaceStorageTree.jsx` — the
+files tree of the workspace page, `/workspace/:workspaceId/files`, the right-hand Files tab and the
+Manage/Create dialogs — owns the drag-and-drop flow: a row drags its provider-relative entry, a
+folder row and the children area below it are drop targets, and the list background is the
+workspace root `/`. A folder lands as `<target>/<name>/**`, never merged into the target itself, and
+a name already present at the destination is refused with `workspace.transfer_conflict` instead of
+being merged or auto-renamed. A drop inside one source runs at once; a cross-source move opens the
+`workspaceTransfer` confirmation first. Mount points, the synthetic `/chats` folder, the
+display-only parents of a nested mount and every read-only row are neither draggable nor a drop
+target, and the workspace root provider is resolved from the node for both drag source and drop
+target. `workspace/transfer.ts` streams the copy, verifies SHA-256, then deletes the source for a
 move, and journals progress in `workspace_transfers`. Arcana quota is read through the
 `/arcana-tools/arcanas/:name/quota` proxy; local and MCP quota is shown as `—` because browsers cannot
 read disk free space.
@@ -1213,19 +1245,71 @@ document's own CSS; relaxed adds `allow-scripts` so an interactive file behaves 
 HTML block. Both modes take the CSP from `utils/htmlPreview.js#buildHtmlCsp` — the same policy the
 fenced HTML block uses — and drop external references according to `html_load_external`.
 
-The browser supports multi-select: `WorkspacePage` owns `selectedPaths` and clears it when the
-source or folder changes, while `WorkspaceRootBrowser` only renders the per-row checkboxes, the
-toolbar select-all and the selection bar from props. An entry is selectable when it can also be
-deleted — local entries in the root view (`entry.local && !entry.mount`, so mounts are never
-selectable) and `canDeleteSourceEntry` entries in a source view — and select-all only covers those.
-Bulk delete confirms once and removes each entry with `provider.remove`, reporting per-entry
-failures. Bulk move opens `MoveToModal` with the entries and then the transfer confirmation with an
-aggregated `planTransfer`; it always uses the move strategy and reuses `runTransfer` per entry.
-A drag or the row-level "Move to…" action that starts on an entry of the current selection carries
-the whole selection (`workspace/selection.ts#entriesForAction`); an entry outside the selection acts
-on itself. `requestTransfer` therefore takes `entries[]` and checks every entry before confirming.
-`MoveToModal` must call `onClose` before `onSelect`, because `onSelect` opens that confirmation
-modal and closing afterwards dismissed it again.
+The tree selects a **set**: a plain click selects one row, Shift extends from the row clicked last
+(the DOM order of `[data-row-key]`), and Ctrl/Cmd toggles one row in or out of it. `selection` holds a
+`describeNode()` record per row — provider, source path, and what may be done to it — and `selected`
+is the single-row read used by Rename and Detach. A selected-count label with a Clear control appears
+for more than one row, and a click on the empty list clears it. The per-row operations live in the
+tree's toolbar, so every host of that component — the Files tab of `WorkspaceRightPanel` (a workspace
+page and an attached chat through `ChatAgentSidebar`), `/workspace/:workspaceId/files`, and the
+Manage/Create dialogs through `WorkspaceStorageManager` — shows the same set:
+
+- **Rename** (`data-guide="workspace-rename"`, `workspace.rename_entry`) only when exactly one row is
+  selected, it is a real entry of its provider — never a mount point, the synthetic `/chats` parent or
+  a display-only mount parent — the row is not read-only and the provider reports
+  `capabilities.rename`. It reuses `CreateEntryModal` with `titleKey`/`confirmKey`/`introKey`, and
+  `onCreateEntry` hosts own the nested instance so the dialog is not replaced.
+- **Download** (`workspace-download`, `workspace.download`) for a file whose provider reports
+  `capabilities.read`, `downloadProviderEntry` in `workspace/download.ts`. It reads the whole content
+  before saving, so a still-connecting provider cannot produce an empty file. With a set selected it
+  saves every downloadable file one after another and reports the failures together. It stays
+  available on a read-only source: taking a copy out is a read.
+- **Delete** (`workspace-delete`, `common.delete`) for a writable entry whose provider reports
+  `capabilities.delete`; it is shown only while **every** selected row is deletable. It always asks
+  through `openModal("confirmAction", …)` with `showDontShowAgain: false` and `danger: true`,
+  recursing for a folder; a set asks once (`workspace.delete_selection_confirm` with `count`) and is
+  deleted sequentially, keeping failed rows selected. It then drops the rows that went, resets the
+  upload target if a removed folder held it, and announces `notifyWorkspaceFilesChanged`.
+
+Dragging any row of a selection carries the whole set (`dragging.items`): one `planTransfer` call,
+one confirmation, then one `runTransfer` per item, so a cross-source batch asks once. Rows a provider
+would not give up (a mount, a read-only source) are left out of the drag, and a drop onto a dragged
+folder itself or into its own descendant is refused. Above the entries the list paints a `/` row
+(`data-guide="workspace-root-row"`) as the workspace root: it is a drop target that moves rows back to
+`/` even when a full listing leaves no background free, and clicking it points New file/folder and
+Upload back at the root. The list background below the rows does the same drop.
+
+A folder whose listing fails shows the provider's message under its row and is **not retried**: the
+line is a yellow warning triangle plus `workspace.folder_open_failed` (“Could not open …”), and the
+provider's own reason follows after a colon when it says more than the folder's path (`errorDetail`).
+A failed attempt leaves `children === null` with `loading` back at `false`, which is exactly what the
+row's auto-load effect waits for, so retrying there would ask an unavailable folder forever.
+`StorageRow`'s `failedRef` stops that; opening the row again or a refresh (the `revision` bump) clears
+it and tries once more.
+
+The older multi-select machinery is still in the code but dead — `WorkspaceRootBrowser`'s
+`selectedPaths` / `canSelectEntry` / `onSelectAll` / `selectionActions` props (its only caller,
+`AgentFilesPanel`, passes none), the `workspace/selection.ts#entriesForAction` helper, and
+`modals/Workspace/MoveToModal.jsx` with its `workspaceMoveTo` registration (nothing opens it). The
+bulk delete and "Move to…" paths lived in `WorkspacePage.tsx` and were deleted with it. The tree's own
+selection is the live equivalent; there is no copy action in the UI, a drag always moves
+(`transferPlanner.ts`).
+
+**One row per path, per source.** A browser-storage file must never appear twice.
+`workspace_nodes` is keyed by a random `id` and indexed by `[sourceId+path]`, but the sync/backup
+serializer omits `nodeId`, so a pull that derived `${sourceId}:${path}` ids added a second row next to
+the local one. Three places now keep the invariant:
+
+- `syncAdapters.applyWorkspaceBundle` reuses the row already at `[sourceId+path]` (skipping the record
+  when the kind disagrees) and collapses with the written ids preferred.
+- `workspaceVfs.listSourceNodes` / `getSourceNode` / `sourceUsage` dedupe by path at read time,
+  keeping the lowest id — which is the row `getSourceNode` (a `.first()` before) also picks, so a
+  listing and a later write cannot land on different rows. `removeSourcePath` checks emptiness after
+  that dedupe, so a duplicate does not read as a child.
+- `db/workspaceTreeDedupe.ts#collapseDuplicateWorkspaceNodes` does the repair (Dexie v19 upgrade and
+  `workspaceVfs.collapseDuplicateNodes`): it keeps the copy that holds the bytes, then the preferred
+  id, then a file, then the lowest id, deleting the extra rows and blobs and repointing
+  `workspace_file_references` at the survivor.
 
 The prompt box's Workspace popover (`WorkspaceAttachButton`) is ordered storage → attachment →
 settings: the "Access storage" master switch, the "Manage data" row directly under it, the

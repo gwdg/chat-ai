@@ -2678,6 +2678,7 @@ export default {
     retry: "Retry",
     refresh: "Refresh",
     empty_folder: "This folder is empty.",
+    folder_open_failed: "Could not open “{{name}}”",
     drop_hint: "Drop files here to copy them into this source.",
     load_more: "Load more",
     select_all: "Select all",
@@ -2685,6 +2686,7 @@ export default {
     selected_count_one: "{{count}} item selected",
     selected_count_other: "{{count}} items selected",
     download: "Download",
+    downloading: "Saving files…",
     preview_too_large: "This file is too large to preview.",
     preview_unavailable: "No preview is available for this file type.",
     remove_source: "Remove source",
@@ -2720,6 +2722,10 @@ export default {
     transfer_success_one: "Transferred {{count}} item.",
     transfer_success_other: "Transferred {{count}} items.",
     transfer_blocked: "This transfer cannot be started.",
+    transfer_conflict: "“{{name}}” already exists at the destination.",
+    transfer_conflict_many:
+      "{{count}} items already exist at the destination.",
+    transfer_multiple_sources: "several sources",
   },
 
   // Landing page
