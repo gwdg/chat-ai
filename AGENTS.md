@@ -2460,10 +2460,43 @@ diagram are inline, so opening it from disk is the whole install.
 
 One `<section class="feature-page">` is one page, and its attributes are its navigation entry:
 `id` (the hash target), `data-title`, `data-category`, `data-summary` and `data-added` (`YYYY-MM`,
-the month the feature was added). The sidebar is generated from those sections and grouped by
+the month the feature landed — the date of its first commit, e.g.
+`git log --diff-filter=A -- front/src/<area>`, not the month the page was written). The sidebar is
+generated from those sections and grouped by
 `data-added`, newest month first, with the category repeated on each row; a section without a
 usable `data-added` falls into a final "Undated" group. A new page is one more section before the
 trailing `<script>` — the list itself is never edited by hand.
+
+**Adding a page.** Copy the section of a neighbouring page and keep this order, which is what the
+shared CSS is written for:
+
+- `<div class="eyebrow"><span>Category</span><span class="chip">code paths · …</span></div>`
+- exactly one `<h1>` — `show()` takes the browser title from it
+- `<p class="lead">`: what exists and why it matters, one paragraph
+- `<h2>The 100-foot view</h2>` + a `.flow` diagram (`.node kind-edge|secret|opaque`,
+  `.node-kicker/title/sub`, `.sees can|cannot`, `.flow-arrow`, `.flow-legend` with
+  `.swatch green|grey`); optional, and missing on two pages today
+- `<h2>How it works</h2>` + `<ol class="steps">`
+- `<h2>Components</h2>` + a `<table class="table">`
+- `<h2>Invariants worth keeping</h2>` + `<ul class="checks">`, then `<h3>Limits</h3>` +
+  `<ul class="checks limits">` (every page has one)
+- `<h2>Where to look</h2>` + `<ul class="paths">`, one `<span class="mono">path</span>` and what
+  it holds per row
+- optional `.callout`
+
+Diagrams are plain HTML/CSS — no image, SVG file or library — so the file stays one download.
+Nothing else is registered: nav rows, month buckets and the `#feature-count` in the topbar are all
+derived from the sections, so a hard-coded count is a bug. Keep the category runs contiguous in the
+order Security, Testing, Agents, Workspace, Platform: the nav groups by month, so the document order
+is what a printout and the **All months** view show. `data-title` is the short name; `data-summary`
+is one clause without a full stop, because it sits in the nav row.
+
+**Scope.** A page is for something with an architectural consequence — a service, a boundary, a
+store, a transport, a deployment mechanism, a test harness. Visual polish, copy, and refactors
+without an architectural consequence do not get one (the footer says so). Which pages exist is
+whatever the file's sections say (`grep -o 'data-title="[^"]*"' docs/architecture/index.html`); do
+not keep a second list here. **Re-date the footer** when you touch a page: it carries the day the
+facts were checked, so a page whose claims were re-read should say so.
 
 The month `<select>` above the list is built from the same groups: **All months** shows every
 group with its month heading, a month value shows only that month's pages (the heading is dropped
@@ -2554,6 +2587,8 @@ repository does not contain their source.
 - [ ] new strings added to both `en.js` and `de.js`
 - [ ] new feature or non-trivial logic change → tests added next to the code (`*.test.js|jsx|ts|tsx`)
 - [ ] new proper user-facing feature → at least one feature guide (tutorial), with its category, an availability entry if it lives behind a switch, and `npm run validate:guides`
+- [ ] feature with an architectural consequence → one page in `docs/architecture/index.html`
+      (`§4.34`), read from the code, with the footer date moved up
 - [ ] Dexie schema change → version bump + `.upgrade()` backfill, existing version blocks untouched
 - [ ] new persisted Redux key → `whitelist` + `getDefaultState()` (+ a migration if the shape changed)
 - [ ] new setting → exposed in the Meta chat context and propose/apply/revert support (§4.16)
