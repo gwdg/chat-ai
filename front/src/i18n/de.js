@@ -128,6 +128,14 @@ export default {
     edit_title: "Thema bearbeiten",
     delete_title: "Thema löschen",
     topic_options: "Thema-Optionen",
+    unsorted_options: "Optionen für nicht zugeordnete Chats",
+    remove_all_unsorted: "Alle Chats entfernen",
+    delete_unsorted_title: "Alle nicht zugeordneten Chats entfernen",
+    delete_unsorted_description:
+      "Alle {{count}} Chats löschen, die keinem Thema zugeordnet sind? Dies kann nicht rückgängig gemacht werden.",
+    removed_unsorted_chats: "{{count}} nicht zugeordnete Chats entfernt.",
+    remove_unsorted_error:
+      "Nicht zugeordnete Chats konnten nicht entfernt werden: {{error}}",
     pinned: "Angeheftet",
     pin_action: "Chat anheften",
     unpin_action: "Nicht mehr anheften",

@@ -128,6 +128,14 @@ export default {
     edit_title: "Edit topic",
     delete_title: "Delete topic",
     topic_options: "Topic options",
+    unsorted_options: "Unsorted chats options",
+    remove_all_unsorted: "Remove all chats",
+    delete_unsorted_title: "Remove all unsorted chats",
+    delete_unsorted_description:
+      "Delete all {{count}} chats that are not in a topic? This cannot be undone.",
+    removed_unsorted_chats: "Removed {{count}} unsorted chats.",
+    remove_unsorted_error:
+      "Could not remove the unsorted chats: {{error}}",
     pinned: "Pinned",
     pin_action: "Pin chat",
     unpin_action: "Unpin chat",

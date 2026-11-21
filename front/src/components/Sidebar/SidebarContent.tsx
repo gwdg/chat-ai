@@ -552,6 +552,16 @@ export default function SidebarContent({
     });
   };
 
+  // Removing every unsorted chat deletes the chats themselves, so it goes
+  // through a confirmation dialog instead of acting on the menu click.
+  const handleDeleteUnsortedChats = (conversations: any[]) => {
+    if (!conversations?.length) return;
+    openModal("deleteUnsortedChats", {
+      conversations,
+      currentConversationId,
+    });
+  };
+
   const handleTogglePinned = async (conv: { id: string; pinned?: boolean }) => {
     if (!conv) return;
     try {
@@ -904,6 +914,7 @@ export default function SidebarContent({
     onRenameTopic: handleRenameFolder,
     onDeleteTopic: handleDeleteFolder,
     onToggleTopicPinned: handleToggleTopicPinned,
+    onDeleteUnsortedChats: handleDeleteUnsortedChats,
     onOpenTopic: handleOpenTopic,
     draggingConversationId,
     dragOverTopicId,

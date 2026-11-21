@@ -54,6 +54,7 @@ const baseProps = {
   onRenameTopic: vi.fn(),
   onDeleteTopic: vi.fn(),
   onToggleTopicPinned: vi.fn(),
+  onDeleteUnsortedChats: vi.fn(),
   onOpenTopic: vi.fn(),
   draggingConversationId: null,
   dragOverTopicId: null,
@@ -311,9 +312,9 @@ describe("TopicList group colours", () => {
     expect(slotFor("Unsorted Chats")).toBeNull();
     expect(rowFor("Unsorted Chats").querySelector(".rounded-full")).toBeNull();
     expect(slotFor("Violet topic")).not.toBeNull();
-    // Its number still sits where a topic's number sits, under the ••• it lacks.
+    // Its number still sits where a topic's number sits, beside the ••• menu.
     expect(
-      rowFor("Unsorted Chats").lastElementChild.querySelector("span.h-6.w-6"),
+      rowFor("Unsorted Chats").lastElementChild.querySelector("button"),
     ).not.toBeNull();
   });
 });
@@ -533,6 +534,36 @@ describe("TopicList row controls", () => {
     expect(row.className).toContain("min-h-9");
     expect(row.className).toContain("px-1");
     expect(row.className).not.toContain("py-2");
+  });
+});
+
+describe("TopicList unsorted menu", () => {
+  const looseChat = { id: "c12", title: "Loose chat", lastModified: 1 };
+
+  it("offers Remove all chats for the unsorted bucket", () => {
+    const onDeleteUnsortedChats = vi.fn();
+    render(
+      <TopicList
+        {...baseProps}
+        unsortedConversations={[looseChat]}
+        onDeleteUnsortedChats={onDeleteUnsortedChats}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Unsorted chats options" }),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Remove all chats" }));
+
+    expect(onDeleteUnsortedChats).toHaveBeenCalledWith([looseChat]);
+  });
+
+  it("offers no menu while the bucket is empty", () => {
+    render(<TopicList {...baseProps} unsortedConversations={[]} />);
+
+    expect(
+      screen.queryByRole("button", { name: "Unsorted chats options" }),
+    ).toBeNull();
   });
 });
 

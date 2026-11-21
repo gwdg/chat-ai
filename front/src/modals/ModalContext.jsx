@@ -22,6 +22,7 @@ import ExportChatModal from "../components/Sidebar/Modals/ExportChatModal";
 import ImportPersonaModal from "../components/Sidebar/Modals/ImportPersonaModal";
 import FolderEditorModal from "../components/Sidebar/Modals/FolderEditorModal";
 import DeleteFolderModal from "../components/Sidebar/Modals/DeleteFolderModal";
+import DeleteUnsortedChatsModal from "../components/Sidebar/Modals/DeleteUnsortedChatsModal";
 import MoveChatModal from "../components/Sidebar/Modals/MoveChatModal";
 import OrganizeChatsModal from "../components/Sidebar/Modals/OrganizeChatsModal";
 import ClearMemoryModal from "./UserSettings/ClearMemoryModal";
@@ -124,6 +125,13 @@ export function ModalProvider({ children }) {
       )}
       {modalType === "deleteFolder" && (
         <DeleteFolderModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "deleteUnsortedChats" && (
+        <DeleteUnsortedChatsModal
+          isOpen
+          onClose={closeModal}
+          {...modalProps}
+        />
       )}
       {/* Chat Modals */}
       {modalType === "shareSettings" && (
