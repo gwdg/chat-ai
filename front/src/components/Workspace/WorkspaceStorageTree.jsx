@@ -252,6 +252,7 @@ export default function WorkspaceStorageTree({
   showTitle = true,
   onPreview,
   allowDetach = false,
+  onCreateEntry,
 }) {
   const { t } = useTranslation();
   const { openModal } = useModal();
@@ -681,7 +682,7 @@ export default function WorkspaceStorageTree({
 
   const createEntry = (kind) => {
     const folder = target;
-    openModal("workspaceCreateEntry", {
+    const request = {
       kind,
       path: folder.path,
       onCreate: async (name) => {
@@ -697,7 +698,14 @@ export default function WorkspaceStorageTree({
         }
         await folder.reload?.();
       },
-    });
+    };
+    // A dialog that hosts this tree owns the nested dialog: opening the global
+    // one would replace that host and with it the draft it holds.
+    if (onCreateEntry) {
+      onCreateEntry(request);
+      return;
+    }
+    openModal("workspaceCreateEntry", request);
   };
 
   const api = {

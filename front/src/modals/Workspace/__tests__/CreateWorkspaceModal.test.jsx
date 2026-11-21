@@ -22,10 +22,18 @@ vi.mock("../../../db/workspaceDb", () => ({
 }));
 
 vi.mock("../../../components/Workspace/WorkspaceStorageManager", () => ({
-  default: ({ workspaceId, onOpenAddSource }) => (
+  default: ({ workspaceId, onOpenAddSource, onCreateEntry }) => (
     <div data-testid="storage-manager" data-workspace={workspaceId ?? ""}>
       <button type="button" onClick={() => onOpenAddSource?.("local")}>
         open add source
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          onCreateEntry?.({ kind: "file", path: "/", onCreate: vi.fn() })
+        }
+      >
+        open create entry
       </button>
     </div>
   ),
@@ -38,6 +46,12 @@ vi.mock("../AddSourceModal", () => ({
       data-kind={initialKind}
       data-workspace={workspaceId ?? ""}
     />
+  ),
+}));
+
+vi.mock("../CreateEntryModal", () => ({
+  default: ({ kind, path }) => (
+    <div data-testid="create-entry-modal" data-kind={kind} data-path={path} />
   ),
 }));
 
@@ -90,6 +104,19 @@ describe("CreateWorkspaceModal", () => {
     expect(screen.getByTestId("add-source-modal")).toHaveAttribute(
       "data-kind",
       "local",
+    );
+    expect(screen.getByTestId("storage-manager")).toBeInTheDocument();
+  });
+
+  it("opens New file inside the dialog instead of replacing it", async () => {
+    renderModal();
+    await waitForDraft();
+
+    fireEvent.click(screen.getByText("open create entry"));
+
+    expect(screen.getByTestId("create-entry-modal")).toHaveAttribute(
+      "data-kind",
+      "file",
     );
     expect(screen.getByTestId("storage-manager")).toBeInTheDocument();
   });

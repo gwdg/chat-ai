@@ -9,6 +9,7 @@ import ChatPage from "../Pages/ChatPage";
 import MetaChatPage from "../Pages/MetaChatPage";
 import TopicMasterPage from "../Pages/TopicMasterPage";
 import WorkspacePage from "../Pages/WorkspacePage";
+import WorkspaceFilesPage from "../Pages/WorkspaceFilesPage";
 import AgentPage from "../Pages/AgentPage";
 import ToolFormDemoPage from "../Pages/ToolFormDemoPage";
 import { isAgentsEnabled } from "../utils/modules";
@@ -24,7 +25,13 @@ const PublicRoute = () => {
       )}
       <Route path="/topic/:topicId" element={<TopicMasterPage />} />
       {isFeatureEnabled("workspaces") && (
-        <Route path="/workspace/:workspaceId" element={<WorkspacePage />} />
+        <>
+          <Route path="/workspace/:workspaceId" element={<WorkspacePage />} />
+          <Route
+            path="/workspace/:workspaceId/files"
+            element={<WorkspaceFilesPage />}
+          />
+        </>
       )}
       {isAgentsEnabled() && (
         <Route path="/agent/:agentId" element={<AgentPage />} />

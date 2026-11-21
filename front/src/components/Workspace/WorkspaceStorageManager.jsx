@@ -27,6 +27,7 @@ import {
 export default function WorkspaceStorageManager({
   workspaceId,
   onOpenAddSource,
+  onCreateEntry,
   allowDetach = false,
 }) {
   const { t } = useTranslation();
@@ -231,6 +232,7 @@ export default function WorkspaceStorageManager({
       <WorkspaceStorageTree
         workspaceId={workspaceId}
         allowDetach={allowDetach}
+        onCreateEntry={onCreateEntry}
         className="min-h-[60vh] min-w-0 flex-[2] rounded-xl border border-base-300 bg-base-100 md:min-h-0"
       />
     </div>

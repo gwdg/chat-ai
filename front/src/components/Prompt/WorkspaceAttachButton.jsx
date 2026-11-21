@@ -7,8 +7,9 @@ import {
   useClose,
 } from "@headlessui/react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router";
 import { ArrowLeft, Check, ChevronRight } from "lucide-react";
-import { Workspace, DataBase } from "@carbon/icons-react";
+import { Workspace, DataBase, Folder } from "@carbon/icons-react";
 
 import Tooltip from "../Others/Tooltip";
 import WorkspaceSettings from "../Workspace/WorkspaceSettings";
@@ -26,7 +27,7 @@ import {
  * list: the settings (storage switches, Manage Workspace, the attachment list, the local agent) and,
  * when more than one workspace is attached, a page that only lists those workspaces — a back arrow
  * returns to the settings. It lives inside the popover so `useClose` can dismiss it before the
- * editor takes over the screen.
+ * editor or the file manager takes over the screen.
  */
 function WorkspaceMenu({
   localState,
@@ -36,6 +37,7 @@ function WorkspaceMenu({
   attached,
   onToggle,
   onOpenEditor,
+  onOpenFiles,
 }) {
   const { t } = useTranslation();
   const close = useClose();
@@ -73,7 +75,13 @@ function WorkspaceMenu({
     onOpenEditor(workspaceId);
   };
 
-  if (page === "manage") {
+  const openFiles = (workspaceId) => {
+    close();
+    onOpenFiles(workspaceId);
+  };
+
+  if (page === "manage" || page === "files") {
+    const showFiles = page === "files";
     return (
       <>
         <button
@@ -85,20 +93,34 @@ function WorkspaceMenu({
           <ArrowLeft size={14} />
           {t("common.back")}
         </button>
-        <p className="text-sm font-medium">{t("workspace.manage_workspace")}</p>
+        <p className="text-sm font-medium">
+          {t(
+            showFiles
+              ? "workspace.file_manager"
+              : "workspace.manage_workspace",
+          )}
+        </p>
         <div
-          data-guide="manage-workspace-list"
+          data-guide={showFiles ? "file-manager-list" : "manage-workspace-list"}
           className="mt-1 flex flex-col gap-0.5"
         >
           {attachedWorkspaces.map((workspace) => (
             <button
               key={workspace.id}
               type="button"
-              data-guide="manage-workspace-option"
-              onClick={() => edit(workspace.id)}
+              data-guide={
+                showFiles ? "file-manager-option" : "manage-workspace-option"
+              }
+              onClick={() =>
+                showFiles ? openFiles(workspace.id) : edit(workspace.id)
+              }
               className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content transition hover:bg-base-200"
             >
-              <Workspace size={16} className="shrink-0 text-accent" />
+              {showFiles ? (
+                <Folder size={16} className="shrink-0 text-accent" />
+              ) : (
+                <Workspace size={16} className="shrink-0 text-accent" />
+              )}
               <span className="min-w-0 flex-1 truncate">{workspace.name}</span>
               <ChevronRight size={12} className="shrink-0 text-base-content/40" />
             </button>
@@ -182,6 +204,24 @@ function WorkspaceMenu({
             <ChevronRight size={12} className="shrink-0 text-base-content/40" />
           )}
         </button>
+        {/* The files as a page of their own: no storage rail, no settings, only the tree. */}
+        <button
+          type="button"
+          data-guide="file-manager"
+          onClick={() => {
+            if (attachedWorkspaces.length > 1) setPage("files");
+            else openFiles(attachedWorkspaces[0].id);
+          }}
+          className="flex w-full items-center gap-2 rounded-lg py-1 pl-1 pr-1 text-left text-xs font-medium text-base-content transition hover:bg-base-200"
+        >
+          <Folder size={16} className="shrink-0 text-accent" />
+          <span className="min-w-0 flex-1 truncate">
+            {t("workspace.file_manager")}
+          </span>
+          {attachedWorkspaces.length > 1 && (
+            <ChevronRight size={12} className="shrink-0 text-base-content/40" />
+          )}
+        </button>
       </div>
 
       <div className="mt-3 border-t border-base-300 pt-2">
@@ -229,6 +269,7 @@ function WorkspaceMenu({
 
 export default function WorkspaceAttachButton({ localState, setLocalState }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { openModal } = useModal();
   const conversationId = localState?.id;
   const workspaces = useWorkspaceList();
@@ -261,6 +302,10 @@ export default function WorkspaceAttachButton({ localState, setLocalState }) {
   // where a workspace's files (and this chat's files inside it) are managed.
   const openEditor = (workspaceId) =>
     openModal("workspaceEdit", { workspaceId });
+
+  // The file manager is the same tree as a page, without the dialog around it.
+  const openFiles = (workspaceId) =>
+    navigate(`/workspace/${workspaceId}/files`);
 
   return (
     <Popover className="relative flex">
@@ -295,6 +340,7 @@ export default function WorkspaceAttachButton({ localState, setLocalState }) {
             attached={attached}
             onToggle={toggle}
             onOpenEditor={openEditor}
+            onOpenFiles={openFiles}
           />
         </PopoverPanel>
       </Transition>

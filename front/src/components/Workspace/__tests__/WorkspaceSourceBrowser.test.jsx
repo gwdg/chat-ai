@@ -328,6 +328,28 @@ describe("WorkspaceSourceBrowser", () => {
     expect(addButton()).toBeDisabled();
   });
 
+  it("adds the open folder from the toolbar when nothing is ticked", async () => {
+    renderBrowser({ target: { drive: "device" } });
+
+    fireEvent.click(await screen.findByText("Project"));
+    await screen.findByText("docs");
+
+    expect(addButton()).toHaveTextContent("Add current dir to workspace");
+    fireEvent.click(addButton());
+
+    await waitFor(() =>
+      expect(mocks.onAddToWorkspace).toHaveBeenCalledWith([
+        expect.objectContaining({
+          sourceId: "local-1",
+          sourceKind: "local",
+          path: "/",
+          name: "Project",
+          kind: "dir",
+        }),
+      ]),
+    );
+  });
+
   it("locks the rows inside a read-only source", async () => {
     mocks.sources = [{ ...localSource, readOnly: true }, arcanaSource];
     mocks.providers = new Map([
@@ -350,7 +372,9 @@ describe("WorkspaceSourceBrowser", () => {
 
     fireEvent.click(await screen.findByText("Project"));
     await screen.findByText("docs");
-    expect(addButton()).toBeDisabled();
+    // Nothing is ticked yet, so the toolbar offers the open folder itself.
+    expect(addButton()).toBeEnabled();
+    expect(addButton()).toHaveTextContent("Add current dir to workspace");
 
     fireEvent.click(screen.getByLabelText("docs"));
     expect(addButton()).toBeEnabled();
@@ -369,7 +393,8 @@ describe("WorkspaceSourceBrowser", () => {
       ]),
     );
     await waitFor(() => expect(addButton()).not.toHaveTextContent("(1)"));
-    expect(addButton()).toBeDisabled();
+    expect(addButton()).toBeEnabled();
+    expect(addButton()).toHaveTextContent("Add current dir to workspace");
   });
 
   it("selects a chat by clicking its row and adds exactly that chat", async () => {
@@ -666,6 +691,49 @@ describe("WorkspaceSourceBrowser", () => {
     expect(mocks.onTargetChange).toHaveBeenCalledWith(null);
   });
 
+  it("mounts an empty SAIA account folder from the empty state", async () => {
+    mocks.sources = [{ ...saiaSource }];
+    mocks.providers = new Map([["saia-1", saiaProvider]]);
+    saiaProvider.list.mockResolvedValue({ entries: [] });
+    renderBrowser({ target: { drive: "saia-fs" } });
+
+    // A fresh account is an empty folder: there is no row to tick, so the
+    // toolbar and the empty state both have to offer the folder itself.
+    expect(await screen.findByText("Nothing here yet")).toBeInTheDocument();
+    expect(addButton()).toBeEnabled();
+    expect(addButton()).toHaveTextContent("Add current dir to workspace");
+
+    const mount = guide("workspace-add-current-folder");
+    expect(mount).toHaveTextContent("Add this folder to the workspace");
+    fireEvent.click(mount);
+
+    await waitFor(() =>
+      expect(mocks.onAddToWorkspace).toHaveBeenCalledWith([
+        expect.objectContaining({
+          sourceId: "saia-1",
+          sourceKind: "saia-fs",
+          path: "/",
+          name: "SAIA Files",
+          kind: "dir",
+        }),
+      ]),
+    );
+  });
+
+  it("marks an empty SAIA folder that is already mounted", async () => {
+    mocks.sources = [{ ...saiaSource }];
+    mocks.providers = new Map([["saia-1", saiaProvider]]);
+    saiaProvider.list.mockResolvedValue({ entries: [] });
+    renderBrowser({
+      target: { drive: "saia-fs" },
+      isInWorkspace: () => true,
+    });
+
+    expect(await screen.findByText("Nothing here yet")).toBeInTheDocument();
+    expect(guide("workspace-add-current-folder")).toBeNull();
+    expect(screen.getByText("In workspace")).toBeInTheDocument();
+  });
+
   it("locks the SAIA rows when the account folder is read-only", async () => {
     mocks.sources = [{ ...saiaSource, readOnly: true }];
     mocks.providers = new Map([["saia-1", saiaProvider]]);
@@ -697,7 +765,8 @@ describe("WorkspaceSourceBrowser", () => {
 
     expect(await screen.findByText("files")).toBeInTheDocument();
     expect(mcpProvider.list).toHaveBeenCalledWith("/");
-    expect(addButton()).toBeDisabled();
+    expect(addButton()).toBeEnabled();
+    expect(addButton()).toHaveTextContent("Add current dir to workspace");
 
     fireEvent.click(screen.getByLabelText("files"));
     expect(addButton()).toHaveTextContent("Add to Workspace (1)");

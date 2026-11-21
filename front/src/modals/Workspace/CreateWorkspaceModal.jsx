@@ -5,6 +5,7 @@ import { Pencil } from "lucide-react";
 
 import BaseModal from "../BaseModal";
 import AddSourceModal from "./AddSourceModal";
+import CreateEntryModal from "./CreateEntryModal";
 import WorkspaceStorageManager from "../../components/Workspace/WorkspaceStorageManager";
 import IconColorPicker from "../../components/Sidebar/IconColorPicker";
 import {
@@ -67,6 +68,7 @@ export default function CreateWorkspaceModal({
   const [color, setColor] = useState(TOPIC_COLORS[0].id);
   const [iconOpen, setIconOpen] = useState(false);
   const [addSourceKind, setAddSourceKind] = useState(null);
+  const [createEntry, setCreateEntry] = useState(null);
   const [nameBlurred, setNameBlurred] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -306,6 +308,7 @@ export default function CreateWorkspaceModal({
         workspaceId={draftId}
         allowDetach
         onOpenAddSource={(kind) => setAddSourceKind(kind ?? "local")}
+        onCreateEntry={setCreateEntry}
       />
 
       <div className="flex shrink-0 items-center justify-end gap-2">
@@ -343,6 +346,15 @@ export default function CreateWorkspaceModal({
           onClose={() => setAddSourceKind(null)}
           workspaceId={draftId}
           initialKind={addSourceKind}
+        />
+      )}
+      {createEntry && (
+        <CreateEntryModal
+          isOpen
+          onClose={() => setCreateEntry(null)}
+          kind={createEntry.kind}
+          path={createEntry.path}
+          onCreate={createEntry.onCreate}
         />
       )}
     </BaseModal>

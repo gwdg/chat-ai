@@ -186,6 +186,37 @@ describe("WorkspaceStorageTree", () => {
     expect(h.listWorkspaceRoot.mock.calls.length).toBe(calls + 1);
   });
 
+  it("opens the global create dialog when no host owns it", async () => {
+    h.listWorkspaceRoot.mockResolvedValue([]);
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" />);
+    fireEvent.click(await screen.findByRole("button", { name: "New folder" }));
+
+    expect(h.openModal).toHaveBeenCalledWith(
+      "workspaceCreateEntry",
+      expect.objectContaining({ kind: "dir", path: "/" }),
+    );
+  });
+
+  it("hands a new entry to the host dialog instead of replacing it", async () => {
+    h.listWorkspaceRoot.mockResolvedValue([]);
+    const onCreateEntry = vi.fn();
+
+    render(
+      <WorkspaceStorageTree
+        workspaceId="ws-1"
+        onCreateEntry={onCreateEntry}
+      />,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "New file" }));
+
+    // The Manage Workspace dialog holds its own draft, so a global modal must not close it.
+    expect(onCreateEntry).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "file", path: "/" }),
+    );
+    expect(h.openModal).not.toHaveBeenCalled();
+  });
+
   it("drops the pane title when the sidebar asks for it", async () => {
     h.listWorkspaceRoot.mockResolvedValue([]);
 

@@ -90,7 +90,7 @@ const useWidePanel = () => {
  * came from the Files tree (already read) or from a chat attachment (a stored file
  * id the tab resolves itself).
  */
-function WorkspacePreviewPane({ request, onClose, onBack }) {
+export function WorkspacePreviewPane({ request, onClose, onBack }) {
   const { t } = useTranslation();
   const { notifyError } = useToast();
   const isChatFile = Boolean(request?.fileId);

@@ -2257,6 +2257,9 @@ export default {
     edit_title: "Arbeitsbereich verwalten",
     edit_storage: "Speicher bearbeiten",
     manage_workspace: "Arbeitsbereich verwalten",
+    file_manager: "Dateimanager",
+    resize_files_split: "Dateibaum und Vorschau skalieren",
+    back_to_workspace: "Zurück zum Arbeitsbereich",
     edit_storage_hint:
       "Speicherorte von {{name}}. Jede Änderung wird sofort übernommen.",
     edit_storage_hint_no_name: "Jede Änderung wird sofort übernommen.",
@@ -2493,6 +2496,10 @@ export default {
       selected_one: "{{count}} ausgewählt",
       selected_many: "{{count}} ausgewählt",
       empty: "Hier ist noch nichts",
+      add_current_folder: "Diesen Ordner zum Arbeitsbereich hinzufügen",
+      add_current_dir: "Aktuellen Ordner zum Arbeitsbereich hinzufügen",
+      empty_folder_hint:
+        "Der Ordner ist gerade leer, bleibt aber verknüpft: Dateien, die du später hier anlegst oder hochlädst, erscheinen darin.",
       loading: "Wird geladen...",
       unavailable: "Diese Quelle ist nicht verfügbar.",
       back: "Zurück",

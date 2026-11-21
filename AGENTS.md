@@ -894,7 +894,17 @@ The rail and the browser below it are rendered by
 source picker of its own: its Files tab is `WorkspaceStorageTree` over the workspace root, so adding
 a source to a workspace that already exists goes through Edit storage. The manager's
 `onOpenAddSource` exists for exactly these two dialogs: without it, Add source opens the global
-`workspaceAddSource` modal, which replaces the dialog that owns the manager.
+`workspaceAddSource` modal, which replaces the dialog that owns the manager. Its `onCreateEntry`
+mirrors that for New file / New folder: `WorkspaceStorageTree` hands the request to the host instead
+of opening the global `workspaceCreateEntry` modal, which would replace the Create workspace dialog
+and drop its draft. The same tree is a page of its own at
+`/workspace/:workspaceId/files` (`Pages/WorkspaceFilesPage.tsx`), opened from the prompt-box
+Workspace menu's **File manager** row and from the sidebar workspace options menu: it shows only the
+tree, full width, with a preview column once a file is clicked. The two panes start at 50/50 and the
+divider between them is adjustable — drag, arrow keys (Home/End jump to the limits, Enter resets) or
+double-click to return to the middle — clamped to 20–80 % so neither side collapses. The chosen share
+is the `--files-split` CSS variable on the flex container and is remembered per viewer in
+`localStorage["chatai.workspaceFiles.split"]`.
 
 The SOURCES rail (`components/Workspace/WorkspaceSourcesPanel.tsx`, `data-guide="workspace-sources"`)
 is the "My Computer" of the workspace and is a **picker only**: three drive cards — **Your Device**
@@ -918,10 +928,18 @@ component's own border/rounding so the page can nest it in the shared card; the 
 click, a checkbox on every row and Select all; local-source rows keep their remove / read-only
 controls on hover (`onRemoveSource`, `onToggleSourceReadOnly`). **Chats are a list, not folders**: one
 row per conversation, clicking a row toggles its selection, and there is no drill-in to a chat's
-files. The toolbar's **Add to Workspace** button is always visible at the top right and is disabled —
-never hidden — until something is selected, when it shows the count ("Add to Workspace (2)"). With
-no target the toolbar keeps the disabled button above the `workspace.source_browser.pick_source`
-hint. Rows already present in the workspace carry a green "In workspace" marker, their checkbox is
+files. The toolbar's **Add to Workspace** button is always visible at the top right. With nothing
+ticked inside a browsable folder it offers that open folder instead ("Add current dir to workspace",
+`workspace.source_browser.add_current_dir`) and mounts it on click; with a selection it shows the
+count ("Add to Workspace (2)"), and it is disabled — never hidden — when there is neither (no target,
+a drive root, the Chats list, or a current folder already in the workspace). With no target it sits
+above the `workspace.source_browser.pick_source` hint. An **empty folder** has no row to tick, so its
+empty state
+(`data-guide="workspace-add-current-folder"`) offers "Add this folder to the workspace" for the
+folder that is open, roots included; that is how a fresh saia-fs account, which starts empty, gets
+mounted (`saia-fs` folders are mounted live, never copied). Once the workspace mounts it, the empty
+state says "In workspace" instead. Rows already present in the workspace carry a green
+"In workspace" marker, their checkbox is
 disabled and Select all skips them; the page supplies that through the `isInWorkspace` predicate —
 `workspace_chats` for a chat, an exact `sourceId` + `sourcePath` match in `workspace_mounts` for a
 folder, and for a file either of those or a same-named entry at the workspace root (`rootNames`,

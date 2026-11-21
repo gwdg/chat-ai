@@ -20,7 +20,7 @@ import type {
   WorkspaceFileEntry,
   WorkspaceSourceRow,
 } from "../../db/dbTypes";
-import { parentPath } from "../../workspace/paths";
+import { baseName, parentPath } from "../../workspace/paths";
 import type {
   FileProvider,
   QuotaInfo,
@@ -572,6 +572,59 @@ export default function WorkspaceSourceBrowser({
     [view, localById, mcpById, arcanaSource, saiaSource],
   );
 
+  // The folder that is open right now. An empty folder has no row to select, so
+  // this is what the empty state offers: mounting the folder itself, roots
+  // included. A saia-fs account starts out empty and would otherwise be
+  // impossible to add to a workspace.
+  const currentFolder = useMemo((): SourcesSelection | null => {
+    if (!view) return null;
+    if (view.drive === "chats") return null;
+    if (view.drive === "device" && view.level === "drives") return null;
+    if (view.drive === "mcp" && view.level === "drives") return null;
+    if (view.drive === "device" || view.drive === "mcp") {
+      const source =
+        view.drive === "device"
+          ? localById.get(view.sourceId)
+          : mcpById.get(view.sourceId);
+      if (!source) return null;
+      const name =
+        path === "/" ? source.label?.trim() || source.id : baseName(path);
+      return {
+        sourceId: source.id,
+        sourceKind: view.drive === "device" ? "local" : "mcp",
+        path,
+        name,
+        kind: "dir",
+        title: name,
+      };
+    }
+    if (view.drive === "saia-fs") {
+      if (!saiaSource) return null;
+      const name =
+        path === "/" ? t("workspace.source_browser.saia_fs") : baseName(path);
+      return {
+        sourceId: saiaSource.id,
+        sourceKind: "saia-fs",
+        path,
+        name,
+        kind: "dir",
+        title: name,
+      };
+    }
+    if (!arcanaSource) return null;
+    const name =
+      path === "/" ? t("workspace.source_browser.arcanas") : baseName(path);
+    return {
+      sourceId: arcanaSource.id,
+      sourceKind:
+        arcanaSource.kind === "arcana" ? "arcana" : "arcana-filesystem",
+      path,
+      name,
+      kind: "dir",
+      title: name,
+    };
+  }, [view, path, localById, mcpById, arcanaSource, saiaSource, t]);
+
   const visibleItems = useMemo(
     () =>
       rows
@@ -724,6 +777,27 @@ export default function WorkspaceSourceBrowser({
       setAdding(false);
     }
   };
+
+  const currentFolderInWorkspace =
+    currentFolder !== null && (isInWorkspace?.(currentFolder) ?? false);
+
+  const addCurrentFolder = async () => {
+    if (!currentFolder || currentFolderInWorkspace || adding || busy) return;
+    setAdding(true);
+    try {
+      await onAddToWorkspace([currentFolder]);
+    } catch {
+      return;
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  // With nothing ticked, the toolbar offers the folder that is open instead of
+  // a dead button: an empty folder has nothing to select, and a full one can
+  // still be mounted as a whole.
+  const offersCurrentFolder = selectedList.length === 0 && currentFolder !== null;
+  const addableCurrentFolder = offersCurrentFolder && !currentFolderInWorkspace;
 
   const unmountSelection = async () => {
     if (!onUnmountSelection || mountedSelected.length === 0 || unmounting || busy) {
@@ -891,8 +965,14 @@ export default function WorkspaceSourceBrowser({
         <button
           type="button"
           data-guide="workspace-add-to-workspace"
-          onClick={() => void addSelection()}
-          disabled={addableSelected.length === 0 || pending}
+          onClick={() =>
+            void (offersCurrentFolder ? addCurrentFolder() : addSelection())
+          }
+          disabled={
+            (offersCurrentFolder
+              ? !addableCurrentFolder
+              : addableSelected.length === 0) || pending
+          }
           className="btn btn-primary btn-xs shrink-0 gap-1"
         >
           {adding && <span className="loading loading-spinner loading-xs" />}
@@ -901,7 +981,9 @@ export default function WorkspaceSourceBrowser({
               ? t("workspace.source_browser.add_to_workspace_count", {
                   count: addableSelected.length,
                 })
-              : t("workspace.source_browser.add_to_workspace")}
+              : offersCurrentFolder
+                ? t("workspace.source_browser.add_current_dir")
+                : t("workspace.source_browser.add_to_workspace")}
           </span>
         </button>
       </div>
@@ -987,6 +1069,34 @@ export default function WorkspaceSourceBrowser({
                 <span className="truncate">
                   {t("workspace.source_browser.empty")}
                 </span>
+                {currentFolder &&
+                  (currentFolderInWorkspace ? (
+                    <span className="mt-0.5 flex items-center gap-0.5 text-[9px] font-semibold uppercase tracking-wide text-success">
+                      <Check size={11} />
+                      {t("workspace.source_browser.in_workspace")}
+                    </span>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        data-guide="workspace-add-current-folder"
+                        onClick={() => void addCurrentFolder()}
+                        disabled={pending}
+                        className="btn btn-primary btn-xs mt-0.5 gap-1"
+                      >
+                        {adding && (
+                          <span className="loading loading-spinner loading-xs" />
+                        )}
+                        <Plus size={12} />
+                        <span className="truncate">
+                          {t("workspace.source_browser.add_current_folder")}
+                        </span>
+                      </button>
+                      <span className="max-w-[22rem] text-[10px] leading-relaxed text-base-content/40">
+                        {t("workspace.source_browser.empty_folder_hint")}
+                      </span>
+                    </>
+                  ))}
               </div>
             ) : (
               <div className="flex flex-col gap-0.5">

@@ -370,6 +370,7 @@ describe("WorkspaceList manage", () => {
     const labels = [
       "Pin Workspace",
       "Manage Workspace",
+      "File manager",
       "Attach Agent Session",
       "Delete Workspace",
     ];
@@ -395,6 +396,27 @@ describe("WorkspaceList manage", () => {
     expect(
       screen.queryByRole("button", { name: "Edit storage" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("opens the file manager page from its options menu", async () => {
+    render(
+      <Provider store={makeStore()}>
+        <MemoryRouter initialEntries={["/"]}>
+          <WorkspaceList />
+          <LocationProbe />
+        </MemoryRouter>
+      </Provider>,
+    );
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Workspace options" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "File manager" }));
+
+    expect(screen.getByTestId("location")).toHaveTextContent(
+      "/workspace/ws-1/files",
+    );
+    expect(mocks.openModal).not.toHaveBeenCalled();
   });
 });
 

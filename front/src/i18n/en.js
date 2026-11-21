@@ -2229,6 +2229,9 @@ export default {
     edit_title: "Manage Workspace",
     edit_storage: "Edit storage",
     manage_workspace: "Manage Workspace",
+    file_manager: "File manager",
+    resize_files_split: "Resize file tree and preview",
+    back_to_workspace: "Back to workspace",
     edit_storage_hint:
       "Storage locations of {{name}}. Every change is applied immediately.",
     edit_storage_hint_no_name: "Every change is applied immediately.",
@@ -2462,6 +2465,10 @@ export default {
       selected_one: "{{count}} selected",
       selected_many: "{{count}} selected",
       empty: "Nothing here yet",
+      add_current_folder: "Add this folder to the workspace",
+      add_current_dir: "Add current dir to workspace",
+      empty_folder_hint:
+        "The folder is empty now, but it stays linked: files you create or upload here later appear in it.",
       loading: "Loading...",
       unavailable: "This source is unavailable.",
       back: "Back",

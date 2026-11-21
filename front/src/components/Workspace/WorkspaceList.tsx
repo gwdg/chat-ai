@@ -8,6 +8,7 @@ import {
   Bot,
   ChevronDown,
   Edit,
+  Folder,
   Link,
   OverflowMenuVertical,
   Pin,
@@ -589,6 +590,18 @@ export default function WorkspaceList({
                       >
                         <Edit size={14} />
                         {t("workspace.manage_workspace")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          close();
+                          navigate(`/workspace/${workspace.id}/files`);
+                        }}
+                        data-guide="workspace-file-manager"
+                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
+                      >
+                        <Folder size={14} />
+                        {t("workspace.file_manager")}
                       </button>
                       <button
                         type="button"

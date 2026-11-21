@@ -23,7 +23,7 @@ vi.mock("../../../db/workspaceDb", () => ({
 vi.mock("../../../modals/ModalContext", () => ({
   useModal: () => ({ openModal }),
 }));
-vi.mock("react-router-dom", () => ({
+vi.mock("react-router", () => ({
   useNavigate: () => navigate,
 }));
 vi.mock("../../Workspace/WorkspaceSettings", () => ({
@@ -152,6 +152,38 @@ describe("WorkspaceAttachButton", () => {
     expect(openModal).toHaveBeenCalledWith("workspaceEdit", {
       workspaceId: "w2",
     });
+  });
+
+  it("opens the file manager page for the one attached workspace", () => {
+    dbMocks.links = [{ workspaceId: "w1" }];
+    renderButton();
+    openMenu();
+
+    fireEvent.click(document.querySelector('[data-guide="file-manager"]'));
+
+    // The file tree is a page, not the editor dialog.
+    expect(openModal).not.toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith("/workspace/w1/files");
+  });
+
+  it("offers the file manager for several workspaces and opens the picked one", () => {
+    dbMocks.links = [{ workspaceId: "w1" }, { workspaceId: "w2" }];
+    renderButton();
+    openMenu();
+
+    fireEvent.click(document.querySelector('[data-guide="file-manager"]'));
+
+    const options = [
+      ...document.querySelectorAll('[data-guide="file-manager-option"]'),
+    ];
+    expect(options.map((option) => option.textContent)).toEqual([
+      "Research",
+      "Teaching",
+    ]);
+    fireEvent.click(options[1]);
+
+    expect(openModal).not.toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith("/workspace/w2/files");
   });
 
   it("puts access storage first and writes it to the conversation", () => {
