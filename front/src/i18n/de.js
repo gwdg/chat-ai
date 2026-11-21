@@ -83,6 +83,11 @@ export default {
     rename_tooltip: "Umbenennen: {{title}}",
     shortcut_new_conversation: "Strg + Shift + O",
     user_section: "Benutzer",
+    sync_now: "Jetzt synchronisieren",
+    sync_running: "Synchronisierung…",
+    sync_settings: "Synchronisierungs-Einstellungen öffnen",
+    sync_done: "Synchronisierung abgeschlossen: {{pulled}} übernommen, {{pushed}} hochgeladen.",
+    sync_failed: "Synchronisierung fehlgeschlagen: {{error}}",
   },
   folders: {
     title: "Chats",
@@ -871,6 +876,15 @@ export default {
       step4:
         "Schalten Sie die Serverkopie ein und erstellen Sie sie mit einer Passphrase, die Sie sich merken können, oder entsperren Sie die Kopie, die ein anderes Gerät bereits für dieses Konto erstellt hat.",
     },
+    backup_create: {
+      title: "Verschlüsselte Sicherung erstellen",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Tab Daten.",
+      step3:
+        "Unter Verschlüsselte Sicherung enthält eine Datei alle Chats, Themen, Einstellungen, Workspaces und Agenten. Sie wird in diesem Browser verschlüsselt und mit Datum und Uhrzeit versehen.",
+      step4:
+        "Erstellen Sie sie mit einer Passphrase, die Sie sich merken können. Dieselbe Passphrase stellt die Datei später wieder her; passende Einträge werden überschrieben, nichts wird gelöscht.",
+    },
     dark_mode: {
       title: "Design wechseln",
       step1:
@@ -1630,6 +1644,41 @@ export default {
       storage_request_unsupported:
         "Dieser Browser unterstützt das Anfordern dauerhaften Speichers nicht.",
       storage_request_failed: "Anfordern von dauerhaftem Speicher fehlgeschlagen: {{error}}",
+      backup: {
+        title: "Verschlüsselte Sicherung",
+        description:
+          "Laden Sie eine verschlüsselte Datei mit allen Chats, Themen, Einstellungen, Workspaces und Agenten herunter und stellen Sie sie später mit derselben Passphrase wieder her.",
+        notice:
+          "Die Sicherung wird in diesem Browser verschlüsselt, bevor sie heruntergeladen wird. Die Passphrase wird nie gespeichert und kann nicht wiederhergestellt werden; ohne sie lässt sich die Datei nicht öffnen. Bewahren Sie Datei und Passphrase sicher auf.",
+        create_title: "Sicherung erstellen",
+        create_description:
+          "Die Datei wird mit dem aktuellen Datum und der Uhrzeit versehen. Dateien über 8 MB werden ausgelassen und gemeldet.",
+        passphrase: "Passphrase",
+        passphrase_confirm: "Passphrase wiederholen",
+        passphrase_hint: "Mindestens {{count}} Zeichen.",
+        create_button: "Sicherung erstellen und herunterladen",
+        creating: "Sicherung wird erstellt…",
+        created: "Sicherung {{file}} heruntergeladen ({{records}} Einträge).",
+        missing_passphrase: "Geben Sie eine Passphrase ein.",
+        mismatch: "Die Passphrasen stimmen nicht überein.",
+        create_error: "Die Sicherung konnte nicht erstellt werden: {{error}}",
+        restore_title: "Sicherung wiederherstellen",
+        restore_description:
+          "Wählen Sie eine Sicherungsdatei und geben Sie ihre Passphrase ein. Die Sicherung wird in diesen Browser eingefügt: Einträge mit derselben ID werden überschrieben, nichts wird gelöscht.",
+        choose_file: "Sicherungsdatei",
+        choose_file_first: "Wählen Sie zuerst eine Sicherungsdatei.",
+        file_summary: "Sicherung vom {{date}} · {{records}} Einträge",
+        inspect_error: "Dies ist keine lesbare Chat-AI-Sicherung: {{error}}",
+        restore_passphrase: "Passphrase der Sicherung",
+        restore_confirm:
+          "Mir ist klar, dass passende Chats, Themen, Workspaces, Agenten und Einstellungen überschrieben werden.",
+        confirm_required: "Bestätigen Sie, dass passende Einträge überschrieben werden dürfen.",
+        restore_button: "Sicherung wiederherstellen",
+        restoring: "Sicherung wird wiederhergestellt…",
+        restored: "Sicherung wiederhergestellt: {{records}} Einträge.",
+        restore_error: "Die Sicherung konnte nicht wiederhergestellt werden: {{error}}",
+        unknown_namespaces: "Daten aus einer neueren Version wurden übersprungen: {{namespaces}}.",
+      },
       sync: {
         title: "Verschlüsselte Serverkopie",
         description:

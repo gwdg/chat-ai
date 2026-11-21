@@ -2169,6 +2169,50 @@ access inside `db/` per §4.2. `MemorySyncStore` / `MemoryStateStore` are the te
 them through `MetaActionCard` like any other setting. The Meta chat never receives the passphrase or
 the vault key and cannot create or unlock the vault — that stays in Data settings.
 
+### 4.33 The encrypted backup is one self-contained file in `front/src/backup/`
+
+User settings → Data → **Encrypted backup** produces one downloadable file of the whole browser
+history and restores it with the same passphrase. It is **not** gated by `isSyncEnabled()` and needs
+no SAIA account: the package is built, encrypted and downloaded entirely in the browser.
+`docs/backup.md` is the format reference.
+
+**Crypto is its own domain.** `backup/crypto.ts` derives a 32-byte key from the passphrase with
+Argon2id (`t=3`, `m=65536`, `p=1`) and HKDF info `backup` under domain `chatai-backup/v1`, then seals
+the archive with the shared `CASSYNC1` envelope (`src/sync/crypto/envelope.ts`). The AAD is
+`chatai-backup/v1/<createdAt>`, so the header's date is authenticated; a different key domain keeps
+a backup from ever being replayed as a sync record. Salt and KDF parameters sit in the cleartext
+header, the passphrase and key are never persisted, and KDF values read from a file are bounded
+(`m ≤ 1 MiB`, `t ≤ 10`, `p ≤ 4`) before Argon2 runs. The passphrase minimum is the shared
+`MIN_PASSPHRASE_LENGTH` (10), re-exported as `MIN_BACKUP_PASSPHRASE_LENGTH`.
+
+**One definition of the history.** `backup/package.ts` builds the archive from the same
+`createDefaultNamespaces()` sync uses (settings, folders, workspaces, agents, conversations), with
+attachments deduplicated by SHA-256 into one `assets` map. `meta-chat` stays excluded because the
+conversations namespace excludes it. The sync limits apply unchanged (`MAX_SYNC_FILE_BYTES` 8 MiB,
+`MAX_SYNC_FILES_PER_RECORD` 500); oversized or unreadable files are listed in the package and in the
+UI, never replaced by placeholders. `ArrayBuffer.isView`, not `instanceof Uint8Array`, decides
+whether an asset carries bytes: assets can cross a realm (worker, jsdom) and are still valid.
+
+**Restore replays the sync write path.** `restoreBackup()` validates the container, decrypts it, and
+applies records through `SyncNamespace.apply` in namespace order (settings → folders → workspaces →
+agents → conversations), with `readAsset` served from the package's map. Existing rows with the same
+id are overwritten and nothing is deleted; a namespace the build does not know is reported in
+`unknownNamespaces` rather than guessed at. Because settings travel through `importUserSettings`, a
+restored profile keeps the validation of the settings import. The UI requires an explicit
+confirmation checkbox before it restores, and it opens a file dialog instead of touching the DB on
+selection.
+
+**UI.** `modals/UserSettings/BackupSettings.jsx` is mounted in the Data tab above `SyncSettings` and
+is always rendered (no module flag). Its feature guide is `backup_create` (category `settings`); the
+`data-guide` hooks are `backup-settings`, `backup-create` and `backup-restore`.
+
+**Sidebar shortcut.** `Sidebar/SyncStatusButton.jsx` is rendered next to the user name in
+`SidebarUserCard` only while `isSyncEnabled()`. With the vault unlocked it calls `syncNow()` and
+reports the pulled/pushed counts; while locked it opens the Data tab, because the passphrase cannot
+be entered from the sidebar. It mounts `useSyncEngine()` a second time, which is safe: the hook's
+mount counter keeps the timer alive until the last instance unmounts, and `startAutoSync()` is
+idempotent.
+
 ## 5. Conventions
 
 - **Gradual TypeScript.** `.jsx` and `.tsx` coexist. `front/tsconfig.json` is `strict: false`,

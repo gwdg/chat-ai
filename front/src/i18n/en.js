@@ -83,6 +83,11 @@ export default {
     rename_tooltip: "Rename: {{title}}",
     shortcut_new_conversation: "Ctrl + Shift + O",
     user_section: "User",
+    sync_now: "Sync now",
+    sync_running: "Syncing…",
+    sync_settings: "Open sync settings",
+    sync_done: "Sync complete: {{pulled}} pulled, {{pushed}} pushed.",
+    sync_failed: "Sync failed: {{error}}",
   },
   folders: {
     title: "Chats",
@@ -856,6 +861,15 @@ export default {
       step4:
         "Switch the server copy on, then create it with a passphrase you can remember, or unlock the copy another device already created for this account.",
     },
+    backup_create: {
+      title: "Create an encrypted backup",
+      step1: "Open your user settings.",
+      step2: "Choose the Data tab.",
+      step3:
+        "Under Encrypted backup, one file carries all chats, topics, settings, workspaces and agents. It is encrypted in this browser and stamped with the date and time.",
+      step4:
+        "Create it with a passphrase you can remember. The same passphrase restores the file later; matching items are overwritten and nothing is deleted.",
+    },
     dark_mode: {
       title: "Switch theme",
       step1: "Use the theme toggle in the footer to switch between light and dark mode.",
@@ -1608,6 +1622,41 @@ export default {
       storage_request_unsupported:
         "This browser does not support requesting persistent storage.",
       storage_request_failed: "Persistent storage request failed: {{error}}",
+      backup: {
+        title: "Encrypted backup",
+        description:
+          "Download one encrypted file of all chats, topics, settings, workspaces and agents, and restore it later with the same passphrase.",
+        notice:
+          "The backup is encrypted in this browser before it is downloaded. The passphrase is never stored and cannot be recovered; without it the file cannot be opened. Keep the file and the passphrase somewhere safe.",
+        create_title: "Create a backup",
+        create_description:
+          "The file is stamped with the current date and time. Files larger than 8 MB are left out and reported.",
+        passphrase: "Passphrase",
+        passphrase_confirm: "Repeat passphrase",
+        passphrase_hint: "At least {{count}} characters.",
+        create_button: "Create and download backup",
+        creating: "Creating backup…",
+        created: "Backup {{file}} downloaded ({{records}} items).",
+        missing_passphrase: "Enter a passphrase.",
+        mismatch: "The passphrases do not match.",
+        create_error: "The backup could not be created: {{error}}",
+        restore_title: "Restore a backup",
+        restore_description:
+          "Choose a backup file and enter its passphrase. The backup is merged into this browser: items with the same id are overwritten and nothing is deleted.",
+        choose_file: "Backup file",
+        choose_file_first: "Choose a backup file first.",
+        file_summary: "Backup from {{date}} · {{records}} items",
+        inspect_error: "This is not a readable Chat AI backup: {{error}}",
+        restore_passphrase: "Backup passphrase",
+        restore_confirm:
+          "I understand that matching chats, topics, workspaces, agents and settings are overwritten.",
+        confirm_required: "Confirm that the restore may overwrite matching items.",
+        restore_button: "Restore backup",
+        restoring: "Restoring…",
+        restored: "Backup restored: {{records}} items.",
+        restore_error: "The backup could not be restored: {{error}}",
+        unknown_namespaces: "Data from a newer version was skipped: {{namespaces}}.",
+      },
       sync: {
         title: "Encrypted server copy",
         description:

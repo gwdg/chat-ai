@@ -38,6 +38,7 @@ import StorageStatus from "./StorageStatus";
 import UsageSettings from "./UsageSettings";
 import EncryptionSettings from "./EncryptionSettings";
 import SyncSettings from "./SyncSettings";
+import BackupSettings from "./BackupSettings";
 import { isChoicesEnabled, isSyncEnabled, isToolsEnabled } from "../../utils/modules";
 import { isFeatureEnabled } from "../../config/deployment";
 
@@ -259,6 +260,9 @@ export default function UserSettingsModal({
             <Trash2 className="h-4 w-4" aria-hidden="true" />
             {t("user_settings.clear_data_button")}
           </button>
+        </div>
+        <div className="border-t border-base-300 pt-5">
+          <BackupSettings />
         </div>
         {isSyncEnabled() && (
           <div className="border-t border-base-300 pt-5">

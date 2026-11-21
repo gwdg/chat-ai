@@ -1397,6 +1397,45 @@ export const featureGuides = {
       },
     ],
   },
+  backup_create: {
+    titleKey: "feature_guide.backup_create.title",
+    prompt:
+      "Download one encrypted file of your whole browser history — chats, topics, settings, workspaces and agents — and restore it later with the same passphrase. Open user settings, choose the Data tab, and create the backup under Encrypted backup. The file is encrypted in this browser and stamped with the date and time; the passphrase is never stored.",
+    keywords: [
+      "backup",
+      "back up",
+      "encrypted backup",
+      "restore",
+      "export",
+      "sicherung",
+      "sicherungskopie",
+      "wiederherstellen",
+    ],
+    steps: [
+      {
+        target: ['[data-guide="user-settings"]', ".user-profile-button", ".user-profile-block"],
+        textKey: "feature_guide.backup_create.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="settings-tab-data"]',
+        prepare: openUserSettings,
+        textKey: "feature_guide.backup_create.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="backup-settings"]',
+        prepare: () => selectSettingsTab("data"),
+        textKey: "feature_guide.backup_create.step3",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="backup-create"]',
+        textKey: "feature_guide.backup_create.step4",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
   dark_mode: {
     titleKey: "feature_guide.dark_mode.title",
     prompt:
@@ -1779,6 +1818,7 @@ export const FEATURE_CATEGORIES = {
     "settings_overview",
     "e2ee",
     "sync_setup",
+    "backup_create",
     "chat_preferences",
     "message_timestamps",
     "memories",
