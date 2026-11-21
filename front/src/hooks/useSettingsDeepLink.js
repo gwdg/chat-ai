@@ -4,6 +4,8 @@ import { useModal } from "../modals/ModalContext";
 
 const SETTINGS_TABS = new Set([
   "profile",
+  "profile/user",
+  "profile/institution",
   "usage",
   "chat",
   "advanced",

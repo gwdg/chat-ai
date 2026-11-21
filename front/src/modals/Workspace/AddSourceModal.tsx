@@ -6,6 +6,7 @@ import BaseModal from "../BaseModal";
 import { addSource } from "../../db/workspaceDb";
 import { newId } from "../../db";
 import { hasLocalMcpServerValue } from "../../agent/mcp";
+import { isBrandExternalAllowed } from "../../config/brandPolicy";
 import { useAgents } from "../../agents/agentStore";
 import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
 import { defaultCapabilities } from "../../workspace/capabilities";
@@ -63,6 +64,7 @@ export default function AddSourceModal({
   const [mcpAllowlist, setMcpAllowlist] = useState("");
 
   const localMcpEnabled =
+    isBrandExternalAllowed("mcp") &&
     userSettings?.tools?.mcp === true &&
     hasLocalMcpServerValue(userSettings?.mcp_servers);
 

@@ -1,6 +1,10 @@
 import { v4 as uuidv4 } from "uuid";
 import { getConversation, getFolder, listConversationMetas } from "../db";
 import { currentBrand, localizeBrandValue } from "../config/brands";
+import {
+  brandFixedModel,
+  isBrandExternalAllowed,
+} from "../config/brandPolicy";
 import { processContentItems } from "./sendMessage";
 import packageJson from "../../package.json";
 import i18n from "../i18n";
@@ -81,7 +85,36 @@ export const getDefaultSettings = (userSettings = {}) => {
       delete mergedSettings.tools.remote_file_access;
     }
   }
+  applyBrandRestrictionsToDefaults(mergedSettings);
   return mergedSettings ;
+};
+
+/**
+ * A brand may fix the model and switch off options that talk to third parties.
+ * This is the default for new conversations; existing ones are narrowed again at
+ * send time (utils/sendMessage.jsx, agent/tools.ts, agent/mcp.ts).
+ */
+const applyBrandRestrictionsToDefaults = (settings) => {
+  const fixedModel = brandFixedModel();
+  // Unknown capabilities are safer than the previous model's: the model selector
+  // replaces this stub with the real entry from `/models` once it loads, and a
+  // stale name would show the wrong model until then.
+  if (fixedModel && settings.model?.id !== fixedModel) {
+    settings.model = { id: fixedModel, name: fixedModel, input: [], output: [] };
+  }
+  if (!isBrandExternalAllowed("web_search")) {
+    settings.enable_web_search = false;
+  }
+  if (settings.tools && typeof settings.tools === "object") {
+    settings.tools = { ...settings.tools };
+    if (!isBrandExternalAllowed("web_search")) {
+      settings.tools.web_search = false;
+      settings.tools.fetch_url = false;
+    }
+    if (!isBrandExternalAllowed("mcp")) {
+      settings.tools.mcp = false;
+    }
+  }
 };
 
 export const getDefaultChatAIModel = (userSettings = {}) => {

@@ -34,6 +34,7 @@ import {
 } from "../db/workspaceDb";
 import { useWorkspaceProviders } from "../workspace/useWorkspaceProviders";
 import { createWorkspaceRootProvider } from "../workspace/workspaceRoot";
+import { isBrandExternalAllowed } from "../config/brandPolicy";
 
 export default function AgentPage() {
   const { t } = useTranslation();
@@ -124,9 +125,12 @@ export default function AgentPage() {
   // a bridge from offering the same server twice once it is started. Both routes are scoped to
   // the session that is open — OpenCode's MCP registry is agent-wide — through the entry names
   // and `useAgentMcpScope` below.
+  // A brand may forbid user-configured MCP servers (config/brandPolicy.js): then neither
+  // the browser relay nor the injection into OpenCode is offered.
+  const mcpAllowed = isBrandExternalAllowed("mcp");
   const mcpInjection = useAgentMcpInjection({
     agent,
-    enabled: agent?.bridgeInjectExternal === true,
+    enabled: mcpAllowed && agent?.bridgeInjectExternal === true,
     sessionId: agent?.sessionId,
   });
   const injectedMcpUrls = useMemo(
@@ -138,11 +142,11 @@ export default function AgentPage() {
     sessionId: agent?.sessionId,
     workspaceId,
     writable: agent?.bridgeWritable === true,
-    mcp: agent?.bridgeMcp === true,
+    mcp: mcpAllowed && agent?.bridgeMcp === true,
     excludedMcpUrls: injectedMcpUrls,
     // The same option that injects the password-free servers: an authenticated one becomes a
     // stdio proxy, because a `remote` entry would carry its token onto the agent host.
-    wrapMcp: agent?.bridgeInjectExternal === true,
+    wrapMcp: mcpAllowed && agent?.bridgeInjectExternal === true,
     mounts,
     providers,
     rootProvider,

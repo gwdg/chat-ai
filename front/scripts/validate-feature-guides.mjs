@@ -46,6 +46,9 @@ const hasDynamicSettingsTabs = sourceText.includes(
 const hasDynamicDataSubtabs = sourceText.includes(
   "data-guide={`data-subtab-${section.id}`}",
 );
+const hasDynamicProfileSubtabs = sourceText.includes(
+  "data-guide={`profile-subtab-${section.id}`}",
+);
 const hasDynamicMetaTabs = sourceText.includes(
   'data-guide={"meta-tab-" + tab.id}',
 );
@@ -79,6 +82,7 @@ function checkTarget(target, featureId, label, errors) {
         !(value.startsWith("tool-") && hasDynamicTools) &&
         !(value.startsWith("settings-tab-") && hasDynamicSettingsTabs) &&
         !(value.startsWith("data-subtab-") && hasDynamicDataSubtabs) &&
+        !(value.startsWith("profile-subtab-") && hasDynamicProfileSubtabs) &&
         !(value.startsWith("meta-tab-") && hasDynamicMetaTabs) &&
         !(value === "attachment-card" && hasDynamicAttachmentCards) &&
         !(value === "message-citation" && hasDynamicMessageCitations)

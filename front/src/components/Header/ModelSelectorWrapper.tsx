@@ -40,6 +40,7 @@ function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader =
         JSON.stringify(newModel?.output) === JSON.stringify(currentModel?.output);
       if (
         newModel?.status === currentModel?.status &&
+        newModel?.name === currentModel?.name &&
         sameCapabilities
       ) return;
     }

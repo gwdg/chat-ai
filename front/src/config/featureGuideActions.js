@@ -117,6 +117,19 @@ export function selectDataSection(section) {
   });
 }
 
+/** The Profile tab's own strip: `user` or `institution`. */
+export function selectProfileSection(section) {
+  selectSettingsTab("profile");
+  retry(() => {
+    const tab = find(`[data-guide="profile-subtab-${section}"]`);
+    if (!tab) return false;
+    if (tab.getAttribute("aria-selected") !== "true") {
+      tab.click();
+    }
+    return true;
+  });
+}
+
 export function openConversationSettings() {
   if (!find('[data-guide="conversation-settings-panel"]')) {
     click(".settings-toggle");

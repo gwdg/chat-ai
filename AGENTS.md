@@ -613,14 +613,17 @@ For navigation and message search, the model calls `search_messages`; results in
 conversation and message ids. It cites messages as
 `/chat/<conversation id>?message=<message id>`; `Conversation` reads that query parameter, scrolls
 to the message, and highlights it briefly. `MarkdownLink` routes `/chat/...`, `/topic/...`, and
-`/settings/<tab>` (or `/settings/data/<section>`) internally; settings links dispatch
-`chatai:open-settings`, handled by
+`/settings/<tab>` (or `/settings/data/<section>`, `/settings/profile/<section>`) internally;
+settings links dispatch `chatai:open-settings`, handled by
 `useSettingsDeepLink` in `ChatPage`/`MetaChatPage`, and `UserSettingsModal` opens the requested tab
 with a brief highlight. Its tabs are Profile, Usage (`UsageSettings.jsx` — the monthly and
 organization limits plus the sidebar switch), Chat, Advanced (`AdvancedModePreference` and
 `RenderingPreferences`, including the reasoning-streaming switch), Memories, Encryption and Data;
-every rendering setting lives in Advanced, never in Chat. `get_user_settings` returns the module
-flags and global preferences.
+every rendering setting lives in Advanced, never in Chat. Profile is itself
+`ProfileSettings.jsx` with two sections, **User** (`UserInfoContainer`) and **Institution**
+(`InstituteSection`, brand data that also renders while `/user` is loading), and the Institution
+section is absent for a brand that neither describes itself nor narrows anything. `get_user_settings`
+returns the module flags and global preferences.
 
 Tutorials and use cases start through the `start_tutorial` / `start_use_case` tools, which dispatch
 `chatai:start-feature-guide` / `chatai:start-use-case`, or through inline links
@@ -753,7 +756,10 @@ guide's first target lives behind a module or feature switch — workspace guide
 (`isToolsEnabled() || isAgentEnabled()`, because agent mode renders the same panel), Arcana guides
 also behind `arcanas`, `feedback` / `speech_output` / `sync_setup` behind their module, `e2ee` and
 `mcp_server` behind their feature, and every `meta_chat_*` guide behind `meta_chat` (three of them
-also behind `agents`, `workspaces` or `mcp_servers`). `validate:guides` fails on
+also behind `agents`, `workspaces` or `mcp_servers`). The `institution` guide is behind
+`hasBrandInstitute()` (`config/brandPolicy.js`), because the Profile → Institution screen it targets
+exists only for a brand that describes itself or narrows something — a runtime condition, not a
+deployment switch, so check it with `npm run validate:guides` after changing it. `validate:guides` fails on
 an availability entry that names an unknown id and on a tools or Meta-chat guide without one; it
 also fails when a use case steps through a gated tutorial without carrying the same gate.
 
@@ -2081,13 +2087,28 @@ while editing:
   that steps through it) to `FEATURE_GUIDE_AVAILABILITY` / `USE_CASE_AVAILABILITY` in
   `config/featureGuides.js` / `config/useCases.js` (§4.18). `import_git` is the worked
   example: it hides the "clone repository" mode in `CreateWorkspaceModal` and nothing else.
-- **A brand may not change features or layout.** Brand objects are only read for presentation
-  (`BrandLogo`, `BrandHeader`, `BrandDisclaimer`, `BrandChatWarning`, `AiServicesMenu`,
-  `LogoContainer`, `useTabTitle`, `CollapsibleFooter`, the `brand-sidebar` surface). By
-  exception it may own its own disclaimers (`disclaimer`, `chatDisclaimer`) and default system
-  prompt (`systemPrompt`) — the admin approved these on 2026-11-19. The feature/module
-  accessors never look at a brand. Keep it that way, or the guarantee in the design doc stops
-  being true.
+- **A brand may narrow, never widen.** It cannot enable a module, feature or model the
+  deployment disabled, and it cannot change layout or routes. Through
+  `config/brandPolicy.js` it may switch modules/features off (`restrictions.modules` /
+  `.features`), fix or allowlist the models (`restrictions.models`) and forbid the four
+  external capabilities (`restrictions.external`: `web_search`, `external_models`, `mcp`,
+  `external_references`). Only `false` / `"false"` / `null` is honoured, so a restriction
+  can only disable. `deployment.js` and `utils/modules.js` consult the brand, so
+  `isFeatureEnabled()` / `moduleValue()` return the effective value; enforcement lives in
+  the request and UI paths (`useUpdateModelsData`, `getDefaultSettings`, `sendMessage`,
+  `agent/tools.ts`, `agent/mcp.ts`, `ToolsContainer`, `SidebarContent`, `ChatPreferences`,
+  `AgentPage`, `AddSourceModal`). `InstituteSection` in Profile shows the institute and
+  every narrowing, and `metaTools.js#buildSettingsLines` reports them to the Meta chat.
+  Brand objects are otherwise presentation only (`BrandLogo`, `BrandHeader`,
+  `BrandDisclaimer`, `BrandChatWarning`, `AiServicesMenu`, `LogoContainer`, `useTabTitle`,
+  `CollapsibleFooter`, the `brand-sidebar` surface). By exception a brand may own its own
+  disclaimers (`disclaimer`, `chatDisclaimer`) and default system prompt (`systemPrompt`)
+  — the admin approved these on 2026-11-19. Never let a brand value turn something on.
+- **The brand's model/feature policy is read from module state.** `BrandProvider` is
+  mounted in `main.jsx`; it calls `setCurrentBrand(brand)` during render and `App` calls
+  `useBrand()` so a claim-resolved brand re-renders the tree. Non-React accessors read
+  `currentBrand()`, so a new request or accessor path that should honour a restriction must
+  import `config/brandPolicy.js` rather than read `VITE_MODULE_*` directly.
 - **Brand CSS goes into `<style id="brand-theme">` at runtime**, and the dark block must
   target `body.dark`. `index.css` re-declares `--chat` and the `base-*` colours on `.dark`,
   so a root-only rule is shadowed on `<body>`. Only values matching `/^#[0-9a-f]{3,8}$/i`

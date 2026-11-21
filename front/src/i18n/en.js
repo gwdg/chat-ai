@@ -803,6 +803,14 @@ export default {
       step3: "Change a preference such as document conversion. Changes are saved automatically.",
       step4: "Rendering engines and the reasoning indicator sit in the Advanced tab.",
     },
+    institution: {
+      title: "See what your institution restricts",
+      step1: "Open your user settings from the profile or the sidebar.",
+      step2: "Choose the Profile tab.",
+      step3: "Open the Institution tab beside User.",
+      step4:
+        "The Institution section names who provides this installation and lists every limitation that applies here, such as a fixed model, disabled features and blocked external communication, with the contact and links.",
+    },
     memories: {
       title: "Manage memories",
       step1: "Open your user settings.",
@@ -1396,9 +1404,54 @@ export default {
           "Manage local data, download an encrypted backup, and keep your devices in step with encrypted server synchronization.",
       },
     },
+    profile: {
+      sections: {
+        label: "Profile sections",
+        user: "User",
+        institution: "Institution",
+      },
+    },
     account: {
       username: "Username",
       email: "Email address",
+      institute: {
+        title: "Institution",
+        description:
+          "This Chat AI installation is provided by your institution, which may narrow the options available here.",
+        limitations: "Limitations for this institution",
+        links: "Links",
+        contact: "Contact",
+        model: "Model choice",
+        model_fixed: "Fixed to {{model}}",
+        model_allowed: "Limited to {{models}}",
+        modules_label: "Disabled modules",
+        features_label: "Disabled features",
+        external_label: "Blocked external communication",
+        modules: {
+          tools: "Tools",
+          feedback: "Feedback",
+          choices: "Follow-up suggestions",
+          agent: "Browser agent",
+          agents: "Agents",
+          arcanas: "Arcana Tools",
+          speech: "Speech output",
+          sync: "Server synchronization",
+        },
+        features: {
+          meta_chat: "Meta chat",
+          workspaces: "Workspaces",
+          mcp_servers: "MCP servers",
+          e2ee: "End-to-end encryption",
+          tutorials: "Tutorials",
+          import_git: "Cloning Git repositories",
+        },
+        external: {
+          web_search: "Web search",
+          external_models: "External models",
+          mcp: "MCP servers",
+          external_references: "External references in rendered content",
+        },
+      },
     },
     usage: {
       title: "Usage",

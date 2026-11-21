@@ -11,12 +11,18 @@ import { ModalProvider } from "./modals/ModalContext";
 import { FilePreviewProvider } from "./context/FilePreviewContext";
 import { FeatureGuideProvider } from "./context/FeatureGuideContext";
 import { requestPersistentStorage } from "./utils/storagePersistence";
-import { BrandProvider } from "./config/BrandProvider";
+import { useBrand } from "./config/BrandProvider";
 import { TabTitleManager } from "./hooks/useTabTitle";
 import { isSyncEnabled } from "./utils/modules";
 
 function App() {
   const { i18n } = useTranslation();
+  // `BrandProvider` lives in main.jsx, so reading the context here makes App
+  // re-render when the brand resolves from `/user`. Feature and module accessors
+  // read the brand from module state (see config/brandPolicy.js), and without
+  // this subscription a claim-resolved brand's restrictions would only appear on
+  // the next unrelated render.
+  useBrand();
 
   const isDarkMode = useSelector((state) => state.interface_settings.dark_mode);
 
@@ -48,19 +54,17 @@ function App() {
   // Render the PublicRoute component
   return (
     <BrowserRouter key={i18n.language}>
-      <BrandProvider>
-        <TabTitleManager />
-        <ToastProvider/>
-        <AgentConflictWatcher />
-        <ModalProvider>
-          {isSyncEnabled() && <SyncOnboardingWatcher />}
-          <FilePreviewProvider>
-            <FeatureGuideProvider>
-              <PublicRoute />
-            </FeatureGuideProvider>
-          </FilePreviewProvider>
-        </ModalProvider>
-      </BrandProvider>
+      <TabTitleManager />
+      <ToastProvider/>
+      <AgentConflictWatcher />
+      <ModalProvider>
+        {isSyncEnabled() && <SyncOnboardingWatcher />}
+        <FilePreviewProvider>
+          <FeatureGuideProvider>
+            <PublicRoute />
+          </FeatureGuideProvider>
+        </FilePreviewProvider>
+      </ModalProvider>
     </BrowserRouter>
   );
 }

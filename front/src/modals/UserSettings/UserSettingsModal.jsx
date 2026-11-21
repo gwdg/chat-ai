@@ -12,7 +12,7 @@ import {
 
 import BaseModal from "../BaseModal";
 import DefaultModelSelector from "./DefaultModelSelector";
-import UserInfoContainer from "./UserInfoContainer";
+import ProfileSettings from "./ProfileSettings";
 import TimeoutSetter from "./TimeoutSetter";
 import UserMemoryContainer from "./UserMemoryContainer";
 import {
@@ -85,13 +85,27 @@ const PROFILE_TABS = [
 ];
 
 const DATA_SUBSECTIONS = new Set(["manage", "backup", "sync"]);
+const PROFILE_SUBSECTIONS = new Set(["user", "institution"]);
 
-/** `"data"` opens the Data tab; `"data/backup"` also picks a section. */
+/**
+ * `"data"` opens the Data tab; `"data/backup"` also picks a section. The Profile
+ * tab works the same way (`"profile/institution"`), so a link can land on the
+ * institution screen directly.
+ */
 const parseInitialTab = (tab) => {
   if (typeof tab !== "string") return { tab: null, section: null };
-  if (!tab.startsWith("data/")) return { tab, section: null };
-  const section = tab.slice("data/".length);
-  return { tab: "data", section: DATA_SUBSECTIONS.has(section) ? section : null };
+  const [section, sub] = tab.split("/");
+  if (!sub) return { tab: section, section: null };
+  if (section === "data") {
+    return { tab: "data", section: DATA_SUBSECTIONS.has(sub) ? sub : null };
+  }
+  if (section === "profile") {
+    return {
+      tab: "profile",
+      section: PROFILE_SUBSECTIONS.has(sub) ? sub : null,
+    };
+  }
+  return { tab: section, section: null };
 };
 
 export default function UserSettingsModal({
@@ -113,7 +127,10 @@ export default function UserSettingsModal({
   const [activeTab, setActiveTab] = useState(() =>
     resolveTab(initialSelection.tab),
   );
-  const [dataSection, setDataSection] = useState(initialSelection.section);
+  // The active tab's own section, if it has one: Profile (`user`/`institution`)
+  // or Data (`manage`/`backup`/`sync`). Each screen ignores a value that is not
+  // one of its own, so one state is enough for both.
+  const [section, setSection] = useState(initialSelection.section);
   const [highlightActiveTab, setHighlightActiveTab] = useState(false);
   const activeTabConfig =
     availableTabs.find((tab) => tab.id === activeTab) ?? availableTabs[0];
@@ -122,7 +139,7 @@ export default function UserSettingsModal({
     if (!isOpen) return undefined;
     const selection = parseInitialTab(initialTab);
     setActiveTab(resolveTab(selection.tab));
-    setDataSection(selection.section);
+    setSection(selection.section);
     setHighlightActiveTab(Boolean(initialTab));
     if (!initialTab) return undefined;
     const timer = setTimeout(() => setHighlightActiveTab(false), 1800);
@@ -131,12 +148,12 @@ export default function UserSettingsModal({
 
   const renderTabContent = () => {
     if (activeTab === "profile") {
-      return userData ? (
-        <UserInfoContainer userData={userData} />
-      ) : (
-        <p className="text-sm text-base-content/70">
-          {t("common.loading")}
-        </p>
+      return (
+        <ProfileSettings
+          userData={userData}
+          modelsData={modelsData}
+          initialSection={section}
+        />
       );
     }
 
@@ -201,7 +218,7 @@ export default function UserSettingsModal({
 
     if (activeTab === "data") {
       return (
-        <DataSettings userData={userData} initialSection={dataSection} />
+        <DataSettings userData={userData} initialSection={section} />
       );
     }
 

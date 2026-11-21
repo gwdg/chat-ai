@@ -70,8 +70,13 @@ export function BrandProvider({ children }) {
     [brandId],
   );
 
+  // The brand must be in module state before the subtree renders, because plain
+  // accessors (isFeatureEnabled, moduleValue, applyBrandModelPolicy, …) cannot use
+  // a hook. App subscribes with `useBrand()`, so assigning here covers the same
+  // render pass; doing it in an effect would leave one render on the old brand.
+  setCurrentBrand(brand);
+
   useEffect(() => {
-    setCurrentBrand(brand);
     applyBrandDocument(brand);
   }, [brand]);
 

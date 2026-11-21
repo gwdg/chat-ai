@@ -23,6 +23,7 @@ import {
   resolveBridgeWorkspace,
   setAgentBridgeEnabled,
 } from "../../agents/agentBridgeAccess";
+import { isBrandExternalAllowed } from "../../config/brandPolicy";
 
 /**
  * Workspace settings of one agent: the access switch, the live bridge status, the attached
@@ -260,7 +261,9 @@ export default function AgentWorkspaceButton({
 
           {/* The MCP servers have two routes: relaying needs the bridge (and the tab), while an
               injected server is dialled by OpenCode itself, so that row stays available with no
-              workspace attached and with workspace access switched off. */}
+              workspace attached and with workspace access switched off. A brand may forbid MCP
+              entirely (config/brandPolicy.js); the whole section is then absent. */}
+          {isBrandExternalAllowed("mcp") && (
           <div className="mt-2 border-t border-base-300 pt-2">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-base-content/50">
               {t("agents.bridge.mcp_servers")}
@@ -397,6 +400,7 @@ export default function AgentWorkspaceButton({
               )}
             </div>
           </div>
+          )}
 
           {attached.size > 0 && accessOn && (
             <p className="mt-2 text-[10px] leading-snug text-warning">

@@ -31,6 +31,7 @@ import {
 } from "./arcanaTools";
 import { markdownToDocx } from "./docx";
 import { isArcanasEnabled } from "../utils/modules";
+import { isBrandExternalAllowed } from "../config/brandPolicy";
 import { enoent, normalize, type Vfs, walk } from "./vfs";
 import type { WorkspaceFileAccess } from "./workspaceTools";
 
@@ -676,13 +677,15 @@ export function createTools(fs: Vfs, { vision, enabled = {}, hasLocalFolder = fa
       enabled.arcana_v2 === true ||
       enabled.remote_file_access === true);
   const isOff = (key: string) =>
-    key === "browser_storage"
-      ? !storageEnabled
-      : key === "arcana_tools"
-        ? !arcanaToolsEnabled
-        : OPT_IN.includes(key)
-          ? enabled[key] !== true
-          : enabled[key] === false;
+    key === "web_search" && !isBrandExternalAllowed("web_search")
+      ? true
+      : key === "browser_storage"
+        ? !storageEnabled
+        : key === "arcana_tools"
+          ? !arcanaToolsEnabled
+          : OPT_IN.includes(key)
+            ? enabled[key] !== true
+            : enabled[key] === false;
   const off = new Set(Object.entries(TOGGLES).flatMap(([key, names]) => (isOff(key) ? names : [])));
   const on = (tool: AgentTool<any>) => !off.has(tool.name);
   // The Browser agent is the default workflow, so codemode is not a switch: it is always offered.

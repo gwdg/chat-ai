@@ -1,33 +1,53 @@
-import { brandConfig } from "./deployment";
-import { BRAND_OVERRIDE_KEY } from "./brandIds";
+import { brandConfig } from "./brandConfig.js";
+import { BRAND_OVERRIDE_KEY } from "./brandIds.js";
 
 const isPlainObject = (value) =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
 
 const normalize = (value) => String(value ?? "").trim().toLowerCase();
 
+// `scripts/validate-feature-guides.mjs` imports the feature-guide catalogs in
+// plain Node, which reaches this module through `featureGuides -> brands`. Vite
+// replaces each literal `import.meta.glob` at build time; outside Vite it does
+// not exist, so every definition falls back to empty and the validator still
+// sees the catalog shape (it never resolves a brand's files). The calls must stay
+// literal: Vite cannot transform a glob whose pattern is a variable.
+const loadGlob = (loader) => {
+  try {
+    return loader();
+  } catch {
+    return {};
+  }
+};
+
 // One folder per brand: `config/branding/<folder>/brand.json` plus the images it
 // names. The folder is only a container; `id` inside the JSON is the brand id.
 // Imported assets become hashed build URLs, so a brand folder is the only place
 // its identity lives — there is no public mirror to keep in sync.
-const brandModules = import.meta.glob("./branding/*/brand.json", {
-  eager: true,
-  import: "default",
-});
+const brandModules = loadGlob(() =>
+  import.meta.glob("./branding/*/brand.json", {
+    eager: true,
+    import: "default",
+  }),
+);
 
-const assetModules = import.meta.glob("./branding/*/*.{svg,png,ico,pdf}", {
-  eager: true,
-  import: "default",
-  query: "?url&no-inline",
-});
+const assetModules = loadGlob(() =>
+  import.meta.glob("./branding/*/*.{svg,png,ico,pdf}", {
+    eager: true,
+    import: "default",
+    query: "?url&no-inline",
+  }),
+);
 
 // Disclaimers and system prompts are inlined, because they are rendered as
 // HTML/text and never fetched as a file.
-const rawModules = import.meta.glob("./branding/*/*.{html,md}", {
-  eager: true,
-  import: "default",
-  query: "?raw",
-});
+const rawModules = loadGlob(() =>
+  import.meta.glob("./branding/*/*.{html,md}", {
+    eager: true,
+    import: "default",
+    query: "?raw",
+  }),
+);
 
 const folderOf = (key) => key.split("/")[2];
 
@@ -104,10 +124,13 @@ const baseBrand =
 
 // Objects merge recursively; arrays and primitives replace. This is what lets a
 // brand override one colour or one link without repeating the whole profile.
+// `undefined` means "not set" (a partial brand loads missing files as
+// `undefined`), so it never erases an inherited value; `null` still does.
 export function mergeBrand(base, override) {
   if (!isPlainObject(override)) return override ?? base;
   const result = { ...(isPlainObject(base) ? base : {}) };
   for (const [key, value] of Object.entries(override)) {
+    if (value === undefined) continue;
     result[key] = isPlainObject(value) ? mergeBrand(result[key], value) : value;
   }
   return result;

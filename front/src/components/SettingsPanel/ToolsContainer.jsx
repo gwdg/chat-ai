@@ -32,6 +32,7 @@ import Tooltip from "../Others/Tooltip";
 import { agentGatewayTools, isAgentEnabled, modelSupportsTools } from "../../apis/agentEndpoints";
 import { mcpServers } from "../../agent/mcp";
 import { isArcanasEnabled } from "../../utils/modules";
+import { isBrandExternalAllowed } from "../../config/brandPolicy";
 
 // Tools the agent has no counterpart for
 const AGENT_UNAVAILABLE = new Set(
@@ -133,6 +134,13 @@ export default function ToolsContainer({ localState, setLocalState }) {
     .filter(
       ({ key }) =>
         arcanasEnabled || (key !== "arcana" && key !== "arcana_tools")
+    )
+    // A brand may forbid the options that leave the institution. Hiding the row
+    // is the "removed option"; the request builders drop it as well.
+    .filter(
+      ({ key }) =>
+        (key !== "web_search" || isBrandExternalAllowed("web_search")) &&
+        (key !== "mcp" || isBrandExternalAllowed("mcp")),
     );
 
   // Simple setter for per-tool flags

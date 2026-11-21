@@ -9,6 +9,7 @@ import App from "./App.jsx"; // Import main App component
 import "./index.css"; // Import global CSS styles
 import AppErrorBoundary from "./components/Others/AppErrorBoundary.jsx";
 import DatabaseGate from "./components/Others/DatabaseGate.jsx";
+import { BrandProvider } from "./config/BrandProvider.jsx";
 
 // Render the app inside the root element using createRoot for better performance
 ReactDOM.createRoot(document.getElementById("root")).render(
@@ -23,9 +24,14 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       persistor={persistor}
     >
       <DatabaseGate>
-        <AppErrorBoundary>
-          <App />
-        </AppErrorBoundary>
+        {/* BrandProvider wraps App so the whole tree re-renders once the brand is
+            resolved from the profile (see App.jsx); brand restrictions then
+            narrow the deployment at runtime. */}
+        <BrandProvider>
+          <AppErrorBoundary>
+            <App />
+          </AppErrorBoundary>
+        </BrandProvider>
       </DatabaseGate>
     </PersistGate>
   </Provider>

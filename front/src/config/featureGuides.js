@@ -22,6 +22,7 @@ import {
   openUserSettings,
   searchHasQuery,
   selectDataSection,
+  selectProfileSection,
   selectSettingsTab,
   toolsAreEnabled,
   topicNameEntered,
@@ -36,6 +37,7 @@ import {
   isToolsEnabled,
 } from "../utils/modules.js";
 import { isFeatureEnabled } from "./deployment.js";
+import { hasBrandInstitute } from "./brandPolicy.js";
 
 export const featureGuides = {
   workspace_overview: {
@@ -1152,6 +1154,49 @@ export const featureGuides = {
       },
     ],
   },
+  institution: {
+    titleKey: "feature_guide.institution.title",
+    prompt:
+      "Show which institution provides this Chat AI and what it restricts. Open user settings and look at the Profile tab's Institution section: it names the institution, explains the limitation in plain words and lists every restriction the active brand applies, such as a fixed model, disabled features and blocked external communication, together with the contact and the links for this installation.",
+    keywords: [
+      "institution",
+      "institutional restrictions",
+      "restricted",
+      "limitations",
+      "approved model",
+      "einrichtung",
+      "einschränkung",
+      "beschränkung",
+    ],
+    steps: [
+      {
+        target: [
+          '[data-guide="user-settings"]',
+          ".user-profile-button",
+          ".user-profile-block",
+        ],
+        textKey: "feature_guide.institution.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="settings-tab-profile"]',
+        prepare: openUserSettings,
+        textKey: "feature_guide.institution.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="profile-subtab-institution"]',
+        prepare: () => selectProfileSection("institution"),
+        textKey: "feature_guide.institution.step3",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="institute-section"]',
+        prepare: () => selectProfileSection("institution"),
+        textKey: "feature_guide.institution.step4",
+      },
+    ],
+  },
   memories: {
     titleKey: "feature_guide.memories.title",
     prompt:
@@ -1896,6 +1941,9 @@ export const FEATURE_GUIDE_AVAILABILITY = {
   e2ee: () => isFeatureEnabled("e2ee"),
   advanced_mode: () => isAgentsEnabled() || isFeatureEnabled("mcp_servers"),
   sync_setup: () => isSyncEnabled(),
+  // The Institution screen renders only for a brand that describes itself or
+  // narrows something.
+  institution: () => hasBrandInstitute(),
   meta_chat_usage: metaChatAvailable,
   meta_chat_catalogs: metaChatAvailable,
   meta_chat_search: metaChatAvailable,
@@ -1966,6 +2014,7 @@ export const FEATURE_CATEGORIES = {
   personas: ["chat_with_persona"],
   settings: [
     "settings_overview",
+    "institution",
     "e2ee",
     "sync_setup",
     "backup_create",

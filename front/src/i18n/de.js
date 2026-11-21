@@ -818,6 +818,14 @@ export default {
       step3: "Ändern Sie eine Einstellung wie Dokumentkonvertierung. Änderungen werden automatisch gespeichert.",
       step4: "Darstellungsmodule und die Denkprozess-Anzeige finden Sie im Tab Erweitert.",
     },
+    institution: {
+      title: "Sehen, was Ihre Einrichtung einschränkt",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen über das Profil oder die Seitenleiste.",
+      step2: "Wählen Sie den Tab Profil.",
+      step3: "Öffnen Sie den Tab Einrichtung neben Benutzer.",
+      step4:
+        "Der Abschnitt Einrichtung nennt den Anbieter dieser Installation und jede hier geltende Einschränkung, etwa ein festes Modell, deaktivierte Funktionen und blockierte externe Kommunikation, mit Kontakt und Links.",
+    },
     memories: {
       title: "Erinnerungen verwalten",
       step1: "Öffnen Sie Ihre Benutzereinstellungen.",
@@ -1413,9 +1421,54 @@ export default {
           "Verwalten Sie lokale Daten, laden Sie eine verschlüsselte Sicherung herunter und halten Sie Ihre Geräte mit verschlüsselter Serversynchronisierung aktuell.",
       },
     },
+    profile: {
+      sections: {
+        label: "Profilbereiche",
+        user: "Benutzer",
+        institution: "Einrichtung",
+      },
+    },
     account: {
       username: "Benutzername",
       email: "E-Mail-Adresse",
+      institute: {
+        title: "Einrichtung",
+        description:
+          "Diese Chat-AI-Installation wird von Ihrer Einrichtung bereitgestellt, die die hier verfügbaren Optionen einschränken kann.",
+        limitations: "Einschränkungen für diese Einrichtung",
+        links: "Links",
+        contact: "Kontakt",
+        model: "Modellauswahl",
+        model_fixed: "Festgelegt auf {{model}}",
+        model_allowed: "Beschränkt auf {{models}}",
+        modules_label: "Deaktivierte Module",
+        features_label: "Deaktivierte Funktionen",
+        external_label: "Blockierte externe Kommunikation",
+        modules: {
+          tools: "Werkzeuge",
+          feedback: "Feedback",
+          choices: "Antwortvorschläge",
+          agent: "Browser-Agent",
+          agents: "Agenten",
+          arcanas: "Arcana-Werkzeuge",
+          speech: "Sprachausgabe",
+          sync: "Server-Synchronisierung",
+        },
+        features: {
+          meta_chat: "Meta-Chat",
+          workspaces: "Arbeitsbereiche",
+          mcp_servers: "MCP-Server",
+          e2ee: "Ende-zu-Ende-Verschlüsselung",
+          tutorials: "Tutorials",
+          import_git: "Klonen von Git-Repositories",
+        },
+        external: {
+          web_search: "Websuche",
+          external_models: "Externe Modelle",
+          mcp: "MCP-Server",
+          external_references: "Externe Verweise in gerenderten Inhalten",
+        },
+      },
     },
     usage: {
       title: "Nutzung",

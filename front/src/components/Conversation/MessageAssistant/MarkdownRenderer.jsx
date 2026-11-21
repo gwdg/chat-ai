@@ -139,11 +139,11 @@ const MarkdownLink = ({ href, children, plain = false }) => {
 
   const settingsMatch =
     typeof href === "string" &&
-    href.match(/^\/settings\/(profile|chat|memories|data)(?:\/(manage|backup|sync))?$/);
+    href.match(
+      /^\/settings\/(profile\/(?:user|institution)|(?:profile|chat|memories|data)(?:\/(?:manage|backup|sync))?)$/,
+    );
   if (settingsMatch) {
-    const tab = settingsMatch[2]
-      ? `${settingsMatch[1]}/${settingsMatch[2]}`
-      : settingsMatch[1];
+    const tab = settingsMatch[1];
     return (
       <a
         href={href}

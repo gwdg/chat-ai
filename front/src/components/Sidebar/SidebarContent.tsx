@@ -106,6 +106,7 @@ import WorkspaceList from "../Workspace/WorkspaceList";
 import AgentList from "./AgentList";
 import McpServerList from "./McpServerList";
 import { isFeatureEnabled } from "../../config/deployment";
+import { isBrandExternalAllowed } from "../../config/brandPolicy";
 
 export default function SidebarContent({
   localState,
@@ -1288,7 +1289,9 @@ export default function SidebarContent({
                   />
                 </>
               )}
-              {showMcpServers && isFeatureEnabled("mcp_servers") && (
+              {showMcpServers &&
+                isFeatureEnabled("mcp_servers") &&
+                isBrandExternalAllowed("mcp") && (
                 <>
                   {showAgents && (
                     <>

@@ -30,7 +30,8 @@ Goals:
 Non-goals:
 
 - A fork or branch per deployment.
-- A brand changing features, routes or layout.
+- A brand *widening* what the deployment offers (a brand may narrow features,
+  modules or the model list, never add to them).
 - A runtime theme editor, or arbitrary CSS/HTML injected from a server.
 - Per-deployment source files for individual components.
 
@@ -39,7 +40,7 @@ Non-goals:
 | Tier | Resolved | Decides | May not change |
 | --- | --- | --- | --- |
 | **Deployment profile** | Build time | Backend, models, features, layout, default brand, brand claim rules, legal copy | — |
-| **Brand profile** | Runtime, per user | Name, logo, favicon, colours, links, footer, copy | Features, layout, routes, model catalogue |
+| **Brand profile** | Runtime, per user | Name, logo, favicon, colours, links, footer, copy, and *narrowing* restrictions (fixed/allowed models, modules/features off, no external communication) | Enabling anything the deployment disabled; layout, routes, adding models |
 
 ```
 secrets/front-chat-ai.json ─┐
@@ -48,10 +49,15 @@ secrets/front-ohb.json     ─┘        │
                                      └─ brand chosen per user at runtime
 ```
 
-Two invariants are enforced mechanically (build error, not review comment):
+Two invariants are enforced mechanically (the accessors make them impossible to
+violate, not a review comment):
 
-1. **A brand cannot change features or layout.** If an institution needs a
-   different app, it needs a deployment.
+1. **A brand may only narrow, never widen.** It can switch a module or feature
+   off, fix or limit the model list, and forbid options that leave the
+   institution (web search, external models, MCP servers, external references in
+   rendered content). It cannot re-enable anything the deployment disabled, add a
+   model the deployment does not list, or change layout or routes. If an
+   institution needs a different app, it needs a deployment.
 2. **The server chooses *which* brand, never *what* the brand is.** A gateway may
    return a brand id; it may not return logos, URLs or CSS. Brand definitions stay
    in the build, so a misconfigured or compromised gateway cannot inject markup.
@@ -86,6 +92,8 @@ front/src/config/branding/
     mark.svg
     mark-dark.svg
     favicon.ico
+  restricted/
+    brand.json               generic example of a restricted brand (JSON only)
 
 front/src/config/deployments/
   chat-ai/
@@ -96,10 +104,17 @@ front/src/config/deployments/
     index.json
 
 front/scripts/resolve-config.mjs   extends, merge, validate; used by vite.config.js
+front/src/config/deploymentProfiles.js  loads deployment profiles (dependency-free)
 front/src/config/deployment.js     build-time accessors (features, layout, rules)
+front/src/config/brandConfig.js    deployment's brand selection (default, field, rules)
+front/src/config/brandPolicy.js    brand restrictions: model/module/feature/external policy
 front/src/config/brands.js         brand loader, lookup + claim rules
 front/src/config/BrandProvider.jsx brand context, document/title/favicon updates
 ```
+
+A brand folder need not carry images: `restricted/` is `brand.json` alone and
+inherits the Chat AI assets and footer. `mergeBrand` treats a missing value as
+"not set" (it does not erase the inherited one); only `null` or `false` clears.
 
 A brand is one folder under `config/branding/`: `brand.json` plus the images it
 names. `brand.json` holds everything about the brand — name, logo variant, links
@@ -318,7 +333,33 @@ own links.
     "external_model_notice": "…"
   },
 
-  "announcement": "Plain-text announcement for this brand."
+  "announcement": "Plain-text announcement for this brand.",
+
+  // Who provides this installation, shown in Profile → Institution.
+  "institute": {
+    "name": { "en": "University X", "de": "Universität X" },
+    "unit": "Central IT Services",
+    "description": { "en": "Operated for members of University X.", "de": "Betrieben für Angehörige der Universität X." },
+    "contact": "mailto:support@uni-x.example",
+    "links": [
+      { "label": { "en": "Usage rules", "de": "Nutzungsregeln" }, "url": "https://uni-x.example/chat-ai" }
+    ]
+  },
+
+  // Everything a brand narrows. Only `false`/`"false"`/`null` is honoured, so a
+  // restriction can never turn something on.
+  "restrictions": {
+    "notice": { "en": "Only the approved model is offered.", "de": "Nur das freigegebene Modell wird angeboten." },
+    "models": { "fixed": "qwen3-30b-a3b-instruct-2507" },
+    "modules": { "agents": false, "arcanas": false, "speech": false },
+    "features": { "workspaces": false, "mcp_servers": false },
+    "external": {
+      "web_search": false,
+      "external_models": false,
+      "mcp": false,
+      "external_references": false
+    }
+  }
 }
 ```
 
@@ -362,9 +403,37 @@ Rules:
 - `footer.help` names a PDF next to `brand.json` or an absolute `https://` URL.
   When set, the footer shows a localized Help link in a new tab; relative files
   go through `withBase`, so a sub-path deployment keeps working.
-- A brand profile may not contain `modules`, `features`, `layout` or model
-  settings; their presence is a build error (invariant 1).
-- A brand cannot suppress `WarningExternalModel` or the data-security notice.
+- `institute` describes **who provides** the installation. It is rendered in the
+  Profile tab's **Institution** section
+  (`modals/UserSettings/ProfileSettings.jsx` + `InstituteSection.jsx`) together
+  with every narrowing `restrictions` declares, so a user sees the limitations
+  and who to contact before using an option that is missing. `name`, `unit`,
+  `description`, `notice` and each link `label`/`description` are localized
+  (string or `{en, de}`). `contact` is a `mailto:`/`https:` URL; `links` is an
+  array (or an id-keyed object) of `{label, url, description?}`. Links open in a
+  new tab. With neither `institute` nor `restrictions` the section (and its tab)
+  is absent, so Chat AI is unchanged.
+- `restrictions` switches things off. **Only `false`, `"false"` and `null` are
+  honoured, and they can only narrow.** `models.fixed` pins one model id and
+  `models.allowed` keeps an allowlist (neither can add a model the deployment does
+  not list); `modules` and `features` disable the names used by `utils/modules.js`
+  and `config/deployment.js`; `external` disables `web_search`,
+  `external_models`, `mcp` and `external_references`. The block `notice` is
+  localized and explains the narrowing in the user's words.
+- The restrictions are read through `config/brandPolicy.js`
+  (`brandDisablesModule`, `brandDisablesFeature`, `isBrandExternalAllowed`,
+  `applyBrandModelPolicy`, `brandRestrictionSummary`) from the accessor and request
+  paths, so enforcement does not depend on a component remembering to hide
+  something: the model selector's list, the tool rows and their request payload,
+  MCP server resolution, the agent bridge's MCP relay, the HTML preview's
+  external-reference switch and the workspace MCP source all consult it. A stored
+  conversation or preference keeps its value, but an active brand's restriction
+  wins while it is active.
+- A brand profile may not *enable* `modules`, `features` or a model: it can only
+  disable or narrow them (invariant 1). `layout` and routes are still
+  deployment-only.
+- A brand cannot suppress `WarningExternalModel` or the data-security notice;
+  restriction only removes the external option itself.
 
 The MPG/OHB brand lives in `front/src/config/branding/mpg/` (its content files
 were migrated from the old build-time `branding/mpg-ohb/` folder). A deployment
@@ -374,9 +443,14 @@ UGOE define none of the new surfaces, so they render exactly as before.
 
 ## 6. Runtime behaviour
 
-- `BrandProvider` (context, like `FilePreviewContext`) starts with the
-  deployment's default brand, resolves the user's brand when `/user` answers, and
-  exposes `{ brand, brandId }` through `useBrand()`.
+- `BrandProvider` (context, like `FilePreviewContext`) is mounted in `main.jsx`
+  outside `App`, starts with the deployment's default brand, resolves the user's
+  brand when `/user` answers, and exposes `{ brand, brandId }` through
+  `useBrand()`. `App` calls `useBrand()` so the tree re-renders when the claim-
+  resolved brand arrives; `BrandProvider` writes it into module state with
+  `setCurrentBrand()` during render, which is what the non-React accessors
+  (`isFeatureEnabled`, `moduleValue`, `brandPolicy`) read. Without that
+  subscription a restriction would only apply on the next unrelated render.
 - The resolved brand is **not** persisted in Redux or `localStorage`. It is
   derived from the session user; persisting it would leak one user's branding into
   the next session on a shared machine, and would add a persisted key plus
@@ -633,7 +707,9 @@ secrets, so inlining all of them is harmless and keeps `useBrand()` synchronous.
   `tutorials` feature on, and each catalog drops the guides whose module or
   feature is off (`FEATURE_GUIDE_AVAILABILITY` / `USE_CASE_AVAILABILITY`), so the
   `minimal` profile lists no workspace, agent, tools, Arcana, speech, feedback or
-  sync tour even though the Meta chat stays on.
+  sync tour even though the Meta chat stays on. The `institution` guide is gated on
+  `hasBrandRestrictions()`, because its target renders only for a brand that
+  narrows something.
 
 **The UGOE brand**
 
@@ -660,15 +736,69 @@ secrets, so inlining all of them is harmless and keeps `useBrand()` synchronous.
   privacy entry reads "Data Privacy for UGOE" / "Datenschutz für UGOE" and links
   to `https://uni-goettingen.de/de/439479.html`. The other entries keep the GWDG
   targets until UGOE supplies its own imprint and terms.
+- `institute` names Georg-August-Universität Göttingen and GWDG as its operator,
+  links the Chat AI documentation and the UGOE privacy page, and gives
+  `mailto:support@gwdg.de` as the contact. `restrictions.external` switches off
+  **web search and external models only**; MCP servers and external references in
+  rendered content stay available. The Profile tab's Institution tab shows
+  exactly that wording.
+
+**Brand restrictions (second slice)**
+
+- `front/src/config/brandPolicy.js` is the only module a brand's *behaviour*
+  reaches through: `brandRestrictions`, `brandDisablesModule`,
+  `brandDisablesFeature`, `BRAND_EXTERNAL_KEYS`, `isBrandExternalAllowed`,
+  `brandModelPolicy`, `brandFixedModel`, `applyBrandModelPolicy`,
+  `brandRestrictionSummary`, `hasBrandRestrictions`, `brandInstituteLinks` and
+  `brandRestrictionLines`. `deployment.js` and `utils/modules.js` consult it, so
+  `isFeatureEnabled()` / `moduleValue()` are the effective, narrowed values.
+- The profile-loading and brand-selection code moved apart to keep the module
+  graph acyclic: `deploymentProfiles.js` (no imports) ← `deployment.js` and
+  `brandConfig.js`; `deployment.js → brandPolicy.js → brands.js →
+  brandConfig.js → deploymentProfiles.js`.
+- Enforcement points (all read `brandPolicy`, so an older stored toggle cannot
+  bypass a brand): `useUpdateModelsData` filters the model list
+  (fixed/allowed/external) and is reactive through `useBrand`;
+  `getDefaultSettings` fixes the default model and switches off web search/MCP;
+  `sendMessage` drops blocked tool types from the request; `agent/tools.ts`
+  exposes no web-search tool; `agent/mcp.ts#resolveMcpServers` returns none;
+  `ToolsContainer` hides the rows; `SidebarContent` hides the MCP section;
+  `ChatPreferences` hides the external-reference switch and the reducer's
+  `selectHtmlLoadExternal` forces `false`; `AgentPage`/`AgentWorkspaceButton`
+  disable the MCP relay and injection; `AddSourceModal` hides the MCP source
+  kind. `metaTools.js#buildSettingsLines` reports the brand, its restrictions,
+  the fixed model and the blocked external capabilities in `get_user_settings`.
+- `front/src/config/branding/restricted/brand.json` is the generic, copyable
+  example (`?brand=restricted`, aliases `example-restricted`/`locked-down`): it
+  fixes `qwen3-30b-a3b-instruct-2507`, switches off the `agent`, `agents`,
+  `arcanas`, `speech` and `sync` modules and the `workspaces`, `mcp_servers` and
+  `import_git` features, and blocks all four external capabilities. It carries no
+  images, so it also demonstrates that a brand folder can be `brand.json` alone.
+- `modals/UserSettings/ProfileSettings.jsx` splits the Profile tab into **User**
+  (`UserInfoContainer`) and **Institution** (`InstituteSection`), like the Data
+  tab's own strip: the buttons carry `data-guide="profile-subtab-<section>"` and
+  the selection is deep-linkable as `initialTab: "profile/institution"` /
+  `/settings/profile/institution`. The Institution pane is brand data, so it is
+  not inside `UserInfoContainer` and keeps rendering while `/user` is loading or
+  unreachable. `InstituteSection` renders the institute and one row per narrowing
+  ("Fixed to …", disabled modules/features, blocked external communication) plus
+  the contact and links, and renders nothing for a brand without either block —
+  which also removes the Institution tab. The `institution` feature guide walks
+  to that section and is available only while `hasBrandInstitute()` is true,
+  because the screen is absent otherwise.
 
 **Tests**
 
-`front/src/config/__tests__/{brands,deployment}.test.js`,
-`BrandProvider.test.jsx` and
+`front/src/config/__tests__/{brands,brandPolicy,deployment}.test.js`,
+`BrandProvider.test.jsx`,
+`front/src/hooks/__tests__/useUpdateModelsData.test.jsx`,
+`front/src/modals/UserSettings/__tests__/{ProfileSettings,InstituteSection}.test.jsx`
+and
 `front/src/components/Footer/__tests__/CollapsibleFooter.test.tsx` (resolution
 precedence, rule matching, CSS emission for the whole palette and the sidebar
 surface, dark asset pair, document application, minimal profile contents, brand
-footer links and the ISO opt-out).
+footer links and the ISO opt-out, model/feature narrowing, the restricted example
+brand, the Profile sub-tabs and the Institution screen).
 
 **Known gaps, deliberately left for the next slice**
 
@@ -678,13 +808,15 @@ footer links and the ISO opt-out).
   ISO claim), but the help links, export PDF and legal modals still point at GWDG.
   That is defensible because GWDG operates the service, but it is not a finished
   brand.
-- No `resolve-config.mjs`: no `extends`, no unknown-key validation, no
-  "brand may not contain features/layout" build error. The invariants are upheld by
-  the shape of the accessors (`brand` objects are only read for presentation), not
-  enforced mechanically yet.
-- `outDir`/`base` per deployment, the layout lists, model allow/deny and the
-  per-deployment Docker service are not implemented; `npm run build` still writes
-  `front/dist`.
+- No `resolve-config.mjs`: no `extends`, no unknown-key validation. The
+  narrow-only invariant is upheld by the accessors (a `restrictions` value is
+  honoured only for `false`/`"false"`/`null`, and `deployment.js` only consults
+  the brand to disable), not by a build-time schema check; `layout` and routes
+  remain deployment-only by construction.
+- `outDir`/`base` per deployment, the layout lists and the per-deployment Docker
+  service are not implemented; `npm run build` still writes `front/dist`.
+  A brand can now fix/limit the model list (`restrictions.models`), but the
+  deployment profile itself still has no model allow/deny.
 - In this repository `/user` is a hard-coded placeholder with no group claims, so
   the IDM rule cannot be exercised locally. Use `?brand=UGOE`; a real deployment
   needs `oidc_claim_groups` (or a gateway `brand` field) in the profile response.

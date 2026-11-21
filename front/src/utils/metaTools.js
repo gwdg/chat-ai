@@ -14,6 +14,11 @@ import {
   isUseCaseAvailable,
 } from "../config/useCases";
 import { isFeatureEnabled } from "../config/deployment";
+import {
+  brandRestrictionLines,
+  brandRestrictionSummary,
+} from "../config/brandPolicy";
+import { currentBrand } from "../config/brands";
 import { loadPersonaCatalog } from "./personaCatalog";
 import { getSpeechModule } from "./speechAudio";
 import {
@@ -69,6 +74,9 @@ function memoryGroupName(userSettings, groupId) {
 }
 
 function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
+  const activeBrand = currentBrand();
+  const restrictions = brandRestrictionSummary(activeBrand);
+  const restrictionLines = brandRestrictionLines(activeBrand);
   const memoryMode =
     userSettings.memory_mode === 1
       ? "recall"
@@ -153,6 +161,10 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
     `- Keep reasoning collapsed while streaming: ${yesNo(userSettings.collapse_reasoning_while_streaming)}`,
     `- Document conversion: ${documentConversion}`,
     `- Modules: tools ${isToolsEnabled() ? "enabled" : "disabled"}, feedback ${isFeedbackEnabled() ? "enabled" : "disabled"}, choices ${isChoicesEnabled() ? "enabled" : "disabled"}, agent ${isAgentEnabled() ? "enabled" : "disabled"}, arcanas ${isArcanasEnabled() ? "enabled" : "disabled"}, agents ${isAgentsEnabled() ? "enabled" : "disabled"}, sync ${isSyncEnabled() ? "enabled" : "disabled"}, speech ${getSpeechModule() ? "enabled" : "disabled"}`,
+    `- Brand: ${activeBrand?.name || activeBrand?.id || "unknown"}`,
+    `- Institutional restrictions: ${restrictionLines.length ? restrictionLines.join("; ") : "none"}`,
+    `- Brand-fixed model: ${restrictions.model.fixed || "none"}`,
+    `- Brand-blocked external communication: ${restrictions.external.length ? restrictions.external.join(", ") : "none"}`,
     `- Dark mode: ${yesNo(interfaceSettings.dark_mode)}`,
     `- Show usage in sidebar: ${yesNo(interfaceSettings.show_usage_in_sidebar)}`,
     `- Chat sorting: ${interfaceSettings.conversation_sort ?? "created_desc"}`,

@@ -53,6 +53,32 @@ describe("brand lookup", () => {
     expect(matchBrandId("not-a-brand")).toBeNull();
   });
 
+  it("ships the restricted example brand", () => {
+    expect(matchBrandId("locked-down")).toBe("restricted");
+    expect(matchBrandId("example-restricted")).toBe("restricted");
+    const brand = getBrandProfile("restricted");
+    expect(brand.restrictions.models.fixed).toBe(
+      "qwen3-30b-a3b-instruct-2507",
+    );
+    expect(brand.institute.links).toHaveLength(2);
+    // A brand folder may hold only its JSON: assets and footer merge over Chat AI.
+    expect(brand.assets.full).toContain("branding/chatai/logo.svg");
+    expect(brand.footer.links.privacy).toEqual({});
+  });
+
+  it("describes the UGOE institute and its narrowing", () => {
+    const brand = getBrandProfile("ugoe");
+    expect(localizeBrandValue(brand.institute.name, "en")).toBe(
+      "Georg-August-Universität Göttingen",
+    );
+    expect(brand.restrictions.external).toEqual({
+      web_search: false,
+      external_models: false,
+    });
+    // UGOE keeps the options it did not restrict.
+    expect(brand.restrictions.modules).toBeUndefined();
+  });
+
   it("merges a sub-brand over the defaults", () => {
     const brand = getBrandProfile("ugoe");
     expect(brand.id).toBe("ugoe");

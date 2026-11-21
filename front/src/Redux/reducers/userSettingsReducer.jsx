@@ -1,6 +1,8 @@
 // userMemorySlice.js
 import { createSlice } from "@reduxjs/toolkit";
 
+import { isBrandExternalAllowed } from "../../config/brandPolicy";
+
 // Every key the store understands, with the built-in defaults. `getDefaultUserSettings()`
 // layers the deployment's `userSettings` from front.json on top of this.
 function baseInitialState() {
@@ -656,7 +658,12 @@ export const selectHtmlRenderMode = (state) => {
   return ["render", "code", "off"].includes(mode) ? mode : "off";
 };
 export const selectHtmlLoadExternal = (state) =>
-  state.user_settings.html_load_external ?? false;
+  // A brand may forbid external references (config/brandPolicy.js). The stored
+  // preference stays, so switching brands does not destroy it, but rendering
+  // never loads a third-party resource while the brand forbids it.
+  isBrandExternalAllowed("external_references")
+    ? (state.user_settings.html_load_external ?? false)
+    : false;
 export const selectHtmlSanitization = (state) => {
   const mode = state.user_settings.html_sanitization;
   return ["strict", "relaxed"].includes(mode) ? mode : "strict";
