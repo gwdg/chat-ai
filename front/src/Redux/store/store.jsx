@@ -51,6 +51,7 @@ const getDefaultState = () => {
       completed_tutorials: [],
       completed_use_cases: [],
       suppressed_tutorials: [],
+      sync_onboarding_dismissed: false,
     },
     // Conditionally preserve memories. Defaults come from the reducer, so front.json
     // can seed a deployment's `userSettings` and a reset picks them up too.

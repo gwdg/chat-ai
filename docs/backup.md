@@ -69,6 +69,7 @@ history" has exactly one definition:
 | Namespace | Unit | Contents |
 | --- | --- | --- |
 | `settings` | one | `user_settings` (preferences, memories and groups, MCP servers, E2EE public keys and bindings) |
+| `interface_settings` | one | presentation preferences (theme, sort and grouping, warnings, tours); view state and consents stay local |
 | `folders` | one per topic | name, icon, colour, pin, order |
 | `workspaces` | one per workspace | workspace row, sources, mounts, chat/agent/session links, browser-tree entries and files |
 | `agents` | one per agent | local agent entry plus cached OpenCode session metadata and histories (bounded) |
@@ -87,11 +88,12 @@ headers when the user configured them. Treat the file as a secret even though it
 ## 4. Restore
 
 `restoreBackup(text, passphrase)` opens the package and replays every record through
-`SyncNamespace.apply`, in namespace order (`settings` → `folders` → `workspaces` → `agents` →
-`conversations`). This is the same write path as a sync pull:
+`SyncNamespace.apply`, in namespace order (`settings` → `interface_settings` → `folders` →
+`workspaces` → `agents` → `conversations`). This is the same write path as a sync pull:
 
 * existing rows with the same id are overwritten (`updateConversation(…, true)` for chats, `db.put`
-  for workspace bundles, `importUserSettings` for settings);
+  for workspace bundles, `importUserSettings` for settings, `importInterfaceSettings` for interface
+  preferences, which leaves the device-local view state and consents alone);
 * nothing is deleted;
 * assets are read from the package's `assets` map; a missing blob is reported as skipped;
 * a namespace this build does not know is named in `unknownNamespaces` instead of being guessed

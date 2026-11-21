@@ -1,5 +1,23 @@
 import { createSlice } from "@reduxjs/toolkit";
 
+// Interface settings follow the account through the encrypted server
+// synchronization, so a new device starts with the same theme, sort order and
+// warning choices. These keys describe this window or this device instead: the
+// sync namespace leaves them out of the archive and the import below never
+// overwrites them.
+export const DEVICE_ONLY_INTERFACE_SETTINGS = Object.freeze([
+  "show_sidebar",
+  "show_settings",
+  "collapsed_topics",
+  "expanded_agents",
+  "count_hallucination",
+  "count_announcement",
+  "agree_web_search",
+  "sync_onboarding_dismissed",
+]);
+
+const CONVERSATION_GROUPINGS = new Set(["topic", "date", "created", "size"]);
+
 const interfaceSettingsSlice = createSlice({
   name: "interface_settings",
   initialState: {
@@ -26,6 +44,7 @@ const interfaceSettingsSlice = createSlice({
     completed_tutorials: [],
     completed_use_cases: [],
     suppressed_tutorials: [],
+    sync_onboarding_dismissed: false,
   },
   reducers: {
     toggleTheme: (state) => {
@@ -150,6 +169,51 @@ const interfaceSettingsSlice = createSlice({
         state.suppressed_tutorials.push(action.payload);
       }
     },
+    // The first-run offer of server synchronization is shown once per browser.
+    // It is device-local on purpose: another device should get its own offer,
+    // and a synced flag would take it away before the user saw anything there.
+    dismissSyncOnboarding: (state) => {
+      state.sync_onboarding_dismissed = true;
+    },
+    // Applied by the server-synchronization pull and the backup restore. Only
+    // known keys keep their exact type, and the device-local keys above are
+    // ignored even when a payload carries them, so a synced profile can never
+    // rewrite this window's view state or its consents.
+    importInterfaceSettings: (state, action) => {
+      const incoming = action.payload;
+      if (!incoming || typeof incoming !== "object" || Array.isArray(incoming)) {
+        return;
+      }
+      for (const [key, value] of Object.entries(incoming)) {
+        if (DEVICE_ONLY_INTERFACE_SETTINGS.includes(key)) continue;
+        if (!Object.prototype.hasOwnProperty.call(state, key)) continue;
+        const current = state[key];
+        if (Array.isArray(current)) {
+          if (!Array.isArray(value)) continue;
+          state[key] = value.filter((item) => typeof item === "string" && item);
+          continue;
+        }
+        if (typeof current === "boolean") {
+          if (typeof value === "boolean") state[key] = value;
+          continue;
+        }
+        if (typeof current === "number") {
+          if (typeof value === "number" && Number.isFinite(value)) {
+            state[key] = value;
+          }
+          continue;
+        }
+        if (typeof current === "string") {
+          if (typeof value !== "string" || !value) continue;
+          // The grouping drives which list the sidebar renders; an unknown
+          // value would leave it with no list at all.
+          if (key === "conversation_grouping" && !CONVERSATION_GROUPINGS.has(value)) {
+            continue;
+          }
+          state[key] = value;
+        }
+      }
+    },
   },
 });
 
@@ -183,6 +247,8 @@ export const selectCompletedUseCases = (state) =>
   state.interface_settings.completed_use_cases ?? EMPTY_LIST;
 export const selectSuppressedTutorials = (state) =>
   state.interface_settings.suppressed_tutorials ?? EMPTY_LIST;
+export const selectSyncOnboardingDismissed = (state) =>
+  state.interface_settings.sync_onboarding_dismissed === true;
 export const {
   toggleTheme, setDarkMode, setLightMode,
   closeSettings, toggleSettings, toggleSidebar, closeSidebar, openSidebar,
@@ -190,6 +256,6 @@ export const {
   setShowUsageInSidebar, setWarning, toggleTopic, collapseTopics, expandTopics,
   toggleExpandedAgent,
   setConversationSort, setConversationGrouping, markTutorialCompleted, markUseCaseCompleted,
-  suppressTutorial,
+  suppressTutorial, dismissSyncOnboarding, importInterfaceSettings,
 } = interfaceSettingsSlice.actions;
 export default interfaceSettingsSlice.reducer;

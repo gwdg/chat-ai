@@ -47,6 +47,7 @@ import interfaceSettingsReducer, {
   agreeWebSearch,
   collapseTopics,
   expandTopics,
+  importInterfaceSettings,
   markTutorialCompleted,
   markUseCaseCompleted,
   setConversationGrouping,
@@ -493,6 +494,67 @@ describe("interface settings reducer", () => {
     state = interfaceSettingsReducer(state, collapseTopics("__pinned__"));
     state = interfaceSettingsReducer(state, expandTopics(["t1", "t2"]));
     expect(state.collapsed_topics).toEqual(["t3", "__pinned__"]);
+  });
+
+  it("applies a synced payload without touching device-local keys", () => {
+    const start = {
+      ...init(interfaceSettingsReducer),
+      show_sidebar: false,
+      collapsed_topics: ["topic-1"],
+      expanded_agents: ["agent-1"],
+      agree_web_search: false,
+      sync_onboarding_dismissed: true,
+      count_hallucination: 3,
+    };
+    const state = interfaceSettingsReducer(
+      start,
+      importInterfaceSettings({
+        dark_mode: true,
+        conversation_sort: "title_asc",
+        conversation_grouping: "date",
+        completed_tutorials: ["upload_file", 7, ""],
+        show_tour: false,
+        // A payload must not be able to rewrite this window's view state, its
+        // consent or the first-run offer decision.
+        show_sidebar: true,
+        collapsed_topics: [],
+        expanded_agents: [],
+        agree_web_search: true,
+        sync_onboarding_dismissed: false,
+        count_hallucination: 0,
+        not_a_setting: "value",
+      }),
+    );
+
+    expect(state.dark_mode).toBe(true);
+    expect(state.conversation_sort).toBe("title_asc");
+    expect(state.conversation_grouping).toBe("date");
+    expect(state.completed_tutorials).toEqual(["upload_file"]);
+    expect(state.show_tour).toBe(false);
+
+    expect(state.show_sidebar).toBe(false);
+    expect(state.collapsed_topics).toEqual(["topic-1"]);
+    expect(state.expanded_agents).toEqual(["agent-1"]);
+    expect(state.agree_web_search).toBe(false);
+    expect(state.sync_onboarding_dismissed).toBe(true);
+    expect(state.count_hallucination).toBe(3);
+    expect(state).not.toHaveProperty("not_a_setting");
+  });
+
+  it("rejects wrongly typed values and unknown groupings from a pull", () => {
+    const state = interfaceSettingsReducer(
+      init(interfaceSettingsReducer),
+      importInterfaceSettings({
+        dark_mode: "yes",
+        conversation_sort: 7,
+        conversation_grouping: "gallery",
+        completed_tutorials: "upload_file",
+      }),
+    );
+    expect(state.dark_mode).toBe(false);
+    expect(state.conversation_sort).toBe("created_desc");
+    expect(state.conversation_grouping).toBe("topic");
+    expect(state.completed_tutorials).toEqual([]);
   });
 });
 
