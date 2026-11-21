@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Installs and verifies what the e2e suites need on this machine.
 #
-#   bash scripts/install-browsers.sh              # Playwright chromium + firefox
+#   bash scripts/install-browsers.sh              # Playwright chromium, firefox, ffmpeg
 #   bash scripts/install-browsers.sh --with-deps  # ... and the host libraries
 #   bash scripts/install-browsers.sh --webkit     # also WebKit (needs extra libraries)
 #   bash scripts/install-browsers.sh --check      # install nothing, only verify
@@ -21,7 +21,7 @@ INSTALL_CHROME=0
 WITH_WEBKIT=0
 
 usage() {
-    sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 for arg in "$@"; do
@@ -115,6 +115,15 @@ if [ "$CHECK_ONLY" = 0 ]; then
     echo "  Installing Playwright browsers: ${BROWSERS[*]}"
     npx playwright install "${BROWSERS[@]}"
     ok "Playwright browsers installed"
+
+    # Video recording (the documentation fixture writes one per test) uses
+    # Playwright's own ffmpeg build, which `install <browsers>` does not fetch.
+    if npx playwright install ffmpeg >/dev/null 2>&1; then
+        ok "Playwright ffmpeg installed (video recording)"
+    else
+        warn "Playwright ffmpeg could not be installed; videos will be skipped"
+        note "run: npx playwright install ffmpeg"
+    fi
 
     if [ "$INSTALL_CHROME" = 1 ]; then
         install_google_chrome || true
