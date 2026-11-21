@@ -26,7 +26,16 @@ import {
   toolsAreEnabled,
   topicNameEntered,
 } from "./featureGuideActions.js";
-import { isAgentsEnabled, isSyncEnabled } from "../utils/modules.js";
+import {
+  isAgentEnabled,
+  isAgentsEnabled,
+  isArcanasEnabled,
+  isFeedbackEnabled,
+  isSpeechEnabled,
+  isSyncEnabled,
+  isToolsEnabled,
+} from "../utils/modules.js";
+import { isFeatureEnabled } from "./deployment.js";
 
 export const featureGuides = {
   workspace_overview: {
@@ -1779,6 +1788,68 @@ export const featureGuides = {
   },
 };
 
+// The Tools panel is where every tool guide points. It exists for the tools
+// module, and agent mode renders the same panel with the agent's own toggles.
+const isToolPanelAvailable = () => isToolsEnabled() || isAgentEnabled();
+const metaChatAvailable = () => isFeatureEnabled("meta_chat");
+
+// A guided tour highlights real elements. When a deployment switches a module or
+// a feature off, its UI is not rendered at all, so the guide would point at
+// nothing and the catalog would promise a walkthrough that cannot run. This map
+// is the single answer to "can this guide start here?"; the catalogs, the Meta
+// chat's `list_tutorials` / `start_tutorial` and `startGuide` all ask it.
+//
+// A guide that is not named here is always available. Add an entry whenever a
+// guide's first target lives behind a module or feature switch.
+export const FEATURE_GUIDE_AVAILABILITY = {
+  workspace_overview: () => isFeatureEnabled("workspaces"),
+  manage_chat_data: () => isFeatureEnabled("workspaces"),
+  workspace_edit_storage: () => isFeatureEnabled("workspaces"),
+  workspace_clone: () => isFeatureEnabled("workspaces"),
+  workspace_upload: () => isFeatureEnabled("workspaces"),
+  workspace_multiselect: () => isFeatureEnabled("workspaces"),
+  arcana_filesystem: () => isFeatureEnabled("workspaces") && isArcanasEnabled(),
+  workspace_saia_fs: () => isFeatureEnabled("workspaces"),
+  attach_from_workspace: () => isFeatureEnabled("workspaces"),
+  attach_chat_to_workspace: () => isFeatureEnabled("workspaces"),
+  pin_workspace: () => isFeatureEnabled("workspaces"),
+  agent_recovery: () => isAgentsEnabled(),
+  remote_agents: () => isAgentsEnabled(),
+  close_group_sessions: () => isAgentsEnabled(),
+  session_workspaces: () => isAgentsEnabled(),
+  agent_workspace_access: () => isAgentsEnabled(),
+  pin_agent: () => isAgentsEnabled(),
+  tools_overview: () => isToolPanelAvailable(),
+  web_search: () => isToolPanelAvailable(),
+  image_generation: () => isToolPanelAvailable(),
+  image_modification: () => isToolPanelAvailable(),
+  image_analysis: () => isToolPanelAvailable(),
+  audio_generation: () => isToolPanelAvailable(),
+  arcana: () => isToolPanelAvailable() && isArcanasEnabled(),
+  arcana_tools: () => isToolPanelAvailable() && isArcanasEnabled(),
+  mcp_server: () => isFeatureEnabled("mcp_servers") && isToolPanelAvailable(),
+  feedback: () => isFeedbackEnabled(),
+  speech_output: () => isSpeechEnabled(),
+  e2ee: () => isFeatureEnabled("e2ee"),
+  sync_setup: () => isSyncEnabled(),
+  meta_chat_usage: metaChatAvailable,
+  meta_chat_catalogs: metaChatAvailable,
+  meta_chat_search: metaChatAvailable,
+  meta_chat_navigation: metaChatAvailable,
+  meta_chat_actions: metaChatAvailable,
+  meta_chat_pins: metaChatAvailable,
+  meta_chat_agents: () => metaChatAvailable() && isAgentsEnabled(),
+  meta_chat_workspaces: () => metaChatAvailable() && isFeatureEnabled("workspaces"),
+  meta_chat_digest: metaChatAvailable,
+  meta_chat_mcp: () => metaChatAvailable() && isFeatureEnabled("mcp_servers"),
+};
+
+/** Whether this deployment renders everything a guide highlights. */
+export function isFeatureGuideAvailable(featureId) {
+  if (!featureId || !featureGuides[featureId]) return false;
+  return FEATURE_GUIDE_AVAILABILITY[featureId]?.() ?? true;
+}
+
 export const FEATURE_CATEGORIES = {
   meta_chat: [
     "meta_chat_usage",
@@ -1870,7 +1941,7 @@ export function getFeatureGuide(featureId) {
 export function getFeatureGuideMarker(text) {
   const match = String(text || "").match(GUIDE_MARKER_PATTERN);
   const featureId = match?.[1]?.toLowerCase();
-  return featureId && featureGuides[featureId] ? featureId : null;
+  return featureId && isFeatureGuideAvailable(featureId) ? featureId : null;
 }
 
 export function stripFeatureGuideMarkers(text) {
@@ -1987,6 +2058,7 @@ export function findFeatureGuideForText(text) {
   let bestLength = 0;
 
   for (const [featureId, guide] of Object.entries(featureGuides)) {
+    if (!isFeatureGuideAvailable(featureId)) continue;
     const keywords = [
       ...(guide.keywords || []),
       ...(germanGuideKeywords[featureId] || []),
@@ -2007,11 +2079,7 @@ export function findFeatureGuideForText(text) {
 
 export function buildFeatureGuidePrompt() {
   return Object.entries(featureGuides)
-    .filter(([featureId]) => {
-      if (featureId === "remote_agents") return isAgentsEnabled();
-      if (featureId === "sync_setup") return isSyncEnabled();
-      return true;
-    })
+    .filter(([featureId]) => isFeatureGuideAvailable(featureId))
     .map(([featureId, guide]) => `- ${featureId}: ${guide.prompt}`)
     .join("\n");
 }

@@ -740,6 +740,23 @@ JavaScript object literals, not database rows or JSON files:
   feature guides. `USE_CASE_CATEGORIES` groups them, and `buildUseCaseGuide()` turns a use case into
   a custom tour.
 
+**Availability follows the deployment.** A guide highlights real elements, so a guide whose UI a
+deployment switched off must not be offered. `FEATURE_GUIDE_AVAILABILITY` and
+`USE_CASE_AVAILABILITY` in the same two files hold one predicate per gated entry; an entry they do
+not name is always available. `isFeatureGuideAvailable()` / `isUseCaseAvailable()` are the only
+readers: the catalogs (`TutorialCatalog`, `UseCaseCatalog`), `buildFeatureGuidePrompt()` /
+`buildUseCasePrompt()` (so the Meta chat's `list_tutorials` omits them), `start_tutorial` /
+`start_use_case`, the `[[GUIDE:…]]` / `[[USE_CASE:…]]` markers, `FeatureGuideCard`, and
+`FeatureGuideContext#startGuide` (which also covers `/tutorial/<id>` links). Add an entry whenever a
+guide's first target lives behind a module or feature switch — workspace guides behind
+`workspaces`, agent guides behind `agents`, tool guides behind the Tools panel
+(`isToolsEnabled() || isAgentEnabled()`, because agent mode renders the same panel), Arcana guides
+also behind `arcanas`, `feedback` / `speech_output` / `sync_setup` behind their module, `e2ee` and
+`mcp_server` behind their feature, and every `meta_chat_*` guide behind `meta_chat` (three of them
+also behind `agents`, `workspaces` or `mcp_servers`). `validate:guides` fails on
+an availability entry that names an unknown id and on a tools or Meta-chat guide without one; it
+also fails when a use case steps through a gated tutorial without carrying the same gate.
+
 Visible copy is not stored in these objects: titles and step texts are i18n keys resolved from
 `front/src/i18n/en.js` and `de.js`. Element preparation lives in
 `front/src/config/featureGuideActions.js`, and the tour runtime is `FeatureGuideContext` +
@@ -2060,7 +2077,9 @@ while editing:
 - **A feature switch needs three wirings**, or a user sees a dead entry point: the route
   (`Route/PublicRoute.tsx`), the entry point (sidebar section, prompt button, settings tab,
   header icon) and the behaviour (agent tools, request fields). Also gate the feature guide,
-  or a tour points at an element that is no longer rendered. `import_git` is the worked
+  or a tour points at an element that is no longer rendered: add the guide (and every use case
+  that steps through it) to `FEATURE_GUIDE_AVAILABILITY` / `USE_CASE_AVAILABILITY` in
+  `config/featureGuides.js` / `config/useCases.js` (§4.18). `import_git` is the worked
   example: it hides the "clone repository" mode in `CreateWorkspaceModal` and nothing else.
 - **A brand may not change features or layout.** Brand objects are only read for presentation
   (`BrandLogo`, `BrandHeader`, `BrandDisclaimer`, `BrandChatWarning`, `AiServicesMenu`,
@@ -2478,7 +2497,7 @@ not running on its own (paused or still locked), gray while nothing is set up.
 - [ ] `npm test` clean in `front/` for changed logic/components
 - [ ] new strings added to both `en.js` and `de.js`
 - [ ] new feature or non-trivial logic change → tests added next to the code (`*.test.js|jsx|ts|tsx`)
-- [ ] new proper user-facing feature → at least one feature guide (tutorial), with its category and `npm run validate:guides`
+- [ ] new proper user-facing feature → at least one feature guide (tutorial), with its category, an availability entry if it lives behind a switch, and `npm run validate:guides`
 - [ ] Dexie schema change → version bump + `.upgrade()` backfill, existing version blocks untouched
 - [ ] new persisted Redux key → `whitelist` + `getDefaultState()` (+ a migration if the shape changed)
 - [ ] new setting → exposed in the Meta chat context and propose/apply/revert support (§4.16)
@@ -2488,6 +2507,7 @@ not running on its own (paused or still locked), gray while nothing is set up.
 - [ ] touched a `VITE_MODULE_*` area → read through `utils/modules.js`, and still correct with the
       module off (check `minimal`, §4.30)
 - [ ] new feature switch → route + entry point + behaviour, and the feature guide respects it
+      (`FEATURE_GUIDE_AVAILABILITY` / `USE_CASE_AVAILABILITY`, §4.18)
 - [ ] new brand → `config/branding/<folder>/brand.json` + its images + a `brands.test.js` case
 - [ ] conversation write → `lastModified` threaded through and `-1` handled
 - [ ] touched sync (§4.32) → a pulled record must hash back to itself (no `lastModified`, keep

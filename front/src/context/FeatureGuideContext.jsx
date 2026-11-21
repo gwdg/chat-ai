@@ -11,7 +11,10 @@ import { createPortal } from "react-dom";
 import { useLocation } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 
-import { featureGuides, getFeatureGuide } from "../config/featureGuides";
+import {
+  getFeatureGuide,
+  isFeatureGuideAvailable,
+} from "../config/featureGuides";
 import { buildUseCaseGuide } from "../config/useCases";
 import { isTargetCovered } from "./featureGuideHighlight";
 import {
@@ -107,7 +110,10 @@ export function FeatureGuideProvider({ children }) {
 
   const startGuide = useCallback(
     (featureId) => {
-      if (!enabled || !featureGuides[featureId]) return;
+      // The catalog and the Meta chat already hide an unavailable guide, but a
+      // `/tutorial/<id>` link or a marker from an imported chat can still name
+      // one. Starting it would highlight elements this deployment never renders.
+      if (!enabled || !isFeatureGuideAvailable(featureId)) return;
       setCompletion(null);
       setTargetRect(null);
       setCursor({

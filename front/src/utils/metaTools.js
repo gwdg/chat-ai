@@ -5,8 +5,14 @@ import {
   listFolders,
   searchMessages,
 } from "../db";
-import { buildFeatureGuidePrompt, featureGuides } from "../config/featureGuides";
-import { buildUseCasePrompt, useCases } from "../config/useCases";
+import {
+  buildFeatureGuidePrompt,
+  isFeatureGuideAvailable,
+} from "../config/featureGuides";
+import {
+  buildUseCasePrompt,
+  isUseCaseAvailable,
+} from "../config/useCases";
 import { isFeatureEnabled } from "../config/deployment";
 import { loadPersonaCatalog } from "./personaCatalog";
 import { getSpeechModule } from "./speechAudio";
@@ -1654,7 +1660,9 @@ Sessions:\n${lines.join("\n") || "(no sessions)"}`;
 
       case "start_tutorial": {
         const id = String(args.id || "").trim();
-        if (!featureGuides[id]) return "Feature guide not found.";
+        if (!isFeatureGuideAvailable(id)) {
+          return "Feature guide not found or unavailable in this deployment.";
+        }
         window.dispatchEvent(
           new CustomEvent("chatai:start-feature-guide", { detail: { featureId: id } }),
         );
@@ -1663,7 +1671,9 @@ Sessions:\n${lines.join("\n") || "(no sessions)"}`;
 
       case "start_use_case": {
         const id = String(args.id || "").trim();
-        if (!useCases[id]) return "Use case not found.";
+        if (!isUseCaseAvailable(id)) {
+          return "Use case not found or unavailable in this deployment.";
+        }
         window.dispatchEvent(
           new CustomEvent("chatai:start-use-case", { detail: { useCaseId: id } }),
         );

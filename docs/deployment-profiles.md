@@ -439,8 +439,13 @@ A feature switch must be applied in all three places, or users see dead buttons:
 Additional rules from this repository:
 
 - Feature guides (`config/featureGuides.js`) must be filtered by enabled feature;
-  hidden UI must not be offered in tours. `npm run validate:guides` stays part of
-  the check.
+  hidden UI must not be offered in tours. `FEATURE_GUIDE_AVAILABILITY` and
+  `USE_CASE_AVAILABILITY` hold that rule, and the catalogs, the Meta chat's
+  `list_tutorials` / `start_tutorial` / `start_use_case`, the markers and
+  `FeatureGuideContext#startGuide` all read them through
+  `isFeatureGuideAvailable()` / `isUseCaseAvailable()`. `npm run validate:guides`
+  stays part of the check and fails on a tools or Meta-chat guide without an
+  entry.
 - The Meta chat must be able to read the deployment and brand state. Add brand id,
   deployment id and the resolved feature map to `get_user_settings` and the
   `list_*` tools' output. A mutation proposal is optional and read-only is the
@@ -624,6 +629,11 @@ secrets, so inlining all of them is harmless and keeps `useBrand()` synchronous.
 - `metaTools.js` reports the effective module state from `utils/modules.js`, and
   `getMetaToolDefinitions()` drops `list_tutorials` / `start_tutorial` /
   `start_use_case` while the `tutorials` feature is off.
+- `TutorialCatalog`, `UseCaseCatalog` and `TourManager` render only with the
+  `tutorials` feature on, and each catalog drops the guides whose module or
+  feature is off (`FEATURE_GUIDE_AVAILABILITY` / `USE_CASE_AVAILABILITY`), so the
+  `minimal` profile lists no workspace, agent, tools, Arcana, speech, feedback or
+  sync tour even though the Meta chat stays on.
 
 **The UGOE brand**
 

@@ -181,7 +181,7 @@ and no dialog blocks the sync.
 * **Module gate.** `modules.sync` in `front.json` maps to `VITE_MODULE_SYNC` and is read through
   `utils/modules.js#isSyncEnabled()`. It is opt-in: an absent key means off, the `minimal`
   deployment keeps it off, and the Data section, the guide and the tutorial catalog all disappear
-  with it.
+  with it (the guide through `FEATURE_GUIDE_AVAILABILITY`, not only through the catalog).
 
 ## 7. Failure handling
 

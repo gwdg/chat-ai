@@ -1,27 +1,15 @@
 import { AUTO_VOICE, normalizeSpeechVoice } from "../config/speechVoices";
-import { speechModuleValue } from "./modules";
+import { normalizeSpeechModule, speechModuleValue } from "./modules";
 
 export const DEFAULT_TTS_SAMPLE_RATE = 16000;
 
+// `"browser"` (and the older `true`) enables speech with the browser's own
+// voices. That is what a setup without a TTS service can offer: replies are
+// spoken locally and nothing is sent to the backend for synthesis. An object
+// names an engine model. The parser lives in `utils/modules.js` so the feature
+// guides can gate themselves on it without loading this module.
 export function getSpeechModule() {
-  const raw = speechModuleValue();
-  if (!raw || raw === "undefined" || raw === "false") return null;
-  try {
-    const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
-    // `"browser"` (and the older `true`) enables speech with the browser's own
-    // voices. That is what a setup without a TTS service can offer: replies are
-    // spoken locally and nothing is sent to the backend for synthesis. An
-    // object names an engine model.
-    if (parsed === "browser" || parsed === true) {
-      return { model: null, voice: null };
-    }
-    if (parsed && typeof parsed === "object" && parsed.model && parsed.voice) {
-      return parsed;
-    }
-  } catch (error) {
-    console.warn("Could not parse the speech module configuration.", error);
-  }
-  return null;
+  return normalizeSpeechModule(speechModuleValue());
 }
 
 export function resolveSpeechLanguage(language) {

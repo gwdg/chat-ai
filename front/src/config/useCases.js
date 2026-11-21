@@ -10,6 +10,17 @@ import {
   openUserSettings,
   selectSettingsTab,
 } from "./featureGuideActions.js";
+import {
+  isAgentEnabled,
+  isArcanasEnabled,
+  isSpeechEnabled,
+  isToolsEnabled,
+} from "../utils/modules.js";
+import { isFeatureEnabled } from "./deployment.js";
+
+// The Tools panel is where the tool steps of these walkthroughs point, and agent
+// mode renders the same panel with the agent's own toggles.
+const isToolPanelAvailable = () => isToolsEnabled() || isAgentEnabled();
 
 export const useCases = {
   analyze_paper: {
@@ -359,10 +370,27 @@ export const USE_CASE_CATEGORIES = {
   ],
 };
 
+// A walkthrough whose steps enable a tool or press the speech button cannot run
+// when the deployment switches that module off. The catalog, the Meta chat and
+// `startCustomGuide` all ask this map; a use case that is not named is always
+// available.
+export const USE_CASE_AVAILABILITY = {
+  web_research: () => isToolPanelAvailable(),
+  rag_documents: () => isToolPanelAvailable() && isArcanasEnabled(),
+  find_chat: () => isFeatureEnabled("meta_chat"),
+  generate_image: () => isToolPanelAvailable(),
+  read_aloud: () => isSpeechEnabled(),
+};
+
+export function isUseCaseAvailable(useCaseId) {
+  if (!useCaseId || !useCases[useCaseId]) return false;
+  return USE_CASE_AVAILABILITY[useCaseId]?.() ?? true;
+}
+
 export const USE_CASE_MARKER_PATTERN = /\[\[USE_CASE:([a-zA-Z0-9_-]+)\]\]/i;
 
 export function buildUseCaseGuide(useCaseId) {
-  const useCase = useCases[useCaseId];
+  const useCase = isUseCaseAvailable(useCaseId) ? useCases[useCaseId] : null;
   if (!useCase) return null;
   return {
     id: `use_case:${useCaseId}`,
@@ -381,7 +409,7 @@ export function buildUseCaseGuide(useCaseId) {
 export function getUseCaseMarker(text) {
   const match = String(text || "").match(USE_CASE_MARKER_PATTERN);
   const useCaseId = match?.[1]?.toLowerCase();
-  return useCaseId && useCases[useCaseId] ? useCaseId : null;
+  return useCaseId && isUseCaseAvailable(useCaseId) ? useCaseId : null;
 }
 
 export function stripUseCaseMarkers(text) {
@@ -394,6 +422,7 @@ export function stripUseCaseMarkers(text) {
 
 export function buildUseCasePrompt() {
   return Object.entries(useCases)
+    .filter(([useCaseId]) => isUseCaseAvailable(useCaseId))
     .map(([useCaseId, useCase]) => `- ${useCaseId}: ${useCase.prompt}`)
     .join("\n");
 }
