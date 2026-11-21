@@ -57,7 +57,9 @@ const seedV16 = async (rows) => {
 const openUpgraded = async () => {
   const appDb = new AppDB();
   await appDb.open();
-  expect(appDb.verno).toBe(18);
+  // The v16 seed must upgrade to whatever the app currently declares, so a new
+  // version block does not need this assertion edited.
+  expect(appDb.verno).toBe(db.verno);
   return appDb;
 };
 

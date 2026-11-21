@@ -9,6 +9,7 @@ import { notifyConversationMoved } from '../utils/conversationEvents'
 import { defaultCapabilities } from '../workspace/capabilities'
 import { SHARED_BROWSER_STORAGE_ID, workspaceBrowserStorageId } from '../workspace/browserStorage'
 import { chatStorageSourceId } from '../workspace/chatStorage'
+import { collapseDuplicateWorkspaceNodes } from './workspaceTreeDedupe'
 
 import type { 
   ConversationRow, 
@@ -376,6 +377,13 @@ export class AppDB extends Dexie {
       sync_meta: 'key',
       sync_records: '[namespace+id], namespace',
     });
+
+    // A synced workspace used to write its tree under a derived id instead of
+    // reusing the row already at that path, so one file was listed twice. Keep
+    // one row per path (the one that holds the bytes), point chat references at
+    // it and drop the extra blobs. New duplicates are prevented by
+    // `applyWorkspaceBundle`.
+    this.version(19).stores({}).upgrade(collapseDuplicateWorkspaceNodesUpgrade);
   }
 }
 
@@ -465,6 +473,19 @@ export function migrateLegacyToolKeys(settings: any) {
  * they are. Absent values read as enabled through `storageAccessEnabled`.
  */
 export async function preserveStorageConsent(_tx: any) {}
+
+/**
+ * The Dexie v19 upgrade: one row per path in every workspace tree, so a file a
+ * pull once wrote twice is listed once. Runs inside the version-change
+ * transaction, which has every table in scope.
+ */
+export async function collapseDuplicateWorkspaceNodesUpgrade(tx: any) {
+  await collapseDuplicateWorkspaceNodes({
+    nodes: tx.table('workspace_nodes'),
+    blobs: tx.table('workspace_blobs'),
+    refs: tx.table('workspace_file_references'),
+  })
+}
 
 export const db = new AppDB()
 

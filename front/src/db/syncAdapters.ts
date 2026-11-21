@@ -5,11 +5,14 @@ import type {
   WorkspaceAgentSessionRow,
   WorkspaceChatRow,
   WorkspaceMountRow,
+  WorkspaceNodeRow,
   WorkspaceRow,
   WorkspaceSourceRow,
 } from "./dbTypes";
 import { workspaceBrowserStorageId } from "../workspace/browserStorage";
+import { normalizePath } from "../workspace/paths";
 import { deleteWorkspace } from "./workspaceDb";
+import { collapseDuplicateNodes } from "./workspaceVfs";
 import { saveAgentSessionMessages, saveAgentSessions } from "./agentSessionCache";
 
 /**
@@ -199,32 +202,55 @@ export async function applyWorkspaceBundle(
   // The tree always lives in the workspace's own browser source, so a rewritten
   // copy does not share storage with the workspace it was copied from.
   const sourceId = workspaceBrowserStorageId(workspaceId);
+  const existingNodes = await db.workspace_nodes
+    .where("sourceId")
+    .equals(sourceId)
+    .toArray();
+  // `nodeId` is not part of a synced record, so a pull cannot name the local
+  // row. Reusing the row a path already has keeps the tree at one row per path
+  // instead of adding a second, differently named row next to it. The lowest id
+  // wins because that is the row `getSourceNode` reads (and every write keeps).
+  const byPath = new Map<string, WorkspaceNodeRow>();
+  for (const node of existingNodes) {
+    const current = byPath.get(node.path);
+    if (!current || node.id < current.id) byPath.set(node.path, node);
+  }
   const nodeIdOf = (nodeId: string | undefined, path: string) => {
     const base = nodeId ?? `${sourceId}:${path}`;
     return rewrite ? `${base}~${workspaceId}` : base;
   };
+  const written: string[] = [];
   for (const entry of bundle.tree) {
+    if (!entry?.path) continue;
+    const path = normalizePath(entry.path);
+    if (path === "/") continue;
+    const local = byPath.get(path);
+    // A pull never turns a file into a directory or back: that path belongs to
+    // the other shape on this device, and the record carries no rename.
+    if (local && local.kind !== entry.kind) continue;
     if (entry.kind === "dir") {
+      const id = local?.id ?? nodeIdOf(entry.nodeId, path);
       await db.workspace_nodes.put({
-        id: nodeIdOf(entry.nodeId, entry.path),
+        id,
         sourceId,
-        path: entry.path,
-        parentPath: parentOf(entry.path),
-        name: baseOf(entry.path),
+        path,
+        parentPath: parentOf(path),
+        name: baseOf(path),
         kind: "dir",
-        mtime: new Date(now).toISOString(),
+        mtime: local?.mtime ?? new Date(now).toISOString(),
       });
+      written.push(id);
       continue;
     }
     if (!entry.data) continue;
-    const nodeId = nodeIdOf(entry.nodeId, entry.path);
+    const nodeId = local?.id ?? nodeIdOf(entry.nodeId, path);
     await db.transaction("rw", [db.workspace_nodes, db.workspace_blobs], async () => {
       await db.workspace_nodes.put({
         id: nodeId,
         sourceId,
-        path: entry.path,
-        parentPath: parentOf(entry.path),
-        name: baseOf(entry.path),
+        path,
+        parentPath: parentOf(path),
+        name: baseOf(path),
         kind: "file",
         size: entry.data!.byteLength,
         mime: entry.mime,
@@ -232,7 +258,12 @@ export async function applyWorkspaceBundle(
       });
       await db.workspace_blobs.put({ id: nodeId, sourceId, data: entry.data! });
     });
+    written.push(nodeId);
   }
+  // Two rows for one path may already exist (a pull before this fix, or a
+  // second device that applied the same record). Keep the row just written, and
+  // the row that holds bytes when there is no clear winner.
+  await collapseDuplicateNodes(sourceId, written);
 }
 
 const parentOf = (path: string) => {
