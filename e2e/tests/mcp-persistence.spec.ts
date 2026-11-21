@@ -64,7 +64,8 @@ test("an MCP server added in one tab is not lost when another tab saves", async 
       user: "The user adds an MCP server in the first tab.",
       system:
         "The change is broadcast to the second tab, so that tab no longer holds a stale list.",
-      shows: "the configured server in the first tab",
+      shows:
+        "the sidebar's MCP Servers section listing Persisted server with the address http://127.0.0.1:9999/mcp",
     },
     async () => {
       await addServer(page, "Persisted server");
@@ -77,12 +78,16 @@ test("an MCP server added in one tab is not lost when another tab saves", async 
       user: "The user switches the theme in the second tab.",
       system:
         "Any action in the second tab re-persists its whole user settings, including the server.",
-      shows: "the second tab with a toggled theme",
+      shows: "the app rendered in dark mode with the sidebar visible",
     },
     async () => {
       await other.locator('[data-guide="theme-toggle"]').click();
-      await other.waitForTimeout(500);
+      // The class on <body> is what actually paints the theme; waiting for it
+      // also gives redux-persist the turn that writes the settings back.
+      await expect(other.locator("body")).toHaveClass(/\bdark\b/);
     },
+    // The step acts on the second tab, so the screenshot must come from it.
+    { page: other },
   );
 
   await doc.step(

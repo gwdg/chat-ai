@@ -61,6 +61,15 @@ interface StepNarrative {
   shows?: string;
 }
 
+interface StepOptions {
+  /**
+   * Page to screenshot. Defaults to the page the fixture was created with, so
+   * a step that acts on a second tab passes that tab explicitly instead of
+   * documenting the first one.
+   */
+  page?: Page;
+}
+
 interface RecordedStep {
   index: number;
   title: string;
@@ -116,16 +125,17 @@ export class ScenarioDocumentation {
     title: string,
     narrative: StepNarrative,
     action?: () => Promise<void>,
+    options?: StepOptions,
   ): Promise<void> {
     if (action) {
       try {
         await action();
       } catch (error) {
-        await this.record(title, narrative, error);
+        await this.record(title, narrative, error, options?.page);
         throw error;
       }
     }
-    await this.record(title, narrative);
+    await this.record(title, narrative, undefined, options?.page);
   }
 
   private nextIndex(): number {
@@ -140,12 +150,13 @@ export class ScenarioDocumentation {
     title: string,
     narrative: StepNarrative,
     error?: unknown,
+    page: Page = this.page,
   ): Promise<void> {
     const index = this.nextIndex();
     const image = `${index}.png`;
 
     try {
-      await this.page.screenshot({
+      await page.screenshot({
         path: join(this.directory, image),
         fullPage: true,
         animations: "disabled",

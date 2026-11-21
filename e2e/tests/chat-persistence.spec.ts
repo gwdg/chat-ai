@@ -67,7 +67,7 @@ test.describe("chat persistence", () => {
         system:
           "The app rehydrates the conversation from IndexedDB: the same prompt, the same answer and the same title are shown again.",
         shows:
-          "the chat after a reload with the user message Persist this exchange and the assistant reply still visible",
+          "the conversation area after a reload, still containing the prompt Persist this exchange at its top right and the assistant answer Mocked reply to: Persist this exchange beneath it",
       },
       async () => {
         await page.reload();

@@ -55,8 +55,9 @@ test.describe("codemode", () => {
         user: "The user creates a workspace named “Codemode workspace” in the sidebar.",
         system:
           "The workspace page opens as its chat home, with the file tree in the right-hand panel. A workspace gives the agent file storage and write access.",
-        shows:
-          "the workspace page for Codemode workspace with a chat home and a right-hand panel whose Files tab holds the file browser",
+        shows: wideLayout
+          ? "the workspace page for Codemode workspace with a chat home and a right-hand panel whose Files tab holds the file browser"
+          : "the workspace page for Codemode workspace on a phone, with no chats yet and a prompt box",
       },
       async () => {
         await openSidebar(page);
@@ -83,27 +84,22 @@ test.describe("codemode", () => {
     );
 
     await doc.step(
-      "Attach the workspace to the chat",
+      "Open the workspace chat",
       {
-        user: "Back in the chat, the user opens the Workspace popover and selects the workspace.",
+        user: "The workspace page offers a prompt box that starts a chat inside the workspace.",
         system:
-          "The workspace option is pressed, so the chat has write access to that workspace. A “What's new” panel appears beside the conversation.",
+          "A chat started from the workspace page is linked to it immediately, so the agent can read and write the workspace files without attaching anything first.",
         shows:
-          "the chat page with an empty conversation and a workspace folder icon in the prompt toolbar",
+          "the workspace page for Codemode workspace with an empty chat and its prompt box at the bottom",
       },
       async () => {
-        await openApp(page);
-
-        // Attach it through the prompt-box popover. The sidebar also has a row with
-        // this name, so scope the click to the popover's aria-pressed options.
-        await page.locator('[data-guide="chat-workspaces"]').click();
-        const option = page
-          .locator("button[aria-pressed]")
-          .filter({ hasText: WORKSPACE });
-        await expect(option).toBeVisible();
-        await option.click();
-        await page.keyboard.press("Escape");
-        await expect(page.locator('[data-guide="chat-workspaces"]')).toBeVisible();
+        // The prompt-box Workspace menu only exists once a chat has a
+        // workspace, so the chat is started here: a prompt from the workspace
+        // page links it at creation.
+        await expect(
+          page.getByText("No chats in this workspace yet"),
+        ).toBeVisible();
+        await expect(page.locator('textarea[name="prompt"]')).toBeVisible();
       },
     );
 

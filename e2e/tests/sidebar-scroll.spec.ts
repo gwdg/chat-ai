@@ -1,5 +1,5 @@
 import { expect, openApp, openSidebar, test } from "./fixtures";
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 /**
  * Opening a topic or a workspace replaces the whole page, and with it the
@@ -16,7 +16,22 @@ async function createTopic(page: Page, name: string): Promise<void> {
   await page.locator('[data-guide="create-topic"]').click();
   await page.locator('[data-guide="topic-create-input"]').fill(name);
   await page.getByRole("button", { name: "Create", exact: true }).click();
-  await expect(page.getByText(name, { exact: true })).toBeVisible();
+  await expect(topicLabel(page, name)).toBeVisible();
+}
+
+/**
+ * The topic label, found by its title rather than its text: a row also shows
+ * the topic's chat count, so the row for "Scroll topic 1" reads "Scroll topic
+ * 10" once its "0" is appended, and a text locator for "Scroll topic 10" then
+ * matches two elements.
+ */
+function topicLabel(page: Page, name: string): Locator {
+  return page.locator(`span[title="${name}"]`);
+}
+
+/** The workspace row's name button. Its count sits beside the button, not in it. */
+function workspaceRow(page: Page, name: string): Locator {
+  return page.getByRole("button", { name, exact: true });
 }
 
 /**
@@ -30,13 +45,11 @@ async function createTopic(page: Page, name: string): Promise<void> {
  */
 async function clickRow(
   page: Page,
-  name: string,
+  row: Locator,
   target: RegExp,
 ): Promise<void> {
   await expect(async () => {
-    await page
-      .getByText(name, { exact: true })
-      .evaluate((element) => (element as HTMLElement).click());
+    await row.evaluate((element) => (element as HTMLElement).click());
     await expect(page).toHaveURL(target, { timeout: 800 });
   }).toPass({ timeout: 10_000 });
 }
@@ -83,7 +96,11 @@ test.describe("sidebar list scroll", () => {
     const before = await scrollToListEnd(page);
     expect(before).toBeGreaterThan(0);
 
-    await clickRow(page, `Scroll topic ${TOPIC_COUNT}`, /\/topic\//);
+    await clickRow(
+      page,
+      topicLabel(page, `Scroll topic ${TOPIC_COUNT}`),
+      /\/topic\//,
+    );
 
     // The new sidebar restores the offset before painting, but its rows arrive
     // from IndexedDB after the first render, so allow a short retry window.
@@ -109,12 +126,16 @@ test.describe("sidebar list scroll", () => {
 
     // The workspace page has its own sidebar; leave it for a topic page, so the
     // measured offset is taken on the same list the workspace row sits in.
-    await clickRow(page, "Scroll topic 1", /\/topic\//);
+    await clickRow(page, topicLabel(page, "Scroll topic 1"), /\/topic\//);
 
     const before = await scrollToListEnd(page);
     expect(before).toBeGreaterThan(0);
 
-    await clickRow(page, "Scroll workspace", /\/workspace\/[^/]+$/);
+    await clickRow(
+      page,
+      workspaceRow(page, "Scroll workspace"),
+      /\/workspace\/[^/]+$/,
+    );
 
     await expectListNear(page, before);
   });
