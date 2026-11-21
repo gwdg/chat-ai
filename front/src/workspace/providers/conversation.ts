@@ -176,6 +176,29 @@ export class ConversationStorageProvider implements FileProvider {
     }
   }
 
+  /** OPFS: open the file with `keepExistingData` and seek to its end. Parents are created. */
+  async append(path: string, data: Uint8Array | string) {
+    const normalized = normalizePath(path);
+    const parts = segments(normalized);
+    const name = parts.pop();
+    if (!name) throw new WorkspaceError("PROVIDER_ERROR", "Not a file path");
+    if (parts.length) await this.mkdir(`/${parts.join("/")}`);
+    const parent = parts.length
+      ? await this.dir(`/${parts.join("/")}`)
+      : await this.rootHandle();
+    const handle = await parent.getFileHandle(name, { create: true });
+    const size = (await handle.getFile()).size;
+    const writable = await handle.createWritable({ keepExistingData: true });
+    try {
+      const bytes =
+        typeof data === "string" ? new TextEncoder().encode(data) : data;
+      await writable.seek(size);
+      await writable.write(bytes as Uint8Array<ArrayBuffer>);
+    } finally {
+      await writable.close();
+    }
+  }
+
   async remove(path: string, opts: { recursive: boolean }) {
     const parts = segments(path);
     const name = parts.pop();

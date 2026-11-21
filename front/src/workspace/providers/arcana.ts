@@ -171,6 +171,33 @@ export class ArcanaProvider implements FileProvider {
     throw new WorkspaceError("UNSUPPORTED");
   }
 
+  /** Arcana stores whole files, so an append reads the file and replaces it with the addition. */
+  async append(path: string, data: Uint8Array | string): Promise<void> {
+    const normalized = normalizePath(path);
+    const name = baseName(normalized);
+    if (!name || normalized.split("/").filter(Boolean).length !== 1) {
+      throw new WorkspaceError("UNSUPPORTED", "Arcana sources are flat");
+    }
+    const exists = this.files.some((file) => fileName(file) === name);
+    let current = new Uint8Array();
+    if (exists) {
+      const result = await readArcanaFile(this.remoteWorkspaceId, name, "base64");
+      current = fromBase64(String(result?.content ?? ""));
+    }
+    const addition =
+      typeof data === "string" ? new TextEncoder().encode(data) : data;
+    const combined = new Uint8Array(current.length + addition.length);
+    combined.set(current, 0);
+    combined.set(addition, current.length);
+    const content = toBase64(combined);
+    if (exists) {
+      await replaceArcanaFile(this.remoteWorkspaceId, name, content, "base64");
+    } else {
+      await uploadArcanaFile(this.remoteWorkspaceId, name, content, "base64");
+    }
+    await this.refresh();
+  }
+
   async remove(path: string) {
     const normalized = normalizePath(path);
     await deleteArcanaFile(this.remoteWorkspaceId, baseName(normalized));

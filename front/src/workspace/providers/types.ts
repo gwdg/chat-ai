@@ -41,6 +41,17 @@ export interface FileProvider {
   remove(path: string, opts: { recursive: boolean }): Promise<void>;
   move?(from: string, to: string): Promise<void>;
   copy?(from: string, to: string): Promise<void>;
+  /**
+   * Appends bytes to a file, creating the file and its missing parents. Providers that cannot
+   * append natively fall back to read + write through `appendToProvider` (entries.ts).
+   */
+  append?(path: string, data: Uint8Array | string): Promise<void>;
+  /**
+   * Renames in place: the parent stays and `newName` is a plain name, without a slash. Never
+   * overwrites. Providers without a native rename go through `renameProviderEntry` (entries.ts),
+   * which checks for a conflict and then uses `move`.
+   */
+  rename?(path: string, newName: string): Promise<void>;
   quota?(): Promise<QuotaInfo | null>;
   close?(): void;
 }

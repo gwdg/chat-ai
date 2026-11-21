@@ -2379,6 +2379,7 @@ export default {
     file_name_placeholder: "Dateiname",
     entry_name_invalid: "Namen dürfen keine Schrägstriche enthalten.",
     rename_entry: "Eintrag umbenennen",
+    rename_in: "In {{path}} umbenennen",
     rename_success: "Umbenannt in {{name}}.",
     git_log: "Git-Log",
     git_log_empty: "Keine Git-Log-Einträge gefunden.",

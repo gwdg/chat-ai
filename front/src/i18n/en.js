@@ -2352,6 +2352,7 @@ export default {
     file_name_placeholder: "File name",
     entry_name_invalid: "Names cannot contain slashes.",
     rename_entry: "Rename entry",
+    rename_in: "Rename in {{path}}",
     rename_success: "Renamed to {{name}}.",
     git_log: "Git log",
     git_log_empty: "No Git log entries found.",

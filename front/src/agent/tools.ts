@@ -77,6 +77,8 @@ const TOGGLES: Record<string, string[]> = {
   browser_storage: [
     "read",
     "write",
+    "append",
+    "rename",
     "edit",
     "delete",
     "ls",
@@ -106,7 +108,7 @@ const TOGGLES: Record<string, string[]> = {
     "add_arcana_member",
     "remove_arcana_member",
   ],
-  write_access: ["write", "edit", "delete"],
+  write_access: ["write", "append", "rename", "edit", "delete"],
   create_docx: ["create_docx"],
   image_analysis: ["explain_image"],
   image_generation: ["generate_image"],
@@ -234,9 +236,51 @@ export function createTools(fs: Vfs, { vision, enabled = {}, hasLocalFolder = fa
     },
   );
 
+  const appendTool = tool(
+    "append",
+    "Append text to a file without replacing its existing contents. Creates the file and any missing parent folders. Use write when the whole file should be replaced.",
+    Type.Object({
+      path: Type.String({ description: "Path to the file to append to (relative or absolute)" }),
+      content: Type.String({ description: "Text to append" }),
+    }),
+    async ({ path, content }) => {
+      const target = normalize(path);
+      const data = String(content ?? "");
+      if (fs.appendFile) {
+        await fs.appendFile(target, data);
+      } else {
+        let existing = "";
+        try {
+          existing = new TextDecoder().decode(await fs.readFile(target));
+        } catch {
+          existing = "";
+        }
+        await fs.writeFile(target, existing + data);
+      }
+      return text(`Appended to ${target}`);
+    },
+  );
+
+  const renameTool = tool(
+    "rename",
+    "Rename a file or folder in place. Pass a plain name, not a path: this never moves an entry to another folder and never overwrites an existing entry.",
+    Type.Object({
+      path: Type.String({ description: "Path of the file or folder to rename (relative or absolute)" }),
+      new_name: Type.String({ description: "New name, without a slash" }),
+    }),
+    async ({ path, new_name }) => {
+      const target = normalize(path);
+      if (!fs.rename) throw new Error("This storage cannot rename an entry.");
+      const result = await fs.rename(target, String(new_name ?? "").trim());
+      return text(`Renamed ${target} to ${result}`);
+    },
+  );
+
   const fileTools: AgentTool<any>[] = [
     readWithHints,
     write,
+    appendTool,
+    renameTool,
     createEditTool(CWD, { operations: { readFile, writeFile, access } }),
     deleteTool,
     createLsTool(CWD, {

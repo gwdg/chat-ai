@@ -46,6 +46,7 @@ const textOf = (result: any) =>
 const capabilities = {
   read: true,
   write: true,
+  append: true,
   delete: true,
   mkdir: true,
   rename: true,
@@ -119,6 +120,8 @@ const providerWith = (overrides: Record<string, any> = {}) => ({
   stat: vi.fn(),
   read: vi.fn(),
   write: vi.fn(async () => ({})),
+  append: vi.fn(async () => {}),
+  rename: vi.fn(async () => {}),
   mkdir: vi.fn(async () => {}),
   remove: vi.fn(),
   ...overrides,
@@ -135,6 +138,10 @@ const bytesOf = (value: string) =>
 const vfs = () => ({
   mkdir: vi.fn(async () => {}),
   writeFile: vi.fn(async () => {}),
+  appendFile: vi.fn(async () => {}),
+  rename: vi.fn(async (path: string, newName: string) =>
+    `${path.slice(0, path.lastIndexOf("/"))}/${newName}`,
+  ),
 });
 
 const tool = async (
@@ -186,6 +193,8 @@ describe("createWorkspaceTools", () => {
 
     const names = tools.map((item) => item.name);
     expect(names).not.toContain("workspace_write_file");
+    expect(names).not.toContain("workspace_append_file");
+    expect(names).not.toContain("workspace_rename");
     expect(names).toContain("workspace_read_file");
   });
 
@@ -415,6 +424,87 @@ describe("createWorkspaceTools", () => {
 
     expect(provider.write).not.toHaveBeenCalled();
     expect(output).toContain("That mount is read-only.");
+  });
+
+  it("appends to a file through a provider", async () => {
+    const provider = providerWith();
+    mocks.createProvider.mockReturnValue(provider);
+
+    const append = await tool("workspace_append_file");
+    const output = textOf(
+      await append.run({
+        source: "Shared documents",
+        path: "/docs/log.md",
+        content: "more",
+      }),
+    );
+
+    expect(provider.append).toHaveBeenCalledWith("/docs/log.md", "more");
+    expect(output).toContain("Appended to /docs/log.md");
+  });
+
+  it("renames through a provider", async () => {
+    const provider = providerWith();
+    mocks.createProvider.mockReturnValue(provider);
+
+    const rename = await tool("workspace_rename");
+    const output = textOf(
+      await rename.run({
+        source: "Shared documents",
+        path: "/docs/old.md",
+        new_name: "new.md",
+      }),
+    );
+
+    expect(provider.rename).toHaveBeenCalledWith("/docs/old.md", "new.md");
+    expect(output).toContain("Renamed /docs/old.md to /docs/new.md");
+  });
+
+  it("refuses to rename a mount point", async () => {
+    const provider = providerWith();
+    mocks.createProvider.mockReturnValue(provider);
+
+    const rename = await tool("workspace_rename");
+    const output = textOf(
+      await rename.run({ path: "/shared", new_name: "elsewhere" }),
+    );
+
+    expect(output).toContain("Cannot rename the mount point /shared");
+    expect(provider.rename).not.toHaveBeenCalled();
+  });
+
+  it("rejects an append or rename through a read-only mount", async () => {
+    mocks.mounts.mockResolvedValue([{ ...mount, readOnly: true }]);
+    const provider = providerWith();
+    mocks.createProvider.mockReturnValue(provider);
+
+    const append = await tool("workspace_append_file");
+    expect(
+      textOf(await append.run({ path: "/shared/note.md", content: "hi" })),
+    ).toContain("That mount is read-only.");
+
+    const rename = await tool("workspace_rename");
+    expect(
+      textOf(await rename.run({ path: "/shared/note.md", new_name: "n.md" })),
+    ).toContain("That mount is read-only.");
+
+    expect(provider.append).not.toHaveBeenCalled();
+    expect(provider.rename).not.toHaveBeenCalled();
+  });
+
+  it("appends and renames through the chat VFS when it is the primary workspace", async () => {
+    const workspaceVfs = vfs();
+
+    const append = await tool("workspace_append_file", workspaceVfs, "ws-1");
+    await append.run({ path: "/notes.md", content: "more" });
+    expect(workspaceVfs.appendFile).toHaveBeenCalledWith("/notes.md", "more");
+
+    const rename = await tool("workspace_rename", workspaceVfs, "ws-1");
+    const output = textOf(
+      await rename.run({ path: "/notes.md", new_name: "final.md" }),
+    );
+    expect(workspaceVfs.rename).toHaveBeenCalledWith("/notes.md", "final.md");
+    expect(output).toContain("Renamed /notes.md to /final.md");
   });
 
   it("fetches a file into the chat workspace", async () => {

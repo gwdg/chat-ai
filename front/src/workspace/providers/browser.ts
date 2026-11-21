@@ -112,6 +112,27 @@ export class BrowserProvider implements FileProvider {
     await ensureSourceDir(this.storageId, path);
   }
 
+  /** IndexedDB has no append: read the blob, join the new bytes and write the file back. */
+  async append(path: string, data: Uint8Array | string) {
+    const normalized = normalizePath(path);
+    const addition =
+      typeof data === "string" ? new TextEncoder().encode(data) : data;
+    const existing = await getSourceNode(this.storageId, normalized);
+    if (existing && existing.kind !== "file") {
+      throw new WorkspaceError("CONFLICT", normalized);
+    }
+    if (!existing) {
+      await writeSourceFile(this.storageId, normalized, addition);
+      return;
+    }
+    const blob = await getSourceBlob(this.storageId, existing.id);
+    const current = blob ?? new Uint8Array();
+    const combined = new Uint8Array(current.length + addition.length);
+    combined.set(current, 0);
+    combined.set(addition, current.length);
+    await writeSourceFile(this.storageId, normalized, combined);
+  }
+
   async remove(path: string, opts: { recursive: boolean }) {
     await removeSourcePath(this.storageId, path, opts.recursive);
   }

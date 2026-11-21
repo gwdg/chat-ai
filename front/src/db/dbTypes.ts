@@ -199,6 +199,8 @@ export type SourceStatus =
 export type WorkspaceCapabilities = {
   read: boolean
   write: boolean
+  /** The provider can append to an existing file, or the shared helper can (read + write). */
+  append?: boolean
   delete: boolean
   mkdir: boolean
   rename: boolean

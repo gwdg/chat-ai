@@ -35,6 +35,8 @@ const makeRoot = () => {
     write: [] as string[],
     mkdir: [] as string[],
     remove: [] as string[],
+    append: [] as string[],
+    rename: [] as [string, string][],
   };
   const root = {
     sourceId: "root",
@@ -82,6 +84,12 @@ const makeRoot = () => {
     remove: async (path: string) => {
       calls.remove.push(path);
     },
+    append: async (path: string) => {
+      calls.append.push(path);
+    },
+    rename: async (path: string, newName: string) => {
+      calls.rename.push([path, newName]);
+    },
   };
   return { root: root as unknown as BrowserProvider, calls };
 };
@@ -92,6 +100,8 @@ const makeMountProvider = (write = true) => {
     write: [] as string[],
     mkdir: [] as string[],
     remove: [] as string[],
+    append: [] as string[],
+    rename: [] as [string, string][],
   };
   let written = "";
   const provider = {
@@ -131,6 +141,12 @@ const makeMountProvider = (write = true) => {
     },
     remove: async (path: string) => {
       calls.remove.push(path);
+    },
+    append: async (path: string) => {
+      calls.append.push(path);
+    },
+    rename: async (path: string, newName: string) => {
+      calls.rename.push([path, newName]);
     },
   };
   return {
@@ -184,11 +200,13 @@ describe("WorkspaceAgentVfs", () => {
     await expect(vfs.remove("/mnt/a.txt")).rejects.toThrow(
       "That mount is read-only.",
     );
-    expect(mounted.calls).toEqual({
+    expect(mounted.calls).toMatchObject({
       list: [],
       write: [],
       mkdir: [],
       remove: [],
+      append: [],
+      rename: [],
     });
   });
 
@@ -325,6 +343,122 @@ describe("WorkspaceAgentVfs", () => {
       "workspace-1",
       "workspace-1",
     ]);
+  });
+
+  it("routes append and rename into a mount's own provider", async () => {
+    const { root } = makeRoot();
+    const mounted = makeMountProvider();
+    const vfs = new WorkspaceAgentVfs(
+      emptyConversation,
+      "workspace-1",
+      root,
+      [{ mount: mount(false), provider: mounted.provider }],
+    );
+
+    await vfs.appendFile("/mnt/a.txt", "more");
+    const target = await vfs.rename("/mnt/a.txt", "b.txt");
+
+    expect(mounted.calls.append).toEqual(["/a.txt"]);
+    expect(mounted.calls.rename).toEqual([["/a.txt", "b.txt"]]);
+    expect(target).toBe("/mnt/b.txt");
+  });
+
+  it("falls back to read and write when the provider cannot append", async () => {
+    const { root } = makeRoot();
+    const mounted = makeMountProvider();
+    delete (mounted.provider as unknown as { append?: unknown }).append;
+    const vfs = new WorkspaceAgentVfs(
+      emptyConversation,
+      "workspace-1",
+      root,
+      [{ mount: mount(false), provider: mounted.provider }],
+    );
+
+    await vfs.appendFile("/mnt/a.txt", "more");
+
+    expect(mounted.calls.append).toEqual([]);
+    expect(mounted.calls.write).toEqual(["/a.txt"]);
+    expect(mounted.written).toBe("more");
+  });
+
+  it("refuses append and rename on a read-only mount", async () => {
+    const { root } = makeRoot();
+    const mounted = makeMountProvider();
+    const vfs = new WorkspaceAgentVfs(
+      emptyConversation,
+      "workspace-1",
+      root,
+      [{ mount: mount(true), provider: mounted.provider }],
+    );
+
+    await expect(vfs.appendFile("/mnt/a.txt", "more")).rejects.toThrow(
+      "That mount is read-only.",
+    );
+    await expect(vfs.rename("/mnt/a.txt", "b.txt")).rejects.toThrow(
+      "That mount is read-only.",
+    );
+    await expect(vfs.rename("/mnt", "elsewhere")).rejects.toThrow(
+      "That mount is read-only.",
+    );
+    expect(mounted.calls.append).toEqual([]);
+    expect(mounted.calls.rename).toEqual([]);
+  });
+
+  it("refuses to rename the mount point or the workspace root", async () => {
+    const { root } = makeRoot();
+    const mounted = makeMountProvider();
+    const vfs = new WorkspaceAgentVfs(
+      emptyConversation,
+      "workspace-1",
+      root,
+      [{ mount: mount(false), provider: mounted.provider }],
+    );
+
+    await expect(vfs.rename("/mnt", "elsewhere")).rejects.toThrow(
+      "Cannot rename the mount point /mnt",
+    );
+    await expect(vfs.rename("/", "elsewhere")).rejects.toThrow(
+      "The workspace root cannot be renamed",
+    );
+    expect(mounted.calls.rename).toEqual([]);
+  });
+
+  it("appends and renames through the workspace root provider", async () => {
+    const { root, calls } = makeRoot();
+    const vfs = new WorkspaceAgentVfs(emptyConversation, "workspace-1", root, []);
+
+    await vfs.appendFile("/notes.md", "more");
+    const target = await vfs.rename("/notes.md", "final.md");
+
+    expect(calls.append).toEqual(["/notes.md"]);
+    expect(calls.rename).toEqual([["/notes.md", "final.md"]]);
+    expect(target).toBe("/final.md");
+  });
+
+  it("keeps conversation uploads on the chat's own storage", async () => {
+    const { root, calls } = makeRoot();
+    const uploads: string[] = [];
+    const renames: [string, string][] = [];
+    const conversation: Vfs = {
+      ...emptyConversation,
+      appendFile: async (path) => {
+        uploads.push(path);
+      },
+      rename: async (path, newName) => {
+        renames.push([path, newName]);
+        return path.replace(/[^/]+$/, newName);
+      },
+    };
+    const vfs = new WorkspaceAgentVfs(conversation, "workspace-1", root, []);
+
+    await vfs.appendFile("/uploads/file.txt", "more");
+    const target = await vfs.rename("/uploads/file.txt", "renamed.txt");
+
+    expect(uploads).toEqual(["/uploads/file.txt"]);
+    expect(renames).toEqual([["/uploads/file.txt", "renamed.txt"]]);
+    expect(calls.append).toEqual([]);
+    expect(calls.rename).toEqual([]);
+    expect(target).toBe("/uploads/renamed.txt");
   });
 
   it("stays quiet for conversation uploads, which are not workspace rows", async () => {
