@@ -88,6 +88,8 @@ export default {
     sync_settings: "Open sync settings",
     sync_done: "Sync complete: {{pulled}} pulled, {{pushed}} pushed.",
     sync_failed: "Sync failed: {{error}}",
+    sync_auto_on: "Automatic synchronization on — pause it",
+    sync_auto_off: "Automatic synchronization off — resume it",
   },
   folders: {
     title: "Chats",
@@ -868,7 +870,7 @@ export default {
       step3:
         "The encrypted server synchronization keeps settings, conversations, workspaces and agents in step across your devices. Everything is encrypted in this browser before it is uploaded, and the passphrase is never stored.",
       step4:
-        "Switch the server synchronization on, then create it with a passphrase you can remember, or unlock the copy another device already created for this account.",
+        "Switch the server synchronization on, then create it with a passphrase you can remember, or unlock the copy another device already created for this account. Once it is open, you can add a passkey on this device so a reload does not ask for the passphrase again.",
     },
     backup_create: {
       title: "Create an encrypted backup",
@@ -1732,6 +1734,57 @@ export default {
         cleanup_done: "Removed {{records}} revisions and {{assets}} attachments.",
         disable_hint:
           "Turning the server synchronization off stops syncing and locks the vault. The encrypted files stay on your filesystem until you clean them up or delete them there.",
+        passkey_title: "Passkey on this device",
+        passkey_description:
+          "Keep the vault unlocked across reloads without saving the passphrase. The passkey stores only a wrapped copy of the vault key; the key itself stays in your browser's memory.",
+        passkey_add: "Add a passkey",
+        passkey_default_label: "Sync vault",
+        passkey_label: "Passkey name",
+        passkey_label_placeholder: "e.g. Work laptop",
+        passkey_enrolled: "Enrolled: {{label}}",
+        passkey_forget: "Forget this passkey",
+        passkey_unlock: "Unlock with passkey",
+        passkey_unlock_hint:
+          "Your browser asks for the passkey (fingerprint, face or device PIN) and the vault opens without the passphrase.",
+        passkey_session_hint:
+          "This session unlocked with a passkey. After a reload it is requested again automatically; your browser may need a click first.",
+        passkey_click_hint:
+          "Browsers may require a click before showing the passkey prompt.",
+        passkey_added:
+          "The passkey was added. This device can unlock the vault after a reload.",
+        passkey_unlocked: "Unlocked with the passkey.",
+        passkey_forgotten:
+          "The passkey was forgotten. The passphrase still opens the vault.",
+        passkey_unsupported:
+          "This browser cannot use passkeys. The passphrase remains the only way to unlock the vault here.",
+        onboarding_title: "Keep your chats in step across devices",
+        onboarding_intro:
+          "Chat AI can keep an encrypted copy of your conversations, topics, settings, workspaces and agents in your SAIA filesystem. Your other devices read that copy, so a chat you start here continues there.",
+        onboarding_point_encrypted:
+          "Encrypted before upload: everything is encrypted in this browser, the passphrase never leaves your device, and the server cannot read the copy.",
+        onboarding_point_passphrase:
+          "One passphrase protects the key. Without it the copy cannot be recovered, so use a passphrase you can remember and keep safe (at least {{min}} characters).",
+        onboarding_point_passkey:
+          "Optional passkey: once the copy is open, a passkey on this device (fingerprint, face or device PIN) opens it again after a reload without asking for the passphrase. Only a wrapped copy of the vault key is stored in this browser.",
+        onboarding_point_nothing:
+          "Nothing is uploaded until you create the copy, and you can switch the synchronization off whenever you want.",
+        onboarding_where:
+          "The copy lives in your SAIA filesystem account folder. If another device already created one for this account, unlock that copy instead of creating a second one.",
+        onboarding_privacy:
+          "The passphrase and the vault key are never stored. The Meta chat cannot read them and cannot create or unlock the copy; that stays in Data settings.",
+        onboarding_setup: "Set up synchronization",
+        onboarding_existing_title:
+          "An encrypted synchronization already exists for this account",
+        onboarding_existing_intro:
+          "Another device already stores an encrypted copy of your conversations, topics, settings, workspaces and agents in your SAIA filesystem. Set that copy up on this device to read it — you need the passphrase it was created with.",
+        onboarding_existing_point_passphrase:
+          "Enter the passphrase that copy was created with on the other device. Without it the copy cannot be read here, and there is no recovery.",
+        onboarding_existing_point_nothing:
+          "Nothing is uploaded from this device until you unlock that copy, and you can switch the synchronization off whenever you want.",
+        onboarding_existing_setup: "Set it up on this device",
+        onboarding_later: "Not now",
+        onboarding_footer:
+          "You can find this later in User settings → Data → Server synchronization.",
         missing_passphrase: "Enter the passphrase.",
         mismatch: "The passphrases do not match.",
         session_expired: "The vault was locked. Enter the passphrase again.",

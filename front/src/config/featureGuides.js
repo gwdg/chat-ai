@@ -1362,7 +1362,7 @@ export const featureGuides = {
   sync_setup: {
     titleKey: "feature_guide.sync_setup.title",
     prompt:
-      "Keep settings, conversations, workspaces and agents in step across devices with an encrypted copy on your SAIA filesystem. Open user settings, choose the Data tab, switch the encrypted server synchronization on, and create it with a passphrase you can remember (or unlock the copy another device already created). Everything is encrypted in this browser before it is uploaded, and the passphrase is never stored.",
+      "Keep settings, conversations, workspaces and agents in step across devices with an encrypted copy on your SAIA filesystem. Open user settings, choose the Data tab, switch the encrypted server synchronization on, and create it with a passphrase you can remember (or unlock the copy another device already created). Everything is encrypted in this browser before it is uploaded, and the passphrase is never stored. A one-time offer may appear on first use while the sync module is on and the SAIA filesystem answers; its button switches the synchronization on and opens this section, but the copy is only created once a passphrase is entered. Once the copy is open, a passkey can remember the vault on this device so a reload does not ask for the passphrase again.",
     keywords: [
       "sync",
       "synchronization",
@@ -1370,6 +1370,8 @@ export const featureGuides = {
       "encrypted copy",
       "server synchronization",
       "multi device",
+      "passkey",
+      "passkeys",
       "verschlüsselte kopie",
       "synchronisieren",
     ],

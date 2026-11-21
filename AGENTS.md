@@ -2160,6 +2160,16 @@ while S3 inherits the no-op (it has no directories and already lists an unknown 
 `list_json("/")`, `exists("/")` and `info("/")` answer a user who has never written anything, and the
 provider's `missing("/")` → empty page is only needed for a service older than that change.
 
+**`append` and `rename` are native saia-fs tools.** `SaiaFsProvider` narrows
+`capabilities.append` to `has("append") || has("write")` and `capabilities.rename` to
+`has("rename") || has("move")`. `append` takes UTF-8 text and creates the file and its parents; bytes
+that the text tool would mangle go through `read_base64` + `write_base64` as a whole-file rewrite,
+because there is no binary append and a partial write would corrupt the file. `rename` takes
+`{path, new_name}` with a plain name (never a path), never overwrites (`destination already exists`
+becomes `CONFLICT`), and refuses the storage root. An older instance without the `rename` tool falls
+back to `move`, which on the local backend **does** overwrite, so `renameProviderEntry` /
+`rename()` pre-check the destination and refuse a conflict first.
+
 ### 4.32 The encrypted server synchronization is opt-in and lives in `front/src/sync/`
 
 Users can keep conversations, topics, settings, workspaces and agents in step across devices by

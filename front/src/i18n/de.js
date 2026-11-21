@@ -88,6 +88,8 @@ export default {
     sync_settings: "Synchronisierungs-Einstellungen öffnen",
     sync_done: "Synchronisierung abgeschlossen: {{pulled}} übernommen, {{pushed}} hochgeladen.",
     sync_failed: "Synchronisierung fehlgeschlagen: {{error}}",
+    sync_auto_on: "Automatische Synchronisierung an — pausieren",
+    sync_auto_off: "Automatische Synchronisierung aus — fortsetzen",
   },
   folders: {
     title: "Chats",
@@ -883,7 +885,7 @@ export default {
       step3:
         "Die verschlüsselte Serversynchronisierung hält Einstellungen, Unterhaltungen, Workspaces und Agenten auf Ihren Geräten aktuell. Alles wird in diesem Browser verschlüsselt, bevor es hochgeladen wird, und die Passphrase wird nie gespeichert.",
       step4:
-        "Schalten Sie die Serversynchronisierung ein und erstellen Sie sie mit einer Passphrase, die Sie sich merken können, oder entsperren Sie die Kopie, die ein anderes Gerät bereits für dieses Konto erstellt hat.",
+        "Schalten Sie die Serversynchronisierung ein und erstellen Sie sie mit einer Passphrase, die Sie sich merken können, oder entsperren Sie die Kopie, die ein anderes Gerät bereits für dieses Konto erstellt hat. Sobald sie offen ist, können Sie auf diesem Gerät einen Passkey hinzufügen, damit nach einem Neuladen nicht erneut nach der Passphrase gefragt wird.",
     },
     backup_create: {
       title: "Verschlüsselte Sicherung erstellen",
@@ -1753,6 +1755,57 @@ export default {
         cleanup_done: "{{records}} Revisionen und {{assets}} Anhänge entfernt.",
         disable_hint:
           "Wenn Sie die Serversynchronisierung ausschalten, stoppt die Synchronisierung und der Tresor wird gesperrt. Die verschlüsselten Dateien bleiben in Ihrem Dateisystem, bis Sie sie aufräumen oder dort löschen.",
+        passkey_title: "Passkey auf diesem Gerät",
+        passkey_description:
+          "Hält den Tresor über ein Neuladen hinweg entsperrt, ohne die Passphrase zu speichern. Der Passkey speichert nur eine verschlüsselte Kopie des Tresorschlüssels; der Schlüssel selbst bleibt nur im Arbeitsspeicher des Browsers.",
+        passkey_add: "Passkey hinzufügen",
+        passkey_default_label: "Sync-Tresor",
+        passkey_label: "Name des Passkeys",
+        passkey_label_placeholder: "z. B. Arbeitslaptop",
+        passkey_enrolled: "Hinterlegt: {{label}}",
+        passkey_forget: "Diesen Passkey entfernen",
+        passkey_unlock: "Mit Passkey entsperren",
+        passkey_unlock_hint:
+          "Der Browser fragt nach dem Passkey (Fingerabdruck, Gesicht oder Geräte-PIN); der Tresor öffnet sich ohne Passphrase.",
+        passkey_session_hint:
+          "Diese Sitzung wurde mit einem Passkey entsperrt. Nach dem Neuladen wird er automatisch angefragt; der Browser braucht dafür eventuell zuerst einen Klick.",
+        passkey_click_hint:
+          "Browser zeigen die Passkey-Abfrage möglicherweise erst nach einem Klick.",
+        passkey_added:
+          "Der Passkey wurde hinzugefügt. Dieses Gerät kann den Tresor nach dem Neuladen entsperren.",
+        passkey_unlocked: "Mit dem Passkey entsperrt.",
+        passkey_forgotten:
+          "Der Passkey wurde entfernt. Die Passphrase öffnet den Tresor weiterhin.",
+        passkey_unsupported:
+          "Dieser Browser kann keine Passkeys verwenden. Die Passphrase bleibt hier der einzige Weg zum Entsperren.",
+        onboarding_title: "Chats auf allen Geräten aktuell halten",
+        onboarding_intro:
+          "Chat AI kann eine verschlüsselte Kopie Ihrer Unterhaltungen, Themen, Einstellungen, Workspaces und Agenten in Ihrem SAIA-Dateisystem speichern. Ihre anderen Geräte lesen diese Kopie, sodass ein hier begonnener Chat dort weitergeht.",
+        onboarding_point_encrypted:
+          "Vor dem Hochladen verschlüsselt: Alles wird in diesem Browser verschlüsselt, die Passphrase verlässt Ihr Gerät nie, und der Server kann die Kopie nicht lesen.",
+        onboarding_point_passphrase:
+          "Eine Passphrase schützt den Schlüssel. Ohne sie lässt sich die Kopie nicht wiederherstellen; verwenden Sie daher eine Passphrase, die Sie sich merken können und sicher aufbewahren (mindestens {{min}} Zeichen).",
+        onboarding_point_passkey:
+          "Optionaler Passkey: Sobald die Kopie offen ist, öffnet ein Passkey auf diesem Gerät (Fingerabdruck, Gesicht oder Geräte-PIN) sie nach einem Neuladen erneut, ohne nach der Passphrase zu fragen. In diesem Browser wird nur eine verschlüsselte Kopie des Tresorschlüssels gespeichert.",
+        onboarding_point_nothing:
+          "Nichts wird hochgeladen, bevor Sie die Kopie erstellen, und Sie können die Synchronisierung jederzeit wieder ausschalten.",
+        onboarding_where:
+          "Die Kopie liegt im Kontoordner Ihres SAIA-Dateisystems. Hat ein anderes Gerät für dieses Konto bereits eine Kopie erstellt, entsperren Sie diese, statt eine zweite anzulegen.",
+        onboarding_privacy:
+          "Die Passphrase und der Tresorschlüssel werden nie gespeichert. Der Meta-Chat kann sie weder lesen noch die Kopie erstellen oder entsperren; das bleibt in den Daten-Einstellungen.",
+        onboarding_setup: "Synchronisierung einrichten",
+        onboarding_existing_title:
+          "Für dieses Konto existiert bereits eine verschlüsselte Synchronisierung",
+        onboarding_existing_intro:
+          "Ein anderes Gerät speichert bereits eine verschlüsselte Kopie Ihrer Unterhaltungen, Themen, Einstellungen, Workspaces und Agenten in Ihrem SAIA-Dateisystem. Richten Sie diese Kopie auf diesem Gerät ein, um sie zu lesen — Sie benötigen die Passphrase, mit der sie erstellt wurde.",
+        onboarding_existing_point_passphrase:
+          "Geben Sie die Passphrase ein, mit der die Kopie auf dem anderen Gerät erstellt wurde. Ohne sie lässt sich die Kopie hier nicht lesen, und es gibt keine Wiederherstellung.",
+        onboarding_existing_point_nothing:
+          "Von diesem Gerät wird nichts hochgeladen, bis Sie diese Kopie entsperrt haben, und Sie können die Synchronisierung jederzeit ausschalten.",
+        onboarding_existing_setup: "Auf diesem Gerät einrichten",
+        onboarding_later: "Jetzt nicht",
+        onboarding_footer:
+          "Sie finden dies später unter Benutzereinstellungen → Daten → Serversynchronisierung.",
         missing_passphrase: "Geben Sie die Passphrase ein.",
         mismatch: "Die Passphrasen stimmen nicht überein.",
         session_expired: "Der Tresor wurde gesperrt. Geben Sie die Passphrase erneut ein.",

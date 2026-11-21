@@ -1,14 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 
 import { isSyncEnabled } from "../utils/modules";
 import {
   getSyncStatus,
   loadSyncStatus,
+  runSyncIfDue,
   setSyncPreferences,
   startAutoSync,
   stopAutoSync,
   subscribeSyncStatus,
+  unlockSyncVaultWithPasskey,
   type SyncStatus,
 } from "../sync/service";
 
@@ -34,6 +36,23 @@ export function useSyncEngine(): SyncStatus {
     (state: any) => state.user_settings?.sync?.auto !== false,
   );
   const [status, setStatus] = useState<SyncStatus>(getSyncStatus);
+  // The stored status has to be known before a passkey attempt can decide
+  // whether this device even has one.
+  const [loaded, setLoaded] = useState(false);
+  const passkeyAttempted = useRef(false);
+  // A tab opened in the background must not pop an authenticator dialog the
+  // user cannot see; it asks when it is brought to the front instead.
+  const [visible, setVisible] = useState(
+    () =>
+      typeof document === "undefined" || document.visibilityState === "visible",
+  );
+
+  useEffect(() => {
+    if (typeof document === "undefined") return undefined;
+    const onChange = () => setVisible(document.visibilityState === "visible");
+    document.addEventListener("visibilitychange", onChange);
+    return () => document.removeEventListener("visibilitychange", onChange);
+  }, []);
 
   // Preferences first: the effect below reads them when it starts the timer.
   useEffect(() => {
@@ -49,7 +68,9 @@ export function useSyncEngine(): SyncStatus {
     });
     void loadSyncStatus()
       .then((next) => {
-        if (active) setStatus(next);
+        if (!active) return;
+        setStatus(next);
+        setLoaded(true);
       })
       .catch(() => undefined);
     startAutoSync();
@@ -60,6 +81,34 @@ export function useSyncEngine(): SyncStatus {
       if (activeMounts === 0) stopAutoSync();
     };
   }, []);
+
+  // No passphrase after a reload: as soon as the app is up with a local passkey
+  // binding for this vault, ask the authenticator. A passkey is only useful
+  // when something will sync on its own, so a paused automatic synchronization
+  // asks nothing here; the sidebar's "Sync now" unlocks on demand instead. The
+  // attempt is best effort and happens once per mount, and only in the tab the
+  // user is looking at: a browser that wants a click fails silently, an explicit
+  // "Lock now" in this session suppresses it in the service, and the "Unlock
+  // with passkey" button in Data settings stays the fallback.
+  useEffect(() => {
+    if (!loaded || !enabled || !auto || !visible || passkeyAttempted.current) {
+      return;
+    }
+    const current = getSyncStatus();
+    if (current.unlocked || !current.configured) return;
+    if (!current.passkey) return;
+    passkeyAttempted.current = true;
+    void unlockSyncVaultWithPasskey({ silent: true }).catch(() => undefined);
+  }, [loaded, enabled, auto, visible]);
+
+  // An unlocked vault in the visible tab is the one that should hold the
+  // freshest copy, so a due pass runs here rather than waiting for the next
+  // timer tick. The due check keeps re-mounts and quick tab switches from
+  // starting a pass of their own.
+  useEffect(() => {
+    if (!status.unlocked || !visible) return;
+    runSyncIfDue();
+  }, [status.unlocked, visible]);
 
   return status;
 }

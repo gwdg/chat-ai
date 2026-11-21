@@ -5,6 +5,7 @@ import { MemoryStateStore } from "./memoryStateStore";
 import { createVault } from "../crypto/vault";
 import { writeVaultHeader, readVaultHeader, SYNC_VAULT_PATH } from "../engine";
 import {
+  AUTO_SYNC_INTERVAL_MS,
   changeSyncPassphrase,
   cleanUpRemote,
   configureSyncDeps,
@@ -16,7 +17,9 @@ import {
   remoteVaultSummary,
   resetSyncServiceForTests,
   rotateSyncVault,
+  runSyncIfUnlocked,
   setSyncPreferences,
+  startAutoSync,
   subscribeSyncStatus,
   syncNow,
   unlockSyncVault,
@@ -40,8 +43,18 @@ const setup = async () => {
 };
 
 afterEach(() => {
+  delete document.visibilityState;
+  vi.useRealTimers();
   resetSyncServiceForTests();
 });
+
+/** jsdom reports `visible`; a test sets the property to simulate a hidden tab. */
+const setVisibility = (value) => {
+  Object.defineProperty(document, "visibilityState", {
+    configurable: true,
+    get: () => value,
+  });
+};
 
 describe("sync service", () => {
   it("creates a vault, locks it and unlocks it again", async () => {
@@ -225,4 +238,51 @@ describe("sync service", () => {
     expect(seen.at(-1)).toBe(false);
     unsubscribe();
   });
+
+  it("runs an automatic pass only from the visible tab", async () => {
+    const { store } = await setup();
+    const vault = await createVault(PASSPHRASE, {
+      argon: { t: 1, m: 1024, p: 1 },
+    });
+    await writeVaultHeader(store, vault.header);
+    await unlockSyncVault(PASSPHRASE);
+    setSyncPreferences({ enabled: true, auto: true });
+
+    // A background tab shares the profile and the archive with the active one;
+    // it must not duplicate the pass.
+    setVisibility("hidden");
+    runSyncIfUnlocked();
+    expect(getSyncStatus().running).toBe(false);
+    expect(getSyncStatus().lastRunAt).toBe(null);
+
+    setVisibility("visible");
+    runSyncIfUnlocked();
+    expect(getSyncStatus().running).toBe(true);
+    await syncNow();
+    expect(getSyncStatus().lastRunAt).toBeTruthy();
+  }, 15000);
+
+  it("catches up on activation only when a pass is due", async () => {
+    vi.useFakeTimers();
+    const { store } = await setup();
+    const vault = await createVault(PASSPHRASE, {
+      argon: { t: 1, m: 1024, p: 1 },
+    });
+    await writeVaultHeader(store, vault.header);
+    await unlockSyncVault(PASSPHRASE);
+    setSyncPreferences({ enabled: true, auto: true });
+    startAutoSync();
+    await syncNow();
+    expect(getSyncStatus().lastRunAt).toBeTruthy();
+
+    setVisibility("visible");
+    // A quick tab switch is not a reason for another pass.
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(getSyncStatus().running).toBe(false);
+
+    vi.setSystemTime(Date.now() + AUTO_SYNC_INTERVAL_MS + 1000);
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(getSyncStatus().running).toBe(true);
+    await syncNow();
+  }, 15000);
 });

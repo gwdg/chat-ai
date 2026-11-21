@@ -12,6 +12,7 @@ import HelpMemoryModal from "./Help/HelpMemoryModal";
 import HelpChoiceProposer from "./Help/HelpChoiceProposer";
 import UserSettingsModal from "./UserSettings/UserSettingsModal";
 import UserMemoryModal from "./UserSettings/UserMemoryModal";
+import SyncOnboardingModal from "./UserSettings/SyncOnboardingModal";
 import ShareSettingsModal from "./Chat/ShareSettingsModal";
 import ClearCacheModal from "./UserSettings/ClearCacheModal";
 import ErrorBadRequestModal from "./Alert/ErrorBadRequestModal";
@@ -174,6 +175,9 @@ export function ModalProvider({ children }) {
       {/* User Settings Modals*/}
       {modalType === "userSettings" && (
         <UserSettingsModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "syncOnboarding" && (
+        <SyncOnboardingModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {modalType === "userMemory" && (
         <UserMemoryModal isOpen onClose={closeModal} {...modalProps} />

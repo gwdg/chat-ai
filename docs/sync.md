@@ -36,11 +36,17 @@ server-side feature.
 | `conversations` | one per chat | title, settings, persona, folder reference, every message with ids, timestamps and feedback; attachments by content hash |
 | `folders` | one per topic | name, icon, colour, pin, order |
 | `settings` | one | `user_settings` (memories, groups, MCP servers, E2EE public keys and bindings, preferences) |
+| `interface_settings` | one | presentation preferences: theme, conversation sort and grouping, warning dialogs, completed and suppressed tours, usage-in-sidebar |
 | `workspaces` | one per workspace | workspace row, sources, mounts, chat/agent links, session links, browser-tree entries and their files (bounded) |
 | `agents` | one per agent | the local agent entry (connection, timestamps, pin) plus its cached OpenCode session metadata and histories (bounded) |
 
 `meta-chat` is excluded, exactly as `getExportData()` excludes it: it is generated from summaries
 and would otherwise fight itself on every device.
+
+`interface_settings` is merged per key like `user_settings`, but a few keys stay on the device that
+owns them and are neither uploaded nor overwritten by a pull: `show_sidebar`, `show_settings`,
+`collapsed_topics`, `expanded_agents`, `count_hallucination`, `count_announcement`,
+`agree_web_search` (a consent) and `sync_onboarding_dismissed` (each browser gets its own offer).
 
 Device-bound data stays device-bound. A local folder source keeps its `deviceId`, so the other
 device shows it as unavailable and does not try to open a handle it cannot have. Passphrases,
@@ -155,11 +161,18 @@ and no dialog blocks the sync.
   device id are never stored in Redux.
 * **One tab at a time.** `navigator.locks.request("chatai-sync")` serialises runs across tabs; a
   second tab receives the same lock and runs afterwards, reading the first tab's fragment.
-* **Auto-sync** runs every five minutes and when the tab becomes visible, but only while the vault
-  key is in memory. Reloading the page locks the vault again; the Data tab then offers *Unlock*.
-  There is no "remember the passphrase" convenience mode.
+* **Only the active tab syncs on its own.** The five-minute timer and the catch-up after switching
+  back to a tab are skipped while `document.visibilityState` is not `"visible"`, so a hidden tab
+  never duplicates a pull or a push. A pass that already runs finishes; catch-up on activation only
+  happens when the interval has elapsed since the last run. Explicit *Sync now* and the pass after
+  creating or rotating the vault still run from the tab where the button was pressed.
+* **Auto-sync** runs every five minutes, but only while the vault key is in memory and only from the
+  active tab. Reloading the page locks the vault again.
 * **Where the key lives:** a module-level session object, so it is gone on reload and never in
-  `localStorage`. Losing it means entering the passphrase again — never losing data.
+  `localStorage`. A passkey on this device can unlock it after a reload without the passphrase, and
+  it is only requested when the key is actually needed: while automatic sync is on, or when *Sync
+  now* is pressed while automatic sync is paused. Losing both means entering the passphrase again —
+  never losing data.
 * **Status** (last sync, conflicts, skipped files, last error) is exposed to the UI. The Meta chat
   sees the two preferences through `get_user_settings` and can propose `sync_enabled` /
   `sync_auto`; it never receives the passphrase or the vault key, and creating or unlocking the
@@ -175,7 +188,7 @@ and no dialog blocks the sync.
 | Failure | Behaviour |
 | --- | --- |
 | `saia-fs` unavailable / no identity | fail closed, nothing written, `AUTH_EXPIRED`/`OFFLINE` surfaced verbatim |
-| interrupted upload | the record file is only referenced by the fragment after the write returned; a truncated blob fails GCM and is rewritten on the next run |
+| interrupted upload | the fragment is written last and the local base rows only after it, so a pass that uploaded records but could not publish its fragment is repeated on the next run; a truncated blob fails GCM and is never applied |
 | wrong passphrase | GCM failure, no mutation, no oracle |
 | two devices push at once | distinct revision files + fragment union |
 | missing asset | the record is applied without that file and the summary names it; the file is left out rather than marked missing, so the payload stays hash-stable |

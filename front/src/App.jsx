@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import PublicRoute from "./Route/PublicRoute";
 import { BrowserRouter } from "react-router";
 import AgentConflictWatcher from "./components/Others/AgentConflictWatcher";
+import SyncOnboardingWatcher from "./components/Others/SyncOnboardingWatcher";
 import { ToastProvider } from "./components/Others/ToastProvider";
 import { ModalProvider } from "./modals/ModalContext";
 import { FilePreviewProvider } from "./context/FilePreviewContext";
@@ -12,6 +13,7 @@ import { FeatureGuideProvider } from "./context/FeatureGuideContext";
 import { requestPersistentStorage } from "./utils/storagePersistence";
 import { BrandProvider } from "./config/BrandProvider";
 import { TabTitleManager } from "./hooks/useTabTitle";
+import { isSyncEnabled } from "./utils/modules";
 
 function App() {
   const { i18n } = useTranslation();
@@ -51,6 +53,7 @@ function App() {
         <ToastProvider/>
         <AgentConflictWatcher />
         <ModalProvider>
+          {isSyncEnabled() && <SyncOnboardingWatcher />}
           <FilePreviewProvider>
             <FeatureGuideProvider>
               <PublicRoute />

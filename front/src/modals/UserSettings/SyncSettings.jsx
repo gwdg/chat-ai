@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 import {
   Cloud,
+  Fingerprint,
   KeyRound,
   Lock,
   RefreshCw,
@@ -22,12 +23,16 @@ import {
   changeSyncPassphrase,
   cleanUpRemote,
   createSyncVault,
+  didPasskeyUnlockSession,
+  forgetSyncPasskey,
   hasRemoteVault,
   lockSyncVault,
+  registerSyncPasskey,
   rotateSyncVault,
   runSyncIfUnlocked,
   syncNow,
   unlockSyncVault,
+  unlockSyncVaultWithPasskey,
 } from "../../sync/service";
 import { useSyncEngine } from "../../hooks/useSyncEngine";
 import { isSyncEnabled } from "../../utils/modules";
@@ -53,9 +58,13 @@ export default function SyncSettings() {
   const [passphrase, setPassphrase] = useState("");
   const [confirm, setConfirm] = useState("");
   const [nextPassphrase, setNextPassphrase] = useState("");
+  const [passkeyLabel, setPasskeyLabel] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  // One automatic attempt per vault in this mount; a browser that wants a
+  // click first must not turn every render into a fresh prompt.
+  const autoAttempted = useRef(null);
 
   const refreshRemote = useCallback(async () => {
     if (!isSyncEnabled()) return;
@@ -73,6 +82,38 @@ export default function SyncSettings() {
     if (!enabled || status.unlocked) return;
     void refreshRemote();
   }, [enabled, status.unlocked, refreshRemote]);
+
+  // A device that holds a passkey asks the authenticator as soon as the vault is
+  // known to be locked, in any tab — the session hint is only display state.
+  // With the automatic synchronization paused nothing runs on its own, so the
+  // panel does not ask either; the visible button below and the sidebar's "Sync
+  // now" are then the ways to unlock. The service suppresses the silent attempt
+  // after an explicit "Lock now"; browsers that demand a click fall back to the
+  // button below.
+  useEffect(() => {
+    if (!enabled || !auto || status.unlocked || !status.configured) return;
+    if (!status.passkey) return;
+    const vaultId = status.vaultId ?? "";
+    if (autoAttempted.current === vaultId) return;
+    autoAttempted.current = vaultId;
+    void (async () => {
+      setBusy(true);
+      try {
+        await unlockSyncVaultWithPasskey({ silent: true });
+      } catch {
+        // The explicit button and the passphrase are the fallback.
+      } finally {
+        setBusy(false);
+      }
+    })();
+  }, [
+    enabled,
+    auto,
+    status.unlocked,
+    status.configured,
+    status.passkey,
+    status.vaultId,
+  ]);
 
   if (!isSyncEnabled()) return null;
 
@@ -125,6 +166,30 @@ export default function SyncSettings() {
     });
   };
 
+  const unlockWithPasskey = () => {
+    void run(
+      () => unlockSyncVaultWithPasskey(),
+      t("user_settings.data.sync.passkey_unlocked"),
+    );
+  };
+
+  const addPasskey = () => {
+    void run(async () => {
+      await registerSyncPasskey(
+        passkeyLabel.trim() ||
+          t("user_settings.data.sync.passkey_default_label"),
+      );
+      setPasskeyLabel("");
+    }, t("user_settings.data.sync.passkey_added"));
+  };
+
+  const forgetPasskey = () => {
+    void run(
+      () => forgetSyncPasskey(),
+      t("user_settings.data.sync.passkey_forgotten"),
+    );
+  };
+
   const changePassphrase = () => {
     if (!validate(nextPassphrase)) return;
     void run(async () => {
@@ -160,10 +225,40 @@ export default function SyncSettings() {
     lockSyncVault();
   };
 
+  const enable = () => {
+    // The switch click is the user gesture a passkey request needs; the effect
+    // above asks right away once the preference is on. `setSyncPreferences`
+    // also re-arms the silent attempt after an explicit lock.
+    dispatch(setSyncEnabled(true));
+  };
+
   const summary = status.lastSummary;
   const lastSync = status.lastRunAt
     ? new Date(status.lastRunAt).toLocaleString()
     : t("user_settings.data.sync.never");
+  // A cached header is enough to unlock: the probe may fail while the copy is
+  // still reachable, and a passkey binding is local anyway.
+  const vaultKnown = remoteExists || status.configured;
+
+  // A failed unlock is reported directly under the button that failed. While
+  // the vault is unlocked the same alerts stay at the end of the section, next
+  // to the passphrase change, rotate and cleanup actions they belong to.
+  const errorAlerts = (
+    <>
+      {status.error && (
+        <div className="alert alert-error text-xs" role="alert">
+          <TriangleAlert className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span>{t("user_settings.data.sync.error", { error: status.error })}</span>
+        </div>
+      )}
+      {error && (
+        <div className="alert alert-error text-xs" role="alert">
+          <span>{error}</span>
+        </div>
+      )}
+    </>
+  );
+  const hasError = Boolean(status.error || error);
 
   return (
     <section className="flex flex-col gap-4" data-guide="sync-settings">
@@ -189,7 +284,7 @@ export default function SyncSettings() {
           description={t("user_settings.data.sync.enable_description")}
           checked={enabled}
           onChange={(checked) => {
-            if (checked) dispatch(setSyncEnabled(true));
+            if (checked) enable();
             else disable();
           }}
         />
@@ -198,15 +293,37 @@ export default function SyncSettings() {
       {enabled && !status.unlocked && (
         <div className="rounded-lg border border-base-300 p-4">
           <h4 className="text-sm font-medium">
-            {remoteExists
+            {vaultKnown
               ? t("user_settings.data.sync.unlock_title")
               : t("user_settings.data.sync.create_title")}
           </h4>
           <p className="mt-1 text-xs leading-relaxed text-base-content/70">
-            {remoteExists
+            {vaultKnown
               ? t("user_settings.data.sync.unlock_description")
               : t("user_settings.data.sync.create_description")}
           </p>
+
+          {vaultKnown && status.passkeySupported && status.passkey && (
+            <div
+              className="mt-3 rounded-lg border border-base-300 bg-base-200/40 p-3"
+              data-guide="sync-passkey-unlock"
+            >
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                disabled={busy}
+                onClick={unlockWithPasskey}
+              >
+                <Fingerprint className="h-4 w-4" aria-hidden="true" />
+                {t("user_settings.data.sync.passkey_unlock")}
+              </button>
+              <p className="mt-2 text-[11px] leading-relaxed text-base-content/70">
+                {didPasskeyUnlockSession(status.vaultId)
+                  ? t("user_settings.data.sync.passkey_session_hint")
+                  : t("user_settings.data.sync.passkey_unlock_hint")}
+              </p>
+            </div>
+          )}
 
           <label className="mt-3 block text-xs font-medium" htmlFor="sync-passphrase">
             {t("user_settings.data.sync.passphrase")}
@@ -225,7 +342,7 @@ export default function SyncSettings() {
             })}
           </p>
 
-          {!remoteExists && (
+          {!vaultKnown && (
             <>
               <label
                 className="mt-3 block text-xs font-medium"
@@ -245,7 +362,7 @@ export default function SyncSettings() {
           )}
 
           <div className="mt-4 flex flex-wrap gap-2">
-            {remoteExists ? (
+            {vaultKnown ? (
               <button
                 type="button"
                 className="btn btn-primary"
@@ -278,6 +395,10 @@ export default function SyncSettings() {
                 : t("user_settings.data.sync.check_again")}
             </button>
           </div>
+
+          {hasError && (
+            <div className="mt-3 flex flex-col gap-2">{errorAlerts}</div>
+          )}
 
           {remoteExists && (
             <div className="mt-4 rounded-lg border border-warning/40 bg-warning/10 p-3">
@@ -396,6 +517,72 @@ export default function SyncSettings() {
             onChange={(checked) => dispatch(setSyncAuto(checked))}
           />
 
+          <div
+            className="rounded-lg border border-base-300 p-3"
+            data-guide="sync-passkey"
+          >
+            <div className="flex items-center gap-2 text-xs font-medium">
+              <Fingerprint className="h-4 w-4" aria-hidden="true" />
+              {t("user_settings.data.sync.passkey_title")}
+            </div>
+            <p className="mt-2 text-[11px] leading-relaxed text-base-content/70">
+              {t("user_settings.data.sync.passkey_description")}
+            </p>
+
+            {!status.passkeySupported && (
+              <p className="mt-2 text-[11px] leading-relaxed text-base-content/60">
+                {t("user_settings.data.sync.passkey_unsupported")}
+              </p>
+            )}
+
+            {status.passkeySupported && status.passkey && (
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                <span className="text-[11px] text-base-content/80">
+                  {t("user_settings.data.sync.passkey_enrolled", {
+                    label:
+                      status.passkeyLabel ||
+                      t("user_settings.data.sync.passkey_default_label"),
+                  })}
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-xs text-error"
+                  disabled={busy}
+                  onClick={forgetPasskey}
+                >
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  {t("user_settings.data.sync.passkey_forget")}
+                </button>
+              </div>
+            )}
+
+            {status.passkeySupported && !status.passkey && (
+              <div className="mt-3 flex flex-wrap items-end gap-2">
+                <label className="flex-1 text-xs font-medium">
+                  <span>{t("user_settings.data.sync.passkey_label")}</span>
+                  <input
+                    type="text"
+                    className="input input-bordered input-sm mt-1 w-full"
+                    placeholder={t(
+                      "user_settings.data.sync.passkey_label_placeholder",
+                    )}
+                    value={passkeyLabel}
+                    onChange={(event) => setPasskeyLabel(event.target.value)}
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  disabled={busy}
+                  onClick={addPasskey}
+                >
+                  <Fingerprint className="h-4 w-4" aria-hidden="true" />
+                  {t("user_settings.data.sync.passkey_add")}
+                </button>
+              </div>
+            )}
+          </div>
+
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -503,20 +690,12 @@ export default function SyncSettings() {
         </div>
       )}
 
-      {status.error && (
-        <div className="alert alert-error text-xs" role="alert">
-          <TriangleAlert className="h-4 w-4 shrink-0" aria-hidden="true" />
-          <span>{t("user_settings.data.sync.error", { error: status.error })}</span>
-        </div>
+      {status.unlocked && hasError && (
+        <div className="flex flex-col gap-2">{errorAlerts}</div>
       )}
       {message && (
         <div className="alert alert-success text-xs" role="status">
           <span>{message}</span>
-        </div>
-      )}
-      {error && (
-        <div className="alert alert-error text-xs" role="alert">
-          <span>{error}</span>
         </div>
       )}
 
