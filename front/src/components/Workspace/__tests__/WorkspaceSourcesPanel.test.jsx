@@ -382,6 +382,18 @@ describe("WorkspaceSourcesPanel", () => {
     await act(async () => {});
   });
 
+  it("routes the device card through onOpenDevice when a host provides one", async () => {
+    const onOpenDevice = vi.fn();
+    renderPanel({ onOpenDevice });
+
+    fireEvent.click(drive("workspace-source-device"));
+    fireEvent.click(drive("workspace-source-chats"));
+
+    expect(onOpenDevice).toHaveBeenCalledTimes(1);
+    expect(mocks.onOpenTarget.mock.calls).toEqual([[{ drive: "chats" }]]);
+    await act(async () => {});
+  });
+
   it("omits the MCP drive when the workspace has no MCP sources", async () => {
     renderPanel();
 
