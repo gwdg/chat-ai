@@ -18,7 +18,12 @@ import {
   brandRestrictionLines,
   brandRestrictionSummary,
 } from "../config/brandPolicy";
-import { currentBrand } from "../config/brands";
+import { brandThemes, currentBrand } from "../config/brands";
+import {
+  brandConsentGate,
+  consentPurposes,
+  requiresBrandConsent,
+} from "../config/consent";
 import { loadPersonaCatalog } from "./personaCatalog";
 import { getSpeechModule } from "./speechAudio";
 import {
@@ -55,6 +60,25 @@ const MAX_CONTEXT_CHARS = 60000;
 
 function yesNo(value) {
   return value ? "yes" : "no";
+}
+
+// The consent state for the settings report. It is device-local and cannot be
+// changed by the Meta chat, so this only names the state and the recorded
+// answers; the gate and the settings switches are the place to change them.
+function consentLine(brand, interfaceSettings) {
+  const gate = brandConsentGate(brand);
+  if (!gate) return "not used by this brand";
+  const record = interfaceSettings?.consent_acceptance?.[brand?.id];
+  if (requiresBrandConsent(brand, record)) {
+    return "not accepted on this device";
+  }
+  const purposes = consentPurposes(gate)
+    .map(
+      (purpose) =>
+        `${purpose.id}=${record?.answers?.[purpose.id] ? "yes" : "no"}`,
+    )
+    .join(", ");
+  return `accepted (version ${record?.version ?? "unknown"}${purposes ? `; ${purposes}` : ""})`;
 }
 
 function memoryGroupsFor(userSettings = {}) {
@@ -166,6 +190,12 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
     `- Brand-fixed model: ${restrictions.model.fixed || "none"}`,
     `- Brand-blocked external communication: ${restrictions.external.length ? restrictions.external.join(", ") : "none"}`,
     `- Dark mode: ${yesNo(interfaceSettings.dark_mode)}`,
+    `- Extra brand themes: ${
+      brandThemes(activeBrand)
+        .map((theme) => theme.id)
+        .join(", ") || "none"
+    }; active: ${interfaceSettings.theme ?? "default"}`,
+    `- Brand consent gate: ${consentLine(activeBrand, interfaceSettings)}`,
     `- Show usage in sidebar: ${yesNo(interfaceSettings.show_usage_in_sidebar)}`,
     `- Chat sorting: ${interfaceSettings.conversation_sort ?? "created_desc"}`,
     `- Chat grouping: ${interfaceSettings.conversation_grouping ?? "topic"}`,

@@ -8,6 +8,7 @@ export default function CopyButton({
   text,
   title = "Copy message",
   cooldown_ms = 700,
+  appendText = "",
 }) {
   // State to manage copy status
   const [copied, setCopied] = useState(false);
@@ -17,12 +18,15 @@ export default function CopyButton({
     try {
       const textToCopy =
         text ?? stripThinking(message?.content?.[0]?.text ?? "");
-      await navigator.clipboard.writeText(textToCopy);
+      // A brand may require its AI watermark on copied assistant text. It is
+      // added to the clipboard only; the message itself stays unchanged.
+      const payload = appendText ? `${textToCopy}\n\n${appendText}` : textToCopy;
+      await navigator.clipboard.writeText(payload);
       setCopied(true);
     } catch (err) {
       console.error("Copy failed:", err);
     }
-  }, [message, text]);
+  }, [message, text, appendText]);
 
   // Reset "copied" status after cooldown
   useEffect(() => {

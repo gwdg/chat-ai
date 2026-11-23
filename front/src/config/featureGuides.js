@@ -38,6 +38,10 @@ import {
 } from "../utils/modules.js";
 import { isFeatureEnabled } from "./deployment.js";
 import { hasBrandInstitute } from "./brandPolicy.js";
+import { canInstallApp } from "../utils/installPrompt.js";
+import { isFeedbackReportEnabled } from "../apis/feedback.js";
+import { currentBrand } from "./brands.js";
+import { brandConsentGate } from "./consent.js";
 
 export const featureGuides = {
   workspace_overview: {
@@ -1306,9 +1310,40 @@ export const featureGuides = {
       },
     ],
   },
-  message_timestamps: {
-    titleKey: "feature_guide.message_timestamps.title",
+  brand_consent: {
+    titleKey: "feature_guide.brand_consent.title",
     prompt:
+      "Review or change the voluntary consents of this service. Open user settings, choose the Advanced tab, and use the consent switches; the terms themselves are linked there.",
+    keywords: [
+      "consent",
+      "consents",
+      "study",
+      "survey",
+      "privacy",
+      "terms of use",
+      "withdraw consent",
+    ],
+    steps: [
+      {
+        target: ['[data-guide="user-settings"]', ".user-profile-button", ".user-profile-block"],
+        textKey: "feature_guide.brand_consent.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="settings-tab-advanced"]',
+        prepare: openUserSettings,
+        textKey: "feature_guide.brand_consent.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="brand-consent-settings"]',
+        textKey: "feature_guide.brand_consent.step3",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
+  message_timestamps: {
+    titleKey: "feature_guide.message_timestamps.title",    prompt:
       "Show the date and time each message was sent. Open user settings, choose the Chat tab, and enable Show message timestamps in the Messages section.",
     keywords: [
       "message timestamps",
@@ -1581,9 +1616,47 @@ export const featureGuides = {
       },
     ],
   },
-  feedback: {
-    titleKey: "feature_guide.feedback.title",
+  language_picker: {
+    titleKey: "feature_guide.language_picker.title",
     prompt:
+      "Change the interface language in the footer. Choose English or German, or Automatic to follow the browser language; the choice is remembered on this device.",
+    keywords: ["language", "deutsch", "english", "sprache", "translation"],
+    steps: [
+      {
+        target: '[data-guide="language-picker"]',
+        textKey: "feature_guide.language_picker.step1",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
+  pwa_install: {
+    titleKey: "feature_guide.pwa_install.title",
+    prompt:
+      "Install this app so it opens in its own window without the browser's address bar. The install button in the footer appears when the browser offers the installation.",
+    keywords: ["install", "pwa", "app", "home screen", "offline"],
+    steps: [
+      {
+        target: '[data-guide="pwa-install"]',
+        textKey: "feature_guide.pwa_install.step1",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
+  bug_report: {
+    titleKey: "feature_guide.bug_report.title",
+    prompt:
+      "Report a problem with the app through the bug report button in the footer: pick a type, describe what happened and attach a screenshot if it helps.",
+    keywords: ["bug", "report", "problem", "feedback", "screenshot"],
+    steps: [
+      {
+        target: '[data-guide="bug-report"]',
+        textKey: "feature_guide.bug_report.step1",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
+  feedback: {
+    titleKey: "feature_guide.feedback.title",    prompt:
       "Rate an assistant message with the feedback buttons when the feedback module is enabled.",
     keywords: ["feedback", "rate answer", "thumbs up", "thumbs down"],
     steps: [
@@ -1937,10 +2010,16 @@ export const FEATURE_GUIDE_AVAILABILITY = {
   arcana_tools: () => isToolPanelAvailable() && isArcanasEnabled(),
   mcp_server: () => isFeatureEnabled("mcp_servers") && isToolPanelAvailable(),
   feedback: () => isFeedbackEnabled(),
+  // The install button renders only while the browser offers an install prompt;
+  // a tour whose target is missing would never start, so the guide follows it.
+  pwa_install: () => canInstallApp(),
+  bug_report: () => isFeedbackReportEnabled(),
   speech_output: () => isSpeechEnabled(),
   e2ee: () => isFeatureEnabled("e2ee"),
   advanced_mode: () => isAgentsEnabled() || isFeatureEnabled("mcp_servers"),
   sync_setup: () => isSyncEnabled(),
+  // The consent section exists only for a brand that declares a consent gate.
+  brand_consent: () => Boolean(brandConsentGate(currentBrand())),
   // The Institution screen renders only for a brand that describes itself or
   // narrows something.
   institution: () => hasBrandInstitute(),
@@ -2028,8 +2107,11 @@ export const FEATURE_CATEGORIES = {
     "document_conversion",
     "data_management",
     "dark_mode",
+    "brand_consent",
+    "language_picker",
+    "pwa_install",
   ],
-  other: ["feedback", "speech_output", "diagram_renderers"],
+  other: ["feedback", "bug_report", "speech_output", "diagram_renderers"],
 };
 
 export function getFeatureCategory(featureId) {

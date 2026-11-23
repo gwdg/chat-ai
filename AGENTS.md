@@ -283,10 +283,21 @@ inside `db/`. UI strings and i18n keys say topic.
 `VITE_PROPOSAL_GENERATION_MODEL`, `VITE_ANNOUNCEMENT`, `VITE_USE_OPENAI_SDK`,
 `VITE_E2EE_KEY_URL`, `VITE_OPENCODE_SERVER_URL`, `VITE_OPENCODE_SERVER_USERNAME`,
 `VITE_OPENCODE_SERVER_PASSWORD`, `VITE_AGENT_SERVICE_MODE`, `VITE_AGENT_SERVICE_MODEL`,
-`VITE_BRIDGE_PATH`, `VITE_BRIDGE_KEY`, `VITE_FAKE_AUTH_HEADERS`, `VITE_SAIA_FS_ENDPOINT`, `VITE_MODULE_*`. Consequences: **a new
+`VITE_BRIDGE_PATH`, `VITE_BRIDGE_KEY`, `VITE_FAKE_AUTH_HEADERS`, `VITE_SAIA_FS_ENDPOINT`,
+`VITE_FEEDBACK_ENDPOINT`, `VITE_MODULE_*`. Consequences: **a new
 config key requires editing `front/vite.config.js` too**, and a config change requires a dev-server
 restart. Read values via `import.meta.env.VITE_*`; they arrive as strings, hence the
 `=== "true"` comparisons.
+
+`feedbackPath` (mapped to `VITE_FEEDBACK_ENDPOINT`) is the one config key that *hides* a feature:
+`apis/feedback.js#feedbackEndpoint()` returns it, and `isFeedbackReportEnabled()` guards the
+footer's bug-report button and the `bug_report` feature guide's availability, so a deployment
+without a receiver shows no dead entry point. The browser posts GAIA's multipart shape (`payload`
+JSON plus up to three `screenshots`) to it; `back` `/feedback` forwards the body to
+`feedbackEndpoint` from `back.json` (with the caller's identity headers and an optional
+`feedbackToken`), because the receiver's address and token must not ship in the bundle. An unset
+`feedbackEndpoint` makes the route answer 501, which the dialog turns into a "copy the report"
+fallback.
 
 `userSettings` maps to `VITE_USER_SETTINGS` (JSON) and seeds the Redux `user_settings` store through
 `Redux/reducers/userSettingsReducer.jsx#getDefaultUserSettings()`, which reuses the validation of a
@@ -2127,7 +2138,9 @@ while editing:
   imprint, privacy, terms, docs), taking `label` (string or `{en, de}`), `url` (falling back
   to `brand.links[id]`) and `visible`; a new id appends a link. `footer.isoCertified: false`
   removes the ISO 27001 line, which is GWDG's certificate and must not appear under another
-  institution's brand.
+  institution's brand. A link URL that is a route of this app renders as a router `Link`; any
+  other URL renders as an `<a target="_blank">` — including a same-origin brand `help` asset
+  under `/assets/…pdf`, so `isInternalUrl` excludes paths with a file extension.
 - **Brands are resolved, not persisted.** Precedence is `?brand=` (test override, kept in
   `sessionStorage` for the visit) → `userData[brands.trustedField]` → the first matching
   claim rule → `brands.default`. Nothing brand-related goes into Redux or `localStorage`.
@@ -2150,6 +2163,19 @@ while editing:
   service-worker cached. `front/public/chat-ai.ico` remains only for the pre-boot favicon in
   `index.html`; the brand's `favicon` replaces it on mount. PDF exports use
   `brand.assets.export`, not a direct `assets/logos` import.
+- **Information pages belong to the brand.** `/about` and `/accessibility` (`Pages/BrandPage.jsx`)
+  render `brand.pages.<id>`, markdown files resolved from the brand folder like a disclaimer
+  (`about.{en,de}.md`). They are not global strings: copy that describes features a deployment
+  does not have is false. A brand without copy links its own `links.<id>` target instead.
+  `/sitemap` (`Pages/SitemapPage.jsx`) lists the live data and drops empty sections and modules
+  that are switched off.
+- **`extends` inherits only what the loader leaves `undefined`.** `mergeBrand` treats `null` as
+  an explicit erase, so the loader must not turn a key the brand file omits into `null`:
+  `resolveContent` returning `null` for an absent `disclaimer` / `chatDisclaimer` /
+  `systemPrompt` silently dropped the parent's copy in a sub-brand (`gaia-tutor` lost GAIA's
+  chat notice until it returned `undefined`). A defined file name that does not resolve may still
+  become `null`. Likewise, logos render through `BrandLogo`, whose default `alt` is the brand's
+  logo alt or name — do not pass a hard-coded `"Chat AI Logo"` at a call site.
 - **`minimal` is the regression deployment.** `CONFIG_LOCATION=../secrets/front-minimal.json
   npm run dev` (copy `front-minimal.json.sample` first) turns every module off and every feature
   off except `meta_chat`; `/workspace/*` and `/agent/*` must redirect to `/chat`, `/meta` must

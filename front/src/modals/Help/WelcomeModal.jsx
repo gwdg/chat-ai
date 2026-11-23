@@ -1,4 +1,4 @@
-import { Trans } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import BaseModal from "../BaseModal";
 
 import packageJson from "../../../package.json";
@@ -6,9 +6,16 @@ import { useDispatch } from "react-redux";
 import {
   closeTour
 } from "../../Redux/reducers/interfaceSettingsSlice";
+import { useBrand } from "../../config/BrandProvider";
+import { localizeBrandValue } from "../../config/brands";
 
 export default function WelcomeModal({ isOpen, onClose, onRunTour }) {
   const dispatch = useDispatch();
+  const { i18n } = useTranslation();
+  const { brand } = useBrand();
+  // A brand name may be localized (`{ en, de }`).
+  const appName =
+    localizeBrandValue(brand?.name, i18n.language) || packageJson.displayName;
 
   function handleSkipTour() {
     onClose();
@@ -20,7 +27,8 @@ export default function WelcomeModal({ isOpen, onClose, onRunTour }) {
         <div className="flex flex-col gap-4">
             <div className="pt-0 pb-2">
             <p className="text-base-content text-justify justify-center text-2xl">
-                <Trans i18nKey="tour.welcome_message" /> {packageJson.version}
+                <Trans i18nKey="tour.welcome_message" values={{ app: appName }} />{" "}
+                {packageJson.version}
             </p>
             </div>
         <p className="text-base-content text-sm">

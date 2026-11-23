@@ -31,13 +31,19 @@ const brandModules = loadGlob(() =>
   }),
 );
 
-const assetModules = loadGlob(() =>
-  import.meta.glob("./branding/*/*.{svg,png,ico,pdf}", {
+const assetModules = loadGlob(() => ({
+  ...import.meta.glob("./branding/*/*.{svg,png,ico,pdf,woff2}", {
     eager: true,
     import: "default",
     query: "?url&no-inline",
   }),
-);
+  // A brand may keep its webfonts in a subfolder of its own (`fonts/`).
+  ...import.meta.glob("./branding/*/*/*.woff2", {
+    eager: true,
+    import: "default",
+    query: "?url&no-inline",
+  }),
+}));
 
 // Disclaimers and system prompts are inlined, because they are rendered as
 // HTML/text and never fetched as a file.
@@ -68,21 +74,77 @@ const resolveAssets = (folder, assets) => {
   return resolved;
 };
 
-// A localized value may be one file name or one per language, so the shape is
-// preserved and each entry resolved like an asset.
+// A brand may ship its own webfont. `faces[]` names one file per style/weight
+// range; the files are resolved like every other asset, so Vite emits them as
+// hashed build assets and no font is ever fetched from a third party.
+const resolveFonts = (folder, fonts) => {
+  if (!isPlainObject(fonts)) return fonts;
+  return {
+    ...fonts,
+    faces: Array.isArray(fonts.faces)
+      ? fonts.faces.map((face) =>
+          isPlainObject(face)
+            ? { ...face, file: resolveFile(folder, face.file, assetModules) }
+            : face,
+        )
+      : fonts.faces,
+  };
+};
+
+// PWA icons live in the brand folder too, so an installed app shows the brand
+// mark. `src` is resolved the same way as any other brand image.
+const resolvePwa = (folder, pwa) => {
+  if (!isPlainObject(pwa)) return pwa;
+  return {
+    ...pwa,
+    icons: Array.isArray(pwa.icons)
+      ? pwa.icons.map((icon) =>
+          isPlainObject(icon)
+            ? { ...icon, src: resolveFile(folder, icon.src, assetModules) }
+            : icon,
+        )
+      : pwa.icons,
+  };
+};
+
+// A localized content value is either inline copy (`"<p>…</p>"`) or the name of
+// a file next to `brand.json` (`"disclaimer.en.html"`). A name with a markdown or
+// HTML extension is looked up and renders nothing when it does not resolve, so a
+// typo never prints a file name; anything else is inline text.
+const CONTENT_FILE = /\.(?:html?|md)$/i;
+
 const resolveContent = (folder, value) => {
-  // Text is inlined, so a file name that does not resolve must render nothing
-  // rather than the name itself; an absolute URL is kept as written.
-  const read = (file) =>
-    typeof file === "string" && /^(?:[a-z]+:|\/|data:|#)/i.test(file)
-      ? file
-      : (rawModules[`./branding/${folder}/${file}`] ?? null);
+  // A key the brand does not define must stay `undefined`, not `null`: the
+  // `extends` merge treats `null` as an explicit erase, so returning `null`
+  // here silently dropped an inherited disclaimer, chat notice or system
+  // prompt. A defined file name that does not resolve still yields `null`.
+  if (value === undefined) return undefined;
+  const read = (file) => {
+    if (typeof file !== "string") return null;
+    // An absolute URL is kept as written.
+    if (/^(?:[a-z]+:|\/|data:|#)/i.test(file)) return file;
+    if (!CONTENT_FILE.test(file)) return file;
+    return rawModules[`./branding/${folder}/${file}`] ?? null;
+  };
   if (isPlainObject(value)) {
     return Object.fromEntries(
       Object.entries(value).map(([language, file]) => [language, read(file)]),
     );
   }
   return read(value);
+};
+
+// Static information pages a brand may ship (`pages.about`,
+// `pages.accessibility`). Each entry is localized copy like a disclaimer, so a
+// brand that does not name one simply has no such page.
+const resolvePages = (folder, pages) => {
+  if (!isPlainObject(pages)) return pages;
+  return Object.fromEntries(
+    Object.entries(pages).map(([id, value]) => [
+      id,
+      resolveContent(folder, value),
+    ]),
+  );
 };
 
 const loadBrands = () => {
@@ -95,6 +157,14 @@ const loadBrands = () => {
       ...data,
       id,
       assets: resolveAssets(folder, data.assets),
+      // The AI marker is rendered as an image, so its file resolves like any
+      // other brand asset (it used to stay a bare file name and rendered broken).
+      aiMarker: isPlainObject(data.aiMarker)
+        ? {
+            ...data.aiMarker,
+            asset: resolveFile(folder, data.aiMarker.asset, assetModules),
+          }
+        : data.aiMarker,
       header: isPlainObject(data.header)
         ? {
             ...data.header,
@@ -104,6 +174,9 @@ const loadBrands = () => {
       disclaimer: resolveContent(folder, data.disclaimer),
       chatDisclaimer: resolveContent(folder, data.chatDisclaimer),
       systemPrompt: resolveContent(folder, data.systemPrompt),
+      pages: resolvePages(folder, data.pages),
+      fonts: resolveFonts(folder, data.fonts),
+      pwa: resolvePwa(folder, data.pwa),
       footer: isPlainObject(data.footer)
         ? {
             ...data.footer,
@@ -152,8 +225,30 @@ export function matchBrandId(candidate) {
 export function getBrandProfile(id) {
   const brandId = matchBrandId(id);
   if (!brandId) return null;
-  const override = brandProfiles[brandId] ?? {};
-  return mergeBrand(baseBrand, { ...override, id: brandId });
+  const resolved = resolveBrandProfile(brandId);
+  if (!resolved) return null;
+  return mergeBrand(baseBrand, { ...resolved, id: brandId });
+}
+
+/**
+ * `extends: "<brand>"` lets a sub-brand inherit another brand folder instead of
+ * duplicating it. The parent is resolved first and the child is merged over it;
+ * an unknown parent or a cycle falls back to the child alone (which still merges
+ * over Chat AI), so a broken brand file can never break boot.
+ */
+function resolveBrandProfile(brandId, seen = new Set()) {
+  const raw = brandProfiles[brandId];
+  if (!raw || seen.has(brandId)) return null;
+  seen.add(brandId);
+  const parentId = raw.extends;
+  const own = { ...raw };
+  delete own.extends;
+  const parent = parentId
+    ? resolveBrandProfile(matchBrandId(parentId) ?? parentId, seen)
+    : null;
+  return parent
+    ? mergeBrand(parent, { ...own, id: brandId })
+    : { ...own, id: brandId };
 }
 
 export const defaultBrandId = () =>
@@ -330,35 +425,124 @@ const declarations = (values, tokens = THEME_TOKENS) =>
     )
     .join(" ");
 
+// daisyUI shape tokens a brand may set. Values are validated so a brand file
+// cannot inject arbitrary CSS: radii accept 0 or rem/px/em, the border accepts a
+// px value, and depth is a unitless number.
+const SHAPE_TOKENS = {
+  radiusSelector: "--radius-selector",
+  radiusField: "--radius-field",
+  radiusBox: "--radius-box",
+  border: "--border",
+  depth: "--depth",
+};
+
+const RADIUS_VALUE = /^(?:0|(?:\d+\.?\d*|\.\d+)(?:rem|px|em))$/;
+const BORDER_VALUE = /^(?:\d+\.?\d*|\.\d+)px$/;
+const DEPTH_VALUE = /^(?:\d+\.?\d*|\.\d+)$/;
+
+const shapeValue = (key, value) => {
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+  if (key === "border") return BORDER_VALUE.test(raw) ? raw : null;
+  if (key === "depth") return DEPTH_VALUE.test(raw) ? raw : null;
+  return RADIUS_VALUE.test(raw) ? raw : null;
+};
+
+const shapeDeclarations = (values) =>
+  Object.entries(SHAPE_TOKENS)
+    .map(([key, cssVar]) => {
+      const value = shapeValue(key, values?.[key]);
+      return value ? `${cssVar}: ${value};` : "";
+    })
+    .filter(Boolean)
+    .join(" ");
+
+// `brand.themes[]` are fully custom palettes on top of the default light/dark
+// pair. The id becomes a CSS attribute selector, so it must stay a plain slug.
+const THEME_ID = /^[a-z0-9][a-z0-9_-]*$/i;
+
+/** The usable custom themes of a brand, in declaration order. */
+export const brandThemes = (brand) =>
+  (Array.isArray(brand?.themes) ? brand.themes : []).filter(
+    (theme) => isPlainObject(theme) && THEME_ID.test(String(theme.id ?? "")),
+  );
+
+// Brand webfonts: one `@font-face` per declared face plus the base family.
+// `--font-sans`/`--default-font-family` cover Tailwind's preflight and the
+// explicit `html, body` rule covers non-utility text.
+const fontCss = (fonts) => {
+  if (!isPlainObject(fonts) || !fonts.family) return "";
+  const family = String(fonts.family).replace(/"/g, "");
+  const fallback = fonts.fallback || "system-ui, -apple-system, sans-serif";
+  const faces = (Array.isArray(fonts.faces) ? fonts.faces : [])
+    .filter((face) => isPlainObject(face) && face.file)
+    .map(
+      (face) =>
+        `@font-face { font-family: "${family}"; src: url("${face.file}") format("woff2"); font-style: ${face.style || "normal"}; font-weight: ${face.weight || "normal"}; font-display: ${face.display || "swap"};${
+          face.unicodeRange ? ` unicode-range: ${face.unicodeRange};` : ""
+        } }`,
+    );
+  const stack = `"${family}", ${fallback}`;
+  return [
+    ...faces,
+    `:root { --font-sans: ${stack}; --font-display: ${stack}; --default-font-family: ${stack}; }`,
+    `html, body { font-family: ${stack}; }`,
+  ].join("\n");
+};
+
 /**
  * The dark values must target `body.dark`, because index.css re-declares `--chat`
  * and the base colours there; a root-only rule would be shadowed on <body>.
- * `<html>` carries `.dark` too (ThemeToggle and index.css both key off it), so
+ * `<html>` carries `.dark` too (App and index.css both key off it), so
  * `:root.dark` gets the same block: otherwise the light palette wins at the html
  * level and everything inherited from there — its `color` included — stays
  * light-mode (dark text on a dark page). The light block is scoped with
  * `:not(.dark)` for the same reason. Surface rules are split the same way, so a
  * brand that defines no dark surface values does not paint its light sidebar on
  * a dark page.
+ *
+ * A custom theme is emitted last, scoped to `[data-brand-theme="<id>"]` on both
+ * `<html>` and `<body>`. Same specificity as the light/dark blocks but later in
+ * the sheet, so it wins while the active theme is set.
  */
-export function brandCss(brand) {
+export function brandCss(brand, activeThemeId = null) {
   const light = declarations(brand?.theme?.light);
   const dark = declarations(brand?.theme?.dark);
   const sidebarLight = declarations(brand?.surfaces?.sidebar?.light, SURFACE_TOKENS);
   const sidebarDark = declarations(brand?.surfaces?.sidebar?.dark, SURFACE_TOKENS);
+  const font = fontCss(brand?.fonts);
+  const shape = shapeDeclarations(brand?.shape);
+  const custom = brandThemes(brand).find((theme) => theme.id === activeThemeId);
+  const customBlock = custom
+    ? `:root[data-brand-theme="${custom.id}"], body[data-brand-theme="${custom.id}"] { ${declarations(custom.colors)} ${shapeDeclarations(custom.shape ?? brand?.shape)} }`
+    : "";
   return [
+    font,
+    shape ? `:root { ${shape} }` : "",
     light ? `:root:not(.dark) { ${light} }` : "",
     dark ? `:root.dark, body.dark { ${dark} }` : "",
     sidebarLight ? `body:not(.dark) .brand-sidebar { ${sidebarLight} }` : "",
     sidebarDark ? `body.dark .brand-sidebar { ${sidebarDark} }` : "",
+    customBlock,
   ]
     .filter(Boolean)
     .join("\n");
 }
 
-export function applyBrandDocument(brand) {
+/** The brand theme selected by id, or null for the default light/dark pair. */
+export const activeBrandTheme = (brand, themeId) =>
+  brandThemes(brand).find((theme) => theme.id === themeId) ?? null;
+
+export function applyBrandDocument(brand, themeId = null) {
   if (typeof document === "undefined" || !brand) return;
   document.documentElement.dataset.brand = brand.id;
+
+  const theme = activeBrandTheme(brand, themeId);
+  for (const target of [document.documentElement, document.body]) {
+    if (!target) continue;
+    if (theme) target.dataset.brandTheme = theme.id;
+    else delete target.dataset.brandTheme;
+  }
 
   let style = document.getElementById("brand-theme");
   if (!style) {
@@ -366,14 +550,18 @@ export function applyBrandDocument(brand) {
     style.id = "brand-theme";
     document.head.appendChild(style);
   }
-  style.textContent = brandCss(brand);
+  style.textContent = brandCss(brand, theme?.id);
 
   const icon = document.querySelector('link[rel="icon"]');
   if (icon && brand.assets?.favicon) {
     icon.setAttribute("href", withBase(brand.assets.favicon));
   }
   const themeColor = document.querySelector('meta[name="theme-color"]');
-  if (themeColor && isColor(brand.theme?.light?.primary)) {
-    themeColor.setAttribute("content", brand.theme.light.primary);
+  const color =
+    theme?.colors?.primary ??
+    brand.pwa?.themeColor ??
+    brand.theme?.light?.primary;
+  if (themeColor && isColor(color)) {
+    themeColor.setAttribute("content", color);
   }
 }

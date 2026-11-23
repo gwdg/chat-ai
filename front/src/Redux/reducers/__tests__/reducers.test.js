@@ -44,17 +44,21 @@ import userSettingsReducer, {
   selectE2eeModels,
 } from "../userSettingsReducer";
 import interfaceSettingsReducer, {
+  acceptBrandConsent,
   agreeWebSearch,
   collapseTopics,
   expandTopics,
   importInterfaceSettings,
   markTutorialCompleted,
   markUseCaseCompleted,
+  setBrandTheme,
   setConversationGrouping,
   setWarning,
   suppressTutorial,
   toggleTheme,
   selectAgreeWebSearch,
+  selectBrandConsent,
+  selectBrandTheme,
   selectConversationGrouping,
   selectSuppressedTutorials,
 } from "../interfaceSettingsSlice";
@@ -484,6 +488,55 @@ describe("interface settings reducer", () => {
     expect(state.warn_fork).toBe(false);
   });
 
+  it("stores a brand theme and falls back to the default on a bad value", () => {
+    let state = init(interfaceSettingsReducer);
+    expect(selectBrandTheme({ interface_settings: state })).toBe("default");
+    state = interfaceSettingsReducer(state, setBrandTheme("business"));
+    expect(selectBrandTheme({ interface_settings: state })).toBe("business");
+    state = interfaceSettingsReducer(state, setBrandTheme("  green  "));
+    expect(state.theme).toBe("green");
+    state = interfaceSettingsReducer(state, setBrandTheme(""));
+    expect(state.theme).toBe("default");
+    state = interfaceSettingsReducer(state, setBrandTheme(42));
+    expect(state.theme).toBe("default");
+    // Old persisted state without the key still reads as the default pair.
+    expect(selectBrandTheme({ interface_settings: {} })).toBe("default");
+  });
+
+  it("records a consent acceptance per brand and sanitizes its payload", () => {
+    let state = init(interfaceSettingsReducer);
+    expect(selectBrandConsent("gaia")({ interface_settings: state })).toBeNull();
+
+    state = interfaceSettingsReducer(
+      state,
+      acceptBrandConsent({
+        brandId: "gaia",
+        version: "2026-02",
+        answers: { surveys: true, logging: false, junk: "yes" },
+        acceptedAt: "2026-02-01T10:00:00.000Z",
+      }),
+    );
+    const record = selectBrandConsent("gaia")({ interface_settings: state });
+    expect(record).toEqual({
+      version: "2026-02",
+      answers: { surveys: true, logging: false, junk: true },
+      acceptedAt: "2026-02-01T10:00:00.000Z",
+    });
+    // A second brand keeps its own record.
+    state = interfaceSettingsReducer(
+      state,
+      acceptBrandConsent({ brandId: "other", version: 3, answers: null }),
+    );
+    expect(state.consent_acceptance.other.version).toBe("3");
+    expect(state.consent_acceptance.other.answers).toEqual({});
+    expect(state.consent_acceptance.other.acceptedAt).toMatch(/^\d{4}-/);
+
+    // A payload without a brand id changes nothing.
+    const before = state;
+    state = interfaceSettingsReducer(state, acceptBrandConsent({ version: "1" }));
+    expect(state).toBe(before);
+  });
+
   it("collapses and expands topic groups in bulk without duplicates", () => {
     let state = init(interfaceSettingsReducer);
     state = interfaceSettingsReducer(state, collapseTopics(["t1", "t2"]));
@@ -505,6 +558,14 @@ describe("interface settings reducer", () => {
       agree_web_search: false,
       sync_onboarding_dismissed: true,
       count_hallucination: 3,
+      theme: "business",
+      consent_acceptance: {
+        gaia: {
+          version: "2026-02",
+          answers: { surveys: true },
+          acceptedAt: "2026-02-01T10:00:00.000Z",
+        },
+      },
     };
     const state = interfaceSettingsReducer(
       start,
@@ -522,6 +583,8 @@ describe("interface settings reducer", () => {
         agree_web_search: true,
         sync_onboarding_dismissed: false,
         count_hallucination: 0,
+        theme: "green",
+        consent_acceptance: {},
         not_a_setting: "value",
       }),
     );
@@ -538,6 +601,8 @@ describe("interface settings reducer", () => {
     expect(state.agree_web_search).toBe(false);
     expect(state.sync_onboarding_dismissed).toBe(true);
     expect(state.count_hallucination).toBe(3);
+    expect(state.theme).toBe("business");
+    expect(state.consent_acceptance.gaia.answers).toEqual({ surveys: true });
     expect(state).not.toHaveProperty("not_a_setting");
   });
 

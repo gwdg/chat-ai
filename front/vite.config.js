@@ -107,6 +107,13 @@ try {
     } else if (key == "userDataPath") {
       process.env["VITE_USERDATA_ENDPOINT"] = value;
       console.log("User data path:", value);
+    } else if (key == "feedbackPath") {
+      // Where the footer's bug report form posts. Empty hides the entry point;
+      // `back` serves `/feedback` and forwards the body to `feedbackEndpoint`
+      // from back.json, so a deployment does not put a third-party URL (or its
+      // token) in the bundle.
+      process.env["VITE_FEEDBACK_ENDPOINT"] = String(value ?? "");
+      console.log("Feedback path:", value || "none (bug report hidden)");
     } else if (key == "apiKey") {
       // Optional bearer token for endpoints without the OIDC proxy. Never log
       // the value: config output ends up in logs and terminals.

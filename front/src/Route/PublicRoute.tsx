@@ -12,6 +12,8 @@ import WorkspacePage from "../Pages/WorkspacePage";
 import WorkspaceFilesPage from "../Pages/WorkspaceFilesPage";
 import AgentPage from "../Pages/AgentPage";
 import ToolFormDemoPage from "../Pages/ToolFormDemoPage";
+import BrandPage from "../Pages/BrandPage";
+import SitemapPage from "../Pages/SitemapPage";
 import { isAgentsEnabled } from "../utils/modules";
 import { isFeatureEnabled } from "../config/deployment";
 
@@ -20,6 +22,12 @@ const PublicRoute = () => {
     <Routes>
       <Route path="/landing" element={<LandingPage />} />
       <Route path="/notfound" element={<NotFoundPage />} />
+      <Route path="/about" element={<BrandPage page="about" titleKey="about.title" />} />
+      <Route
+        path="/accessibility"
+        element={<BrandPage page="accessibility" titleKey="accessibility.title" />}
+      />
+      <Route path="/sitemap" element={<SitemapPage />} />
       {isFeatureEnabled("meta_chat") && (
         <Route path="/meta" element={<MetaChatPage />} />
       )}

@@ -1,0 +1,473 @@
+{
+  "id": "gaia",
+  "aliases": [
+    "GAIA",
+    "gaia.uni-goettingen.de",
+    "gaia-student"
+  ],
+  "name": "GAIA",
+  "shortName": "GAIA",
+  "homeUrl": "https://gaia.uni-goettingen.de/",
+  "logo": {
+    "alt": "GAIA – Georg-August-Universität Göttingen",
+    "headerVariant": "full"
+  },
+  "assets": {
+    "full": "logo.svg",
+    "fullDark": "logo-dark.svg",
+    "small": "mark.svg",
+    "smallDark": "mark-dark.svg",
+    "mark": "mark.svg",
+    "markDark": "mark-dark.svg",
+    "export": "export.png",
+    "favicon": "favicon.svg",
+    "aiLabel": "ai-label.svg"
+  },
+  "fonts": {
+    "family": "Atkinson Hyperlegible Next",
+    "fallback": "system-ui, -apple-system, 'Segoe UI', sans-serif",
+    "faces": [
+      {
+        "file": "fonts/atkinson-normal-latin.woff2",
+        "style": "normal",
+        "weight": "200 800",
+        "unicodeRange": "U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD"
+      },
+      {
+        "file": "fonts/atkinson-normal-latin-ext.woff2",
+        "style": "normal",
+        "weight": "200 800",
+        "unicodeRange": "U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF"
+      },
+      {
+        "file": "fonts/atkinson-italic-latin.woff2",
+        "style": "italic",
+        "weight": "200 800",
+        "unicodeRange": "U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD"
+      },
+      {
+        "file": "fonts/atkinson-italic-latin-ext.woff2",
+        "style": "italic",
+        "weight": "200 800",
+        "unicodeRange": "U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF"
+      }
+    ]
+  },
+  "shape": {
+    "radiusSelector": "0.25rem",
+    "radiusField": "1rem",
+    "radiusBox": "1rem",
+    "border": "1px",
+    "depth": "1"
+  },
+  "theme": {
+    "light": {
+      "base100": "#f9f5ec",
+      "base200": "#ede7dc",
+      "base300": "#dad4c7",
+      "baseContent": "#081123",
+      "primary": "#132d6c",
+      "primaryContent": "#f4f1ec",
+      "secondary": "#006e8d",
+      "secondaryContent": "#f4f1ec",
+      "accent": "#df9200",
+      "accentContent": "#150800",
+      "neutral": "#e5e1d7",
+      "neutralContent": "#111a2d",
+      "info": "#00649d",
+      "infoContent": "#f4f1ec",
+      "success": "#005820",
+      "successContent": "#f4f1ec",
+      "warning": "#b56300",
+      "warningContent": "#fdf9e8",
+      "error": "#b3001c",
+      "errorContent": "#f4f1ec",
+      "chat": "#f1e9d8"
+    },
+    "dark": {
+      "base100": "#202333",
+      "base200": "#181926",
+      "base300": "#0d0f18",
+      "baseContent": "#eeebe4",
+      "primary": "#ed9f00",
+      "primaryContent": "#150800",
+      "secondary": "#43a2c3",
+      "secondaryContent": "#00031c",
+      "accent": "#c578ff",
+      "accentContent": "#07050a",
+      "neutral": "#1b1d32",
+      "neutralContent": "#e7e4df",
+      "info": "#00a7d9",
+      "infoContent": "#010418",
+      "success": "#53be70",
+      "successContent": "#010802",
+      "warning": "#f9ad26",
+      "warningContent": "#0c0400",
+      "error": "#fb5663",
+      "errorContent": "#0c0404",
+      "chat": "#2b2f45"
+    }
+  },
+  "themes": [
+    {
+      "id": "business",
+      "label": {
+        "en": "Business",
+        "de": "Business"
+      },
+      "colorScheme": "dark",
+      "shape": {
+        "radiusSelector": "0.5rem",
+        "radiusField": "0.5rem",
+        "radiusBox": "0.5rem",
+        "depth": "0"
+      },
+      "colors": {
+        "base100": "#202020",
+        "base200": "#1c1c1c",
+        "base300": "#181818",
+        "baseContent": "#cdcdcd",
+        "primary": "#1c4e80",
+        "primaryContent": "#d0dae5",
+        "secondary": "#7c909a",
+        "secondaryContent": "#050708",
+        "accent": "#ea6947",
+        "accentContent": "#130402",
+        "neutral": "#23282e",
+        "neutralContent": "#cecfd0",
+        "info": "#0291d5",
+        "infoContent": "#000710",
+        "success": "#6bb187",
+        "successContent": "#040b07",
+        "warning": "#dbae5a",
+        "warningContent": "#110b03",
+        "error": "#ac3e31",
+        "errorContent": "#f2d8d4",
+        "chat": "#1c1c1c"
+      }
+    },
+    {
+      "id": "green",
+      "label": {
+        "en": "Green",
+        "de": "Grün"
+      },
+      "colorScheme": "light",
+      "shape": {
+        "radiusSelector": "0.25rem",
+        "radiusField": "0.5rem",
+        "radiusBox": "1rem",
+        "depth": "0"
+      },
+      "colors": {
+        "base100": "#fbfff2",
+        "base200": "#e8ede0",
+        "base300": "#d5d9cd",
+        "baseContent": "#151614",
+        "primary": "#378100",
+        "primaryContent": "#fcfdf1",
+        "secondary": "#343300",
+        "secondaryContent": "#fbfee0",
+        "accent": "#edd000",
+        "accentContent": "#11100c",
+        "neutral": "#d6d8c0",
+        "neutralContent": "#090903",
+        "info": "#4892a8",
+        "infoContent": "#f2fafd",
+        "success": "#46785c",
+        "successContent": "#edf4ef",
+        "warning": "#bd6416",
+        "warningContent": "#fdfcf6",
+        "error": "#b6525c",
+        "errorContent": "#fef6f5",
+        "chat": "#e8ede0"
+      }
+    }
+  ],
+  "surfaces": {
+    "sidebar": {
+      "light": {
+        "background": "#ede7dc",
+        "hover": "#e2dbcd",
+        "border": "#d3cbbb",
+        "content": "#081123",
+        "accent": "#132d6c"
+      },
+      "dark": {
+        "background": "#181926",
+        "hover": "#202333",
+        "border": "#2b2f45",
+        "content": "#eeebe4",
+        "accent": "#ed9f00"
+      }
+    }
+  },
+  "services": false,
+  "pwa": {
+    "name": {
+      "en": "GAIA – Study assistant",
+      "de": "GAIA – Lernassistent"
+    },
+    "shortName": "GAIA",
+    "description": {
+      "en": "GAIA, the AI study assistant of the University of Göttingen.",
+      "de": "GAIA, der KI-Lernassistent der Universität Göttingen."
+    },
+    "themeColor": "#132d6c",
+    "backgroundColor": "#f9f5ec",
+    "appleTouchIcon": "apple-touch-icon.png",
+    "icons": [
+      {
+        "src": "icon-192.png",
+        "sizes": "192x192",
+        "type": "image/png"
+      },
+      {
+        "src": "icon-512.png",
+        "sizes": "512x512",
+        "type": "image/png"
+      },
+      {
+        "src": "icon-512-maskable.png",
+        "sizes": "512x512",
+        "type": "image/png",
+        "purpose": "maskable"
+      }
+    ]
+  },
+  "chatDisclaimer": {
+    "en": "<p><strong>GAIA is an AI system.</strong> Answers can be wrong or incomplete. Check important information and never enter sensitive personal data.</p>",
+    "de": "<p><strong>GAIA ist ein KI-System.</strong> Antworten können falsch oder unvollständig sein. Prüfe wichtige Informationen und gib niemals sensible personenbezogene Daten ein.</p>"
+  },
+  "chatDisclaimerDismissible": true,
+  "aiMarker": {
+    "asset": "ai-label.svg",
+    "monochrome": true,
+    "label": {
+      "en": "AI-generated",
+      "de": "KI-generiert"
+    },
+    "watermark": {
+      "en": "Generated with GAIA, an AI system. Check important information.",
+      "de": "Mit GAIA erzeugt, einem KI-System. Wichtige Informationen prüfen."
+    }
+  },
+  "consentGate": {
+    "version": "2026-02",
+    "title": {
+      "en": "Welcome to GAIA",
+      "de": "Willkommen bei GAIA"
+    },
+    "intro": {
+      "en": "Before you use GAIA, please read the terms of use and decide on the voluntary consents. You can decline every consent and still use GAIA.",
+      "de": "Bevor du GAIA nutzt, lies bitte die Nutzungsbedingungen und entscheide über die freiwilligen Einwilligungen. Du kannst jede Einwilligung ablehnen und GAIA trotzdem nutzen."
+    },
+    "termsTitle": {
+      "en": "Terms of use",
+      "de": "Nutzungsbedingungen"
+    },
+    "termsCheckbox": {
+      "en": "I have read and accept the terms of use.",
+      "de": "Ich habe die Nutzungsbedingungen gelesen und akzeptiere sie."
+    },
+    "termsSummary": {
+      "en": "<h3>GAIA is for you. GAIA helps you learn. GAIA does not grade.</h3><ul><li><strong>Never enter sensitive data.</strong> In particular nothing about health, ethnic origin, religion, political opinions or sexual orientation — neither about yourself nor about others.</li><li><strong>Do not rely on GAIA.</strong> AI systems make mistakes. Check important answers.</li><li><strong>Only permitted data.</strong> Enter data only if you have the right to do so. Content stored in GAIA is generally protected by copyright.</li><li><strong>Security.</strong> Do not circumvent protection mechanisms or extract personal data.</li></ul><p>GAIA will never be used for examinations or grading. Teaching staff see only anonymous summaries. All AI models run at GWDG in Göttingen; your data is not used to train models.</p>",
+      "de": "<h3>GAIA ist für dich. GAIA hilft beim Lernen. GAIA benotet nicht.</h3><ul><li><strong>Gib niemals sensible Daten ein.</strong> Insbesondere nichts zu Gesundheit, ethnischer Herkunft, Religion, politischer Meinung oder sexueller Orientierung — weder über dich noch über andere.</li><li><strong>Verlass dich nicht auf GAIA.</strong> KI-Systeme machen Fehler. Prüfe wichtige Antworten.</li><li><strong>Nur erlaubte Daten.</strong> Gib Daten nur ein, wenn du dazu berechtigt bist. Inhalte in GAIA sind in der Regel urheberrechtlich geschützt.</li><li><strong>Sicherheit.</strong> Umgehe keine Schutzmechanismen und extrahiere keine personenbezogenen Daten.</li></ul><p>GAIA wird niemals für Prüfungen oder Benotung verwendet. Lehrende sehen nur anonymisierte Zusammenfassungen. Alle KI-Modelle laufen bei der GWDG in Göttingen; deine Daten werden nicht zum Training von Modellen verwendet.</p>"
+    },
+    "consentsTitle": {
+      "en": "Your consents",
+      "de": "Deine Einwilligungen"
+    },
+    "consentsIntro": {
+      "en": "Participation in the scientific study is voluntary and has no effect on how GAIA works for you. You can change these choices later in Chat preferences → Advanced.",
+      "de": "Die Teilnahme an der wissenschaftlichen Studie ist freiwillig und hat keine Auswirkung darauf, wie GAIA für dich funktioniert. Du kannst diese Auswahl später unter Chat-Einstellungen → Erweitert ändern."
+    },
+    "purposes": [
+      {
+        "id": "surveys",
+        "label": {
+          "en": "Surveys about GAIA",
+          "de": "Umfragen zu GAIA"
+        },
+        "description": {
+          "en": "Your pseudonymised answers from the pre-, mid-, post- and follow-up questionnaires are used for the scientific effectiveness study.",
+          "de": "Deine pseudonymisierten Antworten aus Prä-, Mid-, Post- und Follow-Up-Fragebögen werden für die wissenschaftliche Wirksamkeitsprüfung verwendet."
+        }
+      },
+      {
+        "id": "advanced_logging",
+        "label": {
+          "en": "Contents of chats and documents",
+          "de": "Inhalte von Chats und Dokumenten"
+        },
+        "description": {
+          "en": "The content of your chats and documents is analysed in pseudonymised form for the study.",
+          "de": "Die Inhalte deiner Chats und Dokumente werden pseudonymisiert für die Studie ausgewertet."
+        }
+      },
+      {
+        "id": "survey_linking",
+        "label": {
+          "en": "Link surveys with usage data",
+          "de": "Umfragen mit Nutzungsdaten verknüpfen"
+        },
+        "description": {
+          "en": "Your survey answers are linked with your GAIA usage data (and chat contents if you consented).",
+          "de": "Deine Umfrageantworten werden mit deinen Nutzungsdaten aus GAIA verknüpft (und mit Chat-Inhalten, falls du eingewilligt hast)."
+        }
+      },
+      {
+        "id": "data_linking",
+        "label": {
+          "en": "Examination and study data (FlexNow)",
+          "de": "Prüfungs- und Studiendaten (FlexNow)"
+        },
+        "description": {
+          "en": "Your examination and study data from FlexNow is retrieved and linked with your GAIA data.",
+          "de": "Deine Prüfungs- und Studiendaten aus FlexNow werden abgerufen und mit deinen Daten aus GAIA verknüpft."
+        }
+      }
+    ],
+    "laterNote": {
+      "en": "You can withdraw any consent at any time. The withdrawal takes effect for the future.",
+      "de": "Du kannst jede Einwilligung jederzeit widerrufen. Der Widerruf wirkt für die Zukunft."
+    },
+    "links": [
+      {
+        "id": "terms",
+        "label": {
+          "en": "Terms of use",
+          "de": "Nutzungsbedingungen"
+        },
+        "url": "https://gaia.uni-goettingen.de/legal/nutzungsbedingungen"
+      },
+      {
+        "id": "privacy",
+        "label": {
+          "en": "Data protection",
+          "de": "Datenschutz"
+        },
+        "url": "https://gaia.uni-goettingen.de/legal/data-protection"
+      },
+      {
+        "id": "consent",
+        "label": {
+          "en": "Declarations of consent",
+          "de": "Einwilligungserklärungen"
+        },
+        "url": "https://gaia.uni-goettingen.de/legal/consent"
+      },
+      {
+        "id": "accessibility",
+        "label": {
+          "en": "Accessibility",
+          "de": "Barrierefreiheit"
+        },
+        "url": "https://gaia.uni-goettingen.de/accessibility"
+      }
+    ]
+  },
+  "links": {
+    "imprint": "https://www.uni-goettingen.de/en/105.html",
+    "privacy": "https://gaia.uni-goettingen.de/legal/data-protection",
+    "terms": "https://gaia.uni-goettingen.de/legal/nutzungsbedingungen",
+    "docs": "https://gaia.pages.gwdg.de/gaia/",
+    "accessibility": "https://gaia.uni-goettingen.de/accessibility"
+  },
+  "footer": {
+    "isoCertified": false,
+    "links": {
+      "about": {
+        "url": "/about"
+      },
+      "sitemap": {
+        "url": "/sitemap"
+      },
+      "accessibility": {
+        "label": {
+          "en": "Accessibility",
+          "de": "Barrierefreiheit"
+        },
+        "url": "/accessibility"
+      },
+      "imprint": {},
+      "privacy": {
+        "label": {
+          "en": "Data protection",
+          "de": "Datenschutz"
+        }
+      },
+      "terms": {
+        "label": {
+          "en": "Terms of use",
+          "de": "Nutzungsbedingungen"
+        }
+      },
+      "docs": {}
+    }
+  },
+  "institute": {
+    "name": {
+      "en": "GAIA – Georg-August-Universität Göttingen",
+      "de": "GAIA – Georg-August-Universität Göttingen"
+    },
+    "unit": {
+      "en": "GWDG – Gesellschaft für wissenschaftliche Datenverarbeitung mbH Göttingen",
+      "de": "GWDG – Gesellschaft für wissenschaftliche Datenverarbeitung mbH Göttingen"
+    },
+    "description": {
+      "en": "GAIA is the AI study assistant for students of the University of Göttingen. GWDG operates the service and its models on the university's behalf.",
+      "de": "GAIA ist der KI-Lernassistent für Studierende der Universität Göttingen. Die GWDG betreibt den Dienst und seine Modelle im Auftrag der Universität."
+    },
+    "contact": "https://gaia.pages.gwdg.de/gaia/",
+    "links": [
+      {
+        "label": {
+          "en": "GAIA documentation",
+          "de": "GAIA-Dokumentation"
+        },
+        "url": "https://gaia.pages.gwdg.de/gaia/"
+      },
+      {
+        "label": {
+          "en": "Data protection",
+          "de": "Datenschutz"
+        },
+        "url": "https://gaia.uni-goettingen.de/legal/data-protection"
+      }
+    ]
+  },
+  "restrictions": {
+    "notice": {
+      "en": "Students have no access to agents, workspaces or MCP servers. Only the models operated by GWDG are offered.",
+      "de": "Studierende haben keinen Zugriff auf Agenten, Workspaces oder MCP-Server. Es werden nur die von der GWDG betriebenen Modelle angeboten."
+    },
+    "modules": {
+      "agent": false,
+      "agents": false,
+      "arcanas": false
+    },
+    "features": {
+      "workspaces": false,
+      "mcp_servers": false,
+      "import_git": false,
+      "e2ee": false
+    },
+    "external": {
+      "web_search": false,
+      "external_models": true,
+      "mcp": false,
+      "external_references": false
+    }
+  },
+  "pages": {
+    "about": {
+      "en": "about.en.md",
+      "de": "about.de.md"
+    },
+    "accessibility": {
+      "en": "accessibility.en.md",
+      "de": "accessibility.de.md"
+    }
+  }
+}

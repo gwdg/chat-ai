@@ -59,7 +59,6 @@ export default function SidebarRail({
             <BrandLogo
               variant="mark"
               className="absolute inset-0 object-contain transition-opacity duration-200 group-hover:opacity-0"
-              alt="Chat AI Logo"
             />
 
             {/* Chevron Button */}

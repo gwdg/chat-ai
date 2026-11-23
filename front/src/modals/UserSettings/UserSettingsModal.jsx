@@ -29,6 +29,7 @@ import {
 import DataSettings from "./DataSettings";
 import UsageSettings from "./UsageSettings";
 import EncryptionSettings from "./EncryptionSettings";
+import BrandConsentSettings from "./BrandConsentSettings";
 import { isChoicesEnabled, isToolsEnabled } from "../../utils/modules";
 import { isFeatureEnabled } from "../../config/deployment";
 
@@ -173,6 +174,7 @@ export default function UserSettingsModal({
           <div className="border-t border-base-300 pt-5" data-guide="rendering-preference">
             <RenderingPreferences />
           </div>
+          <BrandConsentSettings />
         </div>
       );
     }
