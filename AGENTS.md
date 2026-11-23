@@ -1377,6 +1377,14 @@ without tool support (`apis/agentEndpoints.ts#modelSupportsTools`) falls back to
 with no tools, and the prompt shows a warning above the input. `runAgent` also refuses to attach any
 tool to such a model, including workspace and connected-agent tools.
 
+pi-ai's `openai-completions` client requires a stream to end with a chunk that carries
+`finish_reason` (`compat.supportsFinishReason` defaults to `true`); otherwise the turn fails with
+`Stream ended without finish_reason`. Every OpenAI-compatible backend in front of the app must
+therefore close the choice stream with that chunk — the local E2EE mock lacked it, and the plain
+chat path never noticed because it does not read `finish_reason`. Do not set
+`supportsFinishReason: false` in `toModel()` to paper over a backend: it also turns a truncated
+stream (a dropped connection before the final chunk) into a successful answer.
+
 "Manage data" is the per-chat view of the same files. With exactly one attached workspace it opens
 that workspace page directly (the workspace owns the file system, so the popover does not repeat
 it in a second view); with several it opens `modals/Chat/ManageDataModal.jsx`, which asks which
@@ -1972,9 +1980,18 @@ before any network call. `openRequest` stays strict like the Python reference: a
 the cleartext `stream`/`stream_options` routing hints, the only allowed top-level fields are `model`
 and `e2ee`. On the response side a keyed request accepts a sealed JSON body or a sealed SSE stream;
 a 2xx JSON body without `e2ee` is refused unless it is an error object, non-2xx statuses pass
-through, SSE may carry cleartext `usage`/`error` chunks but never cleartext `choices`, and the
+through, SSE may carry cleartext `usage`/`error` chunks, a provider error event that only has
+`type: "error"`, or a cleartext `/v1/responses` terminal event — which `fetch.js` reduces to its
+identity plus `usage` (`output: []`) before forwarding — but never cleartext `choices`, and the
 stream must end with the authenticated final marker. Retries are safe because the caller keeps the
 cleartext body and the wrapper re-seals (fresh ephemeral key and random password) on every attempt.
+
+The node also protects `/v1/responses` (and seals its terminal event, emitting only a chat-shaped
+billing chunk before the final marker), but the app calls `/chat/completions` only, so the wrapper
+does not seal a `/responses` request; `fetch.js` matches chat completions alone. The two Responses
+helpers in `protocol.js` (`responsesChatUsageEvent` and `responsesUsageEvent`, ported from
+`responses_chat_usage_event` and `responses_usage_event`) keep the port complete; the second one
+reduces a cleartext terminal event on the chat path.
 
 `src/e2ee/protocol.js` is a direct port of `saia/saia-e2ee/e2ee_connector/saia_e2ee/protocol.py`
 (protocol v3). `canonicalPath()` maps every `*/chat/completions` to `/v1/chat/completions`, so the

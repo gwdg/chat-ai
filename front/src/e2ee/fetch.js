@@ -8,6 +8,7 @@ import {
   ResponseDecryptor,
   openJsonResponse,
   randomPassword,
+  responsesUsageEvent,
   sealRequest,
   verifyFinal,
 } from "./protocol";
@@ -122,7 +123,21 @@ async function* decryptEvents(body, responseKey) {
     if (!parsed.e2ee) {
       // Billing usage and provider errors are cleartext on purpose. A cleartext
       // choices chunk could inject content, so it is refused instead.
-      if (parsed.usage || parsed.error) {
+      //
+      // A `/v1/responses` terminal event from another hop repeats the whole
+      // answer in `response.output`; reduce it to identity plus usage before it
+      // can be forwarded. A terminal without usage falls through to the refusal.
+      const usageEvent = responsesUsageEvent(parsed);
+      if (usageEvent) {
+        yield encodeEvent({
+          event: event.event,
+          id: event.id,
+          data: JSON.stringify(usageEvent),
+        });
+        continue;
+      }
+      // A Responses error event (`type: "error"`) carries no `error` key.
+      if (parsed.usage || parsed.error || parsed.type === "error") {
         yield encodeEvent(event);
         continue;
       }
