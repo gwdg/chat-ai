@@ -170,6 +170,7 @@ provide the plain Chat AI fallback (192/512 PNG generated from the ICO).
 - [x] Tests (brands, reducer, manifest, gate, naming)
 - [x] Verify: targeted Vitest, `npm run build`, browser checks in light/dark/extra themes and with the gate
 - [x] Update this document with verification results
+- [x] Audit parity against the original GAIA app and record the gaps (§7)
 
 ## 6. Verification results
 
@@ -210,3 +211,106 @@ Browser (headless Chrome via `puppeteer-core`, screenshots in
 External models are temporarily allowed in both GAIA brands so the local test
 stack's bridge models are selectable (see §2). With that setting, the yellow
 "Your messages may be processed outside of GWDG" warning appears as designed.
+
+## 7. Parity audit: what the original GAIA app has that this deployment does not
+
+Checked 2026-11-23 on `feature-gaia` against `gaia/` (the original SvelteKit app
++ FastAPI backend in this checkout): `gaia/frontend/src/routes`,
+`gaia/frontend/src/lib`, `gaia/backend/src/api`, `gaia/db_template/pb_migrations`
+and `gaia/logdata`. Everything below was read in that code, not taken from the
+GAIA documentation.
+
+The two systems solve different problems. GAIA is a **course-scoped, mode-aware
+teaching platform** whose FastAPI backend owns the conversation history, the
+system prompt, RAG, quiz and tutoring state. This deployment is a **standalone
+generic chat client** whose conversation state lives in the browser (§4.2 of
+`AGENTS.md`). So a large part of the gap is not "missing UI" but "missing
+service". The gap list is therefore split by what it takes to close it.
+
+### 7.1 Already covered
+
+Chat UX (streaming, abort, retry, edit, fork, undo), one
+topic per conversation set, markdown with KaTeX, Mermaid, Typst, LaTeX and TikZ,
+attachments with server or in-browser document conversion, AI marker and copy
+watermark, brand consent gate, dismissible brand notice, brand themes, PWA
+manifest and service worker, per-message thumbs up/down feedback, i18n (en/de),
+Meta chat, and the whole agent/workspace/MCP/Arcana/memory/persona/tutorial/
+E2EE/sync/backup/speech stack that GAIA does not have at all (§7.5).
+
+### 7.2 Gaps that need no GAIA backend
+
+These are frontend work inside this repository. Nothing here implies a student
+feature that the deployment cannot serve.
+
+| Feature | Original GAIA | What is missing here | Size |
+| --- | --- | --- | --- |
+| **PWA install prompt** | `lib/components/PWAInstall.svelte`: captures `beforeinstallprompt`, hides when `display-mode: standalone` or iOS `navigator.standalone`, shows an install button, handles `appinstalled` | We ship the manifest and `sw.js` but no UI. A user who does not know the browser menu can install it has no entry point | S |
+| **Language picker** | `lib/components/LanguagePicker.svelte`, mounted in the navbar, home, login and consent pages | `i18n.jsx` auto-detects the browser language and exposes no switcher; a user cannot change it after first load. Needs `i18n.changeLanguage` + a persisted choice and a control (header or Profile → User) | S |
+| **About page** | `routes/(app)/about/+page.svelte` + `about.{en,de}.md`, rendered with `marked` and sanitised by DOMPurify, with an `embedded` prop | No `/about` route and no About entry point. The footer currently links documentation only | S |
+| **Sitemap page** | `routes/(app)/sitemap/+page.svelte`: general links, legal links, and the accessible courses with their modules | No page. A reduced version would list chat, topics, workspaces, agents and settings links; there are no courses to list | S |
+| **Accessibility statement** | `routes/(app)/accessibility/+page.svelte`: a structured statement with an easy-language variant, contacts, mediation office and a TOC | Not in the repo. The GAIA brand already links `https://gaia.uni-goettingen.de/accessibility`, so this is only needed for a deployment without its own statement page | S (content, not code) |
+| **Bug report dialog** | `lib/components/BugReportDialog.svelte` + `lib/services/feedback.ts`: type (bug / feedback / accessibility / other), description, up to 3 screenshots ≤ 5 MB, route + user-agent + app-version context, multipart `POST /api/v1/feedback`; the backend stores it in PocketBase and notifies a Matrix room | We only have per-message thumbs, which never leave the conversation. The dialog is frontend work, but the submission needs a sink (an endpoint like GAIA's, a Matrix webhook, or a `mailto:`/issue link) | M |
+
+Two more that only make sense with a producer:
+
+| Feature | Original GAIA | Why it is not just UI |
+| --- | --- | --- |
+| **Citation rendering** | `lib/utils/sources.ts` parses `[^1]` / `[^2, ^3]` markers, `MarkdownContent.svelte` renders the footnote list with page numbers, `api/rag.py#get_cited_image` serves cited page images | The renderer is small, but without a RAG payload (see §7.3) there is nothing to render |
+| **Server-owned conversation history** | `conversations` / `messages` / `chat_context` in PocketBase, scoped by mode, so a course chat opens on any device and the backend can read it | We store in Dexie and offer opt-in E2EE sync instead (§4.32). Replacing that with a server-side store is an architecture change, not a feature |
+
+`Tiptap` (`lib/components/Tiptap/`) is **not** a chat-composer gap: GAIA's chat
+input is a plain `<textarea>` (`lib/components/chat/ChatInput.svelte`), the same
+as our `PromptTextArea`. Tiptap is the authoring editor for quiz questions and
+worked examples, so it belongs to §7.3.
+
+### 7.3 Gaps that need a GAIA-style backend
+
+Everything in this table depends on PocketBase collections, FastAPI routes,
+`saia-rag-cli` and the `logdata` pipeline. Implementing them here would mean
+building the GAIA backend, not extending Chat AI.
+
+| Area | What GAIA has |
+| --- | --- |
+| **Identity and tenancy** | PocketBase auth with OIDC (AcademicCloud) and GitLab providers, `/join`, `/account` (title, studyProgram, nickname, aboutMe, instructions, language), roles `student` / `lecturer` / `admin`, `course_access` and `course_owners` collections, `/home` with one menu per module (Learn / Practice / Worked examples) listing the courses where that module is enabled |
+| **Stud.IP / LTI 1.1** | `/course-admin/access`, LTI launch and role mapping |
+| **Course modules** | `courses.modules` (lectures / exercises / tutoring), `ModeSwitcher`, per-module routes `[course]/chat`, `[course]/quiz`, `[course]/tutoring` |
+| **Quiz mode** | Question bank (`quiz_question`), topic and skill links, difficulty and cooldown, draw / next / dismiss, attempts and evaluation, hints and misconceptions, mastery aggregate, checkpoints, Excel import (`exceljs`, `lib/services/quizImport.ts`), admin CRUD and import preview |
+| **Tutoring mode** | `tutoring_exercises`, `tutoring_sessions`, outline, steps, history, resume / restart, read-only archived sessions, print and download; worked examples with `lib/components/chat/interactive/` (MultipleChoice, TextInput, Step, Confirmation, Infobox) |
+| **Skills and topics** | `skills`, `skill_prerequisites`, `topics`, prerequisite and dependent graphs, per-skill questions, AI-assisted skill import (`skill-ai.ts`, `skillImport.ts`) |
+| **RAG / course material** | `rag_documents`, `rag_document_versions`, `rag_ingestion_jobs`, `rag_document_images`; upload, ingestion jobs, versions, retry schedule, embeddings and vector store, the `search_material` tool, citations with page numbers and cited images |
+| **Learner analytics** | BKT knowledge tracing (`backend/src/knowledge_tracing/bkt_engine.py`, per-skill mastery), `question_attempts`, `knowledge_tracing` collection, course aggregate endpoint, the `logdata` service (FastAPI + PostgreSQL/TimescaleDB, `events.md` catalog: usage, learning, learner_model, course) |
+| **Server-enforced consents** | `users.consents` in PocketBase (`terms`, `usage_analysis`, `surveys`, `survey_linking`, `advanced_logging`, `data_linking`) with a `consent_events` audit collection, a `policy_version` stamped by a PocketBase hook, email consent (`email_consents`) and linking codes that join survey data to usage data — enforced on the server, so they follow the user across devices |
+| **Course administration** | `/course-admin/{course-data,documents,quiz,skills,worked-examples,access}` and the admin-only system-prompt editor (`manage/system-prompts/{system,chat,quiz,tutoring}`) |
+| **Feedback delivery** | `/api/v1/feedback` → PocketBase `feedback` collection + `clients/matrix_client.py` room notification |
+
+### 7.4 Out of scope by decision
+
+- **Embedding Chat AI inside GAIA** (`@chat-ai/core`, `src/embedded/ChatPanel`,
+  `src/adapters/gaia.ts`, the `ChatAiIsland` in `gaia/frontend/src/lib/components/chat-ai/`).
+  That is the `chat-ai-modularization` branch vendored as `gaia/chat-ai` at
+  v1.0.2; this checkout is v2.0.1 and has no `front/src/core`, `embedded` or
+  `adapters`. It is a different project (one chat engine, two hosts), not a
+  feature of this deployment.
+- **Layout parity with the Svelte UI** (§1, item J).
+- **Internal `/legal/*` routes**: the GAIA brand links the university pages
+  instead (§1).
+
+### 7.5 What this deployment has that GAIA does not
+
+Agents (in-browser Pi runtime, direct OpenCode servers and the SAIA agent
+service with the workspace bridge), workspaces with live providers (device,
+chats, Arcanas, saia-fs, agent filesystem, MCP), MCP servers, Arcana Tools,
+memories and memory groups, personas, tutorials and use cases, E2EE-sealed
+model requests, encrypted cross-device sync and encrypted backup, speech input
+and output, Typst / LaTeX / TikZ / Mermaid rendering, document conversion,
+image generation and editing, the Meta chat over local data, topics, the pinned
+section, the brand system (consent gate, themes, notice, AI marker, PWA
+manifest) and 75 feature guides.
+
+### 7.6 Recommendation
+
+Close the §7.2 items, in this order, because they are small and independent:
+language picker, PWA install prompt, About page, reduced sitemap, and the bug
+report dialog once a sink is chosen. Treat everything in §7.3 as the GAIA
+backend roadmap, not as Chat AI work. Citations and server-side history wait
+for the RAG service and a decision about where conversation history lives.
