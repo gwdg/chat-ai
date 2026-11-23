@@ -4403,6 +4403,25 @@ x-saia-bridge-depth: 2
           brand.
         </li>
         <li>
+          <b>Information pages are brand content, not app copy.</b> <code>/about</code> and
+          <code>/accessibility</code> render <code>brand.pages.&lt;id&gt;</code>, markdown files inside the
+          brand folder, through the same safe renderer as a chat message. Shipping one institution's text
+          as a global string would describe features another deployment does not have; a brand without
+          copy links its own <code>links.&lt;id&gt;</code> target instead. <code>/sitemap</code> is the
+          opposite direction - it is generated from the live chats, topics, workspaces and agents, so an
+          empty section or a module this deployment switched off simply is not listed.
+        </li>
+        <li>
+          <b>Outbound features are deployment config, never a form without a sink.</b> The bug report
+          dialog exists only while <code>feedbackPath</code> is set (<code>VITE_FEEDBACK_ENDPOINT</code>).
+          The browser posts the multipart report to <code>back</code>'s <code>/feedback</code>, which
+          forwards it to <code>feedbackEndpoint</code> from <code>back.json</code> with the caller's
+          identity and an optional token, so the receiver's address and secret never ship in the bundle.
+          The same rule covers the install button: it appears only while the browser's one-shot
+          <code>beforeinstallprompt</code> event exists, so an installed app or an unsupporting browser
+          shows no dead control.
+        </li>
+        <li>
           <b>A brand may narrow, never widen.</b> <code>config/brandPolicy.js</code> is the only path from
           a brand into behaviour. It can switch modules and features off, fix or allowlist the models, and
           forbid the four external capabilities - and that is all, because only a value that explicitly
@@ -4503,6 +4522,18 @@ x-saia-bridge-depth: 2
             <td><span class="mono">config/branding/&lt;folder&gt;/</span></td>
           </tr>
           <tr>
+            <td>Information pages</td>
+            <td>Shared shell for brand-owned markdown (<code>brand.pages</code>) and the data-driven
+                sitemap.</td>
+            <td><span class="mono">Pages/BrandPage.jsx · Pages/SitemapPage.jsx · components/Others/InfoLayout.jsx</span></td>
+          </tr>
+          <tr>
+            <td>Feedback relay</td>
+            <td>Multipart bug report, hidden until <code>feedbackPath</code> is set; <code>back</code>
+                forwards it with the caller's identity.</td>
+            <td><span class="mono">modals/Feedback/BugReportModal.jsx · apis/feedback.js · back/service.mjs</span></td>
+          </tr>
+          <tr>
             <td>Guide gating</td>
             <td>One predicate per gated tutorial and use case, checked by the validator.</td>
             <td><span class="mono">config/featureGuides.js · config/useCases.js</span></td>
@@ -4527,6 +4558,11 @@ x-saia-bridge-depth: 2
             finished.</li>
         <li><b>A new gated guide gets an availability entry.</b> Otherwise a tour points at an element a
             deployment does not render.</li>
+        <li><b>A brand page describes what is actually deployed.</b> The copy lives with the brand, but it
+            is still the operator's claim; <code>/sitemap</code> reads the live data instead of a list
+            someone has to maintain.</li>
+        <li><b>The feedback receiver stays server-side.</b> The bundle carries the path to it, never its
+            address or token.</li>
       </ul>
 
       <h3>Limits</h3>
@@ -4544,6 +4580,9 @@ x-saia-bridge-depth: 2
             is only as gated as the code that consults <code>isBrandExternalAllowed()</code>.</li>
         <li>Brand CSS cannot invent a token; the variable must exist in <code>THEME_TOKENS</code> or
             <code>SURFACE_TOKENS</code> first.</li>
+        <li>Brand-owned pages cannot be validated against the code. An operator who copies another
+            institution's About text onto a narrower deployment states features this site does not
+            have.</li>
       </ul>
 
       <h2>Where to look</h2>
@@ -4557,6 +4596,10 @@ x-saia-bridge-depth: 2
         <li><span class="mono">front/src/modals/UserSettings/InstituteSection.jsx</span> - where the
             narrowing is shown to the user</li>
         <li><span class="mono">front/src/config/__tests__/brands.test.js</span> - the brand contract</li>
+        <li><span class="mono">front/src/config/branding/&lt;folder&gt;/*.md</span> - the brand's own About and
+            accessibility copy</li>
+        <li><span class="mono">front/src/modals/Feedback/BugReportModal.jsx</span> - the report form, and
+            <span class="mono">back/service.mjs#POST /feedback</span> for the hop</li>
       </ul>
 
       <div class="callout info">
@@ -4572,7 +4615,7 @@ x-saia-bridge-depth: 2
       <p>
         Sources: the repository at <span class="mono">gwdg/chat-ai</span>, its developer notes and the
         feature documents under <span class="mono">docs/</span>. Facts are checked against the code on
-        21 November 2026; this page is a reading aid, not a specification.
+        23 November 2026; this page is a reading aid, not a specification.
       </p>
       <p>
         Not covered here on purpose: visual polish and sidebar work, tutorial copy, and internal
