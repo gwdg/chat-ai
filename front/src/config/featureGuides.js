@@ -38,6 +38,8 @@ import {
 } from "../utils/modules.js";
 import { isFeatureEnabled } from "./deployment.js";
 import { hasBrandInstitute } from "./brandPolicy.js";
+import { currentBrand } from "./brands.js";
+import { brandConsentGate } from "./consent.js";
 
 export const featureGuides = {
   workspace_overview: {
@@ -1306,9 +1308,40 @@ export const featureGuides = {
       },
     ],
   },
-  message_timestamps: {
-    titleKey: "feature_guide.message_timestamps.title",
+  brand_consent: {
+    titleKey: "feature_guide.brand_consent.title",
     prompt:
+      "Review or change the voluntary consents of this service. Open user settings, choose the Advanced tab, and use the consent switches; the terms themselves are linked there.",
+    keywords: [
+      "consent",
+      "consents",
+      "study",
+      "survey",
+      "privacy",
+      "terms of use",
+      "withdraw consent",
+    ],
+    steps: [
+      {
+        target: ['[data-guide="user-settings"]', ".user-profile-button", ".user-profile-block"],
+        textKey: "feature_guide.brand_consent.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="settings-tab-advanced"]',
+        prepare: openUserSettings,
+        textKey: "feature_guide.brand_consent.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="brand-consent-settings"]',
+        textKey: "feature_guide.brand_consent.step3",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
+  message_timestamps: {
+    titleKey: "feature_guide.message_timestamps.title",    prompt:
       "Show the date and time each message was sent. Open user settings, choose the Chat tab, and enable Show message timestamps in the Messages section.",
     keywords: [
       "message timestamps",
@@ -1941,6 +1974,8 @@ export const FEATURE_GUIDE_AVAILABILITY = {
   e2ee: () => isFeatureEnabled("e2ee"),
   advanced_mode: () => isAgentsEnabled() || isFeatureEnabled("mcp_servers"),
   sync_setup: () => isSyncEnabled(),
+  // The consent section exists only for a brand that declares a consent gate.
+  brand_consent: () => Boolean(brandConsentGate(currentBrand())),
   // The Institution screen renders only for a brand that describes itself or
   // narrows something.
   institution: () => hasBrandInstitute(),
@@ -2028,6 +2063,7 @@ export const FEATURE_CATEGORIES = {
     "document_conversion",
     "data_management",
     "dark_mode",
+    "brand_consent",
   ],
   other: ["feedback", "speech_output", "diagram_renderers"],
 };

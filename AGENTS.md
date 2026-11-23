@@ -2150,6 +2150,13 @@ while editing:
   service-worker cached. `front/public/chat-ai.ico` remains only for the pre-boot favicon in
   `index.html`; the brand's `favicon` replaces it on mount. PDF exports use
   `brand.assets.export`, not a direct `assets/logos` import.
+- **`extends` inherits only what the loader leaves `undefined`.** `mergeBrand` treats `null` as
+  an explicit erase, so the loader must not turn a key the brand file omits into `null`:
+  `resolveContent` returning `null` for an absent `disclaimer` / `chatDisclaimer` /
+  `systemPrompt` silently dropped the parent's copy in a sub-brand (`gaia-tutor` lost GAIA's
+  chat notice until it returned `undefined`). A defined file name that does not resolve may still
+  become `null`. Likewise, logos render through `BrandLogo`, whose default `alt` is the brand's
+  logo alt or name — do not pass a hard-coded `"Chat AI Logo"` at a call site.
 - **`minimal` is the regression deployment.** `CONFIG_LOCATION=../secrets/front-minimal.json
   npm run dev` (copy `front-minimal.json.sample` first) turns every module off and every feature
   off except `meta_chat`; `/workspace/*` and `/agent/*` must redirect to `/chat`, `/meta` must

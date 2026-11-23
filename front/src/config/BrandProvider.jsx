@@ -17,6 +17,7 @@ import {
   resolveBrandId,
   setCurrentBrand,
 } from "./brands";
+import { applyBrandManifest } from "./pwaManifest";
 
 // Re-exported for callers that only need the storage key.
 export { BRAND_OVERRIDE_KEY };
@@ -77,7 +78,11 @@ export function BrandProvider({ children }) {
   setCurrentBrand(brand);
 
   useEffect(() => {
-    applyBrandDocument(brand);
+    // App applies the active brand theme before this effect (child effects run
+    // first), so reading the attribute keeps a brand change from resetting a
+    // custom theme. Without App (tests, an embed) the default pair is used.
+    applyBrandDocument(brand, document.documentElement.dataset.brandTheme ?? null);
+    applyBrandManifest(brand);
   }, [brand]);
 
   const value = useMemo(

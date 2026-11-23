@@ -6,12 +6,15 @@ import PublicRoute from "./Route/PublicRoute";
 import { BrowserRouter } from "react-router";
 import AgentConflictWatcher from "./components/Others/AgentConflictWatcher";
 import SyncOnboardingWatcher from "./components/Others/SyncOnboardingWatcher";
+import BrandConsentGate from "./components/Others/BrandConsentGate";
 import { ToastProvider } from "./components/Others/ToastProvider";
 import { ModalProvider } from "./modals/ModalContext";
 import { FilePreviewProvider } from "./context/FilePreviewContext";
 import { FeatureGuideProvider } from "./context/FeatureGuideContext";
 import { requestPersistentStorage } from "./utils/storagePersistence";
 import { useBrand } from "./config/BrandProvider";
+import { activeBrandTheme, applyBrandDocument } from "./config/brands";
+import { selectBrandTheme, selectDarkMode } from "./Redux/reducers/interfaceSettingsSlice";
 import { TabTitleManager } from "./hooks/useTabTitle";
 import { isSyncEnabled } from "./utils/modules";
 
@@ -22,21 +25,32 @@ function App() {
   // read the brand from module state (see config/brandPolicy.js), and without
   // this subscription a claim-resolved brand's restrictions would only appear on
   // the next unrelated render.
-  useBrand();
+  const { brand } = useBrand();
 
-  const isDarkMode = useSelector((state) => state.interface_settings.dark_mode);
+  const isDarkMode = useSelector(selectDarkMode);
+  const themeId = useSelector(selectBrandTheme);
+  // A custom brand theme may pin the colour scheme (business is dark-only, green
+  // light-only) instead of following the light/dark preference.
+  const brandTheme = activeBrandTheme(brand, themeId);
+  const effectiveDark = brandTheme?.colorScheme
+    ? brandTheme.colorScheme === "dark"
+    : isDarkMode;
 
-  // Add or remove the 'dark' class to the body based on the dark mode state
+  // Both `<html>` and `<body>` carry the class: index.css keys its variables off
+  // `.dark` and the brand palette is emitted for `:root.dark` and `body.dark`.
+  // The brand document is (re)applied here because the active theme id is Redux
+  // state, which BrandProvider does not read.
   useEffect(() => {
-    if (isDarkMode) {
-      document.body.classList.remove("lightScrollbar");
-      document.body.classList.add("dark", "darkScrollbar");
-
-    } else {
-      document.body.classList.remove("dark", "darkScrollbar");
-      document.body.classList.add("lightScrollbar");
+    const root = document.documentElement;
+    const body = document.body;
+    root.classList.toggle("dark", effectiveDark);
+    if (body) {
+      body.classList.toggle("dark", effectiveDark);
+      body.classList.toggle("darkScrollbar", effectiveDark);
+      body.classList.toggle("lightScrollbar", !effectiveDark);
     }
-  }, [isDarkMode]);
+    applyBrandDocument(brand, themeId);
+  }, [effectiveDark, brand, themeId]);
 
   useEffect(() => {
     void requestPersistentStorage();
@@ -58,6 +72,7 @@ function App() {
       <ToastProvider/>
       <AgentConflictWatcher />
       <ModalProvider>
+        <BrandConsentGate />
         {isSyncEnabled() && <SyncOnboardingWatcher />}
         <FilePreviewProvider>
           <FeatureGuideProvider>

@@ -925,6 +925,13 @@ export default {
       step1:
         "Verwenden Sie den Design-Schalter in der Fußzeile, um zwischen hellem und dunklem Modus zu wechseln.",
     },
+    brand_consent: {
+      title: "Einwilligungen prüfen",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Reiter Erweitert.",
+      step3:
+        "Ändern Sie hier die freiwilligen Einwilligungen; die Links zu Nutzungsbedingungen und Datenschutz stehen unter den Schaltern.",
+    },
     feedback: {
       title: "Feedback senden",
       step1:
@@ -2040,7 +2047,7 @@ export default {
   },
   // Tour
   tour: {
-    welcome_message: "Willkommen bei Chat AI",
+    welcome_message: "Willkommen bei {{app}}",
     start_tour: "Tour starten",
     skip_tour: "Tour überspringen",
     description:
@@ -3012,6 +3019,27 @@ export default {
     edit: "Bearbeiten",
     tool_call: "Tool-Aufruf",
     select_placeholder: "Auswählen…",
+  },
+  // Theme-Auswahl (Fußzeile): hell/dunkel plus zusätzliche Marken-Themes
+  theme: {
+    label: "Theme wechseln",
+    light: "Hell",
+    dark: "Dunkel",
+    brand_themes: "Marken-Themes",
+  },
+  // Einwilligungsdialog der Marke und sein späterer Einstellungsbereich
+  consent: {
+    terms_checkbox: "Ich habe die Nutzungsbedingungen gelesen.",
+    terms_required:
+      "Bitte akzeptiere die Nutzungsbedingungen, um fortzufahren.",
+    continue: "Weiter",
+    back: "Zurück",
+    save: "Speichern und fortfahren",
+    settings_title: "Deine Einwilligungen",
+    settings_intro:
+      "Die Teilnahme ist freiwillig. Du kannst diese Auswahl jederzeit ändern.",
+    accepted_on: "Akzeptiert am {{date}}.",
+    not_accepted_yet: "Auf diesem Gerät noch nicht akzeptiert.",
   },
   // Nur für die Entwicklung: /dev/tool-form
   tool_form_demo: {

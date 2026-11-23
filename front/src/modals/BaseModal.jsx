@@ -24,6 +24,7 @@ export default function BaseModal({
   isOpen,
   onClose,
   titleKey,
+  titleNode,
   children,
   maxWidth = "max-w-md",
   isForced = false,
@@ -83,7 +84,9 @@ export default function BaseModal({
                 {/* Header */}
                 <div className="flex justify-between items-center p-5 pb-3">
                   <Dialog.Title className="font-semibold text-sm text-accent">
-                    <Trans i18nKey={titleKey} values={titleValues} />
+                    {titleNode ?? (
+                      <Trans i18nKey={titleKey} values={titleValues} />
+                    )}
                   </Dialog.Title>
 
                   {/* Close button */}

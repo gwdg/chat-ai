@@ -24,6 +24,9 @@ import { getUseCaseMarker } from "../../../config/useCases";
 import { getPersonaMarkers } from "../../../utils/personaCatalog";
 import { getMetaActionProposals } from "../../../utils/metaActions";
 import { isFeedbackEnabled } from "../../../utils/modules";
+import { useBrand } from "../../../config/BrandProvider";
+import { localizeBrandValue, withBase } from "../../../config/brands";
+import { useTranslation } from "react-i18next";
 
 // Constants
 const MAX_HEIGHT = 200;
@@ -57,6 +60,18 @@ export default React.memo(({ localState, setLocalState, message_index, modelsDat
   const { forkConversation } = useForkConversation(localState);
   const { confirmAction } = useModal();
   const feedbackModule = isFeedbackEnabled();
+  const { i18n } = useTranslation();
+  const { brand } = useBrand();
+  // The brand's AI marker (GAIA's "AI" label) beside every assistant message,
+  // and the sentence appended to copied text. Both are brand data, so a brand
+  // without an `aiMarker` renders neither.
+  const aiMarkerAsset = brand?.aiMarker?.asset
+    ? withBase(brand.aiMarker.asset)
+    : null;
+  const aiMarkerLabel = localizeBrandValue(brand?.aiMarker?.label, i18n.language);
+  const copyWatermark =
+    localizeBrandValue(brand?.aiMarker?.watermark, i18n.language) || "";
+  const aiMarkerInvert = brand?.aiMarker?.monochrome === true ? "dark:invert" : "";
 
   //Functions
   const adjustHeight = () => {
@@ -387,7 +402,20 @@ export default React.memo(({ localState, setLocalState, message_index, modelsDat
               <div className="group flex justify-between w-full mt-1 gap-2">
                 {/* Buttons on the bottom right */}
                 <div className="flex items-center justify-end gap-3 overflow-hidden">
-                  <CopyButton message={message} />
+                  {aiMarkerAsset && (
+                    <span
+                      className="inline-flex h-[18px] items-center"
+                      title={aiMarkerLabel}
+                      aria-label={aiMarkerLabel}
+                    >
+                      <img
+                        src={aiMarkerAsset}
+                        alt={aiMarkerLabel || "AI"}
+                        className={`h-[18px] w-auto opacity-70 ${aiMarkerInvert}`}
+                      />
+                    </span>
+                  )}
+                  <CopyButton message={message} appendText={copyWatermark} />
                   <SpeakButton message={message} />
                   <ForkButton handleForkConversation={handleForkConversation} />
                   <EditButton setEditMode={setEditMode} />

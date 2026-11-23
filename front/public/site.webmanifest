@@ -1,0 +1,30 @@
+{
+  "id": "/",
+  "name": "Chat AI",
+  "short_name": "Chat AI",
+  "description": "Chat AI, the browser chat client for OpenAI-compatible AI services.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#B4388D",
+  "icons": [
+    {
+      "src": "/chat-ai-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/chat-ai-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/chat-ai-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

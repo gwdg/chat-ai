@@ -909,6 +909,13 @@ export default {
       title: "Switch theme",
       step1: "Use the theme toggle in the footer to switch between light and dark mode.",
     },
+    brand_consent: {
+      title: "Review your consents",
+      step1: "Open your user settings.",
+      step2: "Choose the Advanced tab.",
+      step3:
+        "Change the voluntary consents here; the terms of use and privacy links sit below the switches.",
+    },
     feedback: {
       title: "Send feedback",
       step1:
@@ -2020,7 +2027,7 @@ export default {
   },
   // Tour
   tour: {
-    welcome_message: "Welcome to Chat AI",
+    welcome_message: "Welcome to {{app}}",
     start_tour: "Start Tour",
     skip_tour: "Skip tour",
     description:
@@ -2979,6 +2986,26 @@ export default {
     edit: "Edit",
     tool_call: "Tool call",
     select_placeholder: "Select…",
+  },
+  // Theme selector (footer): light/dark plus any extra brand themes
+  theme: {
+    label: "Switch theme",
+    light: "Light",
+    dark: "Dark",
+    brand_themes: "Brand themes",
+  },
+  // Brand consent gate and its later settings section
+  consent: {
+    terms_checkbox: "I have read the terms of use.",
+    terms_required: "Please accept the terms of use to continue.",
+    continue: "Continue",
+    back: "Back",
+    save: "Save and continue",
+    settings_title: "Your consents",
+    settings_intro:
+      "Participation is voluntary. You can change these choices at any time.",
+    accepted_on: "Accepted on {{date}}.",
+    not_accepted_yet: "Not accepted yet on this device.",
   },
   // Dev-only preview at /dev/tool-form
   tool_form_demo: {
