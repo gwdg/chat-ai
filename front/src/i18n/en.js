@@ -905,6 +905,21 @@ export default {
       step3:
         "Choose the backup file and type the passphrase it was created with. Confirm that matching items may be overwritten, then restore: items with the same id are replaced, new ones are added, and nothing is deleted.",
     },
+    language_picker: {
+      title: "Change the language",
+      step1:
+        "Open the language menu in the footer. English and German switch the interface immediately; Automatic follows your browser language again.",
+    },
+    pwa_install: {
+      title: "Install the app",
+      step1:
+        "Use the install button in the footer to open your browser's installation dialog. The app then starts in its own window, without the address bar.",
+    },
+    bug_report: {
+      title: "Report a problem",
+      step1:
+        "Open the bug report from the footer: choose a type, describe what happened and attach a screenshot if it helps.",
+    },
     dark_mode: {
       title: "Switch theme",
       step1: "Use the theme toggle in the footer to switch between light and dark mode.",
@@ -1357,6 +1372,7 @@ export default {
   },
   // Footer
   footer: {
+    sitemap: "Sitemap",
     help: "Help",
     imprint: "Imprint",
     terms: "Terms of Use",
@@ -3013,5 +3029,67 @@ export default {
     description:
       "Development-only preview of the form that tool results render in a chat. Submitting shows the values here instead of sending a message.",
     submitted: "Submitted values",
+  },
+
+  // Footer: language picker, PWA install, bug report
+  language: {
+    label: "Language",
+    automatic: "Automatic (browser language)",
+    auto_short: "Auto",
+    english: "English",
+    german: "German",
+  },
+  pwa: {
+    install: "Install this app",
+  },
+  // Brand-owned information pages (/about, /accessibility) and the sitemap
+  info: {
+    back_to_chat: "Back to chat",
+    page_external: "This page is provided by the institution behind this app.",
+    open_page: "Open the page",
+  },
+  about: {
+    title: "About",
+  },
+  accessibility: {
+    title: "Accessibility",
+  },
+  sitemap: {
+    title: "Sitemap",
+    general: "General",
+    pages: "Information",
+  },
+  bug_report: {
+    title: "Report a problem",
+    intro:
+      "Describe what happened. The report goes to the operators of this service, together with the page address and your browser version.",
+    type_label: "Type",
+    type_bug: "Bug",
+    type_feedback: "Feedback",
+    type_accessibility: "Accessibility",
+    type_other: "Other",
+    message_label: "Description",
+    message_placeholder:
+      "What did you do, what did you expect, and what happened instead?",
+    screenshot_label: "Screenshots (optional)",
+    screenshot_hint: "Up to {{count}} files, {{size}} each (PNG, JPEG or WebP).",
+    email_label: "Contact address (optional)",
+    email_placeholder: "you@example.org",
+    diagnostics_label: "Diagnostics that will be sent",
+    unavailable:
+      "This deployment has no feedback receiver, so the report cannot be sent. You can copy it and pass it on to the operator instead.",
+    copy: "Copy report",
+    copied: "Copied",
+    sent: "Thank you — the report was sent.",
+    success: "Report sent.",
+    sending: "Sending…",
+    submit: "Send report",
+    error_type: "Only PNG, JPEG and WebP images can be attached.",
+    error_size: "Each screenshot may be at most {{size}}.",
+    error_count: "You can attach at most {{count}} screenshots.",
+    error_description: "Please describe the problem.",
+    error_rejected:
+      "The report was rejected. Please shorten it or remove an attachment.",
+    error_failed: "The report could not be sent. Please try again later.",
   },
 };

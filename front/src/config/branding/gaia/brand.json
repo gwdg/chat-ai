@@ -1,6 +1,10 @@
 {
   "id": "gaia",
-  "aliases": ["GAIA", "gaia.uni-goettingen.de", "gaia-student"],
+  "aliases": [
+    "GAIA",
+    "gaia.uni-goettingen.de",
+    "gaia-student"
+  ],
   "name": "GAIA",
   "shortName": "GAIA",
   "homeUrl": "https://gaia.uni-goettingen.de/",
@@ -107,7 +111,10 @@
   "themes": [
     {
       "id": "business",
-      "label": { "en": "Business", "de": "Business" },
+      "label": {
+        "en": "Business",
+        "de": "Business"
+      },
       "colorScheme": "dark",
       "shape": {
         "radiusSelector": "0.5rem",
@@ -141,7 +148,10 @@
     },
     {
       "id": "green",
-      "label": { "en": "Green", "de": "Grün" },
+      "label": {
+        "en": "Green",
+        "de": "Grün"
+      },
       "colorScheme": "light",
       "shape": {
         "radiusSelector": "0.25rem",
@@ -194,7 +204,10 @@
   },
   "services": false,
   "pwa": {
-    "name": { "en": "GAIA – Study assistant", "de": "GAIA – Lernassistent" },
+    "name": {
+      "en": "GAIA – Study assistant",
+      "de": "GAIA – Lernassistent"
+    },
     "shortName": "GAIA",
     "description": {
       "en": "GAIA, the AI study assistant of the University of Göttingen.",
@@ -204,8 +217,16 @@
     "backgroundColor": "#f9f5ec",
     "appleTouchIcon": "apple-touch-icon.png",
     "icons": [
-      { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
-      { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+      {
+        "src": "icon-192.png",
+        "sizes": "192x192",
+        "type": "image/png"
+      },
+      {
+        "src": "icon-512.png",
+        "sizes": "512x512",
+        "type": "image/png"
+      },
       {
         "src": "icon-512-maskable.png",
         "sizes": "512x512",
@@ -222,7 +243,10 @@
   "aiMarker": {
     "asset": "ai-label.svg",
     "monochrome": true,
-    "label": { "en": "AI-generated", "de": "KI-generiert" },
+    "label": {
+      "en": "AI-generated",
+      "de": "KI-generiert"
+    },
     "watermark": {
       "en": "Generated with GAIA, an AI system. Check important information.",
       "de": "Mit GAIA erzeugt, einem KI-System. Wichtige Informationen prüfen."
@@ -230,12 +254,18 @@
   },
   "consentGate": {
     "version": "2026-02",
-    "title": { "en": "Welcome to GAIA", "de": "Willkommen bei GAIA" },
+    "title": {
+      "en": "Welcome to GAIA",
+      "de": "Willkommen bei GAIA"
+    },
     "intro": {
       "en": "Before you use GAIA, please read the terms of use and decide on the voluntary consents. You can decline every consent and still use GAIA.",
       "de": "Bevor du GAIA nutzt, lies bitte die Nutzungsbedingungen und entscheide über die freiwilligen Einwilligungen. Du kannst jede Einwilligung ablehnen und GAIA trotzdem nutzen."
     },
-    "termsTitle": { "en": "Terms of use", "de": "Nutzungsbedingungen" },
+    "termsTitle": {
+      "en": "Terms of use",
+      "de": "Nutzungsbedingungen"
+    },
     "termsCheckbox": {
       "en": "I have read and accept the terms of use.",
       "de": "Ich habe die Nutzungsbedingungen gelesen und akzeptiere sie."
@@ -244,7 +274,10 @@
       "en": "<h3>GAIA is for you. GAIA helps you learn. GAIA does not grade.</h3><ul><li><strong>Never enter sensitive data.</strong> In particular nothing about health, ethnic origin, religion, political opinions or sexual orientation — neither about yourself nor about others.</li><li><strong>Do not rely on GAIA.</strong> AI systems make mistakes. Check important answers.</li><li><strong>Only permitted data.</strong> Enter data only if you have the right to do so. Content stored in GAIA is generally protected by copyright.</li><li><strong>Security.</strong> Do not circumvent protection mechanisms or extract personal data.</li></ul><p>GAIA will never be used for examinations or grading. Teaching staff see only anonymous summaries. All AI models run at GWDG in Göttingen; your data is not used to train models.</p>",
       "de": "<h3>GAIA ist für dich. GAIA hilft beim Lernen. GAIA benotet nicht.</h3><ul><li><strong>Gib niemals sensible Daten ein.</strong> Insbesondere nichts zu Gesundheit, ethnischer Herkunft, Religion, politischer Meinung oder sexueller Orientierung — weder über dich noch über andere.</li><li><strong>Verlass dich nicht auf GAIA.</strong> KI-Systeme machen Fehler. Prüfe wichtige Antworten.</li><li><strong>Nur erlaubte Daten.</strong> Gib Daten nur ein, wenn du dazu berechtigt bist. Inhalte in GAIA sind in der Regel urheberrechtlich geschützt.</li><li><strong>Sicherheit.</strong> Umgehe keine Schutzmechanismen und extrahiere keine personenbezogenen Daten.</li></ul><p>GAIA wird niemals für Prüfungen oder Benotung verwendet. Lehrende sehen nur anonymisierte Zusammenfassungen. Alle KI-Modelle laufen bei der GWDG in Göttingen; deine Daten werden nicht zum Training von Modellen verwendet.</p>"
     },
-    "consentsTitle": { "en": "Your consents", "de": "Deine Einwilligungen" },
+    "consentsTitle": {
+      "en": "Your consents",
+      "de": "Deine Einwilligungen"
+    },
     "consentsIntro": {
       "en": "Participation in the scientific study is voluntary and has no effect on how GAIA works for you. You can change these choices later in Chat preferences → Advanced.",
       "de": "Die Teilnahme an der wissenschaftlichen Studie ist freiwillig und hat keine Auswirkung darauf, wie GAIA für dich funktioniert. Du kannst diese Auswahl später unter Chat-Einstellungen → Erweitert ändern."
@@ -252,7 +285,10 @@
     "purposes": [
       {
         "id": "surveys",
-        "label": { "en": "Surveys about GAIA", "de": "Umfragen zu GAIA" },
+        "label": {
+          "en": "Surveys about GAIA",
+          "de": "Umfragen zu GAIA"
+        },
         "description": {
           "en": "Your pseudonymised answers from the pre-, mid-, post- and follow-up questionnaires are used for the scientific effectiveness study.",
           "de": "Deine pseudonymisierten Antworten aus Prä-, Mid-, Post- und Follow-Up-Fragebögen werden für die wissenschaftliche Wirksamkeitsprüfung verwendet."
@@ -299,22 +335,34 @@
     "links": [
       {
         "id": "terms",
-        "label": { "en": "Terms of use", "de": "Nutzungsbedingungen" },
+        "label": {
+          "en": "Terms of use",
+          "de": "Nutzungsbedingungen"
+        },
         "url": "https://gaia.uni-goettingen.de/legal/nutzungsbedingungen"
       },
       {
         "id": "privacy",
-        "label": { "en": "Data protection", "de": "Datenschutz" },
+        "label": {
+          "en": "Data protection",
+          "de": "Datenschutz"
+        },
         "url": "https://gaia.uni-goettingen.de/legal/data-protection"
       },
       {
         "id": "consent",
-        "label": { "en": "Declarations of consent", "de": "Einwilligungserklärungen" },
+        "label": {
+          "en": "Declarations of consent",
+          "de": "Einwilligungserklärungen"
+        },
         "url": "https://gaia.uni-goettingen.de/legal/consent"
       },
       {
         "id": "accessibility",
-        "label": { "en": "Accessibility", "de": "Barrierefreiheit" },
+        "label": {
+          "en": "Accessibility",
+          "de": "Barrierefreiheit"
+        },
         "url": "https://gaia.uni-goettingen.de/accessibility"
       }
     ]
@@ -329,17 +377,33 @@
   "footer": {
     "isoCertified": false,
     "links": {
+      "about": {
+        "url": "/about"
+      },
+      "sitemap": {
+        "url": "/sitemap"
+      },
+      "accessibility": {
+        "label": {
+          "en": "Accessibility",
+          "de": "Barrierefreiheit"
+        },
+        "url": "/accessibility"
+      },
       "imprint": {},
       "privacy": {
-        "label": { "en": "Data protection", "de": "Datenschutz" }
+        "label": {
+          "en": "Data protection",
+          "de": "Datenschutz"
+        }
       },
       "terms": {
-        "label": { "en": "Terms of use", "de": "Nutzungsbedingungen" }
+        "label": {
+          "en": "Terms of use",
+          "de": "Nutzungsbedingungen"
+        }
       },
-      "docs": {},
-      "accessibility": {
-        "label": { "en": "Accessibility", "de": "Barrierefreiheit" }
-      }
+      "docs": {}
     }
   },
   "institute": {
@@ -358,11 +422,17 @@
     "contact": "https://gaia.pages.gwdg.de/gaia/",
     "links": [
       {
-        "label": { "en": "GAIA documentation", "de": "GAIA-Dokumentation" },
+        "label": {
+          "en": "GAIA documentation",
+          "de": "GAIA-Dokumentation"
+        },
         "url": "https://gaia.pages.gwdg.de/gaia/"
       },
       {
-        "label": { "en": "Data protection", "de": "Datenschutz" },
+        "label": {
+          "en": "Data protection",
+          "de": "Datenschutz"
+        },
         "url": "https://gaia.uni-goettingen.de/legal/data-protection"
       }
     ]
@@ -388,6 +458,16 @@
       "external_models": true,
       "mcp": false,
       "external_references": false
+    }
+  },
+  "pages": {
+    "about": {
+      "en": "about.en.md",
+      "de": "about.de.md"
+    },
+    "accessibility": {
+      "en": "accessibility.en.md",
+      "de": "accessibility.de.md"
     }
   }
 }

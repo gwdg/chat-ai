@@ -52,6 +52,13 @@ function App() {
     applyBrandDocument(brand, themeId);
   }, [effectiveDark, brand, themeId]);
 
+  // `<html lang>` follows the interface language, so a screen reader pronounces
+  // German text as German. The accessibility statement promises this, and the
+  // static `lang="en"` in index.html would otherwise stay wrong after a switch.
+  useEffect(() => {
+    document.documentElement.lang = String(i18n.language || "en").split("-")[0];
+  }, [i18n.language]);
+
   useEffect(() => {
     void requestPersistentStorage();
     const request = () => {

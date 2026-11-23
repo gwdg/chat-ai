@@ -134,6 +134,19 @@ const resolveContent = (folder, value) => {
   return read(value);
 };
 
+// Static information pages a brand may ship (`pages.about`,
+// `pages.accessibility`). Each entry is localized copy like a disclaimer, so a
+// brand that does not name one simply has no such page.
+const resolvePages = (folder, pages) => {
+  if (!isPlainObject(pages)) return pages;
+  return Object.fromEntries(
+    Object.entries(pages).map(([id, value]) => [
+      id,
+      resolveContent(folder, value),
+    ]),
+  );
+};
+
 const loadBrands = () => {
   const profiles = {};
   for (const [key, module] of Object.entries(brandModules)) {
@@ -161,6 +174,7 @@ const loadBrands = () => {
       disclaimer: resolveContent(folder, data.disclaimer),
       chatDisclaimer: resolveContent(folder, data.chatDisclaimer),
       systemPrompt: resolveContent(folder, data.systemPrompt),
+      pages: resolvePages(folder, data.pages),
       fonts: resolveFonts(folder, data.fonts),
       pwa: resolvePwa(folder, data.pwa),
       footer: isPlainObject(data.footer)

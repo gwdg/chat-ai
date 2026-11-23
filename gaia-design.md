@@ -56,7 +56,20 @@ Out of scope: layout parity with the GAIA Svelte UI (item J), internal
   watermark is appended only to assistant copy.
 - **PWA**: a static Chat AI fallback manifest plus a runtime, brand-aware Blob
   manifest (icons from the brand folder). The service worker already exists in
-  production.
+  production. The install entry point is the footer button, shown only while the
+  browser's one-shot `beforeinstallprompt` is available.
+- **Language**: the footer picker stores `chatai.language` (`en`, `de` or
+  `auto`) in localStorage, applies it before the first render and keeps
+  `<html lang>` in step. `auto` means "follow the browser" and clears the
+  detector's own cache so the next visit detects again.
+- **Information pages** (`/about`, `/accessibility`) are brand-owned markdown
+  (`brand.pages.<id>`), not global copy: GAIA's own copy describes quiz and
+  tutoring features this deployment does not have. `/sitemap` is generated from
+  the live data and offers only what the deployment shows.
+- **Bug report** is configuration-gated, never a form without a sink: without
+  `feedbackPath` there is no button. `back` `/feedback` forwards the multipart
+  report to `feedbackEndpoint`, so the browser never holds the receiver's URL or
+  token.
 
 ## 3. Architecture
 
@@ -148,6 +161,13 @@ provide the plain Chat AI fallback (192/512 PNG generated from the ICO).
 | `front/src/components/Footer/VersionDisplay.jsx` | brand name + home link |
 | `front/src/modals/Help/WelcomeModal.jsx` | brand-aware welcome copy |
 | `front/src/config/__tests__/brands.test.js` etc. | new coverage |
+| `front/src/utils/language.js`, `i18n.jsx`, `App.jsx` | stored language choice, applied before first render; `<html lang>` follows |
+| `front/src/components/Footer/LanguageSelector.jsx` | EN / DE / Automatic dropdown (was a two-flag toggle) |
+| `front/src/utils/installPrompt.js`, `hooks/useInstallPrompt.ts`, `components/Footer/InstallAppButton.jsx` | PWA install entry point, shown only while the browser offers a prompt |
+| `front/src/apis/feedback.js`, `modals/Feedback/BugReportModal.jsx` | bug report transport + dialog, gated by `feedbackPath` |
+| `front/src/Pages/{BrandPage,SitemapPage}.jsx`, `components/Others/InfoLayout.jsx` | `/about`, `/accessibility`, `/sitemap` |
+| `front/src/config/branding/gaia/{about,accessibility}.{en,de}.md` | brand-owned page copy |
+| `back/service.mjs`, `front/vite.config.js`, `secrets/*.sample` | `/feedback` relay, `feedbackPath` / `feedbackEndpoint` / `feedbackToken` |
 
 ## 5. Todo list
 
@@ -171,6 +191,9 @@ provide the plain Chat AI fallback (192/512 PNG generated from the ICO).
 - [x] Verify: targeted Vitest, `npm run build`, browser checks in light/dark/extra themes and with the gate
 - [x] Update this document with verification results
 - [x] Audit parity against the original GAIA app and record the gaps (§7)
+- [x] Close the §7.2 gaps: language picker, PWA install prompt, About / Sitemap / Accessibility pages, bug report dialog + `/feedback` relay
+- [x] Browser-verify the five additions, then full `npm test`, `npm run build` and `validate:guides`
+- [x] Update this document with the second batch (§6, §7.2)
 
 ## 6. Verification results
 
@@ -212,6 +235,27 @@ External models are temporarily allowed in both GAIA brands so the local test
 stack's bridge models are selectable (see §2). With that setting, the yellow
 "Your messages may be processed outside of GWDG" warning appears as designed.
 
+Second batch (the §7.2 gap closure), same checkout and dev server:
+
+Automated:
+
+- `npx vitest run src/utils/__tests__/language.test.js src/components/Footer/__tests__ src/modals/Feedback/__tests__/BugReportModal.test.jsx src/Pages/__tests__/BrandPages.test.jsx src/config/__tests__/brands.test.js` — 7 files / 53 passed.
+- `npm test` — 261 files / 2030 tests passed (both batches).
+- `npm run build` — clean.
+- `npm run validate:guides` — 78 guides, 13 use cases.
+
+Browser:
+
+| Check | Result |
+| --- | --- |
+| Language picker | English → German renames the footer to `Impressum`, `Datenschutz`, `Nutzungsbedingungen`, `Doku`, `Über uns`, `Sitemap`, `Barrierefreiheit`, the picker reads `DE`, `localStorage["chatai.language"] === "de"` and `document.documentElement.lang === "de"`; a reload starts in German. "Automatic" stores `auto`, clears `i18nextLng` and reads `AUTO` |
+| About page | `/about` renders the brand markdown (five `h2`s, "What GAIA is not" included) under the GAIA mark; "Back to chat" returns to the open chat |
+| Sitemap | `/sitemap` lists New Chat, the Meta chat, About and Accessibility; the empty topic, workspace and agent sections are dropped |
+| Accessibility statement | `/accessibility` renders the statement from `accessibility.en.md` |
+| Footer routes | `/about`, `/sitemap` and `/accessibility` are in-app routes; the legal links and the brand `help` asset still open in a new tab |
+| Bug report | The footer bug button appears only with `feedbackPath` set; the dialog lists Bug / Feedback / Accessibility / Other and the diagnostics it will send; a report with type "accessibility" and a description arrives at `back` `/feedback` and at the test receiver as multipart (`payload` with `type`, `message`, `route`, `user_agent`, `app_version`); the dialog then shows "Thank you — the report was sent." |
+| PWA install button | Not reproducible in headless Chrome: `beforeinstallprompt` never fires, so the button stays hidden. Covered by `InstallAppButton.test.jsx` with a synthetic event (hidden → shown → one use → hidden on `appinstalled`) |
+
 ## 7. Parity audit: what the original GAIA app has that this deployment does not
 
 Checked 2026-11-23 on `feature-gaia` against `gaia/` (the original SvelteKit app
@@ -237,19 +281,32 @@ manifest and service worker, per-message thumbs up/down feedback, i18n (en/de),
 Meta chat, and the whole agent/workspace/MCP/Arcana/memory/persona/tutorial/
 E2EE/sync/backup/speech stack that GAIA does not have at all (§7.5).
 
-### 7.2 Gaps that need no GAIA backend
+### 7.2 Gaps that need no GAIA backend (closed on this branch)
 
 These are frontend work inside this repository. Nothing here implies a student
 feature that the deployment cannot serve.
 
-| Feature | Original GAIA | What is missing here | Size |
+| Feature | Original GAIA | Status on this branch | Size |
 | --- | --- | --- | --- |
-| **PWA install prompt** | `lib/components/PWAInstall.svelte`: captures `beforeinstallprompt`, hides when `display-mode: standalone` or iOS `navigator.standalone`, shows an install button, handles `appinstalled` | We ship the manifest and `sw.js` but no UI. A user who does not know the browser menu can install it has no entry point | S |
-| **Language picker** | `lib/components/LanguagePicker.svelte`, mounted in the navbar, home, login and consent pages | `i18n.jsx` auto-detects the browser language and exposes no switcher; a user cannot change it after first load. Needs `i18n.changeLanguage` + a persisted choice and a control (header or Profile → User) | S |
-| **About page** | `routes/(app)/about/+page.svelte` + `about.{en,de}.md`, rendered with `marked` and sanitised by DOMPurify, with an `embedded` prop | No `/about` route and no About entry point. The footer currently links documentation only | S |
-| **Sitemap page** | `routes/(app)/sitemap/+page.svelte`: general links, legal links, and the accessible courses with their modules | No page. A reduced version would list chat, topics, workspaces, agents and settings links; there are no courses to list | S |
-| **Accessibility statement** | `routes/(app)/accessibility/+page.svelte`: a structured statement with an easy-language variant, contacts, mediation office and a TOC | Not in the repo. The GAIA brand already links `https://gaia.uni-goettingen.de/accessibility`, so this is only needed for a deployment without its own statement page | S (content, not code) |
-| **Bug report dialog** | `lib/components/BugReportDialog.svelte` + `lib/services/feedback.ts`: type (bug / feedback / accessibility / other), description, up to 3 screenshots ≤ 5 MB, route + user-agent + app-version context, multipart `POST /api/v1/feedback`; the backend stores it in PocketBase and notifies a Matrix room | We only have per-message thumbs, which never leave the conversation. The dialog is frontend work, but the submission needs a sink (an endpoint like GAIA's, a Matrix webhook, or a `mailto:`/issue link) | M |
+| **PWA install prompt** | `lib/components/PWAInstall.svelte`: captures `beforeinstallprompt`, hides when `display-mode: standalone` or iOS `navigator.standalone`, shows an install button, handles `appinstalled` | **Done.** `utils/installPrompt.js` stashes the once-only event in module state, `hooks/useInstallPrompt.ts` subscribes, and `Footer/InstallAppButton.jsx` renders the button only while a prompt exists; it disappears after one use and on `appinstalled`, so a browser without the API shows no dead control | S |
+| **Language picker** | `lib/components/LanguagePicker.svelte`, mounted in the navbar, home, login and consent pages | **Done.** `Footer/LanguageSelector.jsx` offers English, German and Automatic. The choice lives in `localStorage["chatai.language"]` (`utils/language.js`), `i18n.jsx` applies it before the first render, Automatic clears `i18nextLng` so detection runs again, and `App.jsx` keeps `<html lang>` in step | S |
+| **About page** | `routes/(app)/about/+page.svelte` + `about.{en,de}.md`, rendered with `marked` and sanitised by DOMPurify, with an `embedded` prop | **Done.** `/about` (`Pages/BrandPage.jsx`) renders the brand's own markdown through the app's safe renderer; GAIA ships `about.{en,de}.md` | S |
+| **Sitemap page** | `routes/(app)/sitemap/+page.svelte`: general links, legal links, and the accessible courses with their modules | **Done.** `/sitemap` (`Pages/SitemapPage.jsx`) lists the live chats/topics/workspaces/agents plus About and Accessibility; empty sections and switched-off modules are omitted, and there are no courses to list | S |
+| **Accessibility statement** | `routes/(app)/accessibility/+page.svelte`: a structured statement with an easy-language variant, contacts, mediation office and a TOC | **Done.** `/accessibility` uses the same brand-owned copy mechanism (`accessibility.{en,de}.md`), and the statement names the GAIA contacts, the mediation office and the authoritative external page | S (content, not code) |
+| **Bug report dialog** | `lib/components/BugReportDialog.svelte` + `lib/services/feedback.ts`: type (bug / feedback / accessibility / other), description, up to 3 screenshots ≤ 5 MB, route + user-agent + app-version context, multipart `POST /api/v1/feedback`; the backend stores it in PocketBase and notifies a Matrix room | **Done.** `modals/Feedback/BugReportModal.jsx` + `apis/feedback.js` send the same multipart shape. `back` `/feedback` forwards it (with the caller's identity headers and an optional `feedbackToken`) to `feedbackEndpoint` from `back.json`, so the browser never learns the receiver. Without `feedbackPath` the footer shows no button; a 501 offers "Copy report" | M |
+
+The two information pages are **brand-owned copy**, not global strings:
+`brand.pages.<id>` names markdown files in the brand folder
+(`config/branding/<brand>/about.{en,de}.md`). GAIA's About page describes quiz,
+tutoring and knowledge tracing, which this deployment deliberately does not
+have, so shipping that text as global copy would be false. A brand that ships no
+copy still gets a usable page: it links its own `links.<id>` target instead.
+
+The feedback endpoint GAIA itself uses is `POST /api/v1/feedback` with exactly
+this `payload` + `screenshots` body, so `feedbackEndpoint` can point straight at
+that service; the GAIA backend stores the report in PocketBase and notifies its
+Matrix room as before. The frontend half is the only part that was missing.
+
 
 Two more that only make sense with a producer:
 
@@ -304,13 +361,16 @@ memories and memory groups, personas, tutorials and use cases, E2EE-sealed
 model requests, encrypted cross-device sync and encrypted backup, speech input
 and output, Typst / LaTeX / TikZ / Mermaid rendering, document conversion,
 image generation and editing, the Meta chat over local data, topics, the pinned
-section, the brand system (consent gate, themes, notice, AI marker, PWA
-manifest) and 75 feature guides.
+section, the brand system (consent gate, themes, notice, AI marker, PWA manifest,
+brand-owned information pages, language picker, install prompt, bug report) and
+78 feature guides.
 
 ### 7.6 Recommendation
 
-Close the §7.2 items, in this order, because they are small and independent:
-language picker, PWA install prompt, About page, reduced sitemap, and the bug
-report dialog once a sink is chosen. Treat everything in §7.3 as the GAIA
-backend roadmap, not as Chat AI work. Citations and server-side history wait
-for the RAG service and a decision about where conversation history lives.
+The §7.2 items are implemented on this branch. The only configuration the bug
+report needs is a sink: `feedbackEndpoint` in `back.json` (GAIA's
+`/api/v1/feedback` accepts the body unchanged) and `feedbackPath` in
+`front.json` pointing at `back`'s `/feedback`, which also hides the entry point
+again when it is unset. Treat everything in §7.3 as the GAIA backend roadmap,
+not as Chat AI work. Citations and server-side history wait for the RAG service
+and a decision about where conversation history lives.

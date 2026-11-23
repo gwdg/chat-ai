@@ -920,6 +920,21 @@ export default {
       step3:
         "Wählen Sie die Sicherungsdatei und geben Sie die Passphrase ein, mit der sie erstellt wurde. Bestätigen Sie das Überschreiben, und stellen Sie dann wieder her: Einträge mit derselben ID werden ersetzt, neue hinzugefügt, nichts wird gelöscht.",
     },
+    language_picker: {
+      title: "Sprache wechseln",
+      step1:
+        "Öffnen Sie das Sprachmenü in der Fußzeile. Englisch und Deutsch stellen die Oberfläche sofort um; Automatisch folgt wieder der Browsersprache.",
+    },
+    pwa_install: {
+      title: "App installieren",
+      step1:
+        "Öffnen Sie mit der Installieren-Schaltfläche in der Fußzeile den Installationsdialog Ihres Browsers. Die App startet danach in einem eigenen Fenster ohne Adressleiste.",
+    },
+    bug_report: {
+      title: "Problem melden",
+      step1:
+        "Öffnen Sie die Fehlermeldung in der Fußzeile: Typ wählen, das Problem beschreiben und bei Bedarf einen Screenshot anhängen.",
+    },
     dark_mode: {
       title: "Design wechseln",
       step1:
@@ -1373,6 +1388,7 @@ export default {
   },
   // Footer
   footer: {
+    sitemap: "Sitemap",
     help: "Hilfe",
     imprint: "Impressum",
     terms: "Nutzungsbedingungen",
@@ -3047,5 +3063,67 @@ export default {
     description:
       "Nur für die Entwicklung: Vorschau des Formulars, das Tool-Ergebnisse im Chat anzeigen. Beim Absenden werden die Werte hier angezeigt, statt eine Nachricht zu senden.",
     submitted: "Übermittelte Werte",
+  },
+
+  // Fußzeile: Sprachwahl, PWA-Installation, Fehlermeldung
+  language: {
+    label: "Sprache",
+    automatic: "Automatisch (Browsersprache)",
+    auto_short: "Auto",
+    english: "Englisch",
+    german: "Deutsch",
+  },
+  pwa: {
+    install: "Diese App installieren",
+  },
+  // Informationen der Marke (/about, /accessibility) und die Sitemap
+  info: {
+    back_to_chat: "Zurück zum Chat",
+    page_external: "Diese Seite wird von der Institution hinter dieser App bereitgestellt.",
+    open_page: "Seite öffnen",
+  },
+  about: {
+    title: "Über diese App",
+  },
+  accessibility: {
+    title: "Barrierefreiheit",
+  },
+  sitemap: {
+    title: "Sitemap",
+    general: "Allgemein",
+    pages: "Informationen",
+  },
+  bug_report: {
+    title: "Problem melden",
+    intro:
+      "Beschreibe, was passiert ist. Die Meldung geht zusammen mit der Seitenadresse und deiner Browser-Version an den Betrieb dieser Anwendung.",
+    type_label: "Typ",
+    type_bug: "Fehler",
+    type_feedback: "Rückmeldung",
+    type_accessibility: "Barrierefreiheit",
+    type_other: "Sonstiges",
+    message_label: "Beschreibung",
+    message_placeholder:
+      "Was hast du getan, was hast du erwartet und was ist stattdessen passiert?",
+    screenshot_label: "Screenshots (optional)",
+    screenshot_hint: "Bis zu {{count}} Dateien mit je {{size}} (PNG, JPEG oder WebP).",
+    email_label: "Kontaktadresse (optional)",
+    email_placeholder: "du@example.org",
+    diagnostics_label: "Diese Diagnosedaten werden mitgesendet",
+    unavailable:
+      "In dieser Installation gibt es keinen Empfänger für Rückmeldungen, daher kann die Meldung nicht gesendet werden. Du kannst sie kopieren und an den Betrieb weitergeben.",
+    copy: "Meldung kopieren",
+    copied: "Kopiert",
+    sent: "Danke — die Meldung wurde gesendet.",
+    success: "Meldung gesendet.",
+    sending: "Wird gesendet…",
+    submit: "Meldung senden",
+    error_type: "Anhängen lassen sich nur PNG-, JPEG- und WebP-Bilder.",
+    error_size: "Ein Screenshot darf höchstens {{size}} groß sein.",
+    error_count: "Du kannst höchstens {{count}} Screenshots anhängen.",
+    error_description: "Bitte beschreibe das Problem.",
+    error_rejected:
+      "Die Meldung wurde abgelehnt. Bitte kürze sie oder entferne einen Anhang.",
+    error_failed: "Die Meldung konnte nicht gesendet werden. Bitte später erneut versuchen.",
   },
 };

@@ -61,6 +61,7 @@ import McpServerDetailsModal from "./McpServer/McpServerDetailsModal";
 import AddAgentModal from "./Agent/AddAgentModal";
 import AgentToolsModal from "./Agent/AgentToolsModal";
 import RenameAgentSessionModal from "./Agent/RenameAgentSessionModal";
+import BugReportModal from "./Feedback/BugReportModal";
 
 const ModalContext = createContext();
 
@@ -296,6 +297,9 @@ export function ModalProvider({ children }) {
           dispatch={dispatch}
           {...modalProps}
         />
+      )}
+      {modalType === "bugReport" && (
+        <BugReportModal isOpen onClose={closeModal} {...modalProps} />
       )}
     </ModalContext.Provider>
   );

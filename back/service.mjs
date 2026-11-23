@@ -32,6 +32,12 @@ let remoteFilesArcana =
   process.env.SAIA_RAG_WEB_ARCANA ||
   "remote-files";
 let bridgePublicUrl = process.env.BRIDGE_PUBLIC_URL || "";
+// Bug report delivery. The browser posts to `/feedback` here; this service
+// forwards the multipart body to a receiver that understands GAIA's format (a
+// JSON `payload` field plus `screenshots`). Empty means the route answers 501
+// and the front end hides the entry point via `feedbackPath`.
+let feedbackEndpoint = process.env.FEEDBACK_ENDPOINT || "";
+let feedbackToken = process.env.FEEDBACK_TOKEN || "";
 // Bridge credentials may also live in back.json: a native checkout started with
 // `npm run start` has no environment file, and the bridge fails closed without
 // them. The env var still wins, so a deployment can override the file.
@@ -74,6 +80,21 @@ try {
     config.bridgePublicUrl.trim()
   ) {
     bridgePublicUrl = config.bridgePublicUrl.trim();
+  }
+  if (
+    typeof config.feedbackEndpoint === "string" &&
+    config.feedbackEndpoint.trim()
+  ) {
+    feedbackEndpoint = config.feedbackEndpoint.trim();
+    console.log("Feedback endpoint: set");
+  }
+  if (
+    typeof config.feedbackToken === "string" &&
+    config.feedbackToken.trim() &&
+    !process.env.FEEDBACK_TOKEN
+  ) {
+    feedbackToken = config.feedbackToken.trim();
+    console.log("Feedback token: set");
   }
   if (
     typeof config.bridgeSharedSecret === "string" &&
@@ -445,6 +466,54 @@ app.post("/images/generations", (req, res) =>
   forward(req, res, "/images/generations", JSON.stringify(req.body ?? {}), "application/json"),
 );
 app.post("/websearch", (req, res) => forward(req, res, "/websearch", JSON.stringify(req.body ?? {}), "application/json"));
+
+// Bug report forwarding. The browser posts GAIA's multipart shape (a JSON
+// `payload` field plus `screenshots`); the body passes through unchanged, so a
+// receiver does not need a Chat AI-specific schema. The caller's identity
+// headers go along, which is how a receiver behind the same OIDC gateway knows
+// who filed the report. `feedbackToken` (back.json or FEEDBACK_TOKEN) is for a
+// receiver that wants a shared secret instead. Without a configured endpoint the
+// route answers 501; the front end then hides the footer entry point entirely
+// (`feedbackPath`).
+app.post("/feedback", async (req, res) => {
+  if (!feedbackEndpoint) {
+    return res.status(501).json({ error: "Feedback is not configured." });
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30 * 1000);
+  res.on("close", () => controller.abort());
+  try {
+    const headers = {};
+    if (feedbackToken) headers.Authorization = `Bearer ${feedbackToken}`;
+    for (const name of [
+      "inference-id",
+      "x-auth-claim-uid",
+      "oidc_claim_uid",
+      "oidc_claim_email",
+    ]) {
+      const value = req.headers[name];
+      if (value) headers[name] = value;
+    }
+    const upstream = await globalThis.fetch(feedbackEndpoint, {
+      method: "POST",
+      headers,
+      body: multipart(req),
+      signal: controller.signal,
+    });
+    const type = upstream.headers.get("content-type");
+    const body = await upstream.text();
+    res.status(upstream.status);
+    res.setHeader("Content-Type", type || "application/json");
+    res.send(body);
+  } catch (error) {
+    if (controller.signal.aborted && res.headersSent) return;
+    console.error("Error in /feedback:", error);
+    if (!res.headersSent) res.status(502);
+    res.end("Feedback delivery failed.");
+  } finally {
+    clearTimeout(timer);
+  }
+});
 
 // Remote file store. Files live in a dedicated saia-rag-web Arcana and are
 // accessed through the saia-rag-web backend with the user's OIDC header.
