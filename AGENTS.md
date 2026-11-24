@@ -833,7 +833,11 @@ fly and never compresses `application/wasm`. `sw.js` is registered only in produ
 (`main.jsx`). It caches on first use, never precaches, handles only paths in its build manifest
 (hashed `assets/` and the vendored `typst-assets/` / `tikzjax/`, the latter keyed by content
 hash), and prunes stale entries on activate. TikZJax's own `.gz` files are real payloads, not
-precompressed siblings: never serve them with `Content-Encoding` (see §4.11).
+precompressed siblings: never serve them with `Content-Encoding` (see §4.11). `index.html` requests
+`/site.webmanifest` with `crossorigin="use-credentials"`: browsers fetch a manifest without cookies,
+so a deployment behind a login gateway answered 401 on every load and installability was lost.
+`pwaManifest.js#manifestLink()` re-applies the attribute to a link it creates or a brand rewrites;
+keep both in step, and exempt the file in a gateway that authenticates by header rather than cookie.
 
 ### 4.22 Arcana Tools and remote files are proxy-backed by saia-rag-web
 

@@ -327,12 +327,13 @@ The directory that contains `index.html` is the one to use both as the document 
 
 Without Docker, the same bundle comes from `cd front && npm i && npm run build`, run from `front/` so the default `CONFIG_LOCATION=../secrets/front.json` resolves (or set `CONFIG_LOCATION` explicitly).
 
-Two things matter when serving it:
+Several things matter when serving it:
 
 - Every `VITE_*` value — including `backendPath`, `modelsPath` and `userDataPath` — is compiled into the JavaScript during the build, so `front/dist` is a snapshot. After changing `front.json`, rerun the build (`docker compose up front` or `docker compose restart front` both re-run the entrypoint) and redeploy the new files; editing the config does not change an already-built or already-copied bundle.
 - The build writes a Brotli (`.br`) and gzip (`.gz`) copy next to every compressible file, including the large Typst WASM files. Let the web server send those instead of compressing on every request (see the examples below). `vite preview` (`"mode": "prod"`) already does this.
 - The build also emits `sw.js`, a service worker that keeps the hashed `assets/` files and the vendored `typst-assets/` and `tikzjax/` files in the browser's cache across visits. Serve `sw.js` with `Cache-Control: no-cache`, like `index.html`, so a new deployment is picked up.
 - The app uses client-side routing (`/chat/<id>`, `/landing`, ...) and Vite's `base` is `"/"`. Unknown paths must fall back to `index.html`, and the bundle must be served from the domain root. For a sub-path deployment, change `base` in `front/vite.config.js` and rebuild.
+- Browsers fetch a web app manifest **without credentials**, so a build behind a login gateway would log a 401 for `/site.webmanifest` on every load even though the user is signed in. The link in `index.html` therefore carries `crossorigin="use-credentials"`, which includes the session cookie for this same-origin file. A gateway that authenticates by injecting headers rather than by cookie still needs `/site.webmanifest` (and a brand's manifest assets) exempted from its login requirement; the file contains no private data.
 
 To keep the browser on a single origin, proxy the `back` service under the same host. With such a setup, the relevant parts of `front.json` are:
 
