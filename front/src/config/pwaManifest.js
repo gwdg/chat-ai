@@ -68,6 +68,13 @@ const manifestLink = () => {
     link.rel = "manifest";
     document.head.appendChild(link);
   }
+  // A manifest fetch omits credentials unless the element asks for them, so a
+  // deployment behind login answers 401 for the same-origin file. `index.html`
+  // ships the attribute; keep it here for a link this module creates or a brand
+  // rewrites, and for a Blob URL (also same-origin, so CORS is satisfied).
+  if (link.getAttribute("crossorigin") !== "use-credentials") {
+    link.setAttribute("crossorigin", "use-credentials");
+  }
   return link;
 };
 
