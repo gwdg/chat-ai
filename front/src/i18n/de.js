@@ -12,6 +12,22 @@ export default {
       "Der Browserspeicher ist voll oder nicht verfügbar. Exportieren Sie eine Sicherung, schaffen Sie Speicherplatz und laden Sie neu.",
     database_generic:
       "Die lokale Datenbank konnte nicht geöffnet werden. Ihre Daten sind möglicherweise noch vorhanden. Laden Sie neu oder schließen Sie andere Chat-AI-Tabs.",
+    database_stalled:
+      "Die lokale Datenbank braucht ungewöhnlich lange zum Öffnen. Wahrscheinlich verwendet ein anderer Chat-AI-Tab oder ein anderes Fenster sie noch — schließen Sie alle anderen Chat-AI-Tabs und -Fenster und versuchen Sie es erneut. Wenn das nicht hilft, laden Sie die Seite neu.",
+    data_safe_title: "Ihre Daten sind sicher",
+    data_safe:
+      "Es wurde nichts gelöscht. Ihre Chats, Dateien und Einstellungen liegen weiterhin in diesem Browser — nur diese Seite konnte sie nicht öffnen.",
+    save_data: "Alle meine Daten speichern",
+    save_data_hint:
+      "Sie können eine Kopie von allem als Datei aufbewahren: Sie wird auf Ihren Rechner heruntergeladen und lässt sich später wieder importieren.",
+    save_data_saving: "Datei wird vorbereitet…",
+    save_data_done: "Ihre Datei wurde heruntergeladen.",
+    save_data_failed:
+      "Die lokale Datenbank konnte nicht gelesen werden, daher wurde keine Datei erstellt. Schließen Sie die anderen Chat-AI-Tabs und -Fenster und versuchen Sie es erneut.",
+    retry: "Erneut versuchen",
+    details: "Details",
+    support_before: "Wenn das Problem nicht von selbst verschwindet, wenden Sie sich bitte an",
+    support_after: ".",
     reload: "Neu laden",
   },
   // Common phrases

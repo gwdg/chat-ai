@@ -12,6 +12,22 @@ export default {
       "The browser storage is full or unavailable. Export a backup, free some space, and reload.",
     database_generic:
       "The local database could not be opened. Your data may still be present. Reload or close other Chat AI tabs.",
+    database_stalled:
+      "The local database is taking unusually long to open. Another Chat AI tab or window is most likely still using it — close every other Chat AI tab and window, then retry. If that does not help, reload the page.",
+    data_safe_title: "Your data is safe",
+    data_safe:
+      "Nothing has been deleted. Your chats, files and settings are still stored in this browser — only this page could not open them.",
+    save_data: "Save all my data",
+    save_data_hint:
+      "You can keep a copy of everything as a file: it downloads to your computer and can be imported again later.",
+    save_data_saving: "Preparing your file…",
+    save_data_done: "Your file has been downloaded.",
+    save_data_failed:
+      "The local database could not be read, so the file was not created. Close the other Chat AI tabs and windows and try again.",
+    retry: "Retry",
+    details: "Details",
+    support_before: "If this does not go away on its own, please contact",
+    support_after: ".",
     reload: "Reload",
   },
   // Common phrases
