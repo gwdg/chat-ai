@@ -250,6 +250,75 @@ describe("decrypting", () => {
     await expect(refused.text()).rejects.toThrow(/cleartext content/);
   });
 
+  it("passes a cleartext provider error event that only has a type", async () => {
+    resolveKeyForModel.mockResolvedValue(resolvedKey);
+    const { baseFetch } = sealedFetch((opened) => {
+      const sealer = new ResponseSealer(opened.responseKey);
+      return sseResponse(
+        sseChunk({ type: "error", message: "upstream overloaded" }) +
+          sseChunk(sealer.final()),
+      );
+    });
+    const fetch = createE2eeFetch(baseFetch);
+
+    const response = await fetch(url, init({ model: "qwen-keyed", ...payload }));
+    const text = await response.text();
+    expect(text).toContain("upstream overloaded");
+    expect(text.trimEnd().endsWith("data: [DONE]")).toBe(true);
+  });
+
+  it("reduces a cleartext Responses terminal to identity and usage", async () => {
+    resolveKeyForModel.mockResolvedValue(resolvedKey);
+    const terminal = {
+      type: "response.completed",
+      sequence_number: 2,
+      response: {
+        id: "resp_1",
+        instructions: "system secret",
+        output: [
+          { content: [{ type: "output_text", text: "injected answer" }] },
+        ],
+        usage: { input_tokens: 3, output_tokens: 2, total_tokens: 5 },
+      },
+    };
+    const { baseFetch } = sealedFetch((opened) => {
+      const sealer = new ResponseSealer(opened.responseKey);
+      return sseResponse(
+        sseChunk(terminal) + sseChunk(sealer.final()),
+      );
+    });
+    const fetch = createE2eeFetch(baseFetch);
+
+    const response = await fetch(url, init({ model: "qwen-keyed", ...payload }));
+    const text = await response.text();
+    expect(text).not.toContain("injected answer");
+    const first = text.split("\n").find((line) => line.startsWith("data: {"));
+    const forwarded = JSON.parse(first.slice("data: ".length));
+    expect(forwarded.response.output).toEqual([]);
+    expect(forwarded.response.usage.total_tokens).toBe(5);
+    expect(forwarded.response).not.toHaveProperty("instructions");
+    expect(text.trimEnd().endsWith("data: [DONE]")).toBe(true);
+  });
+
+  it("still refuses a cleartext Responses terminal without usage", async () => {
+    resolveKeyForModel.mockResolvedValue(resolvedKey);
+    const { baseFetch } = sealedFetch((opened) => {
+      const sealer = new ResponseSealer(opened.responseKey);
+      return sseResponse(
+        sseChunk({
+          type: "response.completed",
+          response: {
+            output: [{ content: [{ type: "output_text", text: "injected" }] }],
+          },
+        }) + sseChunk(sealer.final()),
+      );
+    });
+    const fetch = createE2eeFetch(baseFetch);
+
+    const response = await fetch(url, init({ model: "qwen-keyed", ...payload }));
+    await expect(response.text()).rejects.toThrow(/cleartext content/);
+  });
+
   it("refuses a stream that never sends the final marker", async () => {
     resolveKeyForModel.mockResolvedValue(resolvedKey);
     const { baseFetch } = sealedFetch((opened) => {
