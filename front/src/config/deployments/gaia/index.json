@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "modules": {
+    "tools": true,
+    "feedback": false,
+    "choices": false,
+    "agent": true,
+    "agents": true,
+    "arcanas": true,
+    "speech": "browser",
+    "sync": false
+  },
+  "features": {
+    "meta_chat": true,
+    "workspaces": true,
+    "mcp_servers": true,
+    "e2ee": false,
+    "tutorials": true,
+    "import_git": false
+  },
+  "brands": {
+    "default": "gaia",
+    "trustedField": "brand",
+    "rules": [
+      {
+        "claims": [
+          "brand",
+          "groups",
+          "oidc_claim_groups",
+          "oidc_claim_entitlements",
+          "oidc_claim_ou"
+        ],
+        "contains": "GAIA-TUTOR",
+        "brand": "gaia-tutor"
+      }
+    ]
+  }
+}

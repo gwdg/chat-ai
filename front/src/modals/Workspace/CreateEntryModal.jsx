@@ -12,6 +12,7 @@ export default function CreateEntryModal({
   initialName = "",
   titleKey,
   confirmKey,
+  introKey,
 }) {
   const { t } = useTranslation();
   const [name, setName] = useState(initialName);
@@ -49,7 +50,7 @@ export default function CreateEntryModal({
     >
       <div className="flex flex-col gap-3 pb-2 text-sm">
         <p className="text-xs text-base-content/60">
-          {t("workspace.create_in", { path })}
+          {t(introKey ?? "workspace.create_in", { path })}
         </p>
         <input
           value={name}

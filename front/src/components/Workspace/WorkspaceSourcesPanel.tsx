@@ -103,12 +103,14 @@ export default function WorkspaceSourcesPanel({
   activeTarget = null,
   onOpenTarget,
   onAddSource,
+  onOpenDevice,
   className = "",
 }: {
   sources: WorkspaceSourceRow[];
   activeTarget?: SourceTarget | null;
   onOpenTarget: (target: SourceTarget) => void;
   onAddSource: () => void;
+  onOpenDevice?: () => void;
   className?: string;
 }) {
   const { t } = useTranslation();
@@ -176,7 +178,9 @@ export default function WorkspaceSourcesPanel({
           usageLabel={usageLabel(deviceQuota)}
           broken={brokenReason(localSources)}
           active={activeDrive === "device"}
-          onClick={() => onOpenTarget({ drive: "device" })}
+          onClick={() =>
+            onOpenDevice ? onOpenDevice() : onOpenTarget({ drive: "device" })
+          }
         />
         <DriveCard
           dataGuide="workspace-source-chats"

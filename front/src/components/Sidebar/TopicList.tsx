@@ -154,6 +154,7 @@ export default function TopicList({
   onRenameTopic,
   onDeleteTopic,
   onToggleTopicPinned,
+  onDeleteUnsortedChats,
   onOpenTopic,
   draggingConversationId,
   dragOverTopicId,
@@ -177,6 +178,8 @@ export default function TopicList({
   onRenameTopic: (topic: TopicRef) => void;
   onDeleteTopic: (topic: TopicRef) => void;
   onToggleTopicPinned: (topic: TopicRef) => void;
+  /** Remove every chat in the Unsorted Chats bucket, after confirmation. */
+  onDeleteUnsortedChats?: (conversations: any[]) => void;
   onOpenTopic: (topicId: string) => void;
   draggingConversationId: string | null;
   dragOverTopicId: string | null;
@@ -458,7 +461,7 @@ export default function TopicList({
               {count > 999 ? "999+" : count}
             </span>
 
-            {topic && (
+            {topic ? (
               <button
                 type="button"
                 ref={(el) => {
@@ -480,9 +483,29 @@ export default function TopicList({
                   className="text-base-content/70"
                 />
               </button>
-            )}
-
-            {topic ? null : (
+            ) : neutral && count > 0 ? (
+              <button
+                type="button"
+                ref={(el) => {
+                  menuButtonRefs.current[id] = el;
+                }}
+                onClick={(e) => toggleTopicMenu(e, id)}
+                data-guide="unsorted-menu"
+                aria-label={t("folders.unsorted_options")}
+                aria-haspopup="menu"
+                aria-expanded={menuTopicId === id}
+                className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md hover:bg-base-300 transition ${
+                  menuTopicId === id || window.innerWidth < 1024
+                    ? "opacity-100"
+                    : "opacity-0 group-hover:opacity-100"
+                }`}
+              >
+                <OverflowMenuVertical
+                  size={16}
+                  className="text-base-content/70"
+                />
+              </button>
+            ) : (
               <span
                 aria-hidden="true"
                 className="h-6 w-6 flex-shrink-0"
@@ -537,6 +560,44 @@ export default function TopicList({
   // and a folded variant that never mounted the menu left its "…" dead.
   const renderTopicMenu = () => {
     if (!menuTopicId) return null;
+    // The Unsorted Chats bucket is virtual, so it has no topic row to act on.
+    // Its menu only offers the destructive bulk action.
+    if (menuTopicId === UNSORTED_TOPIC_ID) {
+      return (
+        <div
+          ref={menuRef}
+          role="menu"
+          className="fixed w-44 rounded-lg shadow-2xl ring-1 ring-black/10 dark:ring-white/10 border border-base-300"
+          style={{
+            left: `${menuPosition.x}px`,
+            top: `${menuPosition.y}px`,
+            zIndex: 999999,
+            backgroundColor: "rgb(255, 255, 255)",
+          }}
+        >
+          <div
+            className="absolute inset-0 bg-base-100 rounded-lg"
+            style={{ zIndex: -1 }}
+          />
+          <div className="p-1 bg-base-100 rounded-lg relative">
+            <button
+              type="button"
+              role="menuitem"
+              data-guide="remove-all-unsorted"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeleteUnsortedChats?.(unsortedConversations);
+                closeTopicMenu();
+              }}
+              className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-error transition-colors hover:bg-error/10"
+            >
+              <TrashCan size={14} />
+              {t("folders.remove_all_unsorted")}
+            </button>
+          </div>
+        </div>
+      );
+    }
     const topic =
       pinnedTopics.find((item) => item.id === menuTopicId) ||
       topics.find((item) => item.id === menuTopicId);

@@ -7,7 +7,8 @@
     "agent": false,
     "agents": false,
     "arcanas": false,
-    "speech": false
+    "speech": false,
+    "sync": false
   },
   "features": {
     "meta_chat": true,

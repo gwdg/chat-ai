@@ -224,6 +224,25 @@ export class LocalProvider implements FileProvider {
     await getDir(this.handle(), normalized, true);
   }
 
+  /** OPFS: open the file with `keepExistingData` and seek to its end. Parents are created. */
+  async append(path: string, data: Uint8Array | string) {
+    const normalized = normalizePath(path);
+    const name = baseName(normalized);
+    if (!name) throw new WorkspaceError("NOT_FOUND", "Not a file path");
+    const dir = await getDir(this.handle(), parentPath(normalized), true);
+    const handle = await dir.getFileHandle(name, { create: true });
+    const size = (await handle.getFile()).size;
+    const writable = await handle.createWritable({ keepExistingData: true });
+    try {
+      const bytes =
+        typeof data === "string" ? new TextEncoder().encode(data) : data;
+      await writable.seek(size);
+      await writable.write(bytes as Uint8Array<ArrayBuffer>);
+    } finally {
+      await writable.close();
+    }
+  }
+
   async remove(path: string, opts: { recursive: boolean }) {
     const normalized = normalizePath(path);
     const name = baseName(normalized);

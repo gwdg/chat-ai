@@ -40,6 +40,7 @@ import {
   setMcpToolPolicy,
 } from "../../Redux/reducers/userSettingsReducer";
 import { isToolsEnabled } from "../../utils/modules";
+import { isBrandExternalAllowed } from "../../config/brandPolicy";
 import { useModal } from "../ModalContext";
 import { useSendWithEnter } from "../../hooks/useSendWithEnter";
 import ProfilePreferenceSwitch from "./ProfilePreferenceSwitch";
@@ -306,16 +307,18 @@ export function HtmlRenderPreference() {
       />
 
       <div className="ml-4 flex flex-col gap-2">
-        <ProfilePreferenceSwitch
-          label={t(
-            "user_settings.chat_preferences.html_render.external_references.label",
-          )}
-          description={t(
-            "user_settings.chat_preferences.html_render.external_references.description",
-          )}
-          checked={htmlLoadExternal}
-          onChange={(checked) => dispatch(setHtmlLoadExternal(checked))}
-        />
+        {isBrandExternalAllowed("external_references") && (
+          <ProfilePreferenceSwitch
+            label={t(
+              "user_settings.chat_preferences.html_render.external_references.label",
+            )}
+            description={t(
+              "user_settings.chat_preferences.html_render.external_references.description",
+            )}
+            checked={htmlLoadExternal}
+            onChange={(checked) => dispatch(setHtmlLoadExternal(checked))}
+          />
+        )}
 
         <SegmentedPreference
           label={t(

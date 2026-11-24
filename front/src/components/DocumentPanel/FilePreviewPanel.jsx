@@ -1,8 +1,10 @@
 import { Download } from "@carbon/icons-react";
 import { useTranslation } from "react-i18next";
 
+import DescribeImageButton from "./DescribeImageButton";
 import FilePreviewContent from "./FilePreviewContent";
 import PanelShell from "./PanelShell";
+import { getFileType } from "../../utils/attachments";
 import { formatBytes } from "../../utils/formatBytes";
 
 /**
@@ -55,6 +57,9 @@ export default function FilePreviewPanel({
   };
 
   const label = downloadLabel ?? t("workspace.download");
+  // Only an image can be described, and the button sits left of Download in the
+  // same header actions, so both previews (workspace tab and docked panel) show it.
+  const isImage = getFileType({ type: entry.mime, name: entry.name }) === "image";
 
   return (
     <PanelShell
@@ -62,17 +67,22 @@ export default function FilePreviewPanel({
       subtitle={subtitle}
       onClose={onClose}
       actions={
-        canDownload ? (
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm btn-square"
-            onClick={handleDownload}
-            disabled={downloadDisabled}
-            aria-label={label}
-            title={label}
-          >
-            <Download size={18} />
-          </button>
+        isImage || canDownload ? (
+          <div className="flex items-center gap-1">
+            {isImage && <DescribeImageButton preview={preview} />}
+            {canDownload && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm btn-square"
+                onClick={handleDownload}
+                disabled={downloadDisabled}
+                aria-label={label}
+                title={label}
+              >
+                <Download size={18} />
+              </button>
+            )}
+          </div>
         ) : undefined
       }
     >

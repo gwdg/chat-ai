@@ -1,5 +1,18 @@
 # Changelog 
 
+## Version: v2.0.1 (21.11.2026)
+Highlights:
+- Added encrypted server synchronization of conversations, topics, settings, interface preferences, workspaces and agents via the SAIA filesystem
+- Added an optional passkey that unlocks the sync vault without typing the passphrase, asked automatically after a reload and in any new tab while automatic sync is on; with automatic sync paused, the sidebar's "Sync now" unlocks on demand, plus a one-time offer to set it up
+- A new browser now offers to set up the encrypted synchronization that already exists for the account, once per device
+- Server synchronization now runs its automatic pass only from the active tab, so background tabs no longer duplicate it
+- Added encrypted backups of the whole browser history as a single downloadable file
+- Split Data settings into Manage data, Encrypted backup and Server synchronization sections
+- Added bulk removal of all chats in Unsorted Chats
+- Fixed replacing a locked sync vault and added a sidebar shortcut for the sync status, including a switch that pauses automatic synchronization
+- Server synchronization now repeats an upload that was interrupted before its index fragment was published, instead of pulling older remote data over the newer local edit
+- The sidebar sync button only turns green while automatic synchronization is on and the vault is unlocked; blue means paused or still locked, gray means not set up
+
 ## Version: v2.0.0 (14.11.2026)
 Highlights:
 - Added multi-session OpenCode agents with session creation, switching, renaming, removal, and nested subagent sessions

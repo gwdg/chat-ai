@@ -190,6 +190,15 @@ export default function WorkspaceStorageManager({
     }
   };
 
+  // This dialog is where a workspace's folders are picked, so the device card
+  // always opens the Add source dialog on Local folder, even when the browser
+  // already holds granted folders. The pane behind it returns to the device
+  // drive, so a folder added there shows up right away.
+  const openDeviceDrive = () => {
+    setTarget({ drive: "device" });
+    openAdd("local");
+  };
+
   return (
     <div
       data-testid="workspace-storage-manager"
@@ -205,6 +214,7 @@ export default function WorkspaceStorageManager({
             activeTarget={target}
             onOpenTarget={setTarget}
             onAddSource={() => openAdd()}
+            onOpenDevice={openDeviceDrive}
           />
         </aside>
         <div

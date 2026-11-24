@@ -102,6 +102,7 @@ Supported setting keys and values:
 - html_sanitization: "strict" or "relaxed"
 - document_conversion_mode: "server", "browser", or "choice"
 - mcp_tool_policy: "ask", "always", or "never" (whether chat turns may call tools of the user's MCP servers; "never" leaves the app's own file and workspace tools available)
+- sync_enabled, sync_auto: true or false (the encrypted server synchronization and its automatic five-minute pass; enabling it only switches the preference, the vault is created or unlocked in Data settings and the passphrase is never available here)
 - send_with_enter: true, false, or null
 - timeout: milliseconds (5000-900000)
 

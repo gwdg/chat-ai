@@ -17,6 +17,7 @@ import {
   resolveBrandId,
   setCurrentBrand,
 } from "./brands";
+import { applyBrandManifest } from "./pwaManifest";
 
 // Re-exported for callers that only need the storage key.
 export { BRAND_OVERRIDE_KEY };
@@ -70,9 +71,18 @@ export function BrandProvider({ children }) {
     [brandId],
   );
 
+  // The brand must be in module state before the subtree renders, because plain
+  // accessors (isFeatureEnabled, moduleValue, applyBrandModelPolicy, …) cannot use
+  // a hook. App subscribes with `useBrand()`, so assigning here covers the same
+  // render pass; doing it in an effect would leave one render on the old brand.
+  setCurrentBrand(brand);
+
   useEffect(() => {
-    setCurrentBrand(brand);
-    applyBrandDocument(brand);
+    // App applies the active brand theme before this effect (child effects run
+    // first), so reading the attribute keeps a brand change from resetting a
+    // custom theme. Without App (tests, an embed) the default pair is used.
+    applyBrandDocument(brand, document.documentElement.dataset.brandTheme ?? null);
+    applyBrandManifest(brand);
   }, [brand]);
 
   const value = useMemo(

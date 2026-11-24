@@ -5,9 +5,25 @@ import {
   listFolders,
   searchMessages,
 } from "../db";
-import { buildFeatureGuidePrompt, featureGuides } from "../config/featureGuides";
-import { buildUseCasePrompt, useCases } from "../config/useCases";
+import {
+  buildFeatureGuidePrompt,
+  isFeatureGuideAvailable,
+} from "../config/featureGuides";
+import {
+  buildUseCasePrompt,
+  isUseCaseAvailable,
+} from "../config/useCases";
 import { isFeatureEnabled } from "../config/deployment";
+import {
+  brandRestrictionLines,
+  brandRestrictionSummary,
+} from "../config/brandPolicy";
+import { brandThemes, currentBrand } from "../config/brands";
+import {
+  brandConsentGate,
+  consentPurposes,
+  requiresBrandConsent,
+} from "../config/consent";
 import { loadPersonaCatalog } from "./personaCatalog";
 import { getSpeechModule } from "./speechAudio";
 import {
@@ -16,6 +32,7 @@ import {
   isAgentsEnabled,
   isChoicesEnabled,
   isFeedbackEnabled,
+  isSyncEnabled,
   isToolsEnabled,
 } from "./modules";
 import { usableKey } from "../e2ee/registry";
@@ -45,6 +62,25 @@ function yesNo(value) {
   return value ? "yes" : "no";
 }
 
+// The consent state for the settings report. It is device-local and cannot be
+// changed by the Meta chat, so this only names the state and the recorded
+// answers; the gate and the settings switches are the place to change them.
+function consentLine(brand, interfaceSettings) {
+  const gate = brandConsentGate(brand);
+  if (!gate) return "not used by this brand";
+  const record = interfaceSettings?.consent_acceptance?.[brand?.id];
+  if (requiresBrandConsent(brand, record)) {
+    return "not accepted on this device";
+  }
+  const purposes = consentPurposes(gate)
+    .map(
+      (purpose) =>
+        `${purpose.id}=${record?.answers?.[purpose.id] ? "yes" : "no"}`,
+    )
+    .join(", ");
+  return `accepted (version ${record?.version ?? "unknown"}${purposes ? `; ${purposes}` : ""})`;
+}
+
 function memoryGroupsFor(userSettings = {}) {
   return [
     { id: "default", name: "Default" },
@@ -62,6 +98,9 @@ function memoryGroupName(userSettings, groupId) {
 }
 
 function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
+  const activeBrand = currentBrand();
+  const restrictions = brandRestrictionSummary(activeBrand);
+  const restrictionLines = brandRestrictionLines(activeBrand);
   const memoryMode =
     userSettings.memory_mode === 1
       ? "recall"
@@ -129,6 +168,7 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
     `- Default memory group: ${memoryGroupName(userSettings, userSettings.default_memory_group)} (id: ${userSettings.default_memory_group ?? "default"})`,
     `- Request timeout: ${Math.round((userSettings.timeout ?? 300000) / 1000)} seconds`,
     `- End-to-end encryption: ${e2eeKeys.length} key${e2eeKeys.length === 1 ? "" : "s"} configured; encrypted models: ${keyedModels.length ? keyedModels.join(", ") : "none"}`,
+    `- Encrypted server synchronization (settings sync): ${userSettings.sync?.enabled === true ? "enabled" : "disabled"}; automatic sync: ${userSettings.sync?.auto !== false ? "on" : "off"}. The vault key and passphrase are never available to the Meta chat; creating or unlocking the copy happens in Data settings.`,
     `- Suggest follow-up prompts: ${yesNo(userSettings.suggest_user_prompts)}`,
     `- Set title only on first prompt: ${yesNo(userSettings.set_title_once)}`,
     `- Conversation summaries: ${yesNo(userSettings.conversation_summaries)}`,
@@ -144,8 +184,18 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
     `- Render Chart.js: ${yesNo(userSettings.render_chartjs ?? false)}`,
     `- Keep reasoning collapsed while streaming: ${yesNo(userSettings.collapse_reasoning_while_streaming)}`,
     `- Document conversion: ${documentConversion}`,
-    `- Modules: tools ${isToolsEnabled() ? "enabled" : "disabled"}, feedback ${isFeedbackEnabled() ? "enabled" : "disabled"}, choices ${isChoicesEnabled() ? "enabled" : "disabled"}, agent ${isAgentEnabled() ? "enabled" : "disabled"}, arcanas ${isArcanasEnabled() ? "enabled" : "disabled"}, agents ${isAgentsEnabled() ? "enabled" : "disabled"}, speech ${getSpeechModule() ? "enabled" : "disabled"}`,
+    `- Modules: tools ${isToolsEnabled() ? "enabled" : "disabled"}, feedback ${isFeedbackEnabled() ? "enabled" : "disabled"}, choices ${isChoicesEnabled() ? "enabled" : "disabled"}, agent ${isAgentEnabled() ? "enabled" : "disabled"}, arcanas ${isArcanasEnabled() ? "enabled" : "disabled"}, agents ${isAgentsEnabled() ? "enabled" : "disabled"}, sync ${isSyncEnabled() ? "enabled" : "disabled"}, speech ${getSpeechModule() ? "enabled" : "disabled"}`,
+    `- Brand: ${activeBrand?.name || activeBrand?.id || "unknown"}`,
+    `- Institutional restrictions: ${restrictionLines.length ? restrictionLines.join("; ") : "none"}`,
+    `- Brand-fixed model: ${restrictions.model.fixed || "none"}`,
+    `- Brand-blocked external communication: ${restrictions.external.length ? restrictions.external.join(", ") : "none"}`,
     `- Dark mode: ${yesNo(interfaceSettings.dark_mode)}`,
+    `- Extra brand themes: ${
+      brandThemes(activeBrand)
+        .map((theme) => theme.id)
+        .join(", ") || "none"
+    }; active: ${interfaceSettings.theme ?? "default"}`,
+    `- Brand consent gate: ${consentLine(activeBrand, interfaceSettings)}`,
     `- Show usage in sidebar: ${yesNo(interfaceSettings.show_usage_in_sidebar)}`,
     `- Chat sorting: ${interfaceSettings.conversation_sort ?? "created_desc"}`,
     `- Chat grouping: ${interfaceSettings.conversation_grouping ?? "topic"}`,
@@ -1652,7 +1702,9 @@ Sessions:\n${lines.join("\n") || "(no sessions)"}`;
 
       case "start_tutorial": {
         const id = String(args.id || "").trim();
-        if (!featureGuides[id]) return "Feature guide not found.";
+        if (!isFeatureGuideAvailable(id)) {
+          return "Feature guide not found or unavailable in this deployment.";
+        }
         window.dispatchEvent(
           new CustomEvent("chatai:start-feature-guide", { detail: { featureId: id } }),
         );
@@ -1661,7 +1713,9 @@ Sessions:\n${lines.join("\n") || "(no sessions)"}`;
 
       case "start_use_case": {
         const id = String(args.id || "").trim();
-        if (!useCases[id]) return "Use case not found.";
+        if (!isUseCaseAvailable(id)) {
+          return "Use case not found or unavailable in this deployment.";
+        }
         window.dispatchEvent(
           new CustomEvent("chatai:start-use-case", { detail: { useCaseId: id } }),
         );

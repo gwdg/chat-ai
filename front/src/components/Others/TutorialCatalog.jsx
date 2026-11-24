@@ -6,10 +6,10 @@ import { Book, ChevronRight, Search, StarFilled } from "@carbon/icons-react";
 import {
   FEATURE_CATEGORIES,
   featureGuides,
+  isFeatureGuideAvailable,
 } from "../../config/featureGuides";
 import { selectCompletedTutorials } from "../../Redux/reducers/interfaceSettingsSlice";
 import { useFeatureGuide } from "../../context/FeatureGuideContext";
-import { isAgentsEnabled } from "../../utils/modules";
 
 export default function TutorialCatalog({ open: controlledOpen, onOpenChange }) {
   const { t } = useTranslation();
@@ -33,7 +33,7 @@ export default function TutorialCatalog({ open: controlledOpen, onOpenChange }) 
         ids: ids.filter((id) => {
           const guide = featureGuides[id];
           if (!guide) return false;
-          if (id === "remote_agents" && !isAgentsEnabled()) return false;
+          if (!isFeatureGuideAvailable(id)) return false;
           if (hideCompleted && completed.includes(id)) return false;
           if (!normalizedQuery) return true;
           return t(guide.titleKey).toLowerCase().includes(normalizedQuery);

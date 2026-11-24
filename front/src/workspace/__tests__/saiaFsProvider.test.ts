@@ -135,6 +135,36 @@ vi.mock("@modelcontextprotocol/sdk/client/index.js", () => ({
           sdk.files.set(request.arguments.dst, sdk.files.get(path)!);
           sdk.files.delete(path);
           return text(`moved: ${path} -> ${request.arguments.dst}`);
+        case "append": {
+          const existing = sdk.files.get(path) ?? new Uint8Array();
+          const addition = encoder.encode(
+            String(request.arguments?.content ?? ""),
+          );
+          const combined = new Uint8Array(existing.length + addition.length);
+          combined.set(existing, 0);
+          combined.set(addition, existing.length);
+          sdk.files.set(path, combined);
+          sdk.dirs.add(parentOf(path));
+          return text(`appended: ${path}`);
+        }
+        case "rename": {
+          if (!sdk.files.has(path) && !sdk.dirs.has(path)) {
+            return text(`not found: ${path}`);
+          }
+          const nextName = String(request.arguments?.new_name ?? "");
+          const next = `${parentOf(path) === "/" ? "" : parentOf(path)}/${nextName}`;
+          if (sdk.files.has(next) || sdk.dirs.has(next)) {
+            return text(`error: destination already exists: ${nextName}`);
+          }
+          if (sdk.files.has(path)) {
+            sdk.files.set(next, sdk.files.get(path)!);
+            sdk.files.delete(path);
+          } else {
+            sdk.dirs.delete(path);
+            sdk.dirs.add(next);
+          }
+          return text(`renamed: ${path} -> ${next}`);
+        }
         default:
           return text(`unknown tool ${request.name}`);
       }
@@ -160,6 +190,8 @@ const ALL_TOOLS = [
   "mkdir",
   "exists",
   "move",
+  "append",
+  "rename",
   "info",
 ];
 
@@ -194,12 +226,13 @@ describe("SaiaFsProvider", () => {
     expect(provider.capabilities).toMatchObject({
       read: true,
       write: true,
+      append: true,
       delete: true,
       mkdir: true,
       move: true,
       // No copy tool, no range request, and the account folder's size is unknown.
       copy: false,
-      rename: false,
+      rename: true,
       range: false,
       quota: false,
     });
@@ -212,6 +245,9 @@ describe("SaiaFsProvider", () => {
 
     expect(provider.capabilities.read).toBe(true);
     expect(provider.capabilities.write).toBe(true);
+    // `write` can append text and `move` can rename in place, so both are offered.
+    expect(provider.capabilities.append).toBe(true);
+    expect(provider.capabilities.rename).toBe(true);
   });
 
   it("reads the account folder through back's proxy", async () => {
@@ -220,6 +256,8 @@ describe("SaiaFsProvider", () => {
 
     expect(provider.capabilities.read).toBe(false);
     expect(provider.capabilities.write).toBe(false);
+    expect(provider.capabilities.append).toBe(false);
+    expect(provider.capabilities.rename).toBe(false);
   });
 
   it("treats a fresh account's missing root as an empty folder", async () => {
@@ -301,6 +339,82 @@ describe("SaiaFsProvider", () => {
       src: "/drafts/a.txt",
       dst: "/drafts/b.txt",
     });
+  });
+
+  it("appends text through its own tool", async () => {
+    const provider = await connect();
+    sdk.files.set("/notes/a.txt", encoder.encode("first\n"));
+
+    await provider.append("/notes/a.txt", "second\n");
+
+    expect(sdk.calls.map((call) => call.name)).toEqual(["append"]);
+    expect(sdk.calls[0].args).toEqual({
+      path: "/notes/a.txt",
+      content: "second\n",
+    });
+    expect(decoder.decode(sdk.files.get("/notes/a.txt"))).toBe(
+      "first\nsecond\n",
+    );
+  });
+
+  it("rewrites the whole file in base64 for a binary append", async () => {
+    const provider = await connect();
+    sdk.files.set("/blobs/a.bin", new Uint8Array([0x89, 0x50]));
+
+    await provider.append("/blobs/a.bin", new Uint8Array([0xff, 0x00]));
+
+    expect(sdk.calls.map((call) => call.name)).toEqual([
+      "read_base64",
+      "write_base64",
+    ]);
+    expect(Array.from(sdk.files.get("/blobs/a.bin")!)).toEqual([
+      0x89, 0x50, 0xff, 0x00,
+    ]);
+  });
+
+  it("renames in place and refuses a name that is taken", async () => {
+    const provider = await connect();
+    sdk.files.set("/notes/a.txt", encoder.encode("a"));
+    sdk.files.set("/notes/b.txt", encoder.encode("b"));
+
+    await provider.rename("/notes/a.txt", "c.txt");
+    expect(sdk.files.has("/notes/c.txt")).toBe(true);
+    expect(sdk.calls.at(-1)).toEqual({
+      name: "rename",
+      args: { path: "/notes/a.txt", new_name: "c.txt" },
+    });
+
+    await expect(
+      provider.rename("/notes/c.txt", "b.txt"),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+  });
+
+  it("falls back to move for a rename, checking the destination first", async () => {
+    useTools("list", "read", "write", "delete", "mkdir", "exists", "move");
+    const provider = await connect();
+    sdk.files.set("/notes/a.txt", encoder.encode("a"));
+    sdk.files.set("/notes/b.txt", encoder.encode("b"));
+
+    await expect(
+      provider.rename("/notes/a.txt", "b.txt"),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    expect(sdk.calls.some((call) => call.name === "move")).toBe(false);
+
+    await provider.rename("/notes/a.txt", "c.txt");
+    expect(sdk.files.has("/notes/c.txt")).toBe(true);
+  });
+
+  it("refuses a rename whose name is a path or the storage root", async () => {
+    const provider = await connect();
+    sdk.files.set("/notes/a.txt", encoder.encode("a"));
+
+    await expect(
+      provider.rename("/notes/a.txt", "other/c.txt"),
+    ).rejects.toMatchObject({ code: "UNSUPPORTED" });
+    await expect(provider.rename("/", "root")).rejects.toMatchObject({
+      code: "PERMISSION_DENIED",
+    });
+    expect(sdk.calls).toEqual([]);
   });
 
   it("falls back to the text tools on an instance without the JSON pair", async () => {

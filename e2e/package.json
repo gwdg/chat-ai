@@ -6,6 +6,8 @@
         "e2e": "tsx src/cli.ts",
         "check": "tsc --noEmit",
         "setup:e2e": "bash scripts/install-browsers.sh",
+        "serve:e2e": "bash scripts/serve-apps.sh",
+        "test:e2e:spec": "bash scripts/run-tests.sh",
         "analyze": "node scripts/analyze.mjs",
         "analyze:check": "node scripts/analyze.mjs --check",
         "opencode:serve": "node scripts/opencode-server.mjs",

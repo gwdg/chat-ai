@@ -11,9 +11,12 @@ import { createPortal } from "react-dom";
 import { useLocation } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 
-import { featureGuides, getFeatureGuide } from "../config/featureGuides";
+import {
+  getFeatureGuide,
+  isFeatureGuideAvailable,
+} from "../config/featureGuides";
 import { buildUseCaseGuide } from "../config/useCases";
-import { isTargetCovered } from "./featureGuideHighlight";
+import { isTargetCovered, selectGuideTarget } from "./featureGuideHighlight";
 import {
   markTutorialCompleted,
   markUseCaseCompleted,
@@ -107,7 +110,10 @@ export function FeatureGuideProvider({ children }) {
 
   const startGuide = useCallback(
     (featureId) => {
-      if (!enabled || !featureGuides[featureId]) return;
+      // The catalog and the Meta chat already hide an unavailable guide, but a
+      // `/tutorial/<id>` link or a marker from an imported chat can still name
+      // one. Starting it would highlight elements this deployment never renders.
+      if (!enabled || !isFeatureGuideAvailable(featureId)) return;
       setCompletion(null);
       setTargetRect(null);
       setCursor({
@@ -343,12 +349,20 @@ export function FeatureGuideProvider({ children }) {
     let cancelled = false;
     let currentTarget = null;
 
-    const findTarget = () =>
-      selectors
+    const findTarget = () => {
+      const candidates = selectors
         .flatMap((selector) =>
           Array.from(document.querySelectorAll(selector)),
         )
-        .find(isVisible);
+        .filter(isVisible);
+      // A selector can match several copies of the same control (the sidebar
+      // rail and its expanded panel both carry `data-guide="user-settings"`).
+      // Point at the copy the user can reach, or the step's click completion
+      // would listen on a button that is hidden behind another one.
+      return selectGuideTarget(candidates, (candidate) =>
+        isTargetCovered(candidate, candidate.getBoundingClientRect()),
+      );
+    };
 
     const measure = () => {
       if (cancelled) return;

@@ -7,6 +7,7 @@ const readOnlyCapabilities = (
 ): WorkspaceCapabilities => ({
   ...capabilities,
   write: false,
+  append: false,
   delete: false,
   mkdir: false,
   rename: false,
@@ -54,6 +55,14 @@ export class ReadOnlyProvider implements FileProvider {
   }
 
   async write() {
+    throw new WorkspaceError("PERMISSION_DENIED", "Source is read-only");
+  }
+
+  async append() {
+    throw new WorkspaceError("PERMISSION_DENIED", "Source is read-only");
+  }
+
+  async rename() {
     throw new WorkspaceError("PERMISSION_DENIED", "Source is read-only");
   }
 

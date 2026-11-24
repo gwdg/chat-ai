@@ -3,6 +3,7 @@
 // The SDK is loaded only when a server is enabled.
 import type { AgentTool, AgentToolResult } from "@earendil-works/pi-agent-core";
 import i18n from "../i18n";
+import { isBrandExternalAllowed } from "../config/brandPolicy";
 import { requestMcpConfirmation } from "./mcpConfirmation";
 
 export interface McpServer {
@@ -39,6 +40,10 @@ const selectedIds = (value: unknown): string[] =>
 
 /** Per-chat settings with legacy server entries plus the globally configured selections. */
 export function resolveMcpServers(settings: any, globals: GlobalMcpServer[] = []) {
+  // A brand may forbid user-configured MCP servers entirely (config/brandPolicy.js).
+  // Returning none here covers the agent turn, the idle prefetch and the plain
+  // chat request, because every caller resolves the list through this function.
+  if (!isBrandExternalAllowed("mcp")) return [];
   const legacy = mcpServers(settings);
   const configuredIds = selectedIds(settings?.mcp_local_server_ids);
   // Turning MCP support on without ever choosing a server means "all configured servers"; an

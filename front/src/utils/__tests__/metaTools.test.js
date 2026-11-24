@@ -341,7 +341,7 @@ describe("Meta chat local tools", () => {
     await expect(run("start_tutorial", { id: tutorialId })).resolves.toContain("Started");
     await expect(run("start_use_case", { id: useCaseId })).resolves.toContain("Started");
     await expect(run("start_tutorial", { id: "does-not-exist" })).resolves.toBe(
-      "Feature guide not found.",
+      "Feature guide not found or unavailable in this deployment.",
     );
 
     window.removeEventListener("chatai:start-feature-guide", onTutorial);

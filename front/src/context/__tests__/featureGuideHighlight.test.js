@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isTargetCovered } from "../featureGuideHighlight";
+import { isTargetCovered, selectGuideTarget } from "../featureGuideHighlight";
 
 const rect = { left: 40, top: 100, width: 120, height: 30 };
 
@@ -57,5 +57,27 @@ describe("isTargetCovered", () => {
         options(target),
       ),
     ).toBe(false);
+  });
+});
+
+describe("selectGuideTarget", () => {
+  it("returns null when nothing matches", () => {
+    expect(selectGuideTarget([])).toBeNull();
+    expect(selectGuideTarget(undefined)).toBeNull();
+  });
+
+  it("skips a covered copy of the same control", () => {
+    // The rail's user button sits behind the expanded sidebar panel.
+    const rail = { id: "rail" };
+    const card = { id: "card" };
+    const chosen = selectGuideTarget([rail, card], (node) => node === rail);
+    expect(chosen).toBe(card);
+  });
+
+  it("falls back to the first copy when every one is covered", () => {
+    // A target below the fold is covered too; it still has to be scrolled to.
+    const below = { id: "below" };
+    const covered = () => true;
+    expect(selectGuideTarget([below], covered)).toBe(below);
   });
 });

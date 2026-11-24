@@ -91,3 +91,74 @@ describe("agentStore timestamps", () => {
     expect(store.getAgent("a1").pinned).toBe(false);
   });
 });
+
+describe("agentStore sync apply", () => {
+  // A pull must not look like a local edit: the record's `updatedAt` is adopted
+  // as-is, so the next `list()` produces the payload that was just pulled.
+  it("keeps the synced modification time instead of bumping it", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-01T00:00:00Z"));
+    const store = await freshStore();
+    store.addAgent({
+      id: "a1",
+      name: "Agent",
+      serverUrl: "http://x",
+      createdAt: Date.UTC(2026, 4, 1),
+      updatedAt: Date.UTC(2026, 4, 1),
+    });
+
+    vi.setSystemTime(new Date("2026-05-09T00:00:00Z"));
+    store.applyAgentFromSync({
+      id: "a1",
+      name: "Renamed elsewhere",
+      serverUrl: "http://x",
+      createdAt: Date.UTC(2026, 4, 1),
+      updatedAt: Date.UTC(2026, 4, 2),
+    });
+
+    const agent = store.getAgent("a1");
+    expect(agent.name).toBe("Renamed elsewhere");
+    expect(agent.updatedAt).toBe(Date.UTC(2026, 4, 2));
+    expect(agent.createdAt).toBe(Date.UTC(2026, 4, 1));
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    expect(saved[0].updatedAt).toBe(Date.UTC(2026, 4, 2));
+  });
+
+  it("keeps the device's active session when the record does not carry one", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-01T00:00:00Z"));
+    const store = await freshStore();
+    store.addAgent({ id: "a1", name: "Agent", serverUrl: "http://x" });
+    store.updateAgent("a1", { sessionId: "local-session" });
+
+    store.applyAgentFromSync({
+      id: "a1",
+      name: "Remote name",
+      serverUrl: "http://x",
+      createdAt: Date.UTC(2026, 5, 1),
+      updatedAt: Date.UTC(2026, 5, 2),
+    });
+
+    expect(store.getAgent("a1")).toMatchObject({
+      name: "Remote name",
+      sessionId: "local-session",
+    });
+  });
+
+  it("adds an agent it has never seen with the record's timestamps", async () => {
+    const store = await freshStore();
+    store.applyAgentFromSync({
+      id: "a2",
+      name: "From the account",
+      serverUrl: "http://x",
+      createdAt: 111,
+      updatedAt: 222,
+    });
+
+    expect(store.getAgent("a2")).toMatchObject({
+      name: "From the account",
+      createdAt: 111,
+      updatedAt: 222,
+    });
+  });
+});

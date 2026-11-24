@@ -354,6 +354,10 @@ export default function CreateWorkspaceModal({
           onClose={() => setCreateEntry(null)}
           kind={createEntry.kind}
           path={createEntry.path}
+          initialName={createEntry.initialName}
+          titleKey={createEntry.titleKey}
+          confirmKey={createEntry.confirmKey}
+          introKey={createEntry.introKey}
           onCreate={createEntry.onCreate}
         />
       )}

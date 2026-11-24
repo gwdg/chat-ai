@@ -9,6 +9,7 @@ import { notifyConversationMoved } from '../utils/conversationEvents'
 import { defaultCapabilities } from '../workspace/capabilities'
 import { SHARED_BROWSER_STORAGE_ID, workspaceBrowserStorageId } from '../workspace/browserStorage'
 import { chatStorageSourceId } from '../workspace/chatStorage'
+import { collapseDuplicateWorkspaceNodes } from './workspaceTreeDedupe'
 
 import type { 
   ConversationRow, 
@@ -36,7 +37,9 @@ import type {
   AgentSessionMessageRow,
   WorkspaceNodeRow,
   WorkspaceBlobRow,
-  WorkspaceFileReferenceRow
+  WorkspaceFileReferenceRow,
+  SyncMetaRow,
+  SyncRecordRow
 } from "./dbTypes"
 
 // ---------- Dexie DB ----------
@@ -61,6 +64,8 @@ export class AppDB extends Dexie {
   workspace_nodes!: Table<WorkspaceNodeRow, string>
   workspace_blobs!: Table<WorkspaceBlobRow, string>
   workspace_file_references!: Table<WorkspaceFileReferenceRow, string>
+  sync_meta!: Table<SyncMetaRow, string>
+  sync_records!: Table<SyncRecordRow, [string, string]>
 
   constructor() {
     super('app-conversations-db')
@@ -364,6 +369,21 @@ export class AppDB extends Dexie {
     // every other row value exactly as it is. The version stays registered so PR builds that
     // already opened as v17 do not hit a downgrade error.
     this.version(17).stores({}).upgrade(preserveStorageConsent);
+
+    // Encrypted sync bookkeeping: the vault header cache, the per-device id and
+    // the last remote revision each local record agreed on. None of it is
+    // exported and none of it holds key material — only `{rev, hash}` pairs.
+    this.version(18).stores({
+      sync_meta: 'key',
+      sync_records: '[namespace+id], namespace',
+    });
+
+    // A synced workspace used to write its tree under a derived id instead of
+    // reusing the row already at that path, so one file was listed twice. Keep
+    // one row per path (the one that holds the bytes), point chat references at
+    // it and drop the extra blobs. New duplicates are prevented by
+    // `applyWorkspaceBundle`.
+    this.version(19).stores({}).upgrade(collapseDuplicateWorkspaceNodesUpgrade);
   }
 }
 
@@ -453,6 +473,19 @@ export function migrateLegacyToolKeys(settings: any) {
  * they are. Absent values read as enabled through `storageAccessEnabled`.
  */
 export async function preserveStorageConsent(_tx: any) {}
+
+/**
+ * The Dexie v19 upgrade: one row per path in every workspace tree, so a file a
+ * pull once wrote twice is listed once. Runs inside the version-change
+ * transaction, which has every table in scope.
+ */
+export async function collapseDuplicateWorkspaceNodesUpgrade(tx: any) {
+  await collapseDuplicateWorkspaceNodes({
+    nodes: tx.table('workspace_nodes'),
+    blobs: tx.table('workspace_blobs'),
+    refs: tx.table('workspace_file_references'),
+  })
+}
 
 export const db = new AppDB()
 
@@ -581,9 +614,15 @@ export async function createConversation(params: {
   hasFirstPrompt?: boolean
   isMetaChat?: boolean
   persona?: PersonaInfo | null
+  /** Import/sync: keep the original creation time instead of stamping `now`. */
+  createdAt?: number
 }) {
   const id = params?.id ?? newId()
   const now = Date.now()
+  const createdAt =
+    Number.isFinite(params.createdAt) && params.createdAt! > 0
+      ? params.createdAt!
+      : now
   const title = params.title
   const settings = params.settings
   const messages = params.messages ?? []
@@ -594,7 +633,7 @@ export async function createConversation(params: {
     await db.conversations.add({
       id,
       title,
-      createdAt: now,
+      createdAt,
       lastModified: now,
       settings,
       messageCount: 0,

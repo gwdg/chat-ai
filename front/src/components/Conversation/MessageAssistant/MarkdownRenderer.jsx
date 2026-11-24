@@ -139,8 +139,11 @@ const MarkdownLink = ({ href, children, plain = false }) => {
 
   const settingsMatch =
     typeof href === "string" &&
-    href.match(/^\/settings\/(profile|chat|memories|data)$/);
+    href.match(
+      /^\/settings\/(profile\/(?:user|institution)|(?:profile|chat|memories|data)(?:\/(?:manage|backup|sync))?)$/,
+    );
   if (settingsMatch) {
+    const tab = settingsMatch[1];
     return (
       <a
         href={href}
@@ -149,7 +152,7 @@ const MarkdownLink = ({ href, children, plain = false }) => {
           event.preventDefault();
           window.dispatchEvent(
             new CustomEvent("chatai:open-settings", {
-              detail: { tab: settingsMatch[1] },
+              detail: { tab },
             }),
           );
         }}

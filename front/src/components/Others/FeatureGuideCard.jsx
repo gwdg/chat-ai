@@ -1,7 +1,10 @@
 import { AiLabel } from "@carbon/icons-react";
 import { useTranslation } from "react-i18next";
 
-import { getFeatureGuide } from "../../config/featureGuides";
+import {
+  getFeatureGuide,
+  isFeatureGuideAvailable,
+} from "../../config/featureGuides";
 import { useFeatureGuide } from "../../context/FeatureGuideContext";
 
 export default function FeatureGuideCard({ featureId, compact = false }) {
@@ -9,7 +12,7 @@ export default function FeatureGuideCard({ featureId, compact = false }) {
   const { startGuide, enabled } = useFeatureGuide();
   const guide = getFeatureGuide(featureId);
 
-  if (!guide || !enabled) return null;
+  if (!guide || !enabled || !isFeatureGuideAvailable(featureId)) return null;
 
   if (compact) {
     return (

@@ -3,6 +3,7 @@ import type { SourceKind, WorkspaceCapabilities } from "../db/dbTypes";
 export const FULL_CAPABILITIES: WorkspaceCapabilities = {
   read: true,
   write: true,
+  append: true,
   delete: true,
   mkdir: true,
   rename: true,
@@ -18,6 +19,7 @@ export const FULL_CAPABILITIES: WorkspaceCapabilities = {
 export const READ_ONLY_CAPABILITIES: WorkspaceCapabilities = {
   ...FULL_CAPABILITIES,
   write: false,
+  append: false,
   delete: false,
   mkdir: false,
   rename: false,

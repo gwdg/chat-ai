@@ -21,6 +21,9 @@ Each user scenario is its own readable file in `tests/`, so it can be run alone:
 | `tutorial-select-model.spec.ts` | complete the one-step "Select a model" tutorial |
 | `tutorial-search-chats.spec.ts` | complete the gated two-step "Search chats" tutorial |
 | `tutorial-meta-chat-catalogs.spec.ts` | four-step catalog tutorial with two messages |
+| `tutorial-catalog-availability.spec.ts` | the catalogs list only the guides this build can run |
+| `tutorial-catalog-gated.spec.ts` | the same check on the lean build (project `tutorial-gated`) |
+| `tutorial-backup-restore.spec.ts` | walk the restore guide into Data → Encrypted backup |
 | `workspace-create.spec.ts` | create a workspace and open its file browser |
 | `sidebar-scroll.spec.ts` | keep the sidebar list position when a topic or workspace page opens |
 | `chat-file-upload.spec.ts` | attach a text file and send it with a prompt |
@@ -31,6 +34,17 @@ Each user scenario is its own readable file in `tests/`, so it can be run alone:
 | `agent-agentic-tasks.spec.ts` | a local OpenCode agent writes, runs and edits a script (opt-in) |
 | `chat-real-model.spec.ts` | ask a real model behind your own back service (opt-in) |
 | `saia-fs.spec.ts` | browse and mount the SAIA filesystem from a real service (opt-in) |
+
+Every run writes the screenshots and step narratives to
+`results/documentation/<scenario>/<project>/` (gitignored). A curated set is checked in under
+[`docs/e2e-screenshots/`](../docs/e2e-screenshots), so the tutorial behaviour is visible without
+running anything:
+
+![The tutorial catalog on /meta](../docs/e2e-screenshots/tutorial-catalog.png)
+
+![The lean build no longer offers guides for the modules it switched off](../docs/e2e-screenshots/tutorial-catalog-gated.png)
+
+![The restore guide leads into Data → Encrypted backup](../docs/e2e-screenshots/tutorial-backup-restore.png)
 
 ### Setup
 
@@ -44,12 +58,23 @@ npm run analyze:check                    # verify only, install nothing
 ```
 
 `scripts/install-browsers.sh` is idempotent and ends with the same launch/matrix check as
-`npm run analyze:check`. The Chrome projects use `channel: "chrome"`, so a system Google Chrome must
+`npm run analyze:check`. It also installs Playwright's bundled ffmpeg, which the documentation
+fixture uses to record one video per test; when the binary is missing the run still passes and only
+the videos are skipped. The Chrome projects use `channel: "chrome"`, so a system Google Chrome must
 be installed; the script reports it and can install it with `--install-chrome`.
 
 `npm test:e2e` starts its own Vite dev server, so the normal front/back stack is **not** needed.
 It uses `fixtures/front.e2e.json` (port 8090) via `CONFIG_LOCATION`, which overrides the usual
-`secrets/front.json`.
+`secrets/front.json`. A second instance runs `fixtures/front.e2e-gated.json` on port 8094 with the
+optional modules (tools, feedback, choices, the browser agent, agents, Arcanas, sync) switched off;
+it is the `tutorial-gated` project, and it is skipped in the opt-in modes (real model, SAIA
+filesystem, OpenCode) and when `E2E_APP_URL` points at an app without `E2E_GATED_APP_URL` beside it.
+Both instances need their own Vite server because every `VITE_MODULE_*` value is compiled in at
+startup.
+
+`npm run serve:e2e` starts the same two instances plus a small mock upstream
+(`scripts/mock-upstream.mjs`, port 8091) outside Playwright, so the app can be opened and clicked
+through by hand; `--default` or `--gated` starts only one of them.
 
 ### Run
 
@@ -66,6 +91,19 @@ npx playwright test tests/chat-persistence.spec.ts --project=chrome-phone
 npm run test:e2e:report                 # last HTML report
 npm run test:opencode                   # opt-in local agent scenario, see below
 npm run test:real                       # opt-in real-model scenario, see below
+```
+
+`scripts/run-tests.sh` (npm alias `test:e2e:spec`) builds those project flags for you, so one spec
+can be checked on every device class in one command:
+
+```bash
+cd e2e
+npm run test:e2e:spec                                  # every spec, chrome-desktop
+npm run test:e2e:spec -- --all                         # all four device projects
+npm run test:e2e:spec -- --phone --tablet              # two projects
+npm run test:e2e:spec -- tests/tutorial-backup-restore.spec.ts --all
+npm run test:e2e:spec -- --gated                       # the lean build, project tutorial-gated
+npm run test:e2e:spec -- --headed -- --grep tutorial   # anything after -- goes to Playwright
 ```
 
 Results go to `e2e/results/` (gitignored): the HTML report under `results/html`, traces,
@@ -275,8 +313,9 @@ cd back && npm run start                 # :8081
 cd e2e  && npm run test:real             # E2E_REAL_MODEL=1, project=real-model
 ```
 
-The two are separate modes, not layers. `npm run test:e2e` starts the mocked app on port 8090 and
-runs the 13 deterministic scenarios; `npm run test:real` starts a second app instance on port 8092
+The two are separate modes, not layers. `npm run test:e2e` starts the mocked app on port 8090 (and
+the lean one on 8094) and runs the deterministic scenarios; `npm run test:real` starts a second app
+instance on port 8092
 whose config points at `E2E_BACKEND_URL`, runs only `chat-real-model.spec.ts`, and does not start
 the mocked instance. Combining them (or either with `E2E_OPENCODE=1`) in one run is refused with a
 clear config error, because each mode needs its own app instance.

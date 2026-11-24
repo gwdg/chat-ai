@@ -3,7 +3,8 @@ import { enoent } from "../agent/vfs";
 import type { WorkspaceMountRow } from "../db/dbTypes";
 import type { BrowserProvider } from "./providers/browser";
 import type { FileProvider } from "./providers/types";
-import { joinPath, normalizePath } from "./paths";
+import { appendToProvider, renameProviderEntry } from "./entries";
+import { baseName, joinPath, normalizePath, parentPath } from "./paths";
 import { streamOf, toBytes } from "./bytes";
 import {
   notifyWorkspaceFilesChanged,
@@ -132,6 +133,68 @@ export class WorkspaceAgentVfs implements Vfs {
     } catch {
       return false;
     }
+  }
+
+  async appendFile(path: string, data: Uint8Array | string): Promise<void> {
+    const normalized = normalizePath(path);
+    if (isUploads(normalized)) {
+      const conversation = this.conversation;
+      if (!conversation.appendFile) {
+        throw new Error("This storage cannot append to a file.");
+      }
+      await conversation.appendFile(normalized, data);
+      return;
+    }
+    const routed = this.binding(normalized);
+    const existed = await this.exists(normalized);
+    if (routed) {
+      assertWritable(routed.binding);
+      await appendToProvider(routed.binding.provider, routed.inner, data);
+      this.changed(normalized, existed ? "modify" : "create");
+      return;
+    }
+    if (this.root.capabilities.write === false) {
+      throw new Error(READ_ONLY_MESSAGE);
+    }
+    await appendToProvider(this.root, normalized, data);
+    this.changed(normalized, existed ? "modify" : "create");
+  }
+
+  async rename(path: string, newName: string): Promise<string> {
+    const normalized = normalizePath(path);
+    if (isUploads(normalized)) {
+      const conversation = this.conversation;
+      if (!conversation.rename) {
+        throw new Error("This storage cannot rename a file.");
+      }
+      return conversation.rename(normalized, newName);
+    }
+    const routed = this.binding(normalized);
+    if (routed) {
+      assertWritable(routed.binding);
+      if (normalized === normalizePath(routed.binding.mount.path)) {
+        throw new Error(`Cannot rename the mount point ${normalized}`);
+      }
+      const inner = await renameProviderEntry(
+        routed.binding.provider,
+        routed.inner,
+        newName,
+      );
+      const target = joinPath(parentPath(normalized), baseName(inner));
+      this.changed(normalized, "remove");
+      this.changed(target, "create");
+      return target;
+    }
+    if (normalized === "/") {
+      throw new Error("The workspace root cannot be renamed");
+    }
+    if (this.root.capabilities.write === false) {
+      throw new Error(READ_ONLY_MESSAGE);
+    }
+    const target = await renameProviderEntry(this.root, normalized, newName);
+    this.changed(normalized, "remove");
+    this.changed(target, "create");
+    return target;
   }
 
   async mkdir(path: string): Promise<void> {

@@ -7,6 +7,7 @@ const api = vi.hoisted(() => ({
   getModelsData: vi.fn(),
   notifyError: vi.fn(),
   openModal: vi.fn(),
+  brand: { value: null },
 }));
 
 vi.mock("../../apis/getModelsData", () => ({
@@ -18,11 +19,15 @@ vi.mock("../useToast", () => ({
 vi.mock("../../modals/ModalContext", () => ({
   useModal: () => ({ openModal: api.openModal }),
 }));
+vi.mock("../../config/BrandProvider", () => ({
+  useBrand: () => ({ brand: api.brand.value }),
+}));
 
 beforeEach(() => {
   api.getModelsData.mockReset();
   api.notifyError.mockReset();
   api.openModal.mockReset();
+  api.brand.value = null;
 });
 
 describe("useUpdateModelsData", () => {
@@ -69,6 +74,37 @@ describe("useUpdateModelsData", () => {
       expect(api.notifyError).toHaveBeenCalledWith(
         "No models available or network error",
       ),
+    );
+  });
+
+  it("narrows the selector to a model the brand fixes", async () => {
+    api.brand.value = { restrictions: { models: { fixed: "llama-4" } } };
+    api.getModelsData.mockResolvedValue([
+      { id: "qwen3.8-27b" },
+      { id: "llama-4" },
+    ]);
+
+    const { result } = renderHook(() => useUpdateModelsData());
+
+    await waitFor(() =>
+      expect(result.current.map((model) => model.id)).toEqual(["llama-4"]),
+    );
+  });
+
+  it("drops models the brand treats as external", async () => {
+    api.brand.value = {
+      restrictions: { external: { external_models: false } },
+    };
+    api.getModelsData.mockResolvedValue([
+      { id: "local-1" },
+      { id: "gpt-external", name: "GPT (External)" },
+      { id: "vendor-2", external: true },
+    ]);
+
+    const { result } = renderHook(() => useUpdateModelsData());
+
+    await waitFor(() =>
+      expect(result.current.map((model) => model.id)).toEqual(["local-1"]),
     );
   });
 });

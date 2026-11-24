@@ -16,6 +16,8 @@ import {
   openJsonResponse,
   openRequest,
   parsePublicKey,
+  responsesChatUsageEvent,
+  responsesUsageEvent,
   sealRequest,
   verifyFinal,
 } from "../protocol";
@@ -235,5 +237,125 @@ describe("response sealing", () => {
     const raw = b64d(envelope.e2ee.ct);
     // 16-byte GCM tag plus the padded plaintext (4-byte length prefix included).
     expect((raw.length - 16) % 64).toBe(0);
+  });
+});
+
+describe("Responses usage helpers", () => {
+  const terminal = (overrides = {}, type = "response.completed") => ({
+    type,
+    sequence_number: 3,
+    response: {
+      id: "resp_1",
+      object: "response",
+      created_at: 1,
+      model: "m",
+      status: "completed",
+      instructions: "system secret",
+      metadata: { user: "secret" },
+      output: [
+        {
+          id: "msg_1",
+          type: "message",
+          role: "assistant",
+          content: [{ type: "output_text", text: "secret answer" }],
+        },
+      ],
+      usage: {
+        input_tokens: 10,
+        input_tokens_details: { cached_tokens: 0 },
+        output_tokens: 2,
+        output_tokens_details: { reasoning_tokens: 0 },
+        total_tokens: 12,
+      },
+      ...overrides,
+    },
+  });
+
+  it("builds the chat-shaped billing chunk from the terminal's counts", () => {
+    const chunk = responsesChatUsageEvent(terminal());
+    expect(chunk).toEqual({
+      id: "resp_1",
+      choices: [],
+      usage: { prompt_tokens: 10, completion_tokens: 2, total_tokens: 12 },
+    });
+    const wire = JSON.stringify(chunk);
+    expect(wire).not.toContain("secret answer");
+    expect(wire).not.toContain("system secret");
+  });
+
+  it("handles every terminal type", () => {
+    for (const type of [
+      "response.completed",
+      "response.incomplete",
+      "response.failed",
+    ]) {
+      expect(responsesChatUsageEvent(terminal({}, type))?.usage.total_tokens).toBe(
+        12,
+      );
+    }
+  });
+
+  it("computes a missing total and accepts chat-keyed usage", () => {
+    expect(
+      responsesChatUsageEvent(terminal({ usage: { input_tokens: 7, output_tokens: 3 } }))
+        .usage,
+    ).toEqual({ prompt_tokens: 7, completion_tokens: 3, total_tokens: 10 });
+    expect(
+      responsesChatUsageEvent(
+        terminal({
+          usage: { prompt_tokens: 4, completion_tokens: 2, total_tokens: 6 },
+        }),
+      ).usage,
+    ).toEqual({ prompt_tokens: 4, completion_tokens: 2, total_tokens: 6 });
+  });
+
+  it("is null without usable usage or outside a terminal event", () => {
+    expect(responsesChatUsageEvent(terminal({ usage: null }))).toBeNull();
+    expect(responsesChatUsageEvent(terminal({ usage: {} }))).toBeNull();
+    expect(
+      responsesChatUsageEvent(terminal({ usage: { total_tokens: 12 } })),
+    ).toBeNull();
+    expect(
+      responsesChatUsageEvent({
+        type: "response.output_text.delta",
+        sequence_number: 1,
+        delta: "hi",
+        response: { id: "resp_1", usage: { input_tokens: 1 } },
+      }),
+    ).toBeNull();
+    expect(responsesChatUsageEvent({ type: "response.completed" })).toBeNull();
+    expect(responsesChatUsageEvent(null)).toBeNull();
+  });
+
+  it("reduces a cleartext terminal to identity and usage only", () => {
+    const reduced = responsesUsageEvent(terminal());
+    expect(reduced).toEqual({
+      type: "response.completed",
+      sequence_number: 3,
+      response: {
+        id: "resp_1",
+        object: "response",
+        created_at: 1,
+        model: "m",
+        status: "completed",
+        output: [],
+        usage: terminal().response.usage,
+      },
+    });
+    const wire = JSON.stringify(reduced);
+    expect(wire).not.toContain("secret answer");
+    expect(wire).not.toContain("system secret");
+    expect(wire).not.toContain("metadata");
+  });
+
+  it("keeps incomplete_details and refuses a terminal without usage", () => {
+    const reduced = responsesUsageEvent(
+      terminal({ incomplete_details: { reason: "max_output_tokens" } }),
+    );
+    expect(reduced.response.incomplete_details).toEqual({
+      reason: "max_output_tokens",
+    });
+    expect(responsesUsageEvent(terminal({ usage: null }))).toBeNull();
+    expect(responsesUsageEvent({ type: "response.completed" })).toBeNull();
   });
 });

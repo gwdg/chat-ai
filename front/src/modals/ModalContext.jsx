@@ -12,6 +12,7 @@ import HelpMemoryModal from "./Help/HelpMemoryModal";
 import HelpChoiceProposer from "./Help/HelpChoiceProposer";
 import UserSettingsModal from "./UserSettings/UserSettingsModal";
 import UserMemoryModal from "./UserSettings/UserMemoryModal";
+import SyncOnboardingModal from "./UserSettings/SyncOnboardingModal";
 import ShareSettingsModal from "./Chat/ShareSettingsModal";
 import ClearCacheModal from "./UserSettings/ClearCacheModal";
 import ErrorBadRequestModal from "./Alert/ErrorBadRequestModal";
@@ -22,6 +23,7 @@ import ExportChatModal from "../components/Sidebar/Modals/ExportChatModal";
 import ImportPersonaModal from "../components/Sidebar/Modals/ImportPersonaModal";
 import FolderEditorModal from "../components/Sidebar/Modals/FolderEditorModal";
 import DeleteFolderModal from "../components/Sidebar/Modals/DeleteFolderModal";
+import DeleteUnsortedChatsModal from "../components/Sidebar/Modals/DeleteUnsortedChatsModal";
 import MoveChatModal from "../components/Sidebar/Modals/MoveChatModal";
 import OrganizeChatsModal from "../components/Sidebar/Modals/OrganizeChatsModal";
 import ClearMemoryModal from "./UserSettings/ClearMemoryModal";
@@ -59,6 +61,7 @@ import McpServerDetailsModal from "./McpServer/McpServerDetailsModal";
 import AddAgentModal from "./Agent/AddAgentModal";
 import AgentToolsModal from "./Agent/AgentToolsModal";
 import RenameAgentSessionModal from "./Agent/RenameAgentSessionModal";
+import BugReportModal from "./Feedback/BugReportModal";
 
 const ModalContext = createContext();
 
@@ -125,6 +128,13 @@ export function ModalProvider({ children }) {
       {modalType === "deleteFolder" && (
         <DeleteFolderModal isOpen onClose={closeModal} {...modalProps} />
       )}
+      {modalType === "deleteUnsortedChats" && (
+        <DeleteUnsortedChatsModal
+          isOpen
+          onClose={closeModal}
+          {...modalProps}
+        />
+      )}
       {/* Chat Modals */}
       {modalType === "shareSettings" && (
         <ShareSettingsModal isOpen onClose={closeModal} {...modalProps} />
@@ -166,6 +176,9 @@ export function ModalProvider({ children }) {
       {/* User Settings Modals*/}
       {modalType === "userSettings" && (
         <UserSettingsModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "syncOnboarding" && (
+        <SyncOnboardingModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {modalType === "userMemory" && (
         <UserMemoryModal isOpen onClose={closeModal} {...modalProps} />
@@ -284,6 +297,9 @@ export function ModalProvider({ children }) {
           dispatch={dispatch}
           {...modalProps}
         />
+      )}
+      {modalType === "bugReport" && (
+        <BugReportModal isOpen onClose={closeModal} {...modalProps} />
       )}
     </ModalContext.Provider>
   );

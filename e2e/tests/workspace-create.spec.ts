@@ -64,10 +64,10 @@ test.describe("workspace", () => {
       {
         user: "The user names it “Deterministic workspace” and confirms.",
         system: wideLayout
-          ? "The workspace page opens as that workspace's chat home. Its right-hand panel offers the what's-new report, the Files tree and the Agents choices."
+          ? "The workspace page opens as that workspace's chat home. Its right-hand panel offers the what's-new report and the Files tree; the agent choices live on the workspace page itself."
           : "The workspace page opens as that workspace's chat home. On a phone the right-hand panel is hidden by the responsive layout, so only the chat and the prompt box are shown.",
         shows: wideLayout
-          ? "the workspace page for Deterministic workspace with an empty chat list, a prompt box, and a right-hand panel with What's New, Files and Agents tabs"
+          ? "the workspace page for Deterministic workspace with an empty chat list, a prompt box, and a right-hand panel with What's New and Files tabs"
           : "the workspace page for Deterministic workspace on a phone, with an empty chat list and a prompt box",
       },
       async () => {
@@ -103,14 +103,15 @@ test.describe("workspace", () => {
         ).toBeVisible();
 
         const filesTab = page.getByRole("tab", { name: "Files" });
-        const agentsTab = page.getByRole("tab", { name: "Agents" });
         await expect(filesTab).toBeVisible();
-        await expect(agentsTab).toBeVisible();
+        // The Agents tab was removed from the right sidebar; the agent choices
+        // live on the workspace page itself.
+        await expect(page.getByRole("tab", { name: "Agents" })).toHaveCount(0);
         // The Preview tab only exists while it holds a file.
         await expect(page.locator('[data-guide="meta-tab-preview"]')).toHaveCount(
           0,
         );
-        // The agent choices live in the panel, not in the page header.
+        // The agent choices are not part of the page header either.
         await expect(
           page.locator('header [data-guide="workspace-agent"]'),
         ).toHaveCount(0);
@@ -125,15 +126,6 @@ test.describe("workspace", () => {
         await expect(
           page.locator('[data-guide="workspace-upload"]'),
         ).toBeVisible();
-
-        await agentsTab.click();
-        const agentPanel = page.locator('[data-guide="workspace-agent"]');
-        await expect(agentPanel).toBeVisible();
-        for (const guide of ["browser", "opencode", "remote"]) {
-          await expect(
-            agentPanel.locator(`[data-guide="workspace-agent-${guide}"]`),
-          ).toBeVisible();
-        }
       },
     );
 

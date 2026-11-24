@@ -24,6 +24,8 @@ const SUPPORTED_SETTING_KEYS = new Set([
   "send_with_enter",
   "mcp_tool_policy",
   "timeout",
+  "sync_enabled",
+  "sync_auto",
 ]);
 
 const SUPPORTED_CONVERSATION_SETTING_KEYS = new Set([
@@ -222,6 +224,12 @@ export function getMetaActionProposals(text) {
       if (
         key === "mcp_tool_policy" &&
         !["ask", "always", "never"].includes(payload.value)
+      ) {
+        continue;
+      }
+      if (
+        (key === "sync_enabled" || key === "sync_auto") &&
+        typeof payload.value !== "boolean"
       ) {
         continue;
       }

@@ -141,6 +141,79 @@ describe("agent tools", () => {
     expect(toolNames({ vision: true, enabled: { write_access: true } })).not.toContain("delete");
   });
 
+  it("offers append and rename only when writing is on", () => {
+    const readOnly = toolNames({
+      vision: true,
+      enabled: { browser_storage: true },
+    });
+    expect(readOnly).not.toContain("append");
+    expect(readOnly).not.toContain("rename");
+
+    const writable = toolNames({
+      vision: true,
+      enabled: { browser_storage: true, write_access: true },
+    });
+    expect(writable).toContain("append");
+    expect(writable).toContain("rename");
+  });
+
+  it("appends through the VFS append, falling back to read and write", async () => {
+    const appended: string[] = [];
+    const withAppend = {
+      ...fs,
+      appendFile: async (path: string, data: string) => {
+        appended.push(`${path}:${data}`);
+      },
+    };
+    const appendTool = createTools(withAppend as any, {
+      vision: true,
+      enabled: { browser_storage: true, write_access: true },
+    }).find((item) => item.name === "append")!;
+
+    expect(
+      textOf(await appendTool.execute("call", { path: "/n.md", content: "x" })),
+    ).toBe("Appended to /n.md");
+    expect(appended).toEqual(["/n.md:x"]);
+
+    const written: [string, string][] = [];
+    const withoutAppend = {
+      ...fs,
+      readFile: async () => new TextEncoder().encode("start"),
+      writeFile: async (path: string, data: string) => {
+        written.push([path, data]);
+      },
+    };
+    const fallbackTool = createTools(withoutAppend as any, {
+      vision: true,
+      enabled: { browser_storage: true, write_access: true },
+    }).find((item) => item.name === "append")!;
+
+    await fallbackTool.execute("call", { path: "/n.md", content: "end" });
+    expect(written).toEqual([["/n.md", "startend"]]);
+  });
+
+  it("renames through the VFS and reports the new path", async () => {
+    const renamed: [string, string][] = [];
+    const store = {
+      ...fs,
+      rename: async (path: string, newName: string) => {
+        renamed.push([path, newName]);
+        return `/renamed-${newName}`;
+      },
+    };
+    const renameTool = createTools(store as any, {
+      vision: true,
+      enabled: { browser_storage: true, write_access: true },
+    }).find((item) => item.name === "rename")!;
+
+    expect(
+      textOf(
+        await renameTool.execute("call", { path: "/n.md", new_name: "m.md" }),
+      ),
+    ).toBe("Renamed /n.md to /renamed-m.md");
+    expect(renamed).toEqual([["/n.md", "m.md"]]);
+  });
+
   it("deletes a path through the VFS and refuses the storage root", async () => {
     const removed: string[] = [];
     const store = {

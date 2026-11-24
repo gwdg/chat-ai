@@ -93,4 +93,33 @@ describe("browser provider", () => {
       provider.write("/a.txt", streamOf("second"), { overwrite: false }),
     ).rejects.toMatchObject({ code: "CONFLICT" });
   });
+
+  it("appends to a file and creates it when it is missing", async () => {
+    const provider = new BrowserProvider("source-3");
+    await provider.connect();
+
+    await provider.append("/log.txt", "first");
+    expect(await readText(await provider.read("/log.txt"))).toBe("first");
+
+    await provider.append("/log.txt", " second");
+    expect(await readText(await provider.read("/log.txt"))).toBe(
+      "first second",
+    );
+
+    await provider.append("/bin.dat", new Uint8Array([1, 2]));
+    const bytes = new Uint8Array(
+      await new Response(await provider.read("/bin.dat")).arrayBuffer(),
+    );
+    expect(bytes).toEqual(new Uint8Array([1, 2]));
+  });
+
+  it("rejects an append that targets a folder", async () => {
+    const provider = new BrowserProvider("source-4");
+    await provider.connect();
+    await provider.mkdir("/docs");
+
+    await expect(provider.append("/docs", "x")).rejects.toMatchObject({
+      code: "CONFLICT",
+    });
+  });
 });

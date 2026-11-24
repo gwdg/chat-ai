@@ -10,6 +10,7 @@ import { getFileType, readFileAsBase64, readFileAsText } from "./attachments";
 import { isAgentEnabled, modelSupportsTools } from "../apis/agentEndpoints";
 import { resolveMcpServers } from "../agent/mcp";
 import { isArcanasEnabled, isChoicesEnabled, isFeedbackEnabled, isToolsEnabled } from "./modules";
+import { isBrandExternalAllowed } from "../config/brandPolicy";
 import { confirmMcpNameChange } from "./mcpNameChange";
 import { BINARY_DOCUMENT_TYPES, modelSupportsFileType } from "./modelCapabilities";
 
@@ -383,10 +384,20 @@ const sendMessage = async ({
       systemPromptAPI = `\n\n--- Begin System Context ---\nCurrent Date: ${currentDate}\n--- End System Context ---` + systemPromptAPI;
       // Convert tools dictionary to OpenAI-compatible tools list
       if (toolsActive) {
+        // A brand may forbid the options that leave the institution (see
+        // config/brandPolicy.js); drop them from the request even when an older
+        // conversation still carries the toggle.
+        const blockedToolTypes = new Set();
+        if (!isBrandExternalAllowed("web_search")) {
+          blockedToolTypes.add("web_search");
+          blockedToolTypes.add("fetch_url");
+        }
+        if (!isBrandExternalAllowed("mcp")) blockedToolTypes.add("mcp");
         conversationForAPI.settings.tools = Object.entries(localState.settings.tools)
                   .filter(
                     ([toolKey, enabled]) =>
                       enabled &&
+                      !blockedToolTypes.has(toolKey) &&
                       (arcanasModule ||
                         (toolKey !== "arcana" &&
                           toolKey !== "arcana_tools" &&
@@ -411,6 +422,14 @@ const sendMessage = async ({
       delete conversationForAPI.settings.tools;
       delete conversationForAPI.settings.function_tools;
       delete conversationForAPI.settings.tool_choice;
+    }
+
+    // Legacy switch some gateways still read; never send it against a brand's policy.
+    if (
+      conversationForAPI.settings &&
+      !isBrandExternalAllowed("web_search")
+    ) {
+      conversationForAPI.settings.enable_web_search = false;
     }
 
     // Clean conversation for API call

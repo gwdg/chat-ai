@@ -13,11 +13,11 @@ A Seamless Slurm-Native Solution for HPC-Based Services
 </p>
 
 This repository contains the stand-alone web interface of Chat AI. The implementation of the remaining components of the complete architecture can be found in two other repos:
-- Server components, incl. API gateway and SSH proxy: https://github.com/gwdg/saia-hub 
+- Server components, incl. the OpenAI-compatible API gateway (SAIA): https://github.com/gwdg/saia-hub 
 - HPC components, incl. scheduler and slurm scripts: https://github.com/gwdg/saia-hpc
 
 <p align="center">
-<img alt="Chat AI architecture" src="assets/arch-diagram.png" width="50%">
+<img alt="Chat AI architecture" src="assets/arch-diagram.png" width="100%">
 </p>
 
 Together these repos provide the entire underyling mechanism for Chat AI, which can be generalized as a slurm-native HPC web service.

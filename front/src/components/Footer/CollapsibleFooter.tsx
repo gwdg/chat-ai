@@ -1,12 +1,27 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
+import { Debug } from "@carbon/icons-react";
 
 import VersionDisplay from "./VersionDisplay";
 import LanguageSelector from "./LanguageSelector";
+import InstallAppButton from "./InstallAppButton";
 import ThemeToggle from "../Header/ThemeToggle";
 import { useBrand } from "../../config/BrandProvider";
 import { localizeBrandValue, withBase } from "../../config/brands";
+import { isFeedbackReportEnabled } from "../../apis/feedback";
+import { useModal } from "../../modals/ModalContext";
+
+/**
+ * A footer URL that is a route of this app rather than an external address. A
+ * brand `help` file resolves to a same-origin asset (`/assets/…pdf`), which
+ * starts with `/` as well; that is a download, not a route, so a path with a
+ * file extension stays a normal link.
+ */
+const isInternalUrl = (url: string) =>
+  url.startsWith("/") &&
+  !url.startsWith("//") &&
+  !/\.[a-z0-9]{2,5}(?:[?#]|$)/i.test(url);
 
 // Links every brand gets unless its profile replaces the `footer.links` map.
 const DEFAULT_FOOTER_LINKS: Record<string, Record<string, unknown>> = {
@@ -44,10 +59,31 @@ function footerLabel(
   );
 }
 
+/**
+ * One footer entry. An app route (`/about`, `/sitemap`, `/accessibility`) is a
+ * router `Link` and opens in place; anything else is an external address and
+ * opens in a new tab, as the legal pages always did.
+ */
+function FooterLinkItem({ url, label }: { url: string; label: string }) {
+  if (isInternalUrl(url)) {
+    return (
+      <Link to={url}>
+        <p className="text-center text-info hover:underline">{label}</p>
+      </Link>
+    );
+  }
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer">
+      <p className="text-center text-info hover:underline">{label}</p>
+    </a>
+  );
+}
+
 export default function CollapsibleFooter({ className }: { className?: string }) {
   const [open, setOpen] = useState(false);
   const { t, i18n } = useTranslation();
   const { brand } = useBrand();
+  const { openModal } = useModal();
 
   const configured = brand?.footer?.links ?? DEFAULT_FOOTER_LINKS;
   const helpUrl = brand?.footer?.help
@@ -83,16 +119,10 @@ export default function CollapsibleFooter({ className }: { className?: string })
             <VersionDisplay />
           </div>
           {helpUrl && (
-            <Link to={helpUrl} target="_blank">
-              <p className="text-center text-info hover:underline">
-                {t("footer.help")}
-              </p>
-            </Link>
+            <FooterLinkItem url={helpUrl} label={t("footer.help")} />
           )}
           {links.map((link) => (
-            <Link key={link.id} to={link.url} target="_blank">
-              <p className="text-center text-info hover:underline">{link.label}</p>
-            </Link>
+            <FooterLinkItem key={link.id} url={link.url} label={link.label} />
           ))}
         </div>
 
@@ -104,6 +134,20 @@ export default function CollapsibleFooter({ className }: { className?: string })
             </p>
           ) : null}
           <ThemeToggle />
+          <InstallAppButton />
+          {isFeedbackReportEnabled() && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm btn-square touch-manipulation"
+              data-guide="bug-report"
+              title={t("bug_report.title")}
+              aria-label={t("bug_report.title")}
+              onClick={() => openModal("bugReport")}
+              style={{ WebkitTapHighlightColor: "transparent" }}
+            >
+              <Debug size={20} className="flex-shrink-0 text-accent" />
+            </button>
+          )}
           <LanguageSelector />
         </div>
 

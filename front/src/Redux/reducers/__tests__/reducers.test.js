@@ -44,16 +44,21 @@ import userSettingsReducer, {
   selectE2eeModels,
 } from "../userSettingsReducer";
 import interfaceSettingsReducer, {
+  acceptBrandConsent,
   agreeWebSearch,
   collapseTopics,
   expandTopics,
+  importInterfaceSettings,
   markTutorialCompleted,
   markUseCaseCompleted,
+  setBrandTheme,
   setConversationGrouping,
   setWarning,
   suppressTutorial,
   toggleTheme,
   selectAgreeWebSearch,
+  selectBrandConsent,
+  selectBrandTheme,
   selectConversationGrouping,
   selectSuppressedTutorials,
 } from "../interfaceSettingsSlice";
@@ -483,6 +488,55 @@ describe("interface settings reducer", () => {
     expect(state.warn_fork).toBe(false);
   });
 
+  it("stores a brand theme and falls back to the default on a bad value", () => {
+    let state = init(interfaceSettingsReducer);
+    expect(selectBrandTheme({ interface_settings: state })).toBe("default");
+    state = interfaceSettingsReducer(state, setBrandTheme("business"));
+    expect(selectBrandTheme({ interface_settings: state })).toBe("business");
+    state = interfaceSettingsReducer(state, setBrandTheme("  green  "));
+    expect(state.theme).toBe("green");
+    state = interfaceSettingsReducer(state, setBrandTheme(""));
+    expect(state.theme).toBe("default");
+    state = interfaceSettingsReducer(state, setBrandTheme(42));
+    expect(state.theme).toBe("default");
+    // Old persisted state without the key still reads as the default pair.
+    expect(selectBrandTheme({ interface_settings: {} })).toBe("default");
+  });
+
+  it("records a consent acceptance per brand and sanitizes its payload", () => {
+    let state = init(interfaceSettingsReducer);
+    expect(selectBrandConsent("gaia")({ interface_settings: state })).toBeNull();
+
+    state = interfaceSettingsReducer(
+      state,
+      acceptBrandConsent({
+        brandId: "gaia",
+        version: "2026-02",
+        answers: { surveys: true, logging: false, junk: "yes" },
+        acceptedAt: "2026-02-01T10:00:00.000Z",
+      }),
+    );
+    const record = selectBrandConsent("gaia")({ interface_settings: state });
+    expect(record).toEqual({
+      version: "2026-02",
+      answers: { surveys: true, logging: false, junk: true },
+      acceptedAt: "2026-02-01T10:00:00.000Z",
+    });
+    // A second brand keeps its own record.
+    state = interfaceSettingsReducer(
+      state,
+      acceptBrandConsent({ brandId: "other", version: 3, answers: null }),
+    );
+    expect(state.consent_acceptance.other.version).toBe("3");
+    expect(state.consent_acceptance.other.answers).toEqual({});
+    expect(state.consent_acceptance.other.acceptedAt).toMatch(/^\d{4}-/);
+
+    // A payload without a brand id changes nothing.
+    const before = state;
+    state = interfaceSettingsReducer(state, acceptBrandConsent({ version: "1" }));
+    expect(state).toBe(before);
+  });
+
   it("collapses and expands topic groups in bulk without duplicates", () => {
     let state = init(interfaceSettingsReducer);
     state = interfaceSettingsReducer(state, collapseTopics(["t1", "t2"]));
@@ -493,6 +547,79 @@ describe("interface settings reducer", () => {
     state = interfaceSettingsReducer(state, collapseTopics("__pinned__"));
     state = interfaceSettingsReducer(state, expandTopics(["t1", "t2"]));
     expect(state.collapsed_topics).toEqual(["t3", "__pinned__"]);
+  });
+
+  it("applies a synced payload without touching device-local keys", () => {
+    const start = {
+      ...init(interfaceSettingsReducer),
+      show_sidebar: false,
+      collapsed_topics: ["topic-1"],
+      expanded_agents: ["agent-1"],
+      agree_web_search: false,
+      sync_onboarding_dismissed: true,
+      count_hallucination: 3,
+      theme: "business",
+      consent_acceptance: {
+        gaia: {
+          version: "2026-02",
+          answers: { surveys: true },
+          acceptedAt: "2026-02-01T10:00:00.000Z",
+        },
+      },
+    };
+    const state = interfaceSettingsReducer(
+      start,
+      importInterfaceSettings({
+        dark_mode: true,
+        conversation_sort: "title_asc",
+        conversation_grouping: "date",
+        completed_tutorials: ["upload_file", 7, ""],
+        show_tour: false,
+        // A payload must not be able to rewrite this window's view state, its
+        // consent or the first-run offer decision.
+        show_sidebar: true,
+        collapsed_topics: [],
+        expanded_agents: [],
+        agree_web_search: true,
+        sync_onboarding_dismissed: false,
+        count_hallucination: 0,
+        theme: "green",
+        consent_acceptance: {},
+        not_a_setting: "value",
+      }),
+    );
+
+    expect(state.dark_mode).toBe(true);
+    expect(state.conversation_sort).toBe("title_asc");
+    expect(state.conversation_grouping).toBe("date");
+    expect(state.completed_tutorials).toEqual(["upload_file"]);
+    expect(state.show_tour).toBe(false);
+
+    expect(state.show_sidebar).toBe(false);
+    expect(state.collapsed_topics).toEqual(["topic-1"]);
+    expect(state.expanded_agents).toEqual(["agent-1"]);
+    expect(state.agree_web_search).toBe(false);
+    expect(state.sync_onboarding_dismissed).toBe(true);
+    expect(state.count_hallucination).toBe(3);
+    expect(state.theme).toBe("business");
+    expect(state.consent_acceptance.gaia.answers).toEqual({ surveys: true });
+    expect(state).not.toHaveProperty("not_a_setting");
+  });
+
+  it("rejects wrongly typed values and unknown groupings from a pull", () => {
+    const state = interfaceSettingsReducer(
+      init(interfaceSettingsReducer),
+      importInterfaceSettings({
+        dark_mode: "yes",
+        conversation_sort: 7,
+        conversation_grouping: "gallery",
+        completed_tutorials: "upload_file",
+      }),
+    );
+    expect(state.dark_mode).toBe(false);
+    expect(state.conversation_sort).toBe("created_desc");
+    expect(state.conversation_grouping).toBe("topic");
+    expect(state.completed_tutorials).toEqual([]);
   });
 });
 

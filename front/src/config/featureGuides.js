@@ -21,11 +21,27 @@ import {
   openWorkspaceFiles,
   openUserSettings,
   searchHasQuery,
+  selectDataSection,
+  selectProfileSection,
   selectSettingsTab,
   toolsAreEnabled,
   topicNameEntered,
 } from "./featureGuideActions.js";
-import { isAgentsEnabled } from "../utils/modules.js";
+import {
+  isAgentEnabled,
+  isAgentsEnabled,
+  isArcanasEnabled,
+  isFeedbackEnabled,
+  isSpeechEnabled,
+  isSyncEnabled,
+  isToolsEnabled,
+} from "../utils/modules.js";
+import { isFeatureEnabled } from "./deployment.js";
+import { hasBrandInstitute } from "./brandPolicy.js";
+import { canInstallApp } from "../utils/installPrompt.js";
+import { isFeedbackReportEnabled } from "../apis/feedback.js";
+import { currentBrand } from "./brands.js";
+import { brandConsentGate } from "./consent.js";
 
 export const featureGuides = {
   workspace_overview: {
@@ -1142,6 +1158,49 @@ export const featureGuides = {
       },
     ],
   },
+  institution: {
+    titleKey: "feature_guide.institution.title",
+    prompt:
+      "Show which institution provides this Chat AI and what it restricts. Open user settings and look at the Profile tab's Institution section: it names the institution, explains the limitation in plain words and lists every restriction the active brand applies, such as a fixed model, disabled features and blocked external communication, together with the contact and the links for this installation.",
+    keywords: [
+      "institution",
+      "institutional restrictions",
+      "restricted",
+      "limitations",
+      "approved model",
+      "einrichtung",
+      "einschränkung",
+      "beschränkung",
+    ],
+    steps: [
+      {
+        target: [
+          '[data-guide="user-settings"]',
+          ".user-profile-button",
+          ".user-profile-block",
+        ],
+        textKey: "feature_guide.institution.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="settings-tab-profile"]',
+        prepare: openUserSettings,
+        textKey: "feature_guide.institution.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="profile-subtab-institution"]',
+        prepare: () => selectProfileSection("institution"),
+        textKey: "feature_guide.institution.step3",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="institute-section"]',
+        prepare: () => selectProfileSection("institution"),
+        textKey: "feature_guide.institution.step4",
+      },
+    ],
+  },
   memories: {
     titleKey: "feature_guide.memories.title",
     prompt:
@@ -1227,9 +1286,64 @@ export const featureGuides = {
       },
     ],
   },
-  message_timestamps: {
-    titleKey: "feature_guide.message_timestamps.title",
+  advanced_mode: {
+    titleKey: "feature_guide.advanced_mode.title",
     prompt:
+      "Show the Agents and MCP Servers sections in the sidebar. Open user settings, choose the Advanced tab, and switch Advanced mode on; with it off the sidebar keeps chats, topics and workspaces only.",
+    keywords: ["advanced mode", "sidebar sections", "show agents", "show mcp"],
+    steps: [
+      {
+        target: ['[data-guide="user-settings"]', ".user-profile-button", ".user-profile-block"],
+        textKey: "feature_guide.advanced_mode.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="settings-tab-advanced"]',
+        prepare: openUserSettings,
+        textKey: "feature_guide.advanced_mode.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="profile-advanced-mode-preference"]',
+        textKey: "feature_guide.advanced_mode.step3",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
+  brand_consent: {
+    titleKey: "feature_guide.brand_consent.title",
+    prompt:
+      "Review or change the voluntary consents of this service. Open user settings, choose the Advanced tab, and use the consent switches; the terms themselves are linked there.",
+    keywords: [
+      "consent",
+      "consents",
+      "study",
+      "survey",
+      "privacy",
+      "terms of use",
+      "withdraw consent",
+    ],
+    steps: [
+      {
+        target: ['[data-guide="user-settings"]', ".user-profile-button", ".user-profile-block"],
+        textKey: "feature_guide.brand_consent.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="settings-tab-advanced"]',
+        prepare: openUserSettings,
+        textKey: "feature_guide.brand_consent.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="brand-consent-settings"]',
+        textKey: "feature_guide.brand_consent.step3",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
+  message_timestamps: {
+    titleKey: "feature_guide.message_timestamps.title",    prompt:
       "Show the date and time each message was sent. Open user settings, choose the Chat tab, and enable Show message timestamps in the Messages section.",
     keywords: [
       "message timestamps",
@@ -1352,8 +1466,139 @@ export const featureGuides = {
       },
       {
         target: '[data-guide="export-data"]',
-        prepare: () => selectSettingsTab("data"),
+        prepare: () => selectDataSection("manage"),
         textKey: "feature_guide.data_management.step3",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
+  sync_setup: {
+    titleKey: "feature_guide.sync_setup.title",
+    prompt:
+      "Keep settings, conversations, workspaces and agents in step across devices with an encrypted copy on your SAIA filesystem. Open user settings, choose the Data tab, switch the encrypted server synchronization on, and create it with a passphrase you can remember (or unlock the copy another device already created). Everything is encrypted in this browser before it is uploaded, and the passphrase is never stored. A one-time offer may appear on first use while the sync module is on and the SAIA filesystem answers; its button switches the synchronization on and opens this section, but the copy is only created once a passphrase is entered. Once the copy is open, a passkey can remember the vault on this device so a reload does not ask for the passphrase again.",
+    keywords: [
+      "sync",
+      "synchronization",
+      "synchronisation",
+      "encrypted copy",
+      "server synchronization",
+      "multi device",
+      "passkey",
+      "passkeys",
+      "verschlüsselte kopie",
+      "synchronisieren",
+    ],
+    steps: [
+      {
+        target: ['[data-guide="user-settings"]', ".user-profile-button", ".user-profile-block"],
+        textKey: "feature_guide.sync_setup.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="settings-tab-data"]',
+        prepare: openUserSettings,
+        textKey: "feature_guide.sync_setup.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="data-subtab-sync"]',
+        prepare: () => selectSettingsTab("data"),
+        textKey: "feature_guide.sync_setup.subtab",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="sync-settings"]',
+        prepare: () => selectDataSection("sync"),
+        textKey: "feature_guide.sync_setup.step3",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="sync-enable"]',
+        textKey: "feature_guide.sync_setup.step4",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
+  backup_create: {
+    titleKey: "feature_guide.backup_create.title",
+    prompt:
+      "Download one encrypted file of your whole browser history — chats, topics, settings, workspaces and agents — and restore it later with the same passphrase. Open user settings, choose the Data tab, and create the backup under Encrypted backup. The file is encrypted in this browser and stamped with the date and time; the passphrase is never stored.",
+    keywords: [
+      "backup",
+      "back up",
+      "encrypted backup",
+      "restore",
+      "export",
+      "sicherung",
+      "sicherungskopie",
+      "wiederherstellen",
+    ],
+    steps: [
+      {
+        target: ['[data-guide="user-settings"]', ".user-profile-button", ".user-profile-block"],
+        textKey: "feature_guide.backup_create.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="settings-tab-data"]',
+        prepare: openUserSettings,
+        textKey: "feature_guide.backup_create.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="data-subtab-backup"]',
+        prepare: () => selectSettingsTab("data"),
+        textKey: "feature_guide.backup_create.subtab",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="backup-settings"]',
+        prepare: () => selectDataSection("backup"),
+        textKey: "feature_guide.backup_create.step3",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="backup-create"]',
+        textKey: "feature_guide.backup_create.step4",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
+  backup_restore: {
+    titleKey: "feature_guide.backup_restore.title",
+    prompt:
+      "Restore an encrypted backup file into this browser. Open user settings, choose the Data tab and the Encrypted backup section, pick the file, and type the passphrase it was created with.",
+    keywords: [
+      "backup",
+      "restore",
+      "import backup",
+      "move chats",
+      "new device",
+      "wiederherstellen",
+      "sicherung",
+    ],
+    steps: [
+      {
+        target: ['[data-guide="user-settings"]', ".user-profile-button", ".user-profile-block"],
+        textKey: "feature_guide.backup_restore.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="settings-tab-data"]',
+        prepare: openUserSettings,
+        textKey: "feature_guide.backup_restore.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="data-subtab-backup"]',
+        prepare: () => selectSettingsTab("data"),
+        textKey: "feature_guide.backup_restore.subtab",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="backup-restore"]',
+        prepare: () => selectDataSection("backup"),
+        textKey: "feature_guide.backup_restore.step3",
         completeOnTargetClick: true,
       },
     ],
@@ -1371,9 +1616,47 @@ export const featureGuides = {
       },
     ],
   },
-  feedback: {
-    titleKey: "feature_guide.feedback.title",
+  language_picker: {
+    titleKey: "feature_guide.language_picker.title",
     prompt:
+      "Change the interface language in the footer. Choose English or German, or Automatic to follow the browser language; the choice is remembered on this device.",
+    keywords: ["language", "deutsch", "english", "sprache", "translation"],
+    steps: [
+      {
+        target: '[data-guide="language-picker"]',
+        textKey: "feature_guide.language_picker.step1",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
+  pwa_install: {
+    titleKey: "feature_guide.pwa_install.title",
+    prompt:
+      "Install this app so it opens in its own window without the browser's address bar. The install button in the footer appears when the browser offers the installation.",
+    keywords: ["install", "pwa", "app", "home screen", "offline"],
+    steps: [
+      {
+        target: '[data-guide="pwa-install"]',
+        textKey: "feature_guide.pwa_install.step1",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
+  bug_report: {
+    titleKey: "feature_guide.bug_report.title",
+    prompt:
+      "Report a problem with the app through the bug report button in the footer: pick a type, describe what happened and attach a screenshot if it helps.",
+    keywords: ["bug", "report", "problem", "feedback", "screenshot"],
+    steps: [
+      {
+        target: '[data-guide="bug-report"]',
+        textKey: "feature_guide.bug_report.step1",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
+  feedback: {
+    titleKey: "feature_guide.feedback.title",    prompt:
       "Rate an assistant message with the feedback buttons when the feedback module is enabled.",
     keywords: ["feedback", "rate answer", "thumbs up", "thumbs down"],
     steps: [
@@ -1686,6 +1969,78 @@ export const featureGuides = {
   },
 };
 
+// The Tools panel is where every tool guide points. It exists for the tools
+// module, and agent mode renders the same panel with the agent's own toggles.
+const isToolPanelAvailable = () => isToolsEnabled() || isAgentEnabled();
+const metaChatAvailable = () => isFeatureEnabled("meta_chat");
+
+// A guided tour highlights real elements. When a deployment switches a module or
+// a feature off, its UI is not rendered at all, so the guide would point at
+// nothing and the catalog would promise a walkthrough that cannot run. This map
+// is the single answer to "can this guide start here?"; the catalogs, the Meta
+// chat's `list_tutorials` / `start_tutorial` and `startGuide` all ask it.
+//
+// A guide that is not named here is always available. Add an entry whenever a
+// guide's first target lives behind a module or feature switch.
+export const FEATURE_GUIDE_AVAILABILITY = {
+  workspace_overview: () => isFeatureEnabled("workspaces"),
+  manage_chat_data: () => isFeatureEnabled("workspaces"),
+  workspace_edit_storage: () => isFeatureEnabled("workspaces"),
+  workspace_clone: () => isFeatureEnabled("workspaces"),
+  workspace_upload: () => isFeatureEnabled("workspaces"),
+  workspace_multiselect: () => isFeatureEnabled("workspaces"),
+  arcana_filesystem: () => isFeatureEnabled("workspaces") && isArcanasEnabled(),
+  workspace_saia_fs: () => isFeatureEnabled("workspaces"),
+  attach_from_workspace: () => isFeatureEnabled("workspaces"),
+  attach_chat_to_workspace: () => isFeatureEnabled("workspaces"),
+  pin_workspace: () => isFeatureEnabled("workspaces"),
+  agent_recovery: () => isAgentsEnabled(),
+  remote_agents: () => isAgentsEnabled(),
+  close_group_sessions: () => isAgentsEnabled(),
+  session_workspaces: () => isAgentsEnabled(),
+  agent_workspace_access: () => isAgentsEnabled(),
+  pin_agent: () => isAgentsEnabled(),
+  tools_overview: () => isToolPanelAvailable(),
+  web_search: () => isToolPanelAvailable(),
+  image_generation: () => isToolPanelAvailable(),
+  image_modification: () => isToolPanelAvailable(),
+  image_analysis: () => isToolPanelAvailable(),
+  audio_generation: () => isToolPanelAvailable(),
+  arcana: () => isToolPanelAvailable() && isArcanasEnabled(),
+  arcana_tools: () => isToolPanelAvailable() && isArcanasEnabled(),
+  mcp_server: () => isFeatureEnabled("mcp_servers") && isToolPanelAvailable(),
+  feedback: () => isFeedbackEnabled(),
+  // The install button renders only while the browser offers an install prompt;
+  // a tour whose target is missing would never start, so the guide follows it.
+  pwa_install: () => canInstallApp(),
+  bug_report: () => isFeedbackReportEnabled(),
+  speech_output: () => isSpeechEnabled(),
+  e2ee: () => isFeatureEnabled("e2ee"),
+  advanced_mode: () => isAgentsEnabled() || isFeatureEnabled("mcp_servers"),
+  sync_setup: () => isSyncEnabled(),
+  // The consent section exists only for a brand that declares a consent gate.
+  brand_consent: () => Boolean(brandConsentGate(currentBrand())),
+  // The Institution screen renders only for a brand that describes itself or
+  // narrows something.
+  institution: () => hasBrandInstitute(),
+  meta_chat_usage: metaChatAvailable,
+  meta_chat_catalogs: metaChatAvailable,
+  meta_chat_search: metaChatAvailable,
+  meta_chat_navigation: metaChatAvailable,
+  meta_chat_actions: metaChatAvailable,
+  meta_chat_pins: metaChatAvailable,
+  meta_chat_agents: () => metaChatAvailable() && isAgentsEnabled(),
+  meta_chat_workspaces: () => metaChatAvailable() && isFeatureEnabled("workspaces"),
+  meta_chat_digest: metaChatAvailable,
+  meta_chat_mcp: () => metaChatAvailable() && isFeatureEnabled("mcp_servers"),
+};
+
+/** Whether this deployment renders everything a guide highlights. */
+export function isFeatureGuideAvailable(featureId) {
+  if (!featureId || !featureGuides[featureId]) return false;
+  return FEATURE_GUIDE_AVAILABILITY[featureId]?.() ?? true;
+}
+
 export const FEATURE_CATEGORIES = {
   meta_chat: [
     "meta_chat_usage",
@@ -1738,8 +2093,13 @@ export const FEATURE_CATEGORIES = {
   personas: ["chat_with_persona"],
   settings: [
     "settings_overview",
+    "institution",
     "e2ee",
+    "sync_setup",
+    "backup_create",
+    "backup_restore",
     "chat_preferences",
+    "advanced_mode",
     "message_timestamps",
     "memories",
     "rendering",
@@ -1747,8 +2107,11 @@ export const FEATURE_CATEGORIES = {
     "document_conversion",
     "data_management",
     "dark_mode",
+    "brand_consent",
+    "language_picker",
+    "pwa_install",
   ],
-  other: ["feedback", "speech_output", "diagram_renderers"],
+  other: ["feedback", "bug_report", "speech_output", "diagram_renderers"],
 };
 
 export function getFeatureCategory(featureId) {
@@ -1775,7 +2138,7 @@ export function getFeatureGuide(featureId) {
 export function getFeatureGuideMarker(text) {
   const match = String(text || "").match(GUIDE_MARKER_PATTERN);
   const featureId = match?.[1]?.toLowerCase();
-  return featureId && featureGuides[featureId] ? featureId : null;
+  return featureId && isFeatureGuideAvailable(featureId) ? featureId : null;
 }
 
 export function stripFeatureGuideMarkers(text) {
@@ -1819,6 +2182,8 @@ const germanGuideKeywords = {
   settings_overview: ["einstellung", "benutzereinstellung", "einstellungen änder", "datenschutzeinstellung"],
   memories: ["erinnerung", "gedächtnis", "merken", "gemerkt", "gespeicherte erinnerung"],
   chat_preferences: ["chat einstellung", "chat-einstellung", "benutzereinstellung", "präferenzen"],
+  advanced_mode: ["erweiterter modus", "fortgeschritten", "erweiterte ansicht", "agenten in der seitenleiste", "mcp in der seitenleiste"],
+  backup_restore: ["sicherung wiederherstell", "sicherung einlesen", "backup wiederherstell", "backup importier", "auf neues gerät", "chats übertrag"],
   rendering: ["typst", "latex", "darstellung", "rendern", "code rendern"],
   document_conversion: ["dokumentkonvertierung", "dokument konvertieren", "dokument umwandeln", "konvertierung", "browser konvertierung", "server konvertierung"],
   data_management: ["daten verwalt", "datenverwaltung", "datenschutz", "daten lösch", "cache lösch", "daten exportier"],
@@ -1892,6 +2257,7 @@ export function findFeatureGuideForText(text) {
   let bestLength = 0;
 
   for (const [featureId, guide] of Object.entries(featureGuides)) {
+    if (!isFeatureGuideAvailable(featureId)) continue;
     const keywords = [
       ...(guide.keywords || []),
       ...(germanGuideKeywords[featureId] || []),
@@ -1912,7 +2278,7 @@ export function findFeatureGuideForText(text) {
 
 export function buildFeatureGuidePrompt() {
   return Object.entries(featureGuides)
-    .filter(([featureId]) => featureId !== "remote_agents" || isAgentsEnabled())
+    .filter(([featureId]) => isFeatureGuideAvailable(featureId))
     .map(([featureId, guide]) => `- ${featureId}: ${guide.prompt}`)
     .join("\n");
 }

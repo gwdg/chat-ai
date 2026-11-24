@@ -83,6 +83,13 @@ export default {
     rename_tooltip: "Umbenennen: {{title}}",
     shortcut_new_conversation: "Strg + Shift + O",
     user_section: "Benutzer",
+    sync_now: "Jetzt synchronisieren",
+    sync_running: "Synchronisierung…",
+    sync_settings: "Synchronisierungs-Einstellungen öffnen",
+    sync_done: "Synchronisierung abgeschlossen: {{pulled}} übernommen, {{pushed}} hochgeladen.",
+    sync_failed: "Synchronisierung fehlgeschlagen: {{error}}",
+    sync_auto_on: "Automatische Synchronisierung an — pausieren",
+    sync_auto_off: "Automatische Synchronisierung aus — fortsetzen",
   },
   folders: {
     title: "Chats",
@@ -123,6 +130,14 @@ export default {
     edit_title: "Thema bearbeiten",
     delete_title: "Thema löschen",
     topic_options: "Thema-Optionen",
+    unsorted_options: "Optionen für nicht zugeordnete Chats",
+    remove_all_unsorted: "Alle Chats entfernen",
+    delete_unsorted_title: "Alle nicht zugeordneten Chats entfernen",
+    delete_unsorted_description:
+      "Alle {{count}} Chats löschen, die keinem Thema zugeordnet sind? Dies kann nicht rückgängig gemacht werden.",
+    removed_unsorted_chats: "{{count}} nicht zugeordnete Chats entfernt.",
+    remove_unsorted_error:
+      "Nicht zugeordnete Chats konnten nicht entfernt werden: {{error}}",
     pinned: "Angeheftet",
     pin_action: "Chat anheften",
     unpin_action: "Nicht mehr anheften",
@@ -803,6 +818,14 @@ export default {
       step3: "Ändern Sie eine Einstellung wie Dokumentkonvertierung. Änderungen werden automatisch gespeichert.",
       step4: "Darstellungsmodule und die Denkprozess-Anzeige finden Sie im Tab Erweitert.",
     },
+    institution: {
+      title: "Sehen, was Ihre Einrichtung einschränkt",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen über das Profil oder die Seitenleiste.",
+      step2: "Wählen Sie den Tab Profil.",
+      step3: "Öffnen Sie den Tab Einrichtung neben Benutzer.",
+      step4:
+        "Der Abschnitt Einrichtung nennt den Anbieter dieser Installation und jede hier geltende Einschränkung, etwa ein festes Modell, deaktivierte Funktionen und blockierte externe Kommunikation, mit Kontakt und Links.",
+    },
     memories: {
       title: "Erinnerungen verwalten",
       step1: "Öffnen Sie Ihre Benutzereinstellungen.",
@@ -814,6 +837,13 @@ export default {
       step1: "Öffnen Sie Ihre Benutzereinstellungen.",
       step2:
         "Wählen Sie den Tab Chat, um Standardmodell, Sendetaste, Zusammenfassungen, Zeitstempel und Dokumentkonvertierung zu ändern; die Darstellung liegt im Tab Erweitert.",
+    },
+    advanced_mode: {
+      title: "Agenten und MCP-Server in der Seitenleiste zeigen",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Tab Erweitert.",
+      step3:
+        "Schalten Sie den erweiterten Modus ein, um die Bereiche Agenten und MCP-Server in der Seitenleiste zu zeigen. Ausgeblendet enthält die Seitenleiste nur Chats, Themen und Workspaces.",
     },
     e2ee: {
       title: "Ein Modell Ende-zu-Ende verschlüsseln",
@@ -862,10 +892,60 @@ export default {
       step3:
         "Exportieren Sie lokale Daten oder löschen Sie Chats, Erinnerungen, Einstellungen und Anhänge.",
     },
+    sync_setup: {
+      title: "Verschlüsselte Serversynchronisierung",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Tab Daten.",
+      subtab: "Öffnen Sie den Bereich Serversynchronisierung.",
+      step3:
+        "Die verschlüsselte Serversynchronisierung hält Einstellungen, Unterhaltungen, Workspaces und Agenten auf Ihren Geräten aktuell. Alles wird in diesem Browser verschlüsselt, bevor es hochgeladen wird, und die Passphrase wird nie gespeichert.",
+      step4:
+        "Schalten Sie die Serversynchronisierung ein und erstellen Sie sie mit einer Passphrase, die Sie sich merken können, oder entsperren Sie die Kopie, die ein anderes Gerät bereits für dieses Konto erstellt hat. Sobald sie offen ist, können Sie auf diesem Gerät einen Passkey hinzufügen, damit nach einem Neuladen nicht erneut nach der Passphrase gefragt wird.",
+    },
+    backup_create: {
+      title: "Verschlüsselte Sicherung erstellen",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Tab Daten.",
+      subtab: "Öffnen Sie den Bereich Verschlüsselte Sicherung.",
+      step3:
+        "Unter Verschlüsselte Sicherung enthält eine Datei alle Chats, Themen, Einstellungen, Workspaces und Agenten. Sie wird in diesem Browser verschlüsselt und mit Datum und Uhrzeit versehen.",
+      step4:
+        "Erstellen Sie sie mit einer Passphrase, die Sie sich merken können. Dieselbe Passphrase stellt die Datei später wieder her; passende Einträge werden überschrieben, nichts wird gelöscht.",
+    },
+    backup_restore: {
+      title: "Verschlüsselte Sicherung wiederherstellen",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Tab Daten.",
+      subtab: "Öffnen Sie den Bereich Verschlüsselte Sicherung.",
+      step3:
+        "Wählen Sie die Sicherungsdatei und geben Sie die Passphrase ein, mit der sie erstellt wurde. Bestätigen Sie das Überschreiben, und stellen Sie dann wieder her: Einträge mit derselben ID werden ersetzt, neue hinzugefügt, nichts wird gelöscht.",
+    },
+    language_picker: {
+      title: "Sprache wechseln",
+      step1:
+        "Öffnen Sie das Sprachmenü in der Fußzeile. Englisch und Deutsch stellen die Oberfläche sofort um; Automatisch folgt wieder der Browsersprache.",
+    },
+    pwa_install: {
+      title: "App installieren",
+      step1:
+        "Öffnen Sie mit der Installieren-Schaltfläche in der Fußzeile den Installationsdialog Ihres Browsers. Die App startet danach in einem eigenen Fenster ohne Adressleiste.",
+    },
+    bug_report: {
+      title: "Problem melden",
+      step1:
+        "Öffnen Sie die Fehlermeldung in der Fußzeile: Typ wählen, das Problem beschreiben und bei Bedarf einen Screenshot anhängen.",
+    },
     dark_mode: {
       title: "Design wechseln",
       step1:
         "Verwenden Sie den Design-Schalter in der Fußzeile, um zwischen hellem und dunklem Modus zu wechseln.",
+    },
+    brand_consent: {
+      title: "Einwilligungen prüfen",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Reiter Erweitert.",
+      step3:
+        "Ändern Sie hier die freiwilligen Einwilligungen; die Links zu Nutzungsbedingungen und Datenschutz stehen unter den Schaltern.",
     },
     feedback: {
       title: "Feedback senden",
@@ -1051,6 +1131,16 @@ export default {
       description: "Lassen Sie eine Assistentenantwort über die Sprachschaltfläche vorlesen.",
       step1: "Klicken Sie auf das Lautsprecher-Symbol unter einer Assistenten-Nachricht.",
       step2: "Beenden Sie die Wiedergabe jederzeit mit der Stopp-Schaltfläche.",
+    },
+    backup_migration: {
+      title: "Chats auf ein neues Gerät übertragen",
+      description:
+        "Nehmen Sie Chats, Themen, Einstellungen, Workspaces und Agenten mit einer verschlüsselten Sicherungsdatei in einen anderen Browser mit.",
+      step1:
+        "Erstellen Sie die Sicherung unter Verschlüsselte Sicherung mit einer Passphrase, die Sie sich merken können.",
+      step2: "Kopieren Sie die heruntergeladene Datei auf das andere Gerät oder in den anderen Browser.",
+      step3:
+        "Stellen Sie sie dort mit derselben Passphrase wieder her. Passende Einträge werden überschrieben, neue hinzugefügt, nichts wird gelöscht.",
     },
   },
   // Settings panel
@@ -1298,6 +1388,7 @@ export default {
   },
   // Footer
   footer: {
+    sitemap: "Sitemap",
     help: "Hilfe",
     imprint: "Impressum",
     terms: "Nutzungsbedingungen",
@@ -1350,12 +1441,57 @@ export default {
         label: "Daten",
         title: "Daten und Datenschutz",
         description:
-          "Exportieren oder entfernen Sie die in diesem Browser gespeicherten Daten.",
+          "Verwalten Sie lokale Daten, laden Sie eine verschlüsselte Sicherung herunter und halten Sie Ihre Geräte mit verschlüsselter Serversynchronisierung aktuell.",
+      },
+    },
+    profile: {
+      sections: {
+        label: "Profilbereiche",
+        user: "Benutzer",
+        institution: "Einrichtung",
       },
     },
     account: {
       username: "Benutzername",
       email: "E-Mail-Adresse",
+      institute: {
+        title: "Einrichtung",
+        description:
+          "Diese Chat-AI-Installation wird von Ihrer Einrichtung bereitgestellt, die die hier verfügbaren Optionen einschränken kann.",
+        limitations: "Einschränkungen für diese Einrichtung",
+        links: "Links",
+        contact: "Kontakt",
+        model: "Modellauswahl",
+        model_fixed: "Festgelegt auf {{model}}",
+        model_allowed: "Beschränkt auf {{models}}",
+        modules_label: "Deaktivierte Module",
+        features_label: "Deaktivierte Funktionen",
+        external_label: "Blockierte externe Kommunikation",
+        modules: {
+          tools: "Werkzeuge",
+          feedback: "Feedback",
+          choices: "Antwortvorschläge",
+          agent: "Browser-Agent",
+          agents: "Agenten",
+          arcanas: "Arcana-Werkzeuge",
+          speech: "Sprachausgabe",
+          sync: "Server-Synchronisierung",
+        },
+        features: {
+          meta_chat: "Meta-Chat",
+          workspaces: "Arbeitsbereiche",
+          mcp_servers: "MCP-Server",
+          e2ee: "Ende-zu-Ende-Verschlüsselung",
+          tutorials: "Tutorials",
+          import_git: "Klonen von Git-Repositories",
+        },
+        external: {
+          web_search: "Websuche",
+          external_models: "Externe Modelle",
+          mcp: "MCP-Server",
+          external_references: "Externe Verweise in gerenderten Inhalten",
+        },
+      },
     },
     usage: {
       title: "Nutzung",
@@ -1603,6 +1739,12 @@ export default {
       title: "Daten verwalten",
       description:
         "Exportieren Sie eine Kopie Ihrer lokalen Daten oder entfernen Sie Unterhaltungen, Erinnerungen, Einstellungen und Anhänge dauerhaft aus diesem Browser.",
+      sections: {
+        label: "Datenbereiche",
+        manage: "Daten verwalten",
+        backup: "Verschlüsselte Sicherung",
+        sync: "Serversynchronisierung",
+      },
       export_success: "Lokale Daten wurden erfolgreich exportiert.",
       export_error: "Lokale Daten konnten nicht exportiert werden.",
       storage_title: "Browserspeicher",
@@ -1621,6 +1763,155 @@ export default {
       storage_request_unsupported:
         "Dieser Browser unterstützt das Anfordern dauerhaften Speichers nicht.",
       storage_request_failed: "Anfordern von dauerhaftem Speicher fehlgeschlagen: {{error}}",
+      backup: {
+        title: "Verschlüsselte Sicherung",
+        description:
+          "Laden Sie eine verschlüsselte Datei mit allen Chats, Themen, Einstellungen, Workspaces und Agenten herunter und stellen Sie sie später mit derselben Passphrase wieder her.",
+        notice:
+          "Die Sicherung wird in diesem Browser verschlüsselt, bevor sie heruntergeladen wird. Die Passphrase wird nie gespeichert und kann nicht wiederhergestellt werden; ohne sie lässt sich die Datei nicht öffnen. Bewahren Sie Datei und Passphrase sicher auf.",
+        create_title: "Sicherung erstellen",
+        create_description:
+          "Die Datei wird mit dem aktuellen Datum und der Uhrzeit versehen. Dateien über 8 MB werden ausgelassen und gemeldet.",
+        passphrase: "Passphrase",
+        passphrase_confirm: "Passphrase wiederholen",
+        passphrase_hint: "Mindestens {{count}} Zeichen.",
+        create_button: "Sicherung erstellen und herunterladen",
+        creating: "Sicherung wird erstellt…",
+        created: "Sicherung {{file}} heruntergeladen ({{records}} Einträge).",
+        missing_passphrase: "Geben Sie eine Passphrase ein.",
+        mismatch: "Die Passphrasen stimmen nicht überein.",
+        create_error: "Die Sicherung konnte nicht erstellt werden: {{error}}",
+        restore_title: "Sicherung wiederherstellen",
+        restore_description:
+          "Wählen Sie eine Sicherungsdatei und geben Sie ihre Passphrase ein. Die Sicherung wird in diesen Browser eingefügt: Einträge mit derselben ID werden überschrieben, nichts wird gelöscht.",
+        choose_file: "Sicherungsdatei",
+        choose_file_first: "Wählen Sie zuerst eine Sicherungsdatei.",
+        file_summary: "Sicherung vom {{date}} · {{records}} Einträge",
+        inspect_error: "Dies ist keine lesbare Chat-AI-Sicherung: {{error}}",
+        restore_passphrase: "Passphrase der Sicherung",
+        restore_confirm:
+          "Mir ist klar, dass passende Chats, Themen, Workspaces, Agenten und Einstellungen überschrieben werden.",
+        confirm_required: "Bestätigen Sie, dass passende Einträge überschrieben werden dürfen.",
+        restore_button: "Sicherung wiederherstellen",
+        restoring: "Sicherung wird wiederhergestellt…",
+        restored: "Sicherung wiederhergestellt: {{records}} Einträge.",
+        restore_error: "Die Sicherung konnte nicht wiederhergestellt werden: {{error}}",
+        unknown_namespaces: "Daten aus einer neueren Version wurden übersprungen: {{namespaces}}.",
+      },
+      sync: {
+        title: "Verschlüsselte Serversynchronisierung",
+        description:
+          "Halten Sie Unterhaltungen, Einstellungen, Workspaces und Agenten auf Ihren Geräten aktuell, indem Sie eine verschlüsselte Kopie in Ihrem SAIA-Dateisystem speichern.",
+        notice:
+          "Alles wird in diesem Browser verschlüsselt, bevor es hochgeladen wird. Die Passphrase verlässt Ihr Gerät nie, der Server kann die Kopie nicht lesen, und ohne die Passphrase sind die Daten nicht wiederherstellbar. Verwenden Sie eine Passphrase, die Sie sich merken können, und bewahren Sie sie sicher auf.",
+        enable_label: "Verschlüsselte Kopie in meinem SAIA-Dateisystem speichern",
+        enable_description:
+          "Standardmäßig aus. Es wird nichts hochgeladen, bis Sie unten die Kopie erstellen oder entsperren.",
+        create_title: "Verschlüsselte Kopie erstellen",
+        create_description:
+          "Die Passphrase schützt den Schlüssel, der das Archiv verschlüsselt. Ohne sie ist die Kopie nicht mehr zugänglich.",
+        unlock_title: "Vorhandene Kopie entsperren",
+        unlock_description:
+          "Ein anderes Gerät hat für dieses Konto bereits eine Kopie erstellt. Geben Sie deren Passphrase ein, um sie hier zu verwenden.",
+        passphrase: "Passphrase",
+        passphrase_confirm: "Passphrase wiederholen",
+        passphrase_hint: "Mindestens {{count}} Zeichen.",
+        create_button: "Verschlüsselte Kopie erstellen",
+        unlock_button: "Entsperren",
+        checking: "Server wird geprüft…",
+        check_again: "Erneut prüfen",
+        exists_hint:
+          "Es existiert bereits eine Kopie. Entsperren Sie sie oder ersetzen Sie sie durch einen neuen Tresor und laden Sie alles erneut hoch.",
+        replace_warning:
+          "Beim Ersetzen des Tresors wird jede hochgeladene Datei unlesbar. Dieses Gerät lädt seine Daten erneut hoch.",
+        replace_button: "Tresor ersetzen",
+        unlocked_title: "Verbunden",
+        vault: "Tresor",
+        device: "Dieses Gerät",
+        last_sync: "Letzte Synchronisierung",
+        never: "Noch nicht synchronisiert",
+        conflicts: "Konflikte",
+        skipped: "Übersprungene Dateien",
+        skipped_hint:
+          "Dateien über 8 MB werden nicht hochgeladen. Der Chat oder Workspace behält einen Platzhalter.",
+        conflict_hint:
+          "Bei Konflikten bleiben beide Versionen erhalten. Eine Unterhaltung wird als „ (conflict copy)“ im Titel kopiert.",
+        sync_now: "Jetzt synchronisieren",
+        syncing: "Synchronisierung…",
+        lock: "Tresor sperren",
+        auto_label: "Automatisch synchronisieren",
+        auto_description:
+          "Läuft alle fünf Minuten, solange dieser Tab offen und der Tresor entsperrt ist.",
+        change_title: "Passphrase ändern",
+        change_button: "Passphrase ändern",
+        changed: "Die Passphrase wurde geändert. Das Archiv wurde nicht neu verschlüsselt.",
+        rotate_title: "Tresor ersetzen",
+        rotate_description:
+          "Erzeugt einen neuen Tresorschlüssel und ein neues Salz für die Schlüsselableitung. Jede hochgeladene Datei wird unlesbar; anschließend lädt dieses Gerät seine Daten erneut hoch. Damit können Sie ein Gerät aussperren.",
+        rotate_button: "Tresor ersetzen und erneut hochladen",
+        rotated: "Der Tresor wurde ersetzt. Führen Sie eine Synchronisierung aus, um dieses Gerät erneut hochzuladen.",
+        cleanup: "Remote-Dateien aufräumen",
+        cleanup_description:
+          "Löscht Revisionen und Anhänge, auf die kein Geräteindex mehr verweist.",
+        cleanup_done: "{{records}} Revisionen und {{assets}} Anhänge entfernt.",
+        disable_hint:
+          "Wenn Sie die Serversynchronisierung ausschalten, stoppt die Synchronisierung und der Tresor wird gesperrt. Die verschlüsselten Dateien bleiben in Ihrem Dateisystem, bis Sie sie aufräumen oder dort löschen.",
+        passkey_title: "Passkey auf diesem Gerät",
+        passkey_description:
+          "Hält den Tresor über ein Neuladen hinweg entsperrt, ohne die Passphrase zu speichern. Der Passkey speichert nur eine verschlüsselte Kopie des Tresorschlüssels; der Schlüssel selbst bleibt nur im Arbeitsspeicher des Browsers.",
+        passkey_add: "Passkey hinzufügen",
+        passkey_default_label: "Sync-Tresor",
+        passkey_label: "Name des Passkeys",
+        passkey_label_placeholder: "z. B. Arbeitslaptop",
+        passkey_enrolled: "Hinterlegt: {{label}}",
+        passkey_forget: "Diesen Passkey entfernen",
+        passkey_unlock: "Mit Passkey entsperren",
+        passkey_unlock_hint:
+          "Der Browser fragt nach dem Passkey (Fingerabdruck, Gesicht oder Geräte-PIN); der Tresor öffnet sich ohne Passphrase.",
+        passkey_session_hint:
+          "Diese Sitzung wurde mit einem Passkey entsperrt. Nach dem Neuladen wird er automatisch angefragt; der Browser braucht dafür eventuell zuerst einen Klick.",
+        passkey_click_hint:
+          "Browser zeigen die Passkey-Abfrage möglicherweise erst nach einem Klick.",
+        passkey_added:
+          "Der Passkey wurde hinzugefügt. Dieses Gerät kann den Tresor nach dem Neuladen entsperren.",
+        passkey_unlocked: "Mit dem Passkey entsperrt.",
+        passkey_forgotten:
+          "Der Passkey wurde entfernt. Die Passphrase öffnet den Tresor weiterhin.",
+        passkey_unsupported:
+          "Dieser Browser kann keine Passkeys verwenden. Die Passphrase bleibt hier der einzige Weg zum Entsperren.",
+        onboarding_title: "Chats auf allen Geräten aktuell halten",
+        onboarding_intro:
+          "Chat AI kann eine verschlüsselte Kopie Ihrer Unterhaltungen, Themen, Einstellungen, Workspaces und Agenten in Ihrem SAIA-Dateisystem speichern. Ihre anderen Geräte lesen diese Kopie, sodass ein hier begonnener Chat dort weitergeht.",
+        onboarding_point_encrypted:
+          "Vor dem Hochladen verschlüsselt: Alles wird in diesem Browser verschlüsselt, die Passphrase verlässt Ihr Gerät nie, und der Server kann die Kopie nicht lesen.",
+        onboarding_point_passphrase:
+          "Eine Passphrase schützt den Schlüssel. Ohne sie lässt sich die Kopie nicht wiederherstellen; verwenden Sie daher eine Passphrase, die Sie sich merken können und sicher aufbewahren (mindestens {{min}} Zeichen).",
+        onboarding_point_passkey:
+          "Optionaler Passkey: Sobald die Kopie offen ist, öffnet ein Passkey auf diesem Gerät (Fingerabdruck, Gesicht oder Geräte-PIN) sie nach einem Neuladen erneut, ohne nach der Passphrase zu fragen. In diesem Browser wird nur eine verschlüsselte Kopie des Tresorschlüssels gespeichert.",
+        onboarding_point_nothing:
+          "Nichts wird hochgeladen, bevor Sie die Kopie erstellen, und Sie können die Synchronisierung jederzeit wieder ausschalten.",
+        onboarding_where:
+          "Die Kopie liegt im Kontoordner Ihres SAIA-Dateisystems. Hat ein anderes Gerät für dieses Konto bereits eine Kopie erstellt, entsperren Sie diese, statt eine zweite anzulegen.",
+        onboarding_privacy:
+          "Die Passphrase und der Tresorschlüssel werden nie gespeichert. Der Meta-Chat kann sie weder lesen noch die Kopie erstellen oder entsperren; das bleibt in den Daten-Einstellungen.",
+        onboarding_setup: "Synchronisierung einrichten",
+        onboarding_existing_title:
+          "Für dieses Konto existiert bereits eine verschlüsselte Synchronisierung",
+        onboarding_existing_intro:
+          "Ein anderes Gerät speichert bereits eine verschlüsselte Kopie Ihrer Unterhaltungen, Themen, Einstellungen, Workspaces und Agenten in Ihrem SAIA-Dateisystem. Richten Sie diese Kopie auf diesem Gerät ein, um sie zu lesen — Sie benötigen die Passphrase, mit der sie erstellt wurde.",
+        onboarding_existing_point_passphrase:
+          "Geben Sie die Passphrase ein, mit der die Kopie auf dem anderen Gerät erstellt wurde. Ohne sie lässt sich die Kopie hier nicht lesen, und es gibt keine Wiederherstellung.",
+        onboarding_existing_point_nothing:
+          "Von diesem Gerät wird nichts hochgeladen, bis Sie diese Kopie entsperrt haben, und Sie können die Synchronisierung jederzeit ausschalten.",
+        onboarding_existing_setup: "Auf diesem Gerät einrichten",
+        onboarding_later: "Jetzt nicht",
+        onboarding_footer:
+          "Sie finden dies später unter Benutzereinstellungen → Daten → Serversynchronisierung.",
+        missing_passphrase: "Geben Sie die Passphrase ein.",
+        mismatch: "Die Passphrasen stimmen nicht überein.",
+        session_expired: "Der Tresor wurde gesperrt. Geben Sie die Passphrase erneut ein.",
+        error: "Synchronisierung fehlgeschlagen: {{error}}",
+      },
     },
     clear_data_button: "Alle lokalen Daten löschen",
     import_data_button: "Daten importieren",
@@ -1772,7 +2063,7 @@ export default {
   },
   // Tour
   tour: {
-    welcome_message: "Willkommen bei Chat AI",
+    welcome_message: "Willkommen bei {{app}}",
     start_tour: "Tour starten",
     skip_tour: "Tour überspringen",
     description:
@@ -2250,6 +2541,7 @@ export default {
     file_name_placeholder: "Dateiname",
     entry_name_invalid: "Namen dürfen keine Schrägstriche enthalten.",
     rename_entry: "Eintrag umbenennen",
+    rename_in: "In {{path}} umbenennen",
     rename_success: "Umbenannt in {{name}}.",
     git_log: "Git-Log",
     git_log_empty: "Keine Git-Log-Einträge gefunden.",
@@ -2578,6 +2870,7 @@ export default {
     retry: "Erneut versuchen",
     refresh: "Aktualisieren",
     empty_folder: "Dieser Ordner ist leer.",
+    folder_open_failed: "„{{name}}“ konnte nicht geöffnet werden",
     drop_hint: "Dateien hier ablegen, um sie in diese Quelle zu kopieren.",
     load_more: "Mehr laden",
     select_all: "Alle auswählen",
@@ -2585,6 +2878,7 @@ export default {
     selected_count_one: "{{count}} Element ausgewählt",
     selected_count_other: "{{count}} Elemente ausgewählt",
     download: "Herunterladen",
+    downloading: "Dateien werden gespeichert…",
     preview_too_large: "Diese Datei ist zu groß für die Vorschau.",
     preview_unavailable: "Für diesen Dateityp gibt es keine Vorschau.",
     remove_source: "Quelle entfernen",
@@ -2621,6 +2915,10 @@ export default {
     transfer_success_one: "{{count}} Element übertragen.",
     transfer_success_other: "{{count}} Elemente übertragen.",
     transfer_blocked: "Diese Übertragung kann nicht gestartet werden.",
+    transfer_conflict: "„{{name}}“ existiert am Ziel bereits.",
+    transfer_conflict_many:
+      "{{count}} Elemente existieren am Ziel bereits.",
+    transfer_multiple_sources: "mehreren Quellen",
   },
 
   // Landing page
@@ -2679,6 +2977,14 @@ export default {
     pdf_missing_title: "PDF-Inhalt nicht verfügbar",
     pdf_missing_hint: "Die Daten des Original-PDFs sind für die Vorschau nicht verfügbar",
     docx_failed: "Word-Dokument konnte nicht angezeigt werden",
+    describe_image: "Bild beschreiben",
+    describe_unavailable:
+      "Für diese Installation ist kein Bildverständnis-Modell verfügbar",
+    describe_byline: "Automatisch beschrieben mit {{model}}",
+    describe_opened: "{{name}} geöffnet",
+    describe_saved: "{{name}} gespeichert",
+    describe_downloaded: "{{name}} heruntergeladen",
+    describe_failed: "Das Bild konnte nicht beschrieben werden: {{message}}",
     save: "Auf Gerät speichern",
     save_failed: "Datei konnte nicht heruntergeladen werden",
     download_aria: "Datei herunterladen",
@@ -2730,11 +3036,94 @@ export default {
     tool_call: "Tool-Aufruf",
     select_placeholder: "Auswählen…",
   },
+  // Theme-Auswahl (Fußzeile): hell/dunkel plus zusätzliche Marken-Themes
+  theme: {
+    label: "Theme wechseln",
+    light: "Hell",
+    dark: "Dunkel",
+    brand_themes: "Marken-Themes",
+  },
+  // Einwilligungsdialog der Marke und sein späterer Einstellungsbereich
+  consent: {
+    terms_checkbox: "Ich habe die Nutzungsbedingungen gelesen.",
+    terms_required:
+      "Bitte akzeptiere die Nutzungsbedingungen, um fortzufahren.",
+    continue: "Weiter",
+    back: "Zurück",
+    save: "Speichern und fortfahren",
+    settings_title: "Deine Einwilligungen",
+    settings_intro:
+      "Die Teilnahme ist freiwillig. Du kannst diese Auswahl jederzeit ändern.",
+    accepted_on: "Akzeptiert am {{date}}.",
+    not_accepted_yet: "Auf diesem Gerät noch nicht akzeptiert.",
+  },
   // Nur für die Entwicklung: /dev/tool-form
   tool_form_demo: {
     title: "Tool-Formular testen",
     description:
       "Nur für die Entwicklung: Vorschau des Formulars, das Tool-Ergebnisse im Chat anzeigen. Beim Absenden werden die Werte hier angezeigt, statt eine Nachricht zu senden.",
     submitted: "Übermittelte Werte",
+  },
+
+  // Fußzeile: Sprachwahl, PWA-Installation, Fehlermeldung
+  language: {
+    label: "Sprache",
+    automatic: "Automatisch (Browsersprache)",
+    auto_short: "Auto",
+    english: "Englisch",
+    german: "Deutsch",
+  },
+  pwa: {
+    install: "Diese App installieren",
+  },
+  // Informationen der Marke (/about, /accessibility) und die Sitemap
+  info: {
+    back_to_chat: "Zurück zum Chat",
+    page_external: "Diese Seite wird von der Institution hinter dieser App bereitgestellt.",
+    open_page: "Seite öffnen",
+  },
+  about: {
+    title: "Über diese App",
+  },
+  accessibility: {
+    title: "Barrierefreiheit",
+  },
+  sitemap: {
+    title: "Sitemap",
+    general: "Allgemein",
+    pages: "Informationen",
+  },
+  bug_report: {
+    title: "Problem melden",
+    intro:
+      "Beschreibe, was passiert ist. Die Meldung geht zusammen mit der Seitenadresse und deiner Browser-Version an den Betrieb dieser Anwendung.",
+    type_label: "Typ",
+    type_bug: "Fehler",
+    type_feedback: "Rückmeldung",
+    type_accessibility: "Barrierefreiheit",
+    type_other: "Sonstiges",
+    message_label: "Beschreibung",
+    message_placeholder:
+      "Was hast du getan, was hast du erwartet und was ist stattdessen passiert?",
+    screenshot_label: "Screenshots (optional)",
+    screenshot_hint: "Bis zu {{count}} Dateien mit je {{size}} (PNG, JPEG oder WebP).",
+    email_label: "Kontaktadresse (optional)",
+    email_placeholder: "du@example.org",
+    diagnostics_label: "Diese Diagnosedaten werden mitgesendet",
+    unavailable:
+      "In dieser Installation gibt es keinen Empfänger für Rückmeldungen, daher kann die Meldung nicht gesendet werden. Du kannst sie kopieren und an den Betrieb weitergeben.",
+    copy: "Meldung kopieren",
+    copied: "Kopiert",
+    sent: "Danke — die Meldung wurde gesendet.",
+    success: "Meldung gesendet.",
+    sending: "Wird gesendet…",
+    submit: "Meldung senden",
+    error_type: "Anhängen lassen sich nur PNG-, JPEG- und WebP-Bilder.",
+    error_size: "Ein Screenshot darf höchstens {{size}} groß sein.",
+    error_count: "Du kannst höchstens {{count}} Screenshots anhängen.",
+    error_description: "Bitte beschreibe das Problem.",
+    error_rejected:
+      "Die Meldung wurde abgelehnt. Bitte kürze sie oder entferne einen Anhang.",
+    error_failed: "Die Meldung konnte nicht gesendet werden. Bitte später erneut versuchen.",
   },
 };

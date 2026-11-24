@@ -46,11 +46,59 @@ describe("brand lookup", () => {
     expect(brand.footer.isoCertified).toBe(false);
   });
 
+  it("resolves a brand's information pages from its own folder", () => {
+    const brand = getBrandProfile("gaia");
+    // The markdown lives in the brand folder and is read for both languages.
+    expect(brand.pages.about.en).toContain(
+      "GAIA is the AI study assistant for students",
+    );
+    expect(brand.pages.about.de).toContain("KI-Lernassistent");
+    expect(brand.pages.accessibility.en).toContain("Report a barrier");
+    expect(brand.pages.accessibility.de).toContain("Barriere melden");
+    // The footer keeps the local statement reachable and still names the pages.
+    expect(brand.footer.links.accessibility.url).toBe("/accessibility");
+    expect(brand.footer.links.accessibility.label.en).toBe("Accessibility");
+    // Local pages carry their route, so the footer renders them without a
+    // `brand.links` entry (an external link of the same id stays untouched).
+    expect(brand.footer.links.about.url).toBe("/about");
+    expect(brand.footer.links.sitemap.url).toBe("/sitemap");
+  });
+
+  it("leaves pages undefined for a brand that ships none", () => {
+    expect(getBrandProfile("chat-ai")?.pages).toBeUndefined();
+  });
+
   it("matches the UGOE brand case-insensitively and by alias", () => {
     expect(matchBrandId("UGOE")).toBe("ugoe");
     expect(matchBrandId("ugoe")).toBe("ugoe");
     expect(matchBrandId("Göttingen")).toBe("ugoe");
     expect(matchBrandId("not-a-brand")).toBeNull();
+  });
+
+  it("ships the restricted example brand", () => {
+    expect(matchBrandId("locked-down")).toBe("restricted");
+    expect(matchBrandId("example-restricted")).toBe("restricted");
+    const brand = getBrandProfile("restricted");
+    expect(brand.restrictions.models.fixed).toBe(
+      "qwen3-30b-a3b-instruct-2507",
+    );
+    expect(brand.institute.links).toHaveLength(2);
+    // A brand folder may hold only its JSON: assets and footer merge over Chat AI.
+    expect(brand.assets.full).toContain("branding/chatai/logo.svg");
+    expect(brand.footer.links.privacy).toEqual({});
+  });
+
+  it("describes the UGOE institute and its narrowing", () => {
+    const brand = getBrandProfile("ugoe");
+    expect(localizeBrandValue(brand.institute.name, "en")).toBe(
+      "Georg-August-Universität Göttingen",
+    );
+    expect(brand.restrictions.external).toEqual({
+      web_search: false,
+      external_models: false,
+    });
+    // UGOE keeps the options it did not restrict.
+    expect(brand.restrictions.modules).toBeUndefined();
   });
 
   it("merges a sub-brand over the defaults", () => {

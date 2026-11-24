@@ -4,9 +4,11 @@ import { fileURLToPath } from "node:url";
 
 import {
   FEATURE_CATEGORIES,
+  FEATURE_GUIDE_AVAILABILITY,
   featureGuides,
 } from "../src/config/featureGuides.js";
 import {
+  USE_CASE_AVAILABILITY,
   USE_CASE_CATEGORIES,
   useCases,
 } from "../src/config/useCases.js";
@@ -41,6 +43,12 @@ const hasDynamicTools = sourceText.includes(
 const hasDynamicSettingsTabs = sourceText.includes(
   "data-guide={`settings-tab-${tab.id}`}",
 );
+const hasDynamicDataSubtabs = sourceText.includes(
+  "data-guide={`data-subtab-${section.id}`}",
+);
+const hasDynamicProfileSubtabs = sourceText.includes(
+  "data-guide={`profile-subtab-${section.id}`}",
+);
 const hasDynamicMetaTabs = sourceText.includes(
   'data-guide={"meta-tab-" + tab.id}',
 );
@@ -73,6 +81,8 @@ function checkTarget(target, featureId, label, errors) {
         !staticGuideValues.has(value) &&
         !(value.startsWith("tool-") && hasDynamicTools) &&
         !(value.startsWith("settings-tab-") && hasDynamicSettingsTabs) &&
+        !(value.startsWith("data-subtab-") && hasDynamicDataSubtabs) &&
+        !(value.startsWith("profile-subtab-") && hasDynamicProfileSubtabs) &&
         !(value.startsWith("meta-tab-") && hasDynamicMetaTabs) &&
         !(value === "attachment-card" && hasDynamicAttachmentCards) &&
         !(value === "message-citation" && hasDynamicMessageCitations)
@@ -177,6 +187,29 @@ for (const id of Object.keys(featureGuides)) {
   if (!categorised.has(id)) errors.push(`guide ${id} has no category`);
 }
 
+// A guide can only start when this deployment renders what it highlights. The
+// tools and Meta-chat categories exist only behind a module or feature, so every
+// guide in them must say so; a new one without an entry would be offered with
+// its panel switched off.
+for (const [featureId, available] of Object.entries(FEATURE_GUIDE_AVAILABILITY)) {
+  if (!featureGuides[featureId]) {
+    errors.push(`availability names unknown guide ${featureId}`);
+  }
+  if (typeof available !== "function") {
+    errors.push(`availability for ${featureId} is not a function`);
+  }
+}
+for (const featureId of FEATURE_CATEGORIES.tools) {
+  if (!FEATURE_GUIDE_AVAILABILITY[featureId]) {
+    errors.push(`guide ${featureId} is a tools guide without an availability entry`);
+  }
+}
+for (const featureId of FEATURE_CATEGORIES.meta_chat) {
+  if (!FEATURE_GUIDE_AVAILABILITY[featureId]) {
+    errors.push(`guide ${featureId} is a Meta-chat guide without an availability entry`);
+  }
+}
+
 const useCasesCategorised = new Set();
 
 for (const [useCaseId, useCase] of Object.entries(useCases)) {
@@ -241,6 +274,27 @@ for (const [category, ids] of Object.entries(USE_CASE_CATEGORIES)) {
 for (const id of Object.keys(useCases)) {
   if (!useCasesCategorised.has(id)) {
     errors.push(`use case ${id} has no category`);
+  }
+}
+
+for (const [useCaseId, available] of Object.entries(USE_CASE_AVAILABILITY)) {
+  if (!useCases[useCaseId]) {
+    errors.push(`use-case availability names unknown use case ${useCaseId}`);
+  }
+  if (typeof available !== "function") {
+    errors.push(`use-case availability for ${useCaseId} is not a function`);
+  }
+}
+// A walkthrough that steps through a gated tutorial cannot run when that
+// tutorial's module is off, so it must carry the same gate.
+for (const [useCaseId, useCase] of Object.entries(useCases)) {
+  const gatedTutorial = (useCase.steps || []).find(
+    (step) => step.tutorialId && FEATURE_GUIDE_AVAILABILITY[step.tutorialId],
+  );
+  if (gatedTutorial && !USE_CASE_AVAILABILITY[useCaseId]) {
+    errors.push(
+      `use case ${useCaseId} uses gated tutorial ${gatedTutorial.tutorialId} without an availability entry`,
+    );
   }
 }
 

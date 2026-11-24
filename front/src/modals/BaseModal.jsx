@@ -1,7 +1,12 @@
-import { Fragment } from "react";
+import { Fragment, useEffect, useRef } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import { Trans } from "react-i18next";
 import cross_sm from "../assets/icons/cross_sm.svg";
+
+// The app's double-click window. A dialog opened by a click sees the second
+// click of that double click land on its own overlay, and Headless UI would
+// treat it as "outside" and close the dialog before it is visible.
+const OPEN_GRACE_MS = 300;
 
 /**
  * BaseModal Component
@@ -19,6 +24,7 @@ export default function BaseModal({
   isOpen,
   onClose,
   titleKey,
+  titleNode,
   children,
   maxWidth = "max-w-md",
   isForced = false,
@@ -27,12 +33,25 @@ export default function BaseModal({
   contentClassName = "p-5 pt-0 flex flex-col gap-0",
 }) {
 
+  const openedAtRef = useRef(0);
+  useEffect(() => {
+    if (isOpen) openedAtRef.current = Date.now();
+  }, [isOpen]);
+
+  // Only the dialog's own dismissal (overlay, Escape) waits. The close button
+  // and the footers' cancel buttons call `onClose` directly.
+  const dismiss = () => {
+    const openedAt = openedAtRef.current;
+    if (!openedAt || Date.now() - openedAt < OPEN_GRACE_MS) return;
+    onClose?.();
+  };
+
   return (
     <Transition appear show={isOpen} as={Fragment}>
       <Dialog
         as="div"
         className="relative z-[1000]"
-        onClose={isForced ? () => {} : onClose}
+        onClose={isForced ? () => {} : dismiss}
       >
         {/* Overlay */}
         <Transition.Child
@@ -65,7 +84,9 @@ export default function BaseModal({
                 {/* Header */}
                 <div className="flex justify-between items-center p-5 pb-3">
                   <Dialog.Title className="font-semibold text-sm text-accent">
-                    <Trans i18nKey={titleKey} values={titleValues} />
+                    {titleNode ?? (
+                      <Trans i18nKey={titleKey} values={titleValues} />
+                    )}
                   </Dialog.Title>
 
                   {/* Close button */}

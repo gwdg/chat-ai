@@ -83,6 +83,13 @@ export default {
     rename_tooltip: "Rename: {{title}}",
     shortcut_new_conversation: "Ctrl + Shift + O",
     user_section: "User",
+    sync_now: "Sync now",
+    sync_running: "Syncing…",
+    sync_settings: "Open sync settings",
+    sync_done: "Sync complete: {{pulled}} pulled, {{pushed}} pushed.",
+    sync_failed: "Sync failed: {{error}}",
+    sync_auto_on: "Automatic synchronization on — pause it",
+    sync_auto_off: "Automatic synchronization off — resume it",
   },
   folders: {
     title: "Chats",
@@ -123,6 +130,14 @@ export default {
     edit_title: "Edit topic",
     delete_title: "Delete topic",
     topic_options: "Topic options",
+    unsorted_options: "Unsorted chats options",
+    remove_all_unsorted: "Remove all chats",
+    delete_unsorted_title: "Remove all unsorted chats",
+    delete_unsorted_description:
+      "Delete all {{count}} chats that are not in a topic? This cannot be undone.",
+    removed_unsorted_chats: "Removed {{count}} unsorted chats.",
+    remove_unsorted_error:
+      "Could not remove the unsorted chats: {{error}}",
     pinned: "Pinned",
     pin_action: "Pin chat",
     unpin_action: "Unpin chat",
@@ -788,6 +803,14 @@ export default {
       step3: "Change a preference such as document conversion. Changes are saved automatically.",
       step4: "Rendering engines and the reasoning indicator sit in the Advanced tab.",
     },
+    institution: {
+      title: "See what your institution restricts",
+      step1: "Open your user settings from the profile or the sidebar.",
+      step2: "Choose the Profile tab.",
+      step3: "Open the Institution tab beside User.",
+      step4:
+        "The Institution section names who provides this installation and lists every limitation that applies here, such as a fixed model, disabled features and blocked external communication, with the contact and links.",
+    },
     memories: {
       title: "Manage memories",
       step1: "Open your user settings.",
@@ -799,6 +822,13 @@ export default {
       step1: "Open your user settings.",
       step2:
         "Choose the Chat tab to change the default model, send key, summaries, timestamps and document conversion; rendering is in the Advanced tab.",
+    },
+    advanced_mode: {
+      title: "Show agents and MCP servers in the sidebar",
+      step1: "Open your user settings.",
+      step2: "Choose the Advanced tab.",
+      step3:
+        "Turn on Advanced mode to add the Agents and MCP Servers sections to the sidebar. With it off the sidebar shows chats, topics and workspaces only.",
     },
     e2ee: {
       title: "Encrypt a model end to end",
@@ -847,9 +877,59 @@ export default {
       step3:
         "Export local data or clear chats, memories, settings, and attachments.",
     },
+    sync_setup: {
+      title: "Encrypted server synchronization",
+      step1: "Open your user settings.",
+      step2: "Choose the Data tab.",
+      subtab: "Open the Server synchronization section.",
+      step3:
+        "The encrypted server synchronization keeps settings, conversations, workspaces and agents in step across your devices. Everything is encrypted in this browser before it is uploaded, and the passphrase is never stored.",
+      step4:
+        "Switch the server synchronization on, then create it with a passphrase you can remember, or unlock the copy another device already created for this account. Once it is open, you can add a passkey on this device so a reload does not ask for the passphrase again.",
+    },
+    backup_create: {
+      title: "Create an encrypted backup",
+      step1: "Open your user settings.",
+      step2: "Choose the Data tab.",
+      subtab: "Open the Encrypted backup section.",
+      step3:
+        "Under Encrypted backup, one file carries all chats, topics, settings, workspaces and agents. It is encrypted in this browser and stamped with the date and time.",
+      step4:
+        "Create it with a passphrase you can remember. The same passphrase restores the file later; matching items are overwritten and nothing is deleted.",
+    },
+    backup_restore: {
+      title: "Restore an encrypted backup",
+      step1: "Open your user settings.",
+      step2: "Choose the Data tab.",
+      subtab: "Open the Encrypted backup section.",
+      step3:
+        "Choose the backup file and type the passphrase it was created with. Confirm that matching items may be overwritten, then restore: items with the same id are replaced, new ones are added, and nothing is deleted.",
+    },
+    language_picker: {
+      title: "Change the language",
+      step1:
+        "Open the language menu in the footer. English and German switch the interface immediately; Automatic follows your browser language again.",
+    },
+    pwa_install: {
+      title: "Install the app",
+      step1:
+        "Use the install button in the footer to open your browser's installation dialog. The app then starts in its own window, without the address bar.",
+    },
+    bug_report: {
+      title: "Report a problem",
+      step1:
+        "Open the bug report from the footer: choose a type, describe what happened and attach a screenshot if it helps.",
+    },
     dark_mode: {
       title: "Switch theme",
       step1: "Use the theme toggle in the footer to switch between light and dark mode.",
+    },
+    brand_consent: {
+      title: "Review your consents",
+      step1: "Open your user settings.",
+      step2: "Choose the Advanced tab.",
+      step3:
+        "Change the voluntary consents here; the terms of use and privacy links sit below the switches.",
     },
     feedback: {
       title: "Send feedback",
@@ -1035,6 +1115,16 @@ export default {
       description: "Use the speech button to have an assistant answer read aloud.",
       step1: "Click the speaker icon under an assistant message.",
       step2: "Use the stop button to end playback at any time.",
+    },
+    backup_migration: {
+      title: "Move your chats to a new device",
+      description:
+        "Carry chats, topics, settings, workspaces and agents to another browser with one encrypted backup file.",
+      step1:
+        "Create the backup under Encrypted backup, with a passphrase you can remember.",
+      step2: "Copy the downloaded file to the other device or browser.",
+      step3:
+        "Restore it there with the same passphrase. Matching items are overwritten, new ones are added, and nothing is deleted.",
     },
   },
   // Chat settings
@@ -1282,6 +1372,7 @@ export default {
   },
   // Footer
   footer: {
+    sitemap: "Sitemap",
     help: "Help",
     imprint: "Imprint",
     terms: "Terms of Use",
@@ -1332,12 +1423,58 @@ export default {
       data: {
         label: "Data",
         title: "Data and privacy",
-        description: "Export or remove data stored in this browser.",
+        description:
+          "Manage local data, download an encrypted backup, and keep your devices in step with encrypted server synchronization.",
+      },
+    },
+    profile: {
+      sections: {
+        label: "Profile sections",
+        user: "User",
+        institution: "Institution",
       },
     },
     account: {
       username: "Username",
       email: "Email address",
+      institute: {
+        title: "Institution",
+        description:
+          "This Chat AI installation is provided by your institution, which may narrow the options available here.",
+        limitations: "Limitations for this institution",
+        links: "Links",
+        contact: "Contact",
+        model: "Model choice",
+        model_fixed: "Fixed to {{model}}",
+        model_allowed: "Limited to {{models}}",
+        modules_label: "Disabled modules",
+        features_label: "Disabled features",
+        external_label: "Blocked external communication",
+        modules: {
+          tools: "Tools",
+          feedback: "Feedback",
+          choices: "Follow-up suggestions",
+          agent: "Browser agent",
+          agents: "Agents",
+          arcanas: "Arcana Tools",
+          speech: "Speech output",
+          sync: "Server synchronization",
+        },
+        features: {
+          meta_chat: "Meta chat",
+          workspaces: "Workspaces",
+          mcp_servers: "MCP servers",
+          e2ee: "End-to-end encryption",
+          tutorials: "Tutorials",
+          import_git: "Cloning Git repositories",
+        },
+        external: {
+          web_search: "Web search",
+          external_models: "External models",
+          mcp: "MCP servers",
+          external_references: "External references in rendered content",
+        },
+      },
     },
     usage: {
       title: "Usage",
@@ -1581,6 +1718,12 @@ export default {
       title: "Manage Data",
       description:
         "Export a copy of your local data or permanently remove chats, memories, settings, and attachments from this browser.",
+      sections: {
+        label: "Data sections",
+        manage: "Manage data",
+        backup: "Encrypted backup",
+        sync: "Server synchronization",
+      },
       export_success: "Local data exported successfully.",
       export_error: "Local data could not be exported.",
       storage_title: "Browser storage",
@@ -1599,6 +1742,155 @@ export default {
       storage_request_unsupported:
         "This browser does not support requesting persistent storage.",
       storage_request_failed: "Persistent storage request failed: {{error}}",
+      backup: {
+        title: "Encrypted backup",
+        description:
+          "Download one encrypted file of all chats, topics, settings, workspaces and agents, and restore it later with the same passphrase.",
+        notice:
+          "The backup is encrypted in this browser before it is downloaded. The passphrase is never stored and cannot be recovered; without it the file cannot be opened. Keep the file and the passphrase somewhere safe.",
+        create_title: "Create a backup",
+        create_description:
+          "The file is stamped with the current date and time. Files larger than 8 MB are left out and reported.",
+        passphrase: "Passphrase",
+        passphrase_confirm: "Repeat passphrase",
+        passphrase_hint: "At least {{count}} characters.",
+        create_button: "Create and download backup",
+        creating: "Creating backup…",
+        created: "Backup {{file}} downloaded ({{records}} items).",
+        missing_passphrase: "Enter a passphrase.",
+        mismatch: "The passphrases do not match.",
+        create_error: "The backup could not be created: {{error}}",
+        restore_title: "Restore a backup",
+        restore_description:
+          "Choose a backup file and enter its passphrase. The backup is merged into this browser: items with the same id are overwritten and nothing is deleted.",
+        choose_file: "Backup file",
+        choose_file_first: "Choose a backup file first.",
+        file_summary: "Backup from {{date}} · {{records}} items",
+        inspect_error: "This is not a readable Chat AI backup: {{error}}",
+        restore_passphrase: "Backup passphrase",
+        restore_confirm:
+          "I understand that matching chats, topics, workspaces, agents and settings are overwritten.",
+        confirm_required: "Confirm that the restore may overwrite matching items.",
+        restore_button: "Restore backup",
+        restoring: "Restoring…",
+        restored: "Backup restored: {{records}} items.",
+        restore_error: "The backup could not be restored: {{error}}",
+        unknown_namespaces: "Data from a newer version was skipped: {{namespaces}}.",
+      },
+      sync: {
+        title: "Encrypted server synchronization",
+        description:
+          "Keep conversations, settings, workspaces and agents in step across your devices by storing an encrypted copy on your SAIA filesystem.",
+        notice:
+          "Everything is encrypted in this browser before it is uploaded. The passphrase never leaves your device, the server cannot read the copy, and without the passphrase the data cannot be recovered. Use a passphrase you can remember and keep it safe.",
+        enable_label: "Store an encrypted copy on my SAIA filesystem",
+        enable_description:
+          "Off by default. Nothing is uploaded until you create or unlock the copy below.",
+        create_title: "Create the encrypted copy",
+        create_description:
+          "The passphrase protects the key that encrypts the archive. Losing it means losing access to the copy.",
+        unlock_title: "Unlock the existing copy",
+        unlock_description:
+          "Another device already created a copy for this account. Enter its passphrase to use it here.",
+        passphrase: "Passphrase",
+        passphrase_confirm: "Repeat passphrase",
+        passphrase_hint: "At least {{count}} characters.",
+        create_button: "Create encrypted copy",
+        unlock_button: "Unlock",
+        checking: "Checking the server…",
+        check_again: "Check again",
+        exists_hint:
+          "A copy already exists. Unlock it, or replace it with a new vault and re-upload everything.",
+        replace_warning:
+          "Replacing the vault makes every uploaded file unreadable. This device uploads its data again.",
+        replace_button: "Replace the vault",
+        unlocked_title: "Connected",
+        vault: "Vault",
+        device: "This device",
+        last_sync: "Last sync",
+        never: "Not synced yet",
+        conflicts: "Conflicts",
+        skipped: "Skipped files",
+        skipped_hint:
+          "Files larger than 8 MB are not uploaded. The chat or workspace keeps a placeholder.",
+        conflict_hint:
+          "Conflicts keep both versions. A conversation is copied with “ (conflict copy)” in its title.",
+        sync_now: "Sync now",
+        syncing: "Syncing…",
+        lock: "Lock vault",
+        auto_label: "Sync automatically",
+        auto_description:
+          "Runs every five minutes while this tab is open and the vault is unlocked.",
+        change_title: "Change the passphrase",
+        change_button: "Change passphrase",
+        changed: "The passphrase was changed. The archive was not re-encrypted.",
+        rotate_title: "Replace the vault",
+        rotate_description:
+          "Creates a new vault key and a new key derivation salt. Every uploaded file becomes unreadable, then this device uploads its data again. Use this to revoke a device that should no longer read the copy.",
+        rotate_button: "Replace vault and re-upload",
+        rotated: "The vault was replaced. Run a sync to upload this device again.",
+        cleanup: "Clean up remote files",
+        cleanup_description:
+          "Deletes record revisions and attachments that no device index references any more.",
+        cleanup_done: "Removed {{records}} revisions and {{assets}} attachments.",
+        disable_hint:
+          "Turning the server synchronization off stops syncing and locks the vault. The encrypted files stay on your filesystem until you clean them up or delete them there.",
+        passkey_title: "Passkey on this device",
+        passkey_description:
+          "Keep the vault unlocked across reloads without saving the passphrase. The passkey stores only a wrapped copy of the vault key; the key itself stays in your browser's memory.",
+        passkey_add: "Add a passkey",
+        passkey_default_label: "Sync vault",
+        passkey_label: "Passkey name",
+        passkey_label_placeholder: "e.g. Work laptop",
+        passkey_enrolled: "Enrolled: {{label}}",
+        passkey_forget: "Forget this passkey",
+        passkey_unlock: "Unlock with passkey",
+        passkey_unlock_hint:
+          "Your browser asks for the passkey (fingerprint, face or device PIN) and the vault opens without the passphrase.",
+        passkey_session_hint:
+          "This session unlocked with a passkey. After a reload it is requested again automatically; your browser may need a click first.",
+        passkey_click_hint:
+          "Browsers may require a click before showing the passkey prompt.",
+        passkey_added:
+          "The passkey was added. This device can unlock the vault after a reload.",
+        passkey_unlocked: "Unlocked with the passkey.",
+        passkey_forgotten:
+          "The passkey was forgotten. The passphrase still opens the vault.",
+        passkey_unsupported:
+          "This browser cannot use passkeys. The passphrase remains the only way to unlock the vault here.",
+        onboarding_title: "Keep your chats in step across devices",
+        onboarding_intro:
+          "Chat AI can keep an encrypted copy of your conversations, topics, settings, workspaces and agents in your SAIA filesystem. Your other devices read that copy, so a chat you start here continues there.",
+        onboarding_point_encrypted:
+          "Encrypted before upload: everything is encrypted in this browser, the passphrase never leaves your device, and the server cannot read the copy.",
+        onboarding_point_passphrase:
+          "One passphrase protects the key. Without it the copy cannot be recovered, so use a passphrase you can remember and keep safe (at least {{min}} characters).",
+        onboarding_point_passkey:
+          "Optional passkey: once the copy is open, a passkey on this device (fingerprint, face or device PIN) opens it again after a reload without asking for the passphrase. Only a wrapped copy of the vault key is stored in this browser.",
+        onboarding_point_nothing:
+          "Nothing is uploaded until you create the copy, and you can switch the synchronization off whenever you want.",
+        onboarding_where:
+          "The copy lives in your SAIA filesystem account folder. If another device already created one for this account, unlock that copy instead of creating a second one.",
+        onboarding_privacy:
+          "The passphrase and the vault key are never stored. The Meta chat cannot read them and cannot create or unlock the copy; that stays in Data settings.",
+        onboarding_setup: "Set up synchronization",
+        onboarding_existing_title:
+          "An encrypted synchronization already exists for this account",
+        onboarding_existing_intro:
+          "Another device already stores an encrypted copy of your conversations, topics, settings, workspaces and agents in your SAIA filesystem. Set that copy up on this device to read it — you need the passphrase it was created with.",
+        onboarding_existing_point_passphrase:
+          "Enter the passphrase that copy was created with on the other device. Without it the copy cannot be read here, and there is no recovery.",
+        onboarding_existing_point_nothing:
+          "Nothing is uploaded from this device until you unlock that copy, and you can switch the synchronization off whenever you want.",
+        onboarding_existing_setup: "Set it up on this device",
+        onboarding_later: "Not now",
+        onboarding_footer:
+          "You can find this later in User settings → Data → Server synchronization.",
+        missing_passphrase: "Enter the passphrase.",
+        mismatch: "The passphrases do not match.",
+        session_expired: "The vault was locked. Enter the passphrase again.",
+        error: "Sync failed: {{error}}",
+      },
     },
     clear_data_button: "Delete All Local Data",
     import_data_button: "Import Data",
@@ -1751,7 +2043,7 @@ export default {
   },
   // Tour
   tour: {
-    welcome_message: "Welcome to Chat AI",
+    welcome_message: "Welcome to {{app}}",
     start_tour: "Start Tour",
     skip_tour: "Skip tour",
     description:
@@ -2222,6 +2514,7 @@ export default {
     file_name_placeholder: "File name",
     entry_name_invalid: "Names cannot contain slashes.",
     rename_entry: "Rename entry",
+    rename_in: "Rename in {{path}}",
     rename_success: "Renamed to {{name}}.",
     git_log: "Git log",
     git_log_empty: "No Git log entries found.",
@@ -2547,6 +2840,7 @@ export default {
     retry: "Retry",
     refresh: "Refresh",
     empty_folder: "This folder is empty.",
+    folder_open_failed: "Could not open “{{name}}”",
     drop_hint: "Drop files here to copy them into this source.",
     load_more: "Load more",
     select_all: "Select all",
@@ -2554,6 +2848,7 @@ export default {
     selected_count_one: "{{count}} item selected",
     selected_count_other: "{{count}} items selected",
     download: "Download",
+    downloading: "Saving files…",
     preview_too_large: "This file is too large to preview.",
     preview_unavailable: "No preview is available for this file type.",
     remove_source: "Remove source",
@@ -2589,6 +2884,10 @@ export default {
     transfer_success_one: "Transferred {{count}} item.",
     transfer_success_other: "Transferred {{count}} items.",
     transfer_blocked: "This transfer cannot be started.",
+    transfer_conflict: "“{{name}}” already exists at the destination.",
+    transfer_conflict_many:
+      "{{count}} items already exist at the destination.",
+    transfer_multiple_sources: "several sources",
   },
 
   // Landing page
@@ -2646,6 +2945,13 @@ export default {
     pdf_missing_title: "PDF content not available",
     pdf_missing_hint: "The original PDF file data is not available for preview",
     docx_failed: "Failed to display Word document",
+    describe_image: "Describe image",
+    describe_unavailable: "No vision model is available for this deployment",
+    describe_byline: "Automatically described with {{model}}",
+    describe_opened: "Opened {{name}}",
+    describe_saved: "Saved {{name}}",
+    describe_downloaded: "Downloaded {{name}}",
+    describe_failed: "Could not describe the image: {{message}}",
     save: "Save to device",
     save_failed: "Failed to download file",
     download_aria: "Download file",
@@ -2697,11 +3003,93 @@ export default {
     tool_call: "Tool call",
     select_placeholder: "Select…",
   },
+  // Theme selector (footer): light/dark plus any extra brand themes
+  theme: {
+    label: "Switch theme",
+    light: "Light",
+    dark: "Dark",
+    brand_themes: "Brand themes",
+  },
+  // Brand consent gate and its later settings section
+  consent: {
+    terms_checkbox: "I have read the terms of use.",
+    terms_required: "Please accept the terms of use to continue.",
+    continue: "Continue",
+    back: "Back",
+    save: "Save and continue",
+    settings_title: "Your consents",
+    settings_intro:
+      "Participation is voluntary. You can change these choices at any time.",
+    accepted_on: "Accepted on {{date}}.",
+    not_accepted_yet: "Not accepted yet on this device.",
+  },
   // Dev-only preview at /dev/tool-form
   tool_form_demo: {
     title: "Tool form test",
     description:
       "Development-only preview of the form that tool results render in a chat. Submitting shows the values here instead of sending a message.",
     submitted: "Submitted values",
+  },
+
+  // Footer: language picker, PWA install, bug report
+  language: {
+    label: "Language",
+    automatic: "Automatic (browser language)",
+    auto_short: "Auto",
+    english: "English",
+    german: "German",
+  },
+  pwa: {
+    install: "Install this app",
+  },
+  // Brand-owned information pages (/about, /accessibility) and the sitemap
+  info: {
+    back_to_chat: "Back to chat",
+    page_external: "This page is provided by the institution behind this app.",
+    open_page: "Open the page",
+  },
+  about: {
+    title: "About",
+  },
+  accessibility: {
+    title: "Accessibility",
+  },
+  sitemap: {
+    title: "Sitemap",
+    general: "General",
+    pages: "Information",
+  },
+  bug_report: {
+    title: "Report a problem",
+    intro:
+      "Describe what happened. The report goes to the operators of this service, together with the page address and your browser version.",
+    type_label: "Type",
+    type_bug: "Bug",
+    type_feedback: "Feedback",
+    type_accessibility: "Accessibility",
+    type_other: "Other",
+    message_label: "Description",
+    message_placeholder:
+      "What did you do, what did you expect, and what happened instead?",
+    screenshot_label: "Screenshots (optional)",
+    screenshot_hint: "Up to {{count}} files, {{size}} each (PNG, JPEG or WebP).",
+    email_label: "Contact address (optional)",
+    email_placeholder: "you@example.org",
+    diagnostics_label: "Diagnostics that will be sent",
+    unavailable:
+      "This deployment has no feedback receiver, so the report cannot be sent. You can copy it and pass it on to the operator instead.",
+    copy: "Copy report",
+    copied: "Copied",
+    sent: "Thank you — the report was sent.",
+    success: "Report sent.",
+    sending: "Sending…",
+    submit: "Send report",
+    error_type: "Only PNG, JPEG and WebP images can be attached.",
+    error_size: "Each screenshot may be at most {{size}}.",
+    error_count: "You can attach at most {{count}} screenshots.",
+    error_description: "Please describe the problem.",
+    error_rejected:
+      "The report was rejected. Please shorten it or remove an attachment.",
+    error_failed: "The report could not be sent. Please try again later.",
   },
 };

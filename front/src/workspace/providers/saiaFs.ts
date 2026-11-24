@@ -6,7 +6,8 @@ import { saiaFsMcpUrl } from "../../apis/saiaFs";
 import { authHeaders } from "../../apis/authHeaders";
 import { READ_ONLY_CAPABILITIES } from "../capabilities";
 import { fromBase64, readAll, streamOf, toBase64 } from "../bytes";
-import { baseName, joinPath, normalizePath } from "../paths";
+import { assertPlainName } from "../entries";
+import { baseName, joinPath, normalizePath, parentPath } from "../paths";
 import type { DirectoryPage, FileProvider, QuotaInfo } from "./types";
 import { WorkspaceError } from "./types";
 
@@ -36,6 +37,8 @@ const WRITE_BASE64_TOOL = "write_base64";
 const DELETE_TOOL = "delete";
 const MKDIR_TOOL = "mkdir";
 const MOVE_TOOL = "move";
+const APPEND_TOOL = "append";
+const RENAME_TOOL = "rename";
 const INFO_TOOL = "info";
 const EXISTS_TOOL = "exists";
 
@@ -145,11 +148,15 @@ export class SaiaFsProvider implements FileProvider {
         ...READ_ONLY_CAPABILITIES,
         read: this.has(READ_BASE64_TOOL) || this.has(READ_TOOL),
         write: this.has(WRITE_BASE64_TOOL) || this.has(WRITE_TOOL),
+        append:
+          this.has(APPEND_TOOL) ||
+          this.has(WRITE_BASE64_TOOL) ||
+          this.has(WRITE_TOOL),
         delete: this.has(DELETE_TOOL),
         mkdir: this.has(MKDIR_TOOL),
         move: this.has(MOVE_TOOL),
         copy: false,
-        rename: false,
+        rename: this.has(RENAME_TOOL) || this.has(MOVE_TOOL),
         serverSideMove: false,
         serverSideCopy: false,
         quota: false,
@@ -464,6 +471,123 @@ export class SaiaFsProvider implements FileProvider {
     const target = normalizePath(to);
     const raw = await this.call(MOVE_TOOL, { src: source, dst: target });
     if (/^not found:/.test(raw)) throw new WorkspaceError("NOT_FOUND", source);
+    if (/^error:/.test(raw)) {
+      throw new WorkspaceError("PROVIDER_ERROR", raw.replace(/^error:\s*/, ""));
+    }
+  }
+
+  /**
+   * `append` writes UTF-8 text only and creates the file and its parents. Bytes that the text
+   * tool would mangle are appended with `read_base64` + `write_base64` instead: a whole-file
+   * rewrite, because saia-fs offers no binary append and a partial write would corrupt the file.
+   */
+  async append(path: string, data: Uint8Array | string): Promise<void> {
+    const normalized = normalizePath(path);
+    const bytes =
+      typeof data === "string" ? new TextEncoder().encode(data) : data;
+    let text: string | null = null;
+    try {
+      text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    } catch {
+      text = null;
+    }
+    if (this.has(APPEND_TOOL) && text !== null) {
+      const raw = await this.call(APPEND_TOOL, {
+        path: normalized,
+        content: text,
+      });
+      if (/^error:/.test(raw)) {
+        throw new WorkspaceError("PROVIDER_ERROR", raw.replace(/^error:\s*/, ""));
+      }
+      return;
+    }
+    if (
+      this.has(WRITE_BASE64_TOOL) &&
+      this.has(READ_BASE64_TOOL) &&
+      text === null
+    ) {
+      let existing = new Uint8Array();
+      const payload = parseJson(
+        await this.call(READ_BASE64_TOOL, { path: normalized }),
+      );
+      if (!payload) {
+        throw new WorkspaceError(
+          "PROVIDER_ERROR",
+          "The SAIA filesystem answered unreadable JSON",
+        );
+      }
+      if (payload.error) {
+        if (String(payload.error) !== "not found") {
+          throw new WorkspaceError("PROVIDER_ERROR", String(payload.error));
+        }
+      } else if (typeof payload.content === "string") {
+        existing = fromBase64(payload.content);
+      }
+      const combined = new Uint8Array(existing.length + bytes.length);
+      combined.set(existing, 0);
+      combined.set(bytes, existing.length);
+      const written = parseJson(
+        await this.call(WRITE_BASE64_TOOL, {
+          path: normalized,
+          content: toBase64(combined),
+        }),
+      );
+      if (!written) {
+        throw new WorkspaceError(
+          "PROVIDER_ERROR",
+          "The SAIA filesystem answered unreadable JSON",
+        );
+      }
+      if (written.error) {
+        throw new WorkspaceError("PROVIDER_ERROR", String(written.error));
+      }
+      return;
+    }
+    // No native append on this instance: read the text back and write the concatenation, the
+    // same fallback `appendToProvider` uses for every provider without an append of its own.
+    let existing = new Uint8Array();
+    try {
+      existing = await readAll(await this.read(normalized));
+    } catch (error) {
+      if (!(error instanceof WorkspaceError) || error.code !== "NOT_FOUND") {
+        throw error;
+      }
+    }
+    const combined = new Uint8Array(existing.length + bytes.length);
+    combined.set(existing, 0);
+    combined.set(bytes, existing.length);
+    await this.write(normalized, streamOf(combined), { overwrite: true });
+  }
+
+  async rename(path: string, newName: string): Promise<void> {
+    const normalized = normalizePath(path);
+    if (normalized === "/") {
+      throw new WorkspaceError("PERMISSION_DENIED", "The root cannot be renamed");
+    }
+    const name = assertPlainName(newName);
+    if (name === baseName(normalized)) return;
+    if (!this.has(RENAME_TOOL)) {
+      // Older instances only offer `move`, whose local backend replaces an existing
+      // destination; refuse that instead of overwriting it.
+      if (!this.has(MOVE_TOOL)) throw new WorkspaceError("UNSUPPORTED", "rename");
+      const target = joinPath(parentPath(normalized), name);
+      if (await this.exists(target)) {
+        throw new WorkspaceError("CONFLICT", target);
+      }
+      await this.move(normalized, target);
+      return;
+    }
+    const raw = await this.call(RENAME_TOOL, {
+      path: normalized,
+      new_name: name,
+    });
+    if (/^not found:/.test(raw)) throw new WorkspaceError("NOT_FOUND", normalized);
+    if (/destination already exists|already exists/i.test(raw)) {
+      throw new WorkspaceError("CONFLICT", joinPath(parentPath(normalized), name));
+    }
+    if (/cannot rename the storage root/i.test(raw)) {
+      throw new WorkspaceError("PERMISSION_DENIED", "The root cannot be renamed");
+    }
     if (/^error:/.test(raw)) {
       throw new WorkspaceError("PROVIDER_ERROR", raw.replace(/^error:\s*/, ""));
     }

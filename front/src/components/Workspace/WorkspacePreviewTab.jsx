@@ -1,7 +1,9 @@
 import { ChevronLeft, Close, Document, Download } from "@carbon/icons-react";
 import { useTranslation } from "react-i18next";
 
+import DescribeImageButton from "../DocumentPanel/DescribeImageButton";
 import FilePreviewContent from "../DocumentPanel/FilePreviewContent";
+import { getFileType } from "../../utils/attachments";
 import { formatBytes } from "../../utils/formatBytes";
 
 export default function WorkspacePreviewTab({
@@ -14,6 +16,7 @@ export default function WorkspacePreviewTab({
 }) {
   const { t } = useTranslation();
   const entry = preview.entry;
+  const isImage = getFileType({ type: entry.mime, name: entry.name }) === "image";
   const subtitle = [
     entry.mime,
     typeof entry.size === "number" ? formatBytes(entry.size) : undefined,
@@ -52,6 +55,7 @@ export default function WorkspacePreviewTab({
             </p>
           )}
         </div>
+        {isImage && <DescribeImageButton preview={preview} />}
         {onDownload && (
           <button
             type="button"

@@ -24,6 +24,7 @@ import {
 } from "../db/workspaceDb";
 import { DEVICE_PLANE_KINDS, getDeviceId } from "../workspace/deviceId";
 import { streamOf, toBytes } from "../workspace/bytes";
+import { appendToProvider, renameProviderEntry } from "../workspace/entries";
 import {
   baseName,
   isWithinPath,
@@ -463,6 +464,73 @@ export async function createWorkspaceTools(
     });
   };
 
+  const appendTarget = async (
+    bundle: WorkspaceBundle,
+    target: FileTarget,
+    data: Uint8Array | string,
+  ) => {
+    if (target.mount?.readOnly) throw new Error("That mount is read-only.");
+    if (target.source) {
+      if (target.source.readOnly || !target.source.capabilities?.write) {
+        throw new Error(`Source "${target.source.label}" is read-only.`);
+      }
+      await withProvider(target.source, (provider) =>
+        appendToProvider(provider, target.path, data),
+      );
+      return;
+    }
+    if (primaryWorkspaceId && bundle.workspace.id === primaryWorkspaceId) {
+      if (!workspace.appendFile) {
+        throw new Error("This chat's storage cannot append to a file.");
+      }
+      const directory = parentPath(target.path);
+      if (directory !== "/") await workspace.mkdir(directory).catch(() => {});
+      await workspace.appendFile(target.path, data);
+      return;
+    }
+    await withRoot(bundle, (provider) =>
+      appendToProvider(provider, target.path, data),
+    );
+  };
+
+  const renameTarget = async (
+    bundle: WorkspaceBundle,
+    target: FileTarget,
+    newName: string,
+  ) => {
+    if (target.mount?.readOnly) throw new Error("That mount is read-only.");
+    if (target.source) {
+      if (target.source.readOnly || !target.source.capabilities?.write) {
+        throw new Error(`Source "${target.source.label}" is read-only.`);
+      }
+      await withProvider(target.source, (provider) =>
+        renameProviderEntry(provider, target.path, newName),
+      );
+      return;
+    }
+    if (primaryWorkspaceId && bundle.workspace.id === primaryWorkspaceId) {
+      if (!workspace.rename) {
+        throw new Error("This chat's storage cannot rename an entry.");
+      }
+      await workspace.rename(target.path, newName);
+      return;
+    }
+    await withRoot(bundle, (provider) =>
+      renameProviderEntry(provider, target.path, newName),
+    );
+  };
+
+  /** A rename in place must never rename the folder a mount stands for. */
+  const assertNotMount = (target: FileTarget, pathValue: string) => {
+    const normalized = normalizePath(pathValue);
+    if (normalized === "/") {
+      throw new Error("The workspace root cannot be renamed.");
+    }
+    if (target.mount && normalized === normalizePath(target.mount.path)) {
+      throw new Error(`Cannot rename the mount point ${normalized}.`);
+    }
+  };
+
   /** Every source of every attached workspace, as "label (id)". */
   const allSources = () =>
     bundles
@@ -789,6 +857,80 @@ export async function createWorkspaceTools(
     },
   };
 
+  const appendTool: AgentTool<any> = {
+    name: "workspace_append_file",
+    label: "Append workspace file",
+    description:
+      "Append UTF-8 text to a file in a workspace attached to this chat, creating the file and its folders when needed. Pass `source` (id, label or mount path) for a source outside the workspace root; read-only sources and mounts reject the append.",
+    parameters: Type.Object({
+      workspace: Type.Optional(Type.String()),
+      source: Type.Optional(Type.String()),
+      path: Type.String({ description: "File path" }),
+      content: Type.String({ description: "Text to append" }),
+    }),
+    execute: async (_id, args) => {
+      const bundle = resolveWorkspace(args.workspace);
+      if (!bundle) {
+        return text(`Workspace not found. Attached workspaces: ${workspaceNames()}.`);
+      }
+      const pathValue = String(args.path || "").trim();
+      if (!pathValue) return text("A file path is required.");
+      try {
+        const target = resolveTarget(bundle, args.source, pathValue);
+        if (!target) return text(sourceNotFound(bundle, String(args.source)));
+        await appendTarget(bundle, target, String(args.content ?? ""));
+        return text(
+          `Appended to ${normalizePath(pathValue)} in ${bundle.workspace.name}.`,
+        );
+      } catch (error) {
+        return text(
+          `Could not append to workspace file: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+    },
+  };
+
+  const renameTool: AgentTool<any> = {
+    name: "workspace_rename",
+    label: "Rename workspace entry",
+    description:
+      "Rename a file or folder in place in a workspace attached to this chat. `new_name` is a plain name, not a path: this never moves an entry to another folder and never overwrites an existing entry. Pass `source` (id, label or mount path) for a source outside the workspace root; read-only sources and mounts reject the rename.",
+    parameters: Type.Object({
+      workspace: Type.Optional(Type.String()),
+      source: Type.Optional(Type.String()),
+      path: Type.String({ description: "Path of the file or folder" }),
+      new_name: Type.String({ description: "New name, without a slash" }),
+    }),
+    execute: async (_id, args) => {
+      const bundle = resolveWorkspace(args.workspace);
+      if (!bundle) {
+        return text(`Workspace not found. Attached workspaces: ${workspaceNames()}.`);
+      }
+      const pathValue = String(args.path || "").trim();
+      if (!pathValue) return text("A path is required.");
+      const newName = String(args.new_name || "").trim();
+      if (!newName) return text("A new name is required.");
+      try {
+        const target = resolveTarget(bundle, args.source, pathValue);
+        if (!target) return text(sourceNotFound(bundle, String(args.source)));
+        assertNotMount(target, pathValue);
+        await renameTarget(bundle, target, newName);
+        const targetPath = joinPath(parentPath(normalizePath(pathValue)), newName);
+        return text(
+          `Renamed ${normalizePath(pathValue)} to ${targetPath} in ${bundle.workspace.name}.`,
+        );
+      } catch (error) {
+        return text(
+          `Could not rename workspace entry: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+    },
+  };
+
   const fetchTool: AgentTool<any> = {
     name: "workspace_fetch_file",
     label: "Fetch workspace file",
@@ -842,7 +984,7 @@ export async function createWorkspaceTools(
       agentsTool,
       filesTool,
       readTool,
-      ...(writable ? [writeTool] : []),
+      ...(writable ? [writeTool, appendTool, renameTool] : []),
       fetchTool,
     ],
     context,

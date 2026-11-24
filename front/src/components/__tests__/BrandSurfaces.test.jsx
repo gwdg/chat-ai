@@ -14,6 +14,12 @@ vi.mock("../../config/BrandProvider", () => ({
   useBrand: () => ({ brand: currentBrand.current }),
 }));
 
+// The footer's bug-report button reads the modal context; these tests render it
+// on its own, without an app shell around it.
+vi.mock("../../modals/ModalContext", () => ({
+  useModal: () => ({ openModal: vi.fn() }),
+}));
+
 import BrandHeader from "../Header/BrandHeader";
 import BrandDisclaimer from "../Conversation/BrandDisclaimer";
 import CollapsibleFooter from "../Footer/CollapsibleFooter";

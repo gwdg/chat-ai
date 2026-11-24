@@ -478,6 +478,78 @@ export class ResponseDecryptor {
   }
 }
 
+const RESPONSES_TERMINAL_TYPES = new Set([
+  "response.completed",
+  "response.incomplete",
+  "response.failed",
+]);
+
+const isObject = (value) =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+/**
+ * The cleartext chat-style billing chunk for a `/v1/responses` terminal event.
+ *
+ * `saia-engine` bills from the chat/completions usage chunk, so a Responses
+ * stream ends with the same shape. Only the token counts are copied, never
+ * `response.output` or any other response field. Returns `null` when the event
+ * carries no usable usage.
+ */
+export function responsesChatUsageEvent(event) {
+  if (!isObject(event) || !RESPONSES_TERMINAL_TYPES.has(event.type)) return null;
+  const response = event.response;
+  if (!isObject(response) || !isObject(response.usage)) return null;
+  const usage = response.usage;
+  if (!Object.keys(usage).length) return null;
+  const prompt = usage.prompt_tokens ?? usage.input_tokens ?? null;
+  const completion = usage.completion_tokens ?? usage.output_tokens ?? null;
+  if (prompt === null && completion === null) return null;
+  let total = usage.total_tokens ?? null;
+  if (total === null && prompt !== null && completion !== null) {
+    total = prompt + completion;
+  }
+  return {
+    id: response.id ?? null,
+    choices: [],
+    usage: {
+      prompt_tokens: prompt,
+      completion_tokens: completion,
+      total_tokens: total,
+    },
+  };
+}
+
+/**
+ * Reduces a cleartext `/v1/responses` terminal event to identity plus usage.
+ *
+ * The node seals its own terminal event, so a cleartext one came from another
+ * hop. Its `output` may hold a forged answer, so only identity and usage are
+ * kept. Returns `null` for anything else, which lets the caller refuse it.
+ */
+export function responsesUsageEvent(event) {
+  if (!isObject(event) || !RESPONSES_TERMINAL_TYPES.has(event.type)) return null;
+  const response = event.response;
+  if (!isObject(response) || !isObject(response.usage)) return null;
+  if (!Object.keys(response.usage).length) return null;
+  const reduced = {
+    id: response.id ?? null,
+    object: response.object ?? null,
+    created_at: response.created_at ?? null,
+    model: response.model ?? null,
+    status: response.status ?? null,
+    output: [],
+    usage: response.usage,
+  };
+  if ("incomplete_details" in response) {
+    reduced.incomplete_details = response.incomplete_details ?? null;
+  }
+  return {
+    type: event.type,
+    sequence_number: event.sequence_number ?? null,
+    response: reduced,
+  };
+}
+
 /** Decrypts a non-streaming response that keeps `model`/`usage` cleartext. */
 export function openJsonResponse(response, responseKey) {
   const envelope = response?.e2ee;

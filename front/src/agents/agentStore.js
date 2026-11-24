@@ -149,6 +149,29 @@ export const updateAgent = (id, patch) => {
   emit();
 };
 
+/**
+ * Apply an agent that came from the account copy (encrypted sync).
+ *
+ * Unlike `updateAgent` this does not move `updatedAt`: adopting a remote agent
+ * is not a local modification. Bumping it would make the next `list()` produce a
+ * different payload than the one just pulled, so every pull would look like a
+ * fresh local edit and be pushed back forever. Device-only fields (the active
+ * `sessionId`) are kept from the local entry, because the record never carries
+ * them.
+ */
+export const applyAgentFromSync = (agent) => {
+  if (!agent?.id) return;
+  const next = hydrate(withTimestamps(agent));
+  const existing = agents.find((entry) => entry.id === next.id);
+  agents = existing
+    ? agents.map((entry) =>
+        entry.id === next.id ? { ...entry, ...next } : entry,
+      )
+    : [...agents, next];
+  persist();
+  emit();
+};
+
 /** Pin or unpin an agent; it moves between the pinned section and the agent list. */
 export const setAgentPinned = (id, pinned) => {
   updateAgent(id, { pinned });
