@@ -2,6 +2,7 @@
 import { createSelector, createSlice } from "@reduxjs/toolkit";
 
 import { isBrandExternalAllowed } from "../../config/brandPolicy";
+import { isFeedbackEnabled } from "../../utils/modules";
 
 // Every key the store understands, with the built-in defaults. `getDefaultUserSettings()`
 // layers the deployment's `userSettings` from front.json on top of this.
@@ -38,6 +39,10 @@ function baseInitialState() {
     // End-to-end encryption: published model public keys, and model → key bindings.
     e2ee_keys: [],
     e2ee_models: {},
+    // null = follow the deployment: the feedback module is on, so answers can be
+    // rated and a changed conversation is sent for analysis. An explicit boolean
+    // lets the user switch it off (or back on) without changing the deployment.
+    feedback_enabled: null,
     // Encrypted copy on the user's SAIA filesystem. `enabled` is opt-in and the
     // Data tab explains the encryption before it is switched on; `auto` runs a
     // pass every five minutes while the vault is unlocked in this tab.
@@ -211,6 +216,10 @@ function importUserSettingsState(state, incoming) {
   }
   if (typeof incoming.send_with_enter === "boolean" || incoming.send_with_enter === null) {
     state.send_with_enter = incoming.send_with_enter;
+  }
+  // null is meaningful here ("follow the deployment"), so it is accepted too.
+  if (typeof incoming.feedback_enabled === "boolean" || incoming.feedback_enabled === null) {
+    state.feedback_enabled = incoming.feedback_enabled;
   }
   if (MCP_TOOL_POLICIES.includes(incoming.mcp_tool_policy)) {
     state.mcp_tool_policy = incoming.mcp_tool_policy;
@@ -479,6 +488,10 @@ const userSettingsSlice = createSlice({
       state.send_with_enter = Boolean(action.payload);
     },
 
+    setFeedbackEnabled: (state, action) => {
+      state.feedback_enabled = Boolean(action.payload);
+    },
+
     setMcpToolPolicy: (state, action) => {
       const policy = action.payload;
       if (MCP_TOOL_POLICIES.includes(policy)) state.mcp_tool_policy = policy;
@@ -632,6 +645,7 @@ export const {
   setConversationSummaries, setShowTimestamps,
   setAdvancedMode,
   setSendWithEnter, setMcpToolPolicy, importUserSettings,
+  setFeedbackEnabled,
   setSyncEnabled, setSyncAuto
 } = userSettingsSlice.actions;
 
@@ -707,6 +721,12 @@ export const selectAdvancedMode = (state) =>
 // null means "use the device default", resolved in the prompt component.
 export const selectSendWithEnter = (state) =>
   state.user_settings.send_with_enter ?? null;
+// Feedback on answers and conversation analysis: an explicit choice wins, and the
+// unset default follows the deployment's feedback module.
+export const selectFeedbackEnabled = (state) => {
+  const value = state.user_settings.feedback_enabled;
+  return typeof value === "boolean" ? value : isFeedbackEnabled();
+};
 // Whether chat turns may call tools of the user's MCP servers: "ask" (default), "always", "never".
 export const selectMcpToolPolicy = (state) => {
   const policy = state.user_settings.mcp_tool_policy;

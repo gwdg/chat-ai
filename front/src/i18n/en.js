@@ -70,7 +70,12 @@ export default {
   feedback:{
     thumbsup:"The response is good.",
     thumbsdown: "The response is not so good.",
-    send: "Send a detailed feedback describing your observation."
+    send: "Send a detailed feedback describing your observation.",
+    data_notice: "Your rating and this conversation are sent to the server for analysis.",
+    comment_placeholder: "Describe what was wrong or what helped…",
+    save_and_send: "Save and send",
+    send_failed: "The feedback could not be sent: {{error}}",
+    unknown_error: "unknown error"
   },
   // Sidebar
   sidebar: {
@@ -320,6 +325,7 @@ export default {
     setting_on: "on",
     setting_off: "off",
     setting_device_default: "device default",
+    setting_deployment_default: "deployment default",
     unsorted_topic: "Unsorted",
     error: "Could not answer. Please try again.",
     no_model: "No default model is configured.",
@@ -942,14 +948,18 @@ export default {
     brand_consent: {
       title: "Review your consents",
       step1: "Open your user settings.",
-      step2: "Choose the Advanced tab.",
+      step2: "Choose the Profile tab, then its Consents section.",
       step3:
         "Change the voluntary consents here; the terms of use and privacy links sit below the switches.",
     },
     feedback: {
       title: "Send feedback",
       step1:
-        "Use the feedback buttons under an assistant message when the feedback module is enabled.",
+        "Use the feedback buttons under an assistant message to rate an answer. A changed conversation is also sent to the feedback service for analysis while the feature is on.",
+      step2:
+        "Switch answer feedback and conversation analysis on or off in Chat preferences.",
+      step3:
+        "Under Profile → Feedback you can see everything this account sent and delete it again.",
     },
     speech_output: {
       title: "Read answers aloud",
@@ -1447,6 +1457,36 @@ export default {
         label: "Profile sections",
         user: "User",
         institution: "Institution",
+        consents: "Consents",
+      },
+      feedback: {
+        label: "Feedback sent from this account",
+        description:
+          "See the ratings, reports and conversations this account sent to the feedback service, and delete them.",
+        open: "View collected feedback",
+        modal_title: "Collected feedback",
+        modal_intro:
+          "Everything this account sent to the feedback service, newest first. Only your own submissions are listed.",
+        loading: "Loading feedback…",
+        load_failed: "The feedback could not be loaded.",
+        retry: "Try again",
+        empty: "This account has not sent any feedback yet.",
+        count: "{{count}} entries",
+        kind_report: "Report",
+        kind_rating: "Rating",
+        type_bug: "Bug",
+        type_feedback: "Feedback",
+        type_accessibility: "Accessibility",
+        type_other: "Other",
+        rating_up: "Thumbs up",
+        rating_down: "Thumbs down",
+        delete_all: "Delete all feedback",
+        delete_confirm:
+          "Delete all {{count}} entries? Ratings, reports and the conversations sent for analysis are removed permanently.",
+        delete_confirm_action: "Delete permanently",
+        deleting: "Deleting…",
+        deleted: "Deleted {{count}} entries.",
+        delete_failed: "The feedback could not be deleted: {{error}}",
       },
     },
     account: {
@@ -1613,6 +1653,11 @@ export default {
           description:
             "Display the date and time each message was sent below the message.",
         },
+      },
+      feedback: {
+        label: "Send feedback to the operator",
+        description:
+          "Show thumbs up/down under each answer and send the conversation to the server for analysis whenever it changes. Turning this off removes the rating buttons and stops the conversation from being sent.",
       },
       submission: {
         label: "Send message with",

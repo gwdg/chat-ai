@@ -9,6 +9,18 @@ vi.mock("../../../config/BrandProvider", () => ({
   useBrand: () => ({ brand: api.brand.value }),
 }));
 
+// ProfileSettings opens the feedback history through the modal context; the
+// provider itself is not part of this component's contract.
+vi.mock("../../ModalContext", () => ({
+  useModal: () => ({ openModal: vi.fn() }),
+}));
+
+// The consent switches read Redux; this test only checks that the screen is
+// reachable as a Profile section, so a stub keeps it store-free.
+vi.mock("../BrandConsentSettings", () => ({
+  default: () => <div data-guide="brand-consent-settings">Consent switches</div>,
+}));
+
 const userData = {
   username: "alice",
   firstname: "Alice",
@@ -95,6 +107,33 @@ describe("ProfileSettings", () => {
     expect(
       screen.getByText("Georg-August-Universität Göttingen"),
     ).toBeInTheDocument();
+  });
+
+  it("offers the consents as a Profile section for a brand with a consent gate", () => {
+    api.brand.value = {
+      id: "gaia",
+      name: "GAIA",
+      consentGate: {
+        version: "1",
+        purposes: [{ id: "study", label: { en: "Study" } }],
+      },
+    };
+
+    render(<ProfileSettings userData={userData} />);
+
+    const consentsTab = screen.getByRole("tab", { name: "Consents" });
+    fireEvent.click(consentsTab);
+
+    expect(consentsTab).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByText("Consent switches")).toBeInTheDocument();
+  });
+
+  it("hides the consents section for a brand without a consent gate", () => {
+    render(<ProfileSettings userData={userData} />);
+
+    expect(
+      screen.queryByRole("tab", { name: "Consents" }),
+    ).not.toBeInTheDocument();
   });
 
   it("falls back to the user screen for a section of another tab", () => {

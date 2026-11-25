@@ -68,9 +68,14 @@ export default {
     upgrade_chat_ai: "Chat AI aktualisieren",
   },
   feedback:{
-    thumbsup:"The response is good.",
-    thumbsdown: "The response is not so good.",
-    send: "Send a detailed feedback describing your observation."
+    thumbsup:"Die Antwort ist gut.",
+    thumbsdown: "Die Antwort ist nicht so gut.",
+    send: "Ausführliches Feedback zu Ihrer Beobachtung senden.",
+    data_notice: "Ihre Bewertung und dieser Chat werden zur Auswertung an den Server gesendet.",
+    comment_placeholder: "Beschreiben Sie, was falsch war oder geholfen hat…",
+    save_and_send: "Speichern und senden",
+    send_failed: "Das Feedback konnte nicht gesendet werden: {{error}}",
+    unknown_error: "unbekannter Fehler"
   },
   // Sidebar
   sidebar: {
@@ -327,6 +332,7 @@ export default {
     setting_on: "an",
     setting_off: "aus",
     setting_device_default: "Gerätestandard",
+    setting_deployment_default: "Bereitstellungsstandard",
     unsorted_topic: "Nicht zugeordnet",
     error: "Antwort fehlgeschlagen. Bitte versuchen Sie es erneut.",
     no_model: "Kein Standardmodell konfiguriert.",
@@ -959,14 +965,18 @@ export default {
     brand_consent: {
       title: "Einwilligungen prüfen",
       step1: "Öffnen Sie Ihre Benutzereinstellungen.",
-      step2: "Wählen Sie den Reiter Erweitert.",
+      step2: "Wählen Sie den Reiter Profil und dort den Bereich Einwilligungen.",
       step3:
         "Ändern Sie hier die freiwilligen Einwilligungen; die Links zu Nutzungsbedingungen und Datenschutz stehen unter den Schaltern.",
     },
     feedback: {
       title: "Feedback senden",
       step1:
-        "Verwenden Sie die Feedback-Schaltflächen unter einer Assistenten-Nachricht, wenn das Feedback-Modul aktiviert ist.",
+        "Bewerten Sie eine Antwort mit den Feedback-Schaltflächen unter einer Assistenten-Nachricht. Ein geänderter Chat wird bei aktivierter Funktion zusätzlich zur Auswertung an den Feedback-Dienst gesendet.",
+      step2:
+        "Schalten Sie Antwort-Feedback und Chat-Auswertung in den Chat-Einstellungen ein oder aus.",
+      step3:
+        "Unter Profil → Feedback sehen Sie alles, was dieses Konto gesendet hat, und können es wieder löschen.",
     },
     speech_output: {
       title: "Antworten vorlesen lassen",
@@ -1465,6 +1475,36 @@ export default {
         label: "Profilbereiche",
         user: "Benutzer",
         institution: "Einrichtung",
+        consents: "Einwilligungen",
+      },
+      feedback: {
+        label: "Feedback dieses Kontos",
+        description:
+          "Sehen Sie die Bewertungen, Berichte und Chats, die dieses Konto an den Feedback-Dienst gesendet hat, und löschen Sie sie.",
+        open: "Gesammeltes Feedback ansehen",
+        modal_title: "Gesammeltes Feedback",
+        modal_intro:
+          "Alles, was dieses Konto an den Feedback-Dienst gesendet hat, neueste zuerst. Es werden nur Ihre eigenen Einsendungen aufgelistet.",
+        loading: "Feedback wird geladen…",
+        load_failed: "Das Feedback konnte nicht geladen werden.",
+        retry: "Erneut versuchen",
+        empty: "Dieses Konto hat noch kein Feedback gesendet.",
+        count: "{{count}} Einträge",
+        kind_report: "Bericht",
+        kind_rating: "Bewertung",
+        type_bug: "Fehler",
+        type_feedback: "Rückmeldung",
+        type_accessibility: "Barrierefreiheit",
+        type_other: "Sonstiges",
+        rating_up: "Daumen hoch",
+        rating_down: "Daumen runter",
+        delete_all: "Alles Feedback löschen",
+        delete_confirm:
+          "Alle {{count}} Einträge löschen? Bewertungen, Berichte und die zur Auswertung gesendeten Chats werden dauerhaft entfernt.",
+        delete_confirm_action: "Dauerhaft löschen",
+        deleting: "Wird gelöscht…",
+        deleted: "{{count}} Einträge gelöscht.",
+        delete_failed: "Das Feedback konnte nicht gelöscht werden: {{error}}",
       },
     },
     account: {
@@ -1635,6 +1675,11 @@ export default {
           description:
             "Zeigt Datum und Uhrzeit unter jeder Nachricht an, zu der sie gesendet wurde.",
         },
+      },
+      feedback: {
+        label: "Feedback an den Betrieb senden",
+        description:
+          "Zeigt unter jeder Antwort Daumen hoch/runter und sendet den Chat bei jeder Änderung zur Auswertung an den Server. Wenn Sie dies ausschalten, verschwinden die Bewertungsschaltflächen und der Chat wird nicht mehr gesendet.",
       },
       submission: {
         label: "Nachricht senden mit",

@@ -9,6 +9,7 @@ import {
   selectMemoryMode,
 } from "../../Redux/reducers/userSettingsReducer";
 import { useModal } from "../../modals/ModalContext";
+import { isFeatureEnabled } from "../../config/deployment";
 
 const MEMORY_MODE_OPTIONS = [
   { value: "default", key: "default" },
@@ -26,6 +27,8 @@ export default function MemoryModeContainer({ localState, setLocalState }) {
   const memoryGroups = useSelector(selectMemoryGroups);
   const defaultMemoryGroup = useSelector(selectDefaultMemoryGroup);
   const memories = useSelector(selectAllMemories);
+  // The conversation override only matters while the deployment offers memories.
+  if (!isFeatureEnabled("memories")) return null;
   const globalKey = GLOBAL_MEMORY_KEYS[globalMemoryMode] ?? "none";
 
   const countForGroup = (groupId) =>

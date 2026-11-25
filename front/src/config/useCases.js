@@ -427,6 +427,7 @@ export const USE_CASE_AVAILABILITY = {
   web_research: () => isToolPanelAvailable(),
   rag_documents: () => isToolPanelAvailable() && isArcanasEnabled(),
   find_chat: () => isFeatureEnabled("meta_chat"),
+  memories: () => isFeatureEnabled("memories"),
   generate_image: () => isToolPanelAvailable(),
   read_aloud: () => isSpeechEnabled(),
   // Both step through a gated tutorial (`select_model`, `share_conversation`).

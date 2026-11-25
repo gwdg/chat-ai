@@ -24,6 +24,7 @@ import { useConversationList } from "../../db";
 import { getDefaultSettings } from "../../utils/conversationUtils";
 import ReasoningEffortContainer from "./ReasoningEffortContainer";
 import { getSpeechModule } from "../../utils/speechAudio";
+import { isFeatureEnabled } from "../../config/deployment";
 
 const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
 const SPEECH_MODULE_ENABLED = Boolean(getSpeechModule());
@@ -102,10 +103,12 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
               setLocalState={setLocalState}
             />
           )}
-          <MemoryModeContainer
-            localState={localState}
-            setLocalState={setLocalState}
-          />
+          {isFeatureEnabled("memories") && (
+            <MemoryModeContainer
+              localState={localState}
+              setLocalState={setLocalState}
+            />
+          )}
           {/* temperature Slider */}
           <TemperatureSlider
             localState={localState}

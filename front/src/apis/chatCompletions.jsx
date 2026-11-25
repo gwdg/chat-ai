@@ -81,10 +81,6 @@ async function* chatCompletions (
       params.arcana = conversation.settings.arcana;
     }
 
-    if (conversation.settings?.feedback) {
-      params.feedback = conversation.settings.feedback;
-    }
-
     // Define openai object to call backend
     const openai = createBackendClient(timeout);
 

@@ -6,6 +6,7 @@ import { useSyncConversation } from "../hooks/useSyncConversation";
 import { useSendMessage } from "../hooks/useSendMessage";
 import { usePendingPrompt } from "../hooks/usePendingPrompt";
 import { useConversationSummaries } from "../hooks/useConversationSummaries";
+import { useFeedbackConversationSync } from "../hooks/useFeedbackConversationSync";
 import { useAgents } from "../agents/agentStore";
 import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
 import { useUpdateUserData } from "../hooks/useUpdateUserData";
@@ -111,6 +112,9 @@ export default function ChatPage() {
   });
 
   useConversationSummaries({ localState, conversationId });
+  // Sends the conversation for analysis after a finished turn, when the
+  // deployment's feedback module is on.
+  useFeedbackConversationSync(localState);
 
   useEffect(() => {
     const onPreview = (event: Event) => {

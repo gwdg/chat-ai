@@ -1,6 +1,13 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import MemoryModeContainer from "../MemoryModeContainer";
+
+const features = vi.hoisted(() => ({ memories: true }));
+vi.mock("../../../config/deployment", async (importOriginal) => ({
+  ...(await importOriginal()),
+  isFeatureEnabled: (name) =>
+    name === "memories" ? features.memories : true,
+}));
 
 const openModal = vi.fn();
 vi.mock("react-redux", () => ({
@@ -21,7 +28,20 @@ vi.mock("../../../modals/ModalContext", () => ({
 
 const localState = { settings: { memory_mode_override: "default" } };
 
+afterEach(() => {
+  features.memories = true;
+});
+
 describe("MemoryModeContainer", () => {
+  it("renders nothing when the deployment disables memories", () => {
+    features.memories = false;
+    const { container } = render(
+      <MemoryModeContainer localState={localState} setLocalState={vi.fn()} />,
+    );
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
   it("updates the conversation memory override", () => {
     const setLocalState = vi.fn((updater) => updater(localState));
     render(

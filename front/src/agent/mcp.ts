@@ -4,6 +4,7 @@
 import type { AgentTool, AgentToolResult } from "@earendil-works/pi-agent-core";
 import i18n from "../i18n";
 import { isBrandExternalAllowed } from "../config/brandPolicy";
+import { isFeatureEnabled } from "../config/deployment";
 import { requestMcpConfirmation } from "./mcpConfirmation";
 
 export interface McpServer {
@@ -40,10 +41,13 @@ const selectedIds = (value: unknown): string[] =>
 
 /** Per-chat settings with legacy server entries plus the globally configured selections. */
 export function resolveMcpServers(settings: any, globals: GlobalMcpServer[] = []) {
-  // A brand may forbid user-configured MCP servers entirely (config/brandPolicy.js).
+  // A deployment that switched the MCP feature off, or a brand that forbids
+  // user-configured MCP servers (config/brandPolicy.js), has none at all.
   // Returning none here covers the agent turn, the idle prefetch and the plain
   // chat request, because every caller resolves the list through this function.
-  if (!isBrandExternalAllowed("mcp")) return [];
+  if (!isFeatureEnabled("mcp_servers") || !isBrandExternalAllowed("mcp")) {
+    return [];
+  }
   const legacy = mcpServers(settings);
   const configuredIds = selectedIds(settings?.mcp_local_server_ids);
   // Turning MCP support on without ever choosing a server means "all configured servers"; an
@@ -124,7 +128,7 @@ export function mcpServers(settings: any): McpServer[] {
 
 /** The servers the agent uses this turn. */
 export const activeMcpServers = (settings: any) =>
-  settings?.tools?.mcp === true
+  isFeatureEnabled("mcp_servers") && settings?.tools?.mcp === true
     ? mcpServers(settings)
         .filter((server) => server.enabled)
         .map((server) => ({ ...server, url: normalizeMcpUrl(server.url) }))

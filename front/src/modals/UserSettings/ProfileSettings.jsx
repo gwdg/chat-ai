@@ -1,20 +1,32 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Building2, UserRound } from "lucide-react";
+import {
+  Building2,
+  MessageSquareWarning,
+  ShieldCheck,
+  UserRound,
+} from "lucide-react";
 
 import { useBrand } from "../../config/BrandProvider";
 import { hasBrandInstitute } from "../../config/brandPolicy";
+import { brandConsentGate } from "../../config/consent";
+import { isChatFeedbackEnabled } from "../../apis/feedback";
+import { useModal } from "../ModalContext";
+import BrandConsentSettings from "./BrandConsentSettings";
 import InstituteSection from "./InstituteSection";
 import UserInfoContainer from "./UserInfoContainer";
 
 /**
- * The Profile tab has two screens, mirroring the Data tab: the user's own account
- * (`User`) and the institution that provides this deployment (`Institution`).
+ * The Profile tab has three screens, mirroring the Data tab: the user's own
+ * account (`User`), the institution that provides this deployment
+ * (`Institution`) and the brand's voluntary consents (`Consents`).
  *
  * The Institution screen is brand data, not user data, so it is a section of its
  * own: it stays available while `/user` is still loading or when the profile
  * route does not answer, and it is absent entirely for a brand that neither
- * describes itself nor narrows anything.
+ * describes itself nor narrows anything. The Consents screen follows the same
+ * rule: it appears only for a brand that declares a `consentGate`, because a
+ * brand without one has no voluntary purposes to switch on or off.
  */
 
 const PROFILE_SECTIONS = [
@@ -29,6 +41,12 @@ const PROFILE_SECTIONS = [
     labelKey: "user_settings.profile.sections.institution",
     brandOnly: true,
   },
+  {
+    id: "consents",
+    icon: ShieldCheck,
+    labelKey: "user_settings.profile.sections.consents",
+    consentOnly: true,
+  },
 ];
 
 export default function ProfileSettings({
@@ -38,9 +56,12 @@ export default function ProfileSettings({
 }) {
   const { t } = useTranslation();
   const { brand } = useBrand();
+  const { openModal } = useModal();
 
   const sections = PROFILE_SECTIONS.filter(
-    (section) => !section.brandOnly || hasBrandInstitute(brand),
+    (section) =>
+      (!section.brandOnly || hasBrandInstitute(brand)) &&
+      (!section.consentOnly || Boolean(brandConsentGate(brand))),
   );
   const resolveSection = (id) =>
     sections.some((section) => section.id === id) ? id : "user";
@@ -74,12 +95,41 @@ export default function ProfileSettings({
       );
     }
 
+    if (currentSection === "consents") {
+      return (
+        <div data-guide="profile-section-consents">
+          <BrandConsentSettings />
+        </div>
+      );
+    }
+
     return (
-      <div data-guide="profile-section-user">
+      <div data-guide="profile-section-user" className="flex flex-col gap-5">
         {userData ? (
           <UserInfoContainer userData={userData} />
         ) : (
           <p className="text-sm text-base-content/70">{t("common.loading")}</p>
+        )}
+        {isChatFeedbackEnabled() && (
+          <section
+            className="rounded-xl border border-base-300 bg-base-100 p-4"
+            data-guide="profile-feedback-history"
+          >
+            <h3 className="flex items-center gap-2 text-sm font-medium text-base-content">
+              <MessageSquareWarning className="h-4 w-4 text-accent" />
+              {t("user_settings.profile.feedback.label")}
+            </h3>
+            <p className="mt-1 text-xs text-base-content/70">
+              {t("user_settings.profile.feedback.description")}
+            </p>
+            <button
+              type="button"
+              className="btn btn-sm mt-3 w-fit"
+              onClick={() => openModal("feedbackHistory")}
+            >
+              {t("user_settings.profile.feedback.open")}
+            </button>
+          </section>
         )}
       </div>
     );

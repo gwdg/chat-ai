@@ -35,6 +35,8 @@ import userSettingsReducer, {
   setAdvancedMode,
   selectMcpToolPolicy,
   setMcpToolPolicy,
+  setFeedbackEnabled,
+  selectFeedbackEnabled,
   addE2eeKey,
   updateE2eeKey,
   removeE2eeKey,
@@ -317,6 +319,34 @@ describe("user settings reducer", () => {
     expect(state.mcp_tool_policy).toBe("never");
 
     expect(selectMcpToolPolicy({ user_settings: {} })).toBe("ask");
+  });
+
+  it("lets an explicit feedback choice override the deployment module", () => {
+    vi.stubEnv("VITE_MODULE_FEEDBACK", "false");
+    let state = init(userSettingsReducer);
+    expect(state.feedback_enabled).toBeNull();
+    // Unset follows the deployment, which has the module off here.
+    expect(selectFeedbackEnabled({ user_settings: state })).toBe(false);
+
+    state = userSettingsReducer(state, setFeedbackEnabled(true));
+    expect(state.feedback_enabled).toBe(true);
+    expect(selectFeedbackEnabled({ user_settings: state })).toBe(true);
+
+    state = userSettingsReducer(state, setFeedbackEnabled(false));
+    expect(selectFeedbackEnabled({ user_settings: state })).toBe(false);
+
+    // An import keeps a boolean and an explicit null; anything else is ignored.
+    state = userSettingsReducer(
+      state,
+      importUserSettings({ feedback_enabled: null }),
+    );
+    expect(state.feedback_enabled).toBeNull();
+    state = userSettingsReducer(
+      state,
+      importUserSettings({ feedback_enabled: "yes" }),
+    );
+    expect(state.feedback_enabled).toBeNull();
+    vi.unstubAllEnvs();
   });
 
   it("toggles diagram rendering preferences and imports them", () => {

@@ -9,7 +9,7 @@ import { loadFile, loadFileMeta, saveFile, updateConversation, updateConversatio
 import { getFileType, readFileAsBase64, readFileAsText } from "./attachments";
 import { isAgentEnabled, modelSupportsTools } from "../apis/agentEndpoints";
 import { resolveMcpServers } from "../agent/mcp";
-import { isArcanasEnabled, isChoicesEnabled, isFeedbackEnabled, isToolsEnabled } from "./modules";
+import { isArcanasEnabled, isChoicesEnabled, isToolsEnabled } from "./modules";
 import { isBrandExternalAllowed } from "../config/brandPolicy";
 import { brandChatToolsFor } from "./brandChatTools";
 import { confirmMcpNameChange } from "./mcpNameChange";
@@ -339,7 +339,6 @@ const sendMessage = async ({
   const assistantIndex = localState.messages.length
 
   try {
-    const feedbackModule = isFeedbackEnabled();
     const toolsModule = isToolsEnabled();
     const choicesModule = isChoicesEnabled();
 
@@ -497,24 +496,7 @@ const sendMessage = async ({
 
     // Ensure timeout value is within valid range
     const timeoutAPI = (timeout >= 5000 && timeout <= 900000) ? timeout : 300000;
-    
-    if(feedbackModule){
-      // add Feedback information
-      if (conversationForAPI.settings?.tools == undefined){
-        conversationForAPI.settings.tools = {
-            enabled: true
-          }
-      } else{
-        conversationForAPI.settings.tools.enabled = true;
-      }
-      let message = localState.messages[localState.messages.length - 1];
-      if (Array.isArray(message.content)) {
-        if (message?.feedback){
-            conversationForAPI.settings.feedback = message.feedback;
-        }
-      }
-    }
-    
+
     if(!setLocalState){   
       // send the message WITHOUT changing the UI with any response
       // TODO handle errors and print them to the user

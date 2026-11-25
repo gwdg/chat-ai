@@ -31,7 +31,6 @@ import {
   isAgentEnabled,
   isAgentsEnabled,
   isArcanasEnabled,
-  isFeedbackEnabled,
   isSpeechEnabled,
   isSyncEnabled,
   isToolsEnabled,
@@ -39,7 +38,7 @@ import {
 import { isFeatureEnabled } from "./deployment.js";
 import { hasBrandInstitute, isBrandLocked, isBrandUiVisible } from "./brandPolicy.js";
 import { canInstallApp } from "../utils/installPrompt.js";
-import { isFeedbackReportEnabled } from "../apis/feedback.js";
+import { isFeedbackReportEnabled, isChatFeedbackEnabled } from "../apis/feedback.js";
 import { currentBrand } from "./brands.js";
 import { brandConsentGate } from "./consent.js";
 import { brandFeatureFlag } from "./brandFeatures.js";
@@ -1375,7 +1374,7 @@ export const featureGuides = {
   brand_consent: {
     titleKey: "feature_guide.brand_consent.title",
     prompt:
-      "Review or change the voluntary consents of this service. Open user settings, choose the Advanced tab, and use the consent switches; the terms themselves are linked there.",
+      "Review or change the voluntary consents of this service. Open user settings, choose the Profile tab and its Consents section, and use the consent switches; the terms themselves are linked there.",
     keywords: [
       "consent",
       "consents",
@@ -1392,8 +1391,8 @@ export const featureGuides = {
         completeOnTargetClick: true,
       },
       {
-        target: '[data-guide="settings-tab-advanced"]',
-        prepare: openUserSettings,
+        target: '[data-guide="profile-subtab-consents"]',
+        prepare: () => selectProfileSection("consents"),
         textKey: "feature_guide.brand_consent.step2",
         completeOnTargetClick: true,
       },
@@ -1718,13 +1717,33 @@ export const featureGuides = {
     ],
   },
   feedback: {
-    titleKey: "feature_guide.feedback.title",    prompt:
-      "Rate an assistant message with the feedback buttons when the feedback module is enabled.",
-    keywords: ["feedback", "rate answer", "thumbs up", "thumbs down"],
+    titleKey: "feature_guide.feedback.title",
+    prompt:
+      "Rate an assistant message with the thumbs-up/down buttons; switch answer feedback and conversation analysis on or off in Chat preferences; and review or delete everything this account sent to the feedback service under Profile → Feedback.",
+    keywords: [
+      "feedback",
+      "rate answer",
+      "thumbs up",
+      "thumbs down",
+      "delete feedback",
+      "conversation analysis",
+    ],
     steps: [
       {
         target: '[data-guide="feedback"]',
         textKey: "feature_guide.feedback.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="feedback-preference"]',
+        prepare: () => selectSettingsTab("chat"),
+        textKey: "feature_guide.feedback.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="profile-feedback-history"]',
+        prepare: () => selectProfileSection("user"),
+        textKey: "feature_guide.feedback.step3",
         completeOnTargetClick: true,
       },
     ],
@@ -2083,13 +2102,14 @@ export const FEATURE_GUIDE_AVAILABILITY = {
   arcana: () => isToolPanelAvailable() && isArcanasEnabled(),
   arcana_tools: () => isToolPanelAvailable() && isArcanasEnabled(),
   mcp_server: () => isFeatureEnabled("mcp_servers") && isToolPanelAvailable(),
-  feedback: () => isFeedbackEnabled(),
+  feedback: () => isChatFeedbackEnabled(),
   // The install button renders only while the browser offers an install prompt;
   // a tour whose target is missing would never start, so the guide follows it.
   pwa_install: () => canInstallApp(),
   bug_report: () => isFeedbackReportEnabled(),
   speech_output: () => isSpeechEnabled(),
   e2ee: () => isFeatureEnabled("e2ee"),
+  memories: () => isFeatureEnabled("memories"),
   advanced_mode: () => isAgentsEnabled() || isFeatureEnabled("mcp_servers"),
   sync_setup: () => isSyncEnabled(),
   // The quiz card ships with the brand feature that contributes its tool.

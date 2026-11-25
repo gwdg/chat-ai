@@ -186,7 +186,8 @@ rejected. `mode`, `port` and `apiKey` keep their current meaning.
     "mcp_servers": true,
     "e2ee": true,
     "tutorials": true,
-    "import_git": false
+    "import_git": false,
+    "memories": true
   },
 
   "models": {
@@ -216,7 +217,10 @@ rejected. `mode`, `port` and `apiKey` keep their current meaning.
 `features` is separate from `modules` on purpose: `modules` are the coarse product
 areas that already gate routes and code paths, `features` are the finer switches
 inside an area (`web_search` inside tools, `import_git` inside workspaces).
-Existing defaults are preserved per key; see section 9.
+Existing defaults are preserved per key; see section 9. A feature also removes
+the preferences that only serve it: `features.memories: false` (as the GAIA
+profile sets) hides the Memories tab, the per-chat memory mode and the Meta
+chat's memory tools, and forces recall/learning off.
 
 The deployment names the default brand and the claim rules; what a brand looks
 like lives in its own folder, `front/src/config/branding/<folder>/brand.json`

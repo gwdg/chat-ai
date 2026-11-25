@@ -62,6 +62,7 @@ import AddAgentModal from "./Agent/AddAgentModal";
 import AgentToolsModal from "./Agent/AgentToolsModal";
 import RenameAgentSessionModal from "./Agent/RenameAgentSessionModal";
 import BugReportModal from "./Feedback/BugReportModal";
+import FeedbackHistoryModal from "./UserSettings/FeedbackHistoryModal";
 
 const ModalContext = createContext();
 
@@ -300,6 +301,9 @@ export function ModalProvider({ children }) {
       )}
       {modalType === "bugReport" && (
         <BugReportModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "feedbackHistory" && (
+        <FeedbackHistoryModal isOpen onClose={closeModal} {...modalProps} />
       )}
     </ModalContext.Provider>
   );

@@ -475,6 +475,85 @@ app.post("/websearch", (req, res) => forward(req, res, "/websearch", JSON.string
 // receiver that wants a shared secret instead. Without a configured endpoint the
 // route answers 501; the front end then hides the footer entry point entirely
 // (`feedbackPath`).
+//
+// GET lists the caller's feedback and DELETE removes all of it, for the Profile
+// screen's feedback history. Both forward the same identity headers, so the
+// receiver decides whose rows are returned or deleted.
+function feedbackHeaders(req) {
+  const headers = {};
+  if (feedbackToken) headers.Authorization = `Bearer ${feedbackToken}`;
+  for (const name of [
+    "inference-id",
+    "x-auth-claim-uid",
+    "oidc_claim_uid",
+    "oidc_claim_email",
+  ]) {
+    const value = req.headers[name];
+    if (value) headers[name] = value;
+  }
+  return headers;
+}
+
+app.get("/feedback", async (req, res) => {
+  if (!feedbackEndpoint) {
+    return res.status(501).json({ error: "Feedback is not configured." });
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30 * 1000);
+  res.on("close", () => controller.abort());
+  try {
+    const target = new URL(feedbackEndpoint);
+    for (const [name, value] of Object.entries(req.query ?? {})) {
+      if (typeof value === "string") target.searchParams.set(name, value);
+    }
+    const upstream = await globalThis.fetch(target, {
+      method: "GET",
+      headers: feedbackHeaders(req),
+      signal: controller.signal,
+    });
+    const type = upstream.headers.get("content-type");
+    const body = await upstream.text();
+    res.status(upstream.status);
+    res.setHeader("Content-Type", type || "application/json");
+    res.send(body);
+  } catch (error) {
+    if (controller.signal.aborted && res.headersSent) return;
+    console.error("Error in GET /feedback:", error);
+    if (!res.headersSent) res.status(502);
+    res.end("Feedback delivery failed.");
+  } finally {
+    clearTimeout(timer);
+  }
+});
+
+app.delete("/feedback", async (req, res) => {
+  if (!feedbackEndpoint) {
+    return res.status(501).json({ error: "Feedback is not configured." });
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30 * 1000);
+  res.on("close", () => controller.abort());
+  try {
+    const upstream = await globalThis.fetch(feedbackEndpoint, {
+      method: "DELETE",
+      headers: feedbackHeaders(req),
+      signal: controller.signal,
+    });
+    const type = upstream.headers.get("content-type");
+    const body = await upstream.text();
+    res.status(upstream.status);
+    res.setHeader("Content-Type", type || "application/json");
+    res.send(body);
+  } catch (error) {
+    if (controller.signal.aborted && res.headersSent) return;
+    console.error("Error in DELETE /feedback:", error);
+    if (!res.headersSent) res.status(502);
+    res.end("Feedback delivery failed.");
+  } finally {
+    clearTimeout(timer);
+  }
+});
+
 app.post("/feedback", async (req, res) => {
   if (!feedbackEndpoint) {
     return res.status(501).json({ error: "Feedback is not configured." });
@@ -483,21 +562,16 @@ app.post("/feedback", async (req, res) => {
   const timer = setTimeout(() => controller.abort(), 30 * 1000);
   res.on("close", () => controller.abort());
   try {
-    const headers = {};
-    if (feedbackToken) headers.Authorization = `Bearer ${feedbackToken}`;
-    for (const name of [
-      "inference-id",
-      "x-auth-claim-uid",
-      "oidc_claim_uid",
-      "oidc_claim_email",
-    ]) {
-      const value = req.headers[name];
-      if (value) headers[name] = value;
-    }
+    const headers = feedbackHeaders(req);
+    // Chat AI also posts ratings and whole conversations here. Those are plain
+    // JSON, which must pass through as JSON: the multipart rebuild below would
+    // stringify the `messages` array to "[object Object]".
+    const isJson = req.is("application/json");
+    if (isJson) headers["Content-Type"] = "application/json";
     const upstream = await globalThis.fetch(feedbackEndpoint, {
       method: "POST",
       headers,
-      body: multipart(req),
+      body: isJson ? JSON.stringify(req.body ?? {}) : multipart(req),
       signal: controller.signal,
     });
     const type = upstream.headers.get("content-type");

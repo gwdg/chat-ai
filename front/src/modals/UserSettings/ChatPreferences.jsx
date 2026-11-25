@@ -38,9 +38,13 @@ import {
   setAdvancedMode,
   selectMcpToolPolicy,
   setMcpToolPolicy,
+  selectFeedbackEnabled,
+  setFeedbackEnabled,
 } from "../../Redux/reducers/userSettingsReducer";
 import { isToolsEnabled } from "../../utils/modules";
+import { isChatFeedbackEnabled } from "../../apis/feedback";
 import { isBrandExternalAllowed } from "../../config/brandPolicy";
+import { isFeatureEnabled } from "../../config/deployment";
 import { useModal } from "../ModalContext";
 import { useSendWithEnter } from "../../hooks/useSendWithEnter";
 import ProfilePreferenceSwitch from "./ProfilePreferenceSwitch";
@@ -100,6 +104,11 @@ export function MemoryPreference() {
   const { t } = useTranslation();
   const { openModal } = useModal();
   const memoryMode = useSelector(selectMemoryMode);
+
+  // A deployment or brand without the memories feature has no memory mode to
+  // choose and no account memories to manage.
+  if (!isFeatureEnabled("memories")) return null;
+
   const selectedMemoryOption =
     MEMORY_OPTIONS.find((option) => option.value === memoryMode) ??
     MEMORY_OPTIONS[0];
@@ -412,9 +421,9 @@ export function McpToolPolicyPreference() {
   const { t } = useTranslation();
   const policy = useSelector(selectMcpToolPolicy);
 
-  // The policy only concerns the MCP servers the user added; without the tools module
-  // there is no MCP UI at all.
-  if (!isToolsEnabled()) return null;
+  // The policy only concerns the MCP servers the user added; without the tools
+  // module or the MCP feature there is no MCP UI at all.
+  if (!isToolsEnabled() || !isFeatureEnabled("mcp_servers")) return null;
 
   const selectedOption =
     MCP_TOOL_POLICY_OPTIONS.find((option) => option.value === policy) ??
@@ -439,6 +448,27 @@ export function McpToolPolicyPreference() {
       <p className="px-2 text-xs text-base-content/70">
         {t("user_settings.chat_preferences.mcp_tools.note")}
       </p>
+    </section>
+  );
+}
+
+export function FeedbackPreference() {
+  const dispatch = useDispatch();
+  const { t } = useTranslation();
+  const feedbackEnabled = useSelector(selectFeedbackEnabled);
+
+  // Only a deployment that switched the feedback module on and pointed
+  // `feedbackPath` at a receiver gets the switch at all.
+  if (!isChatFeedbackEnabled()) return null;
+
+  return (
+    <section className="flex flex-col gap-2" data-guide="feedback-preference">
+      <ProfilePreferenceSwitch
+        label={t("user_settings.chat_preferences.feedback.label")}
+        description={t("user_settings.chat_preferences.feedback.description")}
+        checked={feedbackEnabled}
+        onChange={(checked) => dispatch(setFeedbackEnabled(checked))}
+      />
     </section>
   );
 }

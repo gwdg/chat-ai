@@ -33,6 +33,7 @@ import { agentGatewayTools, isAgentEnabled, modelSupportsTools } from "../../api
 import { mcpServers } from "../../agent/mcp";
 import { isArcanasEnabled } from "../../utils/modules";
 import { isBrandExternalAllowed } from "../../config/brandPolicy";
+import { isFeatureEnabled } from "../../config/deployment";
 
 // Tools the agent has no counterpart for
 const AGENT_UNAVAILABLE = new Set(
@@ -135,6 +136,8 @@ export default function ToolsContainer({ localState, setLocalState }) {
       ({ key }) =>
         arcanasEnabled || (key !== "arcana" && key !== "arcana_tools")
     )
+    // A deployment (or brand) without the MCP feature gets no MCP row at all.
+    .filter(({ key }) => key !== "mcp" || isFeatureEnabled("mcp_servers"))
     // A brand may forbid the options that leave the institution. Hiding the row
     // is the "removed option"; the request builders drop it as well.
     .filter(

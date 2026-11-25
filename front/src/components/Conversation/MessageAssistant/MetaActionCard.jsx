@@ -386,6 +386,7 @@ export default function MetaActionCard({
     conversation_summaries: "user_settings.chat_preferences.summaries.label",
     show_timestamps: "user_settings.chat_preferences.messages.timestamps.label",
     send_with_enter: "user_settings.chat_preferences.submission.label",
+    feedback_enabled: "user_settings.chat_preferences.feedback.label",
     html_render_mode: "user_settings.chat_preferences.html_render.label",
     html_load_external:
       "user_settings.chat_preferences.html_render.external_references.label",
@@ -447,6 +448,9 @@ export default function MetaActionCard({
       return t(`user_settings.chat_preferences.submission.options.${name}.label`, {
         defaultValue: String(value),
       });
+    }
+    if (key === "feedback_enabled" && (value === null || value === undefined)) {
+      return t("meta_chat.setting_deployment_default");
     }
     if (key === "mcp_tool_policy") {
       return t(
