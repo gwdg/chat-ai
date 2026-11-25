@@ -95,12 +95,16 @@ export default function WarningExternalModel({
     Boolean(modelId) &&
     isModelKeyed({ keys: e2eeKeys, models: e2eeModels }, modelId);
 
+  // The notice is an aid, not a dialog: it opens on hover or click, and an
+  // unsafe setting opens it once so the warning cannot be missed. Keeping the
+  // safe notice closed at mount and on every model change stops it covering
+  // the conversation (#123).
+  const [showTextBox, setShowTextBox] = useState(!isSafe);
+
   useEffect(() => {
-    setShowTextBox(true);
+    setShowTextBox(!isSafe);
     setSuppressHoverTooltip(false);
   }, [isSafe]);
-
-  const [showTextBox, setShowTextBox] = useState(true);
   const [isHovering, setIsHovering] = useState(false);
   const [suppressHoverTooltip, setSuppressHoverTooltip] = useState(false);
   const isPopoverVisible = (showTextBox && !isSafe) || (isHovering && !suppressHoverTooltip);
