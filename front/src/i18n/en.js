@@ -1447,7 +1447,7 @@ export default {
       },
       data: {
         label: "Data",
-        title: "Data and privacy",
+        title: "Data",
         description:
           "Manage local data, download an encrypted backup, and keep your devices in step with encrypted server synchronization.",
       },

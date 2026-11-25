@@ -1465,7 +1465,7 @@ export default {
       },
       data: {
         label: "Daten",
-        title: "Daten und Datenschutz",
+        title: "Daten",
         description:
           "Verwalten Sie lokale Daten, laden Sie eine verschlüsselte Sicherung herunter und halten Sie Ihre Geräte mit verschlüsselter Serversynchronisierung aktuell.",
       },
