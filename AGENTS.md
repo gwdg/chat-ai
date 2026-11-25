@@ -632,12 +632,14 @@ with a brief highlight. Its tabs are Profile, Usage (`UsageSettings.jsx` — the
 organization limits plus the sidebar switch), Chat, Advanced (`AdvancedModePreference` and
 `RenderingPreferences`, including the reasoning-streaming switch), Memories, Encryption and Data;
 every rendering setting lives in Advanced, never in Chat. Profile is itself
-`ProfileSettings.jsx` with three sections: **User** (`UserInfoContainer`), **Institution**
-(`InstituteSection`, brand data that also renders while `/user` is loading) and **Consents**
-(`BrandConsentSettings`, the brand's `consentGate` switches). The Institution section is absent for
-a brand that neither describes itself nor narrows anything, and Consents is absent for a brand
-without a `consentGate`; the consent switches are not in the Advanced tab. `get_user_settings`
-returns the module flags and global preferences.
+`ProfileSettings.jsx` with four sections: **User** (`UserInfoContainer`), **Institution**
+(`InstituteSection`, brand data that also renders while `/user` is loading), **Feedback**
+(the switch for `feedback_enabled` above the collected-feedback card, only while a receiver is
+configured) and **Consents** (`BrandConsentSettings`, the brand's `consentGate` switches). The
+Institution section is absent for a brand that neither describes itself nor narrows anything,
+Feedback without `feedbackPath`, and Consents for a brand without a `consentGate`; the consent
+switches are not in the Advanced tab.
+`get_user_settings` returns the module flags and global preferences.
 
 Tutorials and use cases start through the `start_tutorial` / `start_use_case` tools, which dispatch
 `chatai:start-feature-guide` / `chatai:start-use-case`, or through inline links

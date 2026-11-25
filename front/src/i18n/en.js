@@ -957,9 +957,9 @@ export default {
       step1:
         "Use the feedback buttons under an assistant message to rate an answer. A changed conversation is also sent to the feedback service for analysis while the feature is on.",
       step2:
-        "Switch answer feedback and conversation analysis on or off in Chat preferences.",
+        "Under Profile → Feedback you can switch answer feedback and conversation analysis on or off.",
       step3:
-        "Under Profile → Feedback you can see everything this account sent and delete it again.",
+        "The same section lists everything this account sent, and deletes it again.",
     },
     speech_output: {
       title: "Read answers aloud",
@@ -1457,6 +1457,7 @@ export default {
         label: "Profile sections",
         user: "User",
         institution: "Institution",
+        feedback: "Feedback",
         consents: "Consents",
       },
       feedback: {

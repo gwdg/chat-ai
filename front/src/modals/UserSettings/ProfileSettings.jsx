@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useDispatch, useSelector } from "react-redux";
 import {
   Building2,
   MessageSquareWarning,
@@ -11,22 +12,28 @@ import { useBrand } from "../../config/BrandProvider";
 import { hasBrandInstitute } from "../../config/brandPolicy";
 import { brandConsentGate } from "../../config/consent";
 import { isChatFeedbackEnabled } from "../../apis/feedback";
+import {
+  selectFeedbackEnabled,
+  setFeedbackEnabled,
+} from "../../Redux/reducers/userSettingsReducer";
 import { useModal } from "../ModalContext";
 import BrandConsentSettings from "./BrandConsentSettings";
 import InstituteSection from "./InstituteSection";
+import ProfilePreferenceSwitch from "./ProfilePreferenceSwitch";
 import UserInfoContainer from "./UserInfoContainer";
 
 /**
- * The Profile tab has three screens, mirroring the Data tab: the user's own
+ * The Profile tab has four screens, mirroring the Data tab: the user's own
  * account (`User`), the institution that provides this deployment
- * (`Institution`) and the brand's voluntary consents (`Consents`).
+ * (`Institution`), the feedback this account sent (`Feedback`) and the brand's
+ * voluntary consents (`Consents`).
  *
  * The Institution screen is brand data, not user data, so it is a section of its
  * own: it stays available while `/user` is still loading or when the profile
  * route does not answer, and it is absent entirely for a brand that neither
- * describes itself nor narrows anything. The Consents screen follows the same
- * rule: it appears only for a brand that declares a `consentGate`, because a
- * brand without one has no voluntary purposes to switch on or off.
+ * describes itself nor narrows anything. Feedback appears only while a receiver
+ * is configured, and Consents only for a brand that declares a `consentGate`,
+ * because a brand without one has no voluntary purposes to switch on or off.
  */
 
 const PROFILE_SECTIONS = [
@@ -42,12 +49,43 @@ const PROFILE_SECTIONS = [
     brandOnly: true,
   },
   {
+    id: "feedback",
+    icon: MessageSquareWarning,
+    labelKey: "user_settings.profile.sections.feedback",
+    feedbackOnly: true,
+  },
+  {
     id: "consents",
     icon: ShieldCheck,
     labelKey: "user_settings.profile.sections.consents",
     consentOnly: true,
   },
 ];
+
+/**
+ * Answers are rated with the thumbs controls under each message, and the
+ * feedback service is sent a changed conversation for analysis. Both follow
+ * this switch, so a deployment that offers the feature can still leave the
+ * choice to the user; only a deployment without a receiver hides it.
+ */
+function FeedbackPreference() {
+  const dispatch = useDispatch();
+  const { t } = useTranslation();
+  const feedbackEnabled = useSelector(selectFeedbackEnabled);
+
+  if (!isChatFeedbackEnabled()) return null;
+
+  return (
+    <section className="flex flex-col gap-2" data-guide="feedback-preference">
+      <ProfilePreferenceSwitch
+        label={t("user_settings.chat_preferences.feedback.label")}
+        description={t("user_settings.chat_preferences.feedback.description")}
+        checked={feedbackEnabled}
+        onChange={(checked) => dispatch(setFeedbackEnabled(checked))}
+      />
+    </section>
+  );
+}
 
 export default function ProfileSettings({
   userData,
@@ -61,6 +99,7 @@ export default function ProfileSettings({
   const sections = PROFILE_SECTIONS.filter(
     (section) =>
       (!section.brandOnly || hasBrandInstitute(brand)) &&
+      (!section.feedbackOnly || isChatFeedbackEnabled()) &&
       (!section.consentOnly || Boolean(brandConsentGate(brand))),
   );
   const resolveSection = (id) =>
@@ -95,22 +134,13 @@ export default function ProfileSettings({
       );
     }
 
-    if (currentSection === "consents") {
+    if (currentSection === "feedback") {
       return (
-        <div data-guide="profile-section-consents">
-          <BrandConsentSettings />
-        </div>
-      );
-    }
-
-    return (
-      <div data-guide="profile-section-user" className="flex flex-col gap-5">
-        {userData ? (
-          <UserInfoContainer userData={userData} />
-        ) : (
-          <p className="text-sm text-base-content/70">{t("common.loading")}</p>
-        )}
-        {isChatFeedbackEnabled() && (
+        <div
+          data-guide="profile-section-feedback"
+          className="flex flex-col gap-4"
+        >
+          <FeedbackPreference />
           <section
             className="rounded-xl border border-base-300 bg-base-100 p-4"
             data-guide="profile-feedback-history"
@@ -130,6 +160,24 @@ export default function ProfileSettings({
               {t("user_settings.profile.feedback.open")}
             </button>
           </section>
+        </div>
+      );
+    }
+
+    if (currentSection === "consents") {
+      return (
+        <div data-guide="profile-section-consents">
+          <BrandConsentSettings />
+        </div>
+      );
+    }
+
+    return (
+      <div data-guide="profile-section-user" className="flex flex-col gap-5">
+        {userData ? (
+          <UserInfoContainer userData={userData} />
+        ) : (
+          <p className="text-sm text-base-content/70">{t("common.loading")}</p>
         )}
       </div>
     );

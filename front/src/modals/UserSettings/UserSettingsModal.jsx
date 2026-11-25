@@ -19,7 +19,6 @@ import {
   AdvancedModePreference,
   ConversationSummaryPreference,
   DocumentConversionPreference,
-  FeedbackPreference,
   McpToolPolicyPreference,
   MemoryPreference,
   MessageDisplayPreference,
@@ -90,7 +89,12 @@ const PROFILE_TABS = [
 ];
 
 const DATA_SUBSECTIONS = new Set(["manage", "backup", "sync"]);
-const PROFILE_SUBSECTIONS = new Set(["user", "institution", "consents"]);
+const PROFILE_SUBSECTIONS = new Set([
+  "user",
+  "institution",
+  "feedback",
+  "consents",
+]);
 
 // A tab that only holds one feature's preferences disappears with that feature,
 // so a deployment or brand never shows a control whose module is switched off.
@@ -221,7 +225,6 @@ export default function UserSettingsModal({
           <div data-guide="document-conversion-preference">
             <DocumentConversionPreference />
           </div>
-          <FeedbackPreference />
           {choicesModule && <SuggestionPreference />}
           <TimeoutSetter />
         </div>

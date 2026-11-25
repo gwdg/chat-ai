@@ -2,11 +2,28 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import ProfileSettings from "../ProfileSettings";
+import { setFeedbackEnabled } from "../../../Redux/reducers/userSettingsReducer";
 
-const api = vi.hoisted(() => ({ brand: { value: null } }));
+const api = vi.hoisted(() => ({
+  brand: { value: null },
+  feedback: { enabled: false },
+  dispatch: vi.fn(),
+}));
 
 vi.mock("../../../config/BrandProvider", () => ({
   useBrand: () => ({ brand: api.brand.value }),
+}));
+
+// The feedback switch reads its preference from Redux; the section around it
+// is what this test is about, so the store is a stub.
+vi.mock("react-redux", () => ({
+  useDispatch: () => api.dispatch,
+  useSelector: () => true,
+}));
+
+// The Feedback section appears only while a receiver is configured.
+vi.mock("../../../apis/feedback", () => ({
+  isChatFeedbackEnabled: () => api.feedback.enabled,
 }));
 
 // ProfileSettings opens the feedback history through the modal context; the
@@ -31,6 +48,8 @@ const userData = {
 
 beforeEach(() => {
   api.brand.value = { id: "chat-ai", name: "Chat AI" };
+  api.feedback.enabled = false;
+  api.dispatch.mockClear();
 });
 
 describe("ProfileSettings", () => {
@@ -107,6 +126,59 @@ describe("ProfileSettings", () => {
     expect(
       screen.getByText("Georg-August-Universität Göttingen"),
     ).toBeInTheDocument();
+  });
+
+  it("keeps the collected feedback on its own section", () => {
+    api.feedback.enabled = true;
+
+    render(<ProfileSettings userData={userData} />);
+
+    // The account screen no longer carries the feedback card.
+    expect(
+      screen.queryByText("Feedback sent from this account"),
+    ).not.toBeInTheDocument();
+
+    const feedbackTab = screen.getByRole("tab", { name: "Feedback" });
+    fireEvent.click(feedbackTab);
+
+    expect(feedbackTab).toHaveAttribute("aria-selected", "true");
+    expect(
+      screen.getByText("Feedback sent from this account"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "View collected feedback" }),
+    ).toBeInTheDocument();
+  });
+
+  it("offers the feedback switch there and can turn it off", () => {
+    api.feedback.enabled = true;
+
+    render(<ProfileSettings userData={userData} />);
+
+    // The switch moved out of Chat preferences into this section.
+    expect(
+      screen.queryByRole("switch", { name: /Send feedback to the operator/ }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Feedback" }));
+
+    const preference = screen.getByRole("switch", {
+      name: /Send feedback to the operator/,
+    });
+    // The store stub resolves the preference to on.
+    expect(preference).toHaveAttribute("aria-checked", "true");
+
+    fireEvent.click(preference);
+
+    expect(api.dispatch).toHaveBeenCalledWith(setFeedbackEnabled(false));
+  });
+
+  it("hides the feedback section without a configured receiver", () => {
+    render(<ProfileSettings userData={userData} />);
+
+    expect(
+      screen.queryByRole("tab", { name: "Feedback" }),
+    ).not.toBeInTheDocument();
   });
 
   it("offers the consents as a Profile section for a brand with a consent gate", () => {

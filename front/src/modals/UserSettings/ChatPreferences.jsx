@@ -38,11 +38,8 @@ import {
   setAdvancedMode,
   selectMcpToolPolicy,
   setMcpToolPolicy,
-  selectFeedbackEnabled,
-  setFeedbackEnabled,
 } from "../../Redux/reducers/userSettingsReducer";
 import { isToolsEnabled } from "../../utils/modules";
-import { isChatFeedbackEnabled } from "../../apis/feedback";
 import { isBrandExternalAllowed } from "../../config/brandPolicy";
 import { isFeatureEnabled } from "../../config/deployment";
 import { useModal } from "../ModalContext";
@@ -448,27 +445,6 @@ export function McpToolPolicyPreference() {
       <p className="px-2 text-xs text-base-content/70">
         {t("user_settings.chat_preferences.mcp_tools.note")}
       </p>
-    </section>
-  );
-}
-
-export function FeedbackPreference() {
-  const dispatch = useDispatch();
-  const { t } = useTranslation();
-  const feedbackEnabled = useSelector(selectFeedbackEnabled);
-
-  // Only a deployment that switched the feedback module on and pointed
-  // `feedbackPath` at a receiver gets the switch at all.
-  if (!isChatFeedbackEnabled()) return null;
-
-  return (
-    <section className="flex flex-col gap-2" data-guide="feedback-preference">
-      <ProfilePreferenceSwitch
-        label={t("user_settings.chat_preferences.feedback.label")}
-        description={t("user_settings.chat_preferences.feedback.description")}
-        checked={feedbackEnabled}
-        onChange={(checked) => dispatch(setFeedbackEnabled(checked))}
-      />
     </section>
   );
 }

@@ -1719,7 +1719,7 @@ export const featureGuides = {
   feedback: {
     titleKey: "feature_guide.feedback.title",
     prompt:
-      "Rate an assistant message with the thumbs-up/down buttons; switch answer feedback and conversation analysis on or off in Chat preferences; and review or delete everything this account sent to the feedback service under Profile → Feedback.",
+      "Rate an assistant message with the thumbs-up/down buttons; under Profile → Feedback, switch answer feedback and conversation analysis on or off, and review or delete everything this account sent to the feedback service.",
     keywords: [
       "feedback",
       "rate answer",
@@ -1736,13 +1736,13 @@ export const featureGuides = {
       },
       {
         target: '[data-guide="feedback-preference"]',
-        prepare: () => selectSettingsTab("chat"),
+        prepare: () => selectProfileSection("feedback"),
         textKey: "feature_guide.feedback.step2",
         completeOnTargetClick: true,
       },
       {
         target: '[data-guide="profile-feedback-history"]',
-        prepare: () => selectProfileSection("user"),
+        prepare: () => selectProfileSection("feedback"),
         textKey: "feature_guide.feedback.step3",
         completeOnTargetClick: true,
       },

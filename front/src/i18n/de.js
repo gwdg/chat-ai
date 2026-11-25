@@ -974,9 +974,9 @@ export default {
       step1:
         "Bewerten Sie eine Antwort mit den Feedback-Schaltflächen unter einer Assistenten-Nachricht. Ein geänderter Chat wird bei aktivierter Funktion zusätzlich zur Auswertung an den Feedback-Dienst gesendet.",
       step2:
-        "Schalten Sie Antwort-Feedback und Chat-Auswertung in den Chat-Einstellungen ein oder aus.",
+        "Unter Profil → Feedback können Sie Antwort-Feedback und Chat-Auswertung ein- oder ausschalten.",
       step3:
-        "Unter Profil → Feedback sehen Sie alles, was dieses Konto gesendet hat, und können es wieder löschen.",
+        "Derselbe Bereich listet alles, was dieses Konto gesendet hat, und löscht es wieder.",
     },
     speech_output: {
       title: "Antworten vorlesen lassen",
@@ -1475,6 +1475,7 @@ export default {
         label: "Profilbereiche",
         user: "Benutzer",
         institution: "Einrichtung",
+        feedback: "Feedback",
         consents: "Einwilligungen",
       },
       feedback: {
