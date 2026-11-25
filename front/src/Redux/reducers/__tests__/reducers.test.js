@@ -182,6 +182,22 @@ describe("user settings reducer", () => {
     expect(selectGlobalMcpServers({ user_settings: state })).toEqual([]);
   });
 
+  it("returns the same MCP server list for the same state", () => {
+    // react-redux warns when a selector returns a new reference for an
+    // unchanged state; the filtered list has to be memoized.
+    let state = init(userSettingsReducer);
+    state = userSettingsReducer(
+      state,
+      addMcpServer({ id: "mcp-1", name: "Files", url: "http://localhost:9000/mcp" }),
+    );
+    const first = selectGlobalMcpServers({ user_settings: state });
+    expect(selectGlobalMcpServers({ user_settings: state })).toBe(first);
+
+    const empty = init(userSettingsReducer);
+    const firstEmpty = selectGlobalMcpServers({ user_settings: empty });
+    expect(selectGlobalMcpServers({ user_settings: empty })).toBe(firstEmpty);
+  });
+
   it("imports only MCP servers that have an address", () => {
     let state = init(userSettingsReducer);
     state = userSettingsReducer(

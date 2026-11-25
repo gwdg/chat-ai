@@ -38,6 +38,13 @@ export const speechModuleValue = () => moduleValue("speech", env.VITE_MODULE_SPE
 // working in plain Node.
 export function normalizeSpeechModule(raw) {
   if (!raw || raw === "undefined" || raw === "false") return null;
+  // The value has two encodings: `vite.config.js` puts the env value through
+  // JSON.stringify, while a deployment profile hands over the native JSON value
+  // (`"speech": "browser"` in deployments/gaia/index.json). Accept the literal
+  // first, so the profile's bare string never reaches JSON.parse.
+  if (raw === true || raw === "browser") {
+    return { model: null, voice: null };
+  }
   try {
     const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
     if (parsed === "browser" || parsed === true) {

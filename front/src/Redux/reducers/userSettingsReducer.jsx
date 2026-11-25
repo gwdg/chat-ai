@@ -1,5 +1,5 @@
 // userMemorySlice.js
-import { createSlice } from "@reduxjs/toolkit";
+import { createSelector, createSlice } from "@reduxjs/toolkit";
 
 import { isBrandExternalAllowed } from "../../config/brandPolicy";
 
@@ -637,10 +637,20 @@ export const {
 
 // Selectors
 export const selectAllMemories = (state) => state.user_settings.memories;
-export const selectGlobalMcpServers = (state) =>
-  (state.user_settings.mcp_servers ?? []).filter(
-    (server) => server && typeof server.url === "string" && server.url.trim(),
-  );
+// `.filter()` allocates, so memoize: react-redux compares the result by
+// reference and otherwise warns about a selector that "returned a different
+// result when called with the same parameters". The input is the stored array
+// itself, so the empty fallback has to be a stable constant as well.
+const NO_MCP_SERVERS = [];
+const selectStoredMcpServers = (state) =>
+  state.user_settings.mcp_servers ?? NO_MCP_SERVERS;
+export const selectGlobalMcpServers = createSelector(
+  [selectStoredMcpServers],
+  (servers) =>
+    servers.filter(
+      (server) => server && typeof server.url === "string" && server.url.trim(),
+    ),
+);
 export const selectMemoryGroups = (state) =>
   state.user_settings.memory_groups ?? [];
 export const selectDefaultMemoryGroup = (state) =>
