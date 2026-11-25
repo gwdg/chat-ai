@@ -1,7 +1,7 @@
 {
   "name": "chat-ai-front",
   "displayName": "Chat AI",
-  "version": "2.0.1",
+  "version": "2.0.0-beta",
   "private": true,
   "type": "module",
   "scripts": {

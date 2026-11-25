@@ -223,7 +223,7 @@ Browser (headless Chrome via `puppeteer-core`, screenshots in
 | Back to Light | Attribute cleared, primary `#132d6c` |
 | PWA manifest | Blob `link[rel=manifest]`, name "GAIA – Study assistant", theme `#132d6c`, 3 icons, absolute `start_url`/`scope`/`id` |
 | Dismissible notice | Close button hides "GAIA is an AI system", `sessionStorage["chatai.brand-chat-notice.gaia"] === "1"`, stays hidden after a reload |
-| Brand naming | Footer link reads "GAIA v2.0.1" and points at `https://gaia.uni-goettingen.de/`; the tour welcome modal greets "Welcome to GAIA 2.0.1"; a brand whose `name` is `{ en, de }` (MPG) renders its localized name (unit-tested) |
+| Brand naming | Footer link reads "GAIA v2.0.0-beta" and points at `https://gaia.uni-goettingen.de/`; the tour welcome modal greets "Welcome to GAIA 2.0.0-beta"; a brand whose `name` is `{ en, de }` (MPG) renders its localized name (unit-tested) |
 | Models | The selector lists every model the local engine offers — Anthropic 8, DeepSeek 3, GLM 3, Local 2, OpenAI 21, Qwen 6 — with the configured `bridge/qwen3-30b-a3b-instruct-2507` selected |
 | AI marker | The `ai-label.svg` asset loads (150×150 SVG rendered at 18 px) beside the assistant answer; `brand.aiMarker.asset` now resolves to a build asset instead of a bare file name |
 | Copy watermark | Copying the answer puts `hello\n\nGenerated with GAIA, an AI system. Check important information.` on the clipboard |
@@ -345,7 +345,7 @@ building the GAIA backend, not extending Chat AI.
 - **Embedding Chat AI inside GAIA** (`@chat-ai/core`, `src/embedded/ChatPanel`,
   `src/adapters/gaia.ts`, the `ChatAiIsland` in `gaia/frontend/src/lib/components/chat-ai/`).
   That is the `chat-ai-modularization` branch vendored as `gaia/chat-ai` at
-  v1.0.2; this checkout is v2.0.1 and has no `front/src/core`, `embedded` or
+  v1.0.2; this checkout is v2.0.0-beta and has no `front/src/core`, `embedded` or
   `adapters`. It is a different project (one chat engine, two hosts), not a
   feature of this deployment.
 - **Layout parity with the Svelte UI** (§1, item J).
