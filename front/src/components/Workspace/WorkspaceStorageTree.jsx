@@ -1673,6 +1673,18 @@ export default function WorkspaceStorageTree({
           </div>
         )}
         <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-base-300 px-2 py-1">
+          <WorkspaceGitButton
+            provider={targetProvider()}
+            path={target.sourcePath ?? target.path ?? "/"}
+            displayPath={target.path ?? "/"}
+            readOnly={
+              target.mount ? readOnlyFor({ context: { mount: target.mount } }) : false
+            }
+            onChanged={() => {
+              bumpRevision();
+              target.reload?.();
+            }}
+          />
           <button
             type="button"
             data-guide="workspace-upload"
@@ -1776,18 +1788,6 @@ export default function WorkspaceStorageTree({
                 <span className="truncate">{t("workspace.detach")}</span>
               </button>
             )}
-            <WorkspaceGitButton
-              provider={targetProvider()}
-              path={target.sourcePath ?? target.path ?? "/"}
-              displayPath={target.path ?? "/"}
-              readOnly={
-                target.mount ? readOnlyFor({ context: { mount: target.mount } }) : false
-              }
-              onChanged={() => {
-                bumpRevision();
-                target.reload?.();
-              }}
-            />
             <button
               type="button"
               className="btn btn-ghost btn-xs btn-square"
