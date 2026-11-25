@@ -12,7 +12,31 @@ import {
   deleteChatStorage,
 } from "../chatStorage";
 import { defaultCapabilities } from "../capabilities";
+import { readAll, streamOf } from "../bytes";
 import { createProvider } from "../providers";
+
+// jsdom's `Blob` has no `stream()`, while a browser `File` does — and the
+// provider hands its callers real byte chunks. Adding the browser method to the
+// fake keeps the read path exercised instead of skipped.
+type StreamableFile = File & { stream: () => ReadableStream<Uint8Array> };
+
+const streamable = (blob: Blob): StreamableFile => {
+  const file = blob as StreamableFile;
+  const slice = file.slice.bind(file);
+  Object.defineProperty(file, "slice", {
+    value: (start?: number, end?: number) => streamable(slice(start, end)),
+  });
+  Object.defineProperty(file, "stream", {
+    value: () =>
+      new ReadableStream<Uint8Array>({
+        async start(controller) {
+          controller.enqueue(new Uint8Array(await file.arrayBuffer()));
+          controller.close();
+        },
+      }),
+  });
+  return file;
+};
 
 class FakeFileHandle {
   kind = "file" as const;
@@ -21,7 +45,7 @@ class FakeFileHandle {
   constructor(readonly name: string) {}
 
   async getFile() {
-    return new File([this.bytes], this.name, { lastModified: 1 });
+    return streamable(new File([this.bytes], this.name, { lastModified: 1 }));
   }
 
   async createWritable() {
@@ -116,6 +140,19 @@ const seed = async (path: string, text: string) => {
   await writeFile(root, path, text);
 };
 
+const chatProvider = (conversationId = "chat-1") =>
+  createProvider({
+    id: chatStorageSourceId("ws-1", conversationId),
+    workspaceId: "ws-1",
+    kind: "chat",
+    label: "Trip planning",
+    config: { conversationId },
+    capabilities: defaultCapabilities("chat"),
+    status: "offline",
+    createdAt: 1,
+    lastModified: 1,
+  } as any);
+
 describe("chat storage", () => {
   beforeEach(() => {
     root = new FakeDirHandle("");
@@ -196,17 +233,7 @@ describe("chat storage", () => {
   });
 
   it("serves the chat tree through the workspace file provider", async () => {
-    const provider = createProvider({
-      id: "chat-storage:ws-1:chat-1",
-      workspaceId: "ws-1",
-      kind: "chat",
-      label: "Trip planning",
-      config: { conversationId: "chat-1" },
-      capabilities: defaultCapabilities("chat"),
-      status: "offline",
-      createdAt: 1,
-      lastModified: 1,
-    } as any);
+    const provider = chatProvider();
     expect(provider.kind).toBe("chat");
     await provider.connect();
     await provider.mkdir("/artefacts");
@@ -214,5 +241,28 @@ describe("chat storage", () => {
       entries: [expect.objectContaining({ name: "artefacts", kind: "dir" })],
     });
     expect(root.children.get("chats")?.children.has("chat-1")).toBe(true);
+  });
+
+  // The provider used to enqueue the `File` itself. `readAll` then added
+  // `Blob.length` (undefined) to its total, so every file in the chat's own tree
+  // read back as zero bytes — the file looked empty in the preview and an agent
+  // `read` returned nothing.
+  it("reads a stored chat file back as its bytes", async () => {
+    const provider = chatProvider();
+    await provider.connect();
+    await provider.mkdir("/artefacts");
+    const code = "#include <iostream>\n\nint main() { return 0; }\n";
+    await provider.write("/artefacts/example.cpp", streamOf(code), {
+      overwrite: false,
+    });
+
+    const bytes = await readAll(await provider.read("/artefacts/example.cpp"));
+    expect(bytes.byteLength).toBe(code.length);
+    expect(new TextDecoder().decode(bytes)).toBe(code);
+
+    const slice = await readAll(
+      await provider.read("/artefacts/example.cpp", { start: 0, end: 18 }),
+    );
+    expect(new TextDecoder().decode(slice)).toBe(code.slice(0, 18));
   });
 });

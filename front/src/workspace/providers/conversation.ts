@@ -132,12 +132,11 @@ export class ConversationStorageProvider implements FileProvider {
     }
     const file = await (handle as FileSystemFileHandle).getFile();
     const blob = range ? file.slice(range.start, range.end) : file;
-    return new ReadableStream<Uint8Array>({
-      start(controller) {
-        controller.enqueue(blob);
-        controller.close();
-      },
-    });
+    // A `File`/`Blob` is not a byte chunk. Handing one to a stream typed
+    // `ReadableStream<Uint8Array>` made `readAll` add `Blob.length` (undefined) to
+    // its total, so the length was `NaN` and every read of this tree came back
+    // empty. `Blob.stream()` yields real `Uint8Array` chunks and copies nothing.
+    return blob.stream();
   }
 
   async write(
