@@ -42,6 +42,7 @@ import { canInstallApp } from "../utils/installPrompt.js";
 import { isFeedbackReportEnabled } from "../apis/feedback.js";
 import { currentBrand } from "./brands.js";
 import { brandConsentGate } from "./consent.js";
+import { brandFeatureFlag } from "./brandFeatures.js";
 
 export const featureGuides = {
   workspace_overview: {
@@ -1067,6 +1068,67 @@ export const featureGuides = {
       },
     ],
   },
+  course_view: {
+    titleKey: "feature_guide.course_view.title",
+    prompt:
+      "Open the persona library with the Chat with Persona button in the sidebar, choose the Courses folder, and pick a course. A course page opens with two modes: Learn (skills browser, practice quiz, self-learning pages) and Review (the course's own lecturer pages plus coverage numbers). The course tutor chat starts from the same page.",
+    keywords: [
+      "course",
+      "courses",
+      "kurs",
+      "lernseite",
+      "quiz",
+      "üben",
+      "practice",
+      "c programming",
+      "c programmierung",
+    ],
+    steps: [
+      {
+        target: '[data-guide="import-persona"]',
+        textKey: "feature_guide.course_view.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="persona-courses"]',
+        textKey: "feature_guide.course_view.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="persona-course-badge"]',
+        textKey: "feature_guide.course_view.step3",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
+  course_quiz_chat: {
+    titleKey: "feature_guide.course_quiz_chat.title",
+    prompt:
+      "Open a course chat and click Ask for a quiz question in the course chat banner. The tutor calls its quiz tool and answers with one interactive quiz question from the course, which you answer and check right in the chat. The tutor decides which question to show; it can also offer one when you ask to practise a skill. Ask the same tutor to explain a skill and it embeds one of the course's learning pages (Lernseiten) in its reply, where you can read and interact with it without leaving the chat.",
+    keywords: [
+      "quiz",
+      "quizfrage",
+      "üben",
+      "ueben",
+      "practice question",
+      "learning page",
+      "lernseite",
+      "course chat",
+      "kurs chat",
+    ],
+    steps: [
+      {
+        target: '[data-guide="course-quiz-ask"]',
+        textKey: "feature_guide.course_quiz_chat.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="course-page-ask"]',
+        textKey: "feature_guide.course_quiz_chat.step2",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
   share_conversation: {
     titleKey: "feature_guide.share_conversation.title",
     prompt:
@@ -2018,6 +2080,8 @@ export const FEATURE_GUIDE_AVAILABILITY = {
   e2ee: () => isFeatureEnabled("e2ee"),
   advanced_mode: () => isAgentsEnabled() || isFeatureEnabled("mcp_servers"),
   sync_setup: () => isSyncEnabled(),
+  // The quiz card ships with the brand feature that contributes its tool.
+  course_quiz_chat: () => brandFeatureFlag("course_material"),
   // The consent section exists only for a brand that declares a consent gate.
   brand_consent: () => Boolean(brandConsentGate(currentBrand())),
   // The Institution screen renders only for a brand that describes itself or
@@ -2090,7 +2154,7 @@ export const FEATURE_CATEGORIES = {
     "close_chat",
   ],
   workspace: ["workspace_overview", "manage_chat_data", "pin_workspace", "pin_agent", "workspace_edit_storage", "workspace_clone", "workspace_upload", "workspace_multiselect", "arcana_filesystem", "workspace_saia_fs", "attach_from_workspace", "remote_agents", "agent_recovery", "close_group_sessions", "session_workspaces", "agent_workspace_access"],
-  personas: ["chat_with_persona"],
+  personas: ["chat_with_persona", "course_view", "course_quiz_chat"],
   settings: [
     "settings_overview",
     "institution",

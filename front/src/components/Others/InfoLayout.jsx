@@ -20,7 +20,13 @@ import {
  * renderer (no raw HTML unless a caller passes `renderHtml`), so a brand file
  * cannot inject markup the chat renderer would refuse.
  */
-export default function InfoLayout({ title, subtitle, content, children }) {
+export default function InfoLayout({
+  title,
+  subtitle,
+  content,
+  children,
+  maxWidthClass = "max-w-3xl",
+}) {
   const { i18n, t } = useTranslation();
   const navigate = useNavigate();
   const { brand } = useBrand();
@@ -39,7 +45,7 @@ export default function InfoLayout({ title, subtitle, content, children }) {
 
   return (
     <div className="h-full w-full overflow-y-auto bg-base-100 text-base-content">
-      <article className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-6">
+      <article className={`mx-auto flex w-full ${maxWidthClass} flex-col gap-4 px-4 py-6`}>
         <div className="flex items-center justify-between gap-3">
           <BrandLogo variant="small" className="h-8 w-auto" />
           <button

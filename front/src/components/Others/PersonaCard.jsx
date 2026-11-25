@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Bot } from "@carbon/icons-react";
+import { useNavigate } from "react-router";
+import { Bot, GraduationCap } from "lucide-react";
 
 import { useImportConversation } from "../../hooks/useImportConversation";
 import { useToast } from "../../hooks/useToast";
@@ -17,6 +18,7 @@ function fallbackTitle(path) {
 
 export default function PersonaCard({ path }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const importConversation = useImportConversation();
   const { notifyError } = useToast();
   const [persona, setPersona] = useState(() => getCachedPersona(path));
@@ -42,6 +44,11 @@ export default function PersonaCard({ path }) {
     setStarting(true);
     try {
       const { entry, data } = await fetchPersona(path);
+      const courseId = String(data?.course?.id || entry?.course?.id || "").trim();
+      if (courseId) {
+        navigate(`/course/${courseId}`);
+        return;
+      }
       await importConversation(data, false, null, {
         persona: {
           title: entry.title,
@@ -59,13 +66,25 @@ export default function PersonaCard({ path }) {
 
   const title = persona?.title || fallbackTitle(path);
   const description = persona?.description || "";
+  const courseId = persona?.course?.id || "";
 
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-base-300 bg-base-200/60 p-3">
       <div className="flex items-start gap-2">
-        <Bot size={18} className="mt-0.5 shrink-0 text-accent" />
+        {courseId ? (
+          <GraduationCap size={18} className="mt-0.5 shrink-0 text-accent" />
+        ) : (
+          <Bot size={18} className="mt-0.5 shrink-0 text-accent" />
+        )}
         <div className="min-w-0">
-          <p className="text-sm font-medium text-base-content">{title}</p>
+          <p className="text-sm font-medium text-base-content">
+            {title}
+            {courseId && (
+              <span className="badge badge-accent badge-sm badge-outline ml-2 align-middle">
+                {t("course.badge")}
+              </span>
+            )}
+          </p>
           {description && (
             <p className="mt-0.5 text-xs leading-relaxed text-base-content/70">
               {description}
@@ -78,10 +97,18 @@ export default function PersonaCard({ path }) {
         className="btn btn-accent btn-sm w-fit gap-2"
         onClick={handleStart}
         disabled={starting}
-        aria-label={t("persona.startChatWith", { title })}
+        aria-label={
+          courseId
+            ? t("course.open_named", { title })
+            : t("persona.startChatWith", { title })
+        }
       >
-        <Bot size={16} />
-        {starting ? t("persona.startingChat") : t("persona.startChat")}
+        {courseId ? <GraduationCap size={16} /> : <Bot size={16} />}
+        {starting
+          ? t("persona.startingChat")
+          : courseId
+            ? t("course.open_course")
+            : t("persona.startChat")}
       </button>
     </div>
   );

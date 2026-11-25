@@ -796,6 +796,22 @@ export default {
       step3:
         "Klicken Sie auf eine Persona, um einen neuen Chat mit Titel, Modell und Systemprompt zu starten.",
     },
+    course_view: {
+      title: "Einen Kurs öffnen",
+      step1:
+        "Klicken Sie in der Seitenleiste auf „Mit Persona chatten“, um die Persona-Bibliothek zu öffnen.",
+      step2:
+        "Wählen Sie links den Ordner „Courses“ (Kurse).",
+      step3:
+        "Klicken Sie auf eine Kurs-Persona. Die Kursseite öffnet sich mit den Ansichten Lernen und Prüfen.",
+    },
+    course_quiz_chat: {
+      title: "Im Kurs-Chat üben",
+      step1:
+        "Klicken Sie im Kurs-Chat-Banner auf „Nach einer Quizfrage fragen“. Der Tutor antwortet mit einer interaktiven Quizfrage, die Sie direkt hier beantworten können.",
+      step2:
+        "Klicken Sie im Banner auf „Lernseite anzeigen“. Der Tutor bettet eine Lernseite des Kurses direkt in seine Antwort ein, wo Sie sie lesen und bedienen können.",
+    },
     share_conversation: {
       title: "Unterhaltungseinstellungen teilen",
       step1: "Öffnen Sie die Unterhaltungseinstellungen.",
@@ -1967,6 +1983,112 @@ export default {
     startChatWith: "Chat mit {{title}} starten",
     startingChat: "Wird gestartet…",
     startError: "Diese Persona konnte nicht geladen werden. Bitte versuchen Sie es erneut.",
+  },
+  course: {
+    title: "Kurs",
+    badge: "Kurs",
+    open_course: "Kurs öffnen",
+    open_named: "Kurs {{title}} öffnen",
+    banner_label: "Kurs-Chat",
+    loading: "Kurs wird geladen…",
+    load_error: "Der Kurs konnte nicht geladen werden.",
+    load_error_detail: "Details:",
+    not_a_course: "Diese Persona ist kein Kurs.",
+    retry: "Erneut versuchen",
+    chat_error: "Der Kurs-Chat konnte nicht gestartet werden.",
+    start_chat: "Kurs-Chat starten",
+    starting_chat: "Wird gestartet…",
+    mode_label: "Ansicht",
+    mode_learn: "Lernen",
+    mode_review: "Prüfen",
+    tabs_label: "Kursbereiche",
+    tab_skills: "Skills",
+    tab_quiz: "Quiz",
+    tab_lernseiten: "Lernseiten",
+    tab_skills_review: "Skills (Prüfansicht)",
+    tab_quiz_review: "Quiz (Prüfansicht)",
+    stat_topics: "{{n}} Themen",
+    stat_skills: "{{n}} Skills",
+    stat_questions: "{{n}} Fragen",
+    stat_lernseiten: "{{n}} Lernseiten",
+    skills: {
+      search: "Skills durchsuchen",
+      empty: "Keine Skills gefunden.",
+      questions: "{{n}} Fragen",
+      needs: "Braucht: {{names}}",
+      lernseite: "Lernseite",
+      open_lernseite: "Lernseite öffnen",
+      quiz: "Üben",
+      chat: "Fragen",
+      chat_about: "Den Kurs-Tutor zu diesem Skill fragen",
+      chat_prompt:
+        "Erkläre mir den Skill „{{name}}“ aus diesem Kurs.\n\n{{description}}",
+    },
+    quiz: {
+      empty: "Für diesen Filter sind keine Fragen vorhanden.",
+      filter_label: "Skill:",
+      all_skills: "Alle Skills",
+      draft: "Entwurf",
+      progress: "Frage {{current}} von {{total}}",
+      question_label: "Antwort",
+      sample_answer: "Musterantwort",
+      open_note:
+        "Offene Fragen werden nicht automatisch bewertet. Vergleichen Sie Ihre Antwort mit der Musterantwort.",
+      correct: "Richtig.",
+      incorrect: "Noch nicht richtig.",
+      explanation: "Erklärung",
+      check: "Prüfen",
+      show_solution: "Lösung zeigen",
+      reset: "Zurücksetzen",
+      previous: "Zurück",
+      next: "Weiter",
+      type_single: "Eine Antwort",
+      type_multiple: "Mehrere Antworten",
+      type_open: "Offene Frage",
+    },
+    material_chat: {
+      hint: "Der Tutor kann dir hier im Chat eine Quizfrage oder eine Lernseite aus diesem Kurs zeigen.",
+    },
+    quiz_chat: {
+      button: "Nach einer Quizfrage fragen",
+      prompt: "Gib mir bitte eine Beispiel-Quizfrage aus diesem Kurs zum Üben.",
+      block_error: "Diese Quizfrage konnte nicht geladen werden.",
+      block_missing: "Diese Frage gehört nicht mehr zum Kurs.",
+      block_loading: "Quizfrage wird geladen…",
+    },
+    page_chat: {
+      button: "Lernseite anzeigen",
+      prompt: "Zeig mir bitte eine Beispiel-Lernseite aus diesem Kurs.",
+      block_loading: "Lernseite wird geladen…",
+      block_error: "Diese Lernseite konnte nicht geladen werden.",
+      block_missing: "Diese Lernseite gehört nicht mehr zum Kurs.",
+    },
+    lernseiten: {
+      title: "Lernseiten",
+      description:
+        "Interaktive Erklärungen, die einen Skill Schritt für Schritt aufbauen.",
+      empty: "Für diesen Kurs sind noch keine Lernseiten hinterlegt.",
+      loading: "Lernseite wird geladen…",
+      load_error: "Die Lernseite konnte nicht geladen werden.",
+      belongs_to: "Gehört zu: {{name}}",
+      unknown_skill: "Kein Skill zugeordnet",
+      close: "Schließen",
+      pick: "Wählen Sie oben eine Lernseite aus.",
+    },
+    review: {
+      description:
+        "Die Prüfansicht zeigt die Lösungen und die Abdeckung des Kurses. Sie ist für Lehrende gedacht, nicht zum Üben.",
+      coverage: "Abdeckung",
+      skills_with_lernseite: "{{with}} von {{total}} Skills haben eine Lernseite.",
+      questions_by_type:
+        "{{single}} Einzelwahl, {{multiple}} Mehrfachwahl, {{open}} offene Fragen.",
+      drafts: "{{n}} Fragen sind noch als Entwurf markiert.",
+      no_explanations:
+        "Keine Frage hat eine Erklärung; nach dem Prüfen erscheint nur richtig/falsch.",
+      missing: "Für diesen Kurs ist keine Prüfansicht hinterlegt.",
+      loading: "Prüfansicht wird geladen…",
+      load_error: "Die Prüfansicht konnte nicht geladen werden.",
+    },
   },
   // Memory Modal
   memory: {

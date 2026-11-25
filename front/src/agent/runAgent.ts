@@ -28,6 +28,7 @@ import { type Change, observe } from "./vfs";
 import { getWorkspace, listMounts } from "./workspace";
 import { WorkspaceAgentVfs } from "../workspace/agentVfs";
 import { getChatWorkspaceBundle } from "../workspace/agentBridge";
+import { brandChatTool } from "../config/brandFeatures";
 
 const PROVIDER = "chat-ai";
 
@@ -252,6 +253,7 @@ export async function runAgentTurn({
   uiMessages,
   systemPrompt,
   settings,
+  persona,
   mcpToolPolicy = "ask",
   onUpdate,
   onMcpNameMismatch,
@@ -260,6 +262,8 @@ export async function runAgentTurn({
   uiMessages: any[];
   systemPrompt: string;
   settings: any;
+  /** The conversation's persona; a brand feature may derive its own tools from it. */
+  persona?: any;
   /** Advanced setting: "ask" (default), "always", or "never" for user MCP servers. */
   mcpToolPolicy?: McpToolPolicy;
   onUpdate: (update: TurnUpdate) => void;
@@ -452,6 +456,43 @@ export async function runAgentTurn({
       tools.push(...mcp.tools);
     }
 
+    // A brand feature may contribute its own app-side tools (the GAIA course quiz).
+    // They do not touch a workspace or a server, so they are offered whenever the
+    // model supports tools — including a deployment where the agent is enabled.
+    if (useTools) {
+      const brandTools = brandChatTool({ model: spec, persona });
+      if (brandTools) {
+        for (const definition of brandTools.definitions) {
+          const fn = definition?.function;
+          if (!fn?.name) continue;
+          tools.push({
+            name: fn.name,
+            label: fn.name,
+            description: fn.description || fn.name,
+            parameters: (fn.parameters || {
+              type: "object",
+              properties: {},
+            }) as any,
+            execute: async (_id: string, args: any) => {
+              const result = await brandTools.run(fn.name, args ?? {});
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text:
+                      typeof result === "string"
+                        ? result
+                        : JSON.stringify(result),
+                  },
+                ],
+                details: undefined,
+              };
+            },
+          } as AgentTool<any>);
+        }
+      }
+    }
+
     const agent = new Agent({
       initialState: {
         systemPrompt: [
@@ -579,7 +620,7 @@ export async function runAgentTurn({
     // request failed that way, remember the model and redo the turn without tools.
     if (useTools && done.length === 1 && error && NO_TOOL_CALLING.test(error)) {
       markToolless(spec.id);
-      return runAgentTurn({ conversationId, uiMessages, systemPrompt, settings, onUpdate });
+      return runAgentTurn({ conversationId, uiMessages, systemPrompt, settings, persona, onUpdate });
     }
     return { ...snapshot(), usage, error };
   } finally {

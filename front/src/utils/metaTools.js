@@ -307,6 +307,18 @@ function personaLines(personas) {
   );
 }
 
+function courseLines(personas) {
+  const courses = personas.filter((persona) => persona.course?.id);
+  return (
+    courses
+      .map(
+        (persona) =>
+          `- id: ${persona.course.id}\n  title: ${persona.course.title || persona.title}\n  persona: ${persona.path}\n  description: ${persona.description || "(no description)"}\n  link: /course/${persona.course.id}`,
+      )
+      .join("\n") || "(no courses available)"
+  );
+}
+
 function messageLines(matches, topics) {
   const topicNames = new Map(topics.map((topic) => [topic.id, topic.name]));
   return (
@@ -841,6 +853,16 @@ export const META_TOOL_DEFINITIONS = [
   ),
   tool("list_models", "List the models available in this deployment with their ids and names."),
   tool("list_personas", "List the recommended persona catalog with ids, titles, categories, and descriptions."),
+  tool(
+    "list_courses",
+    "List the available courses (personas with learning material) with course ids, titles, and links. A course page holds its skills, a practice quiz, and self-learning pages.",
+  ),
+  tool(
+    "start_course",
+    "Open a course page by its course id.",
+    { id: { type: "string", description: "Course id" } },
+    ["id"],
+  ),
   tool(
     "list_tutorials",
     "List the available feature guides and use cases, including their ids and purposes.",
@@ -1694,6 +1716,26 @@ Sessions:\n${lines.join("\n") || "(no sessions)"}`;
       case "list_personas": {
         const personas = await loadPersonaCatalog().catch(() => []);
         return personaLines(personas);
+      }
+
+      case "list_courses": {
+        const personas = await loadPersonaCatalog().catch(() => []);
+        return courseLines(personas);
+      }
+
+      case "start_course": {
+        const id = String(args.id || "").trim();
+        const personas = await loadPersonaCatalog().catch(() => []);
+        const match = personas.find(
+          (persona) => String(persona.course?.id || "") === id,
+        );
+        if (!match) {
+          return "Course not found. Call list_courses for the available ids.";
+        }
+        window.dispatchEvent(
+          new CustomEvent("chatai:start-course", { detail: { courseId: id } }),
+        );
+        return `Opened the course ${match.course?.title || id}.`;
       }
 
       case "list_tutorials": {

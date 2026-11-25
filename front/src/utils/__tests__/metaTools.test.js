@@ -56,6 +56,14 @@ vi.mock("../personaCatalog", () => ({
       category: "writing",
       description: "Improves text",
     },
+    {
+      id: "courses/c.json",
+      path: "courses/c.json",
+      title: "C-Programmierung",
+      category: "courses",
+      description: "C course",
+      course: { id: "c", title: "C-Programmierung" },
+    },
   ]),
 }));
 
@@ -160,6 +168,8 @@ describe("Meta chat local tools", () => {
       "fetch_agent_file",
       "list_models",
       "list_personas",
+      "list_courses",
+      "start_course",
       "list_tutorials",
       "start_tutorial",
       "start_use_case",
@@ -316,6 +326,32 @@ describe("Meta chat local tools", () => {
     );
     await expect(run("list_models")).resolves.toContain("Other Model");
     await expect(run("list_personas")).resolves.toContain("writing/editor.json");
+  });
+
+  it("lists courses and opens one by id", async () => {
+    const run = createMetaToolRunner(context);
+    const events = [];
+    const onCourse = (event) => events.push(event.detail);
+    window.addEventListener("chatai:start-course", onCourse);
+
+    try {
+      const list = await run("list_courses");
+      expect(list).toContain("id: c");
+      expect(list).toContain("link: /course/c");
+      // Only course personas are listed, not plain ones.
+      expect(list).not.toContain("writing/editor.json");
+
+      await expect(run("start_course", { id: "c" })).resolves.toContain(
+        "C-Programmierung",
+      );
+      expect(events).toEqual([{ courseId: "c" }]);
+
+      await expect(run("start_course", { id: "missing" })).resolves.toContain(
+        "not found",
+      );
+    } finally {
+      window.removeEventListener("chatai:start-course", onCourse);
+    }
   });
 
   it("returns live conversation, topic, and message data", async () => {

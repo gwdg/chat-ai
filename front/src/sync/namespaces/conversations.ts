@@ -85,6 +85,12 @@ async function serializeConversation(
         message.feedback && Object.keys(message.feedback).length
           ? message.feedback
           : undefined,
+      // Per-message UI state (the course quiz keeps the user's answer here) is
+      // part of the conversation, so a pulled chat keeps it too.
+      meta:
+        message.meta && Object.keys(message.meta).length
+          ? message.meta
+          : undefined,
       content,
     });
   }
@@ -160,6 +166,10 @@ export function createConversationsNamespace(): SyncNamespace {
         feedback:
           message.feedback && Object.keys(message.feedback).length
             ? message.feedback
+            : undefined,
+        meta:
+          message.meta && Object.keys(message.meta).length
+            ? message.meta
             : undefined,
         content,
       });

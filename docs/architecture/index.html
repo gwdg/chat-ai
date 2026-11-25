@@ -4448,7 +4448,22 @@ x-saia-bridge-depth: 2
         <li>
           <b>One deliberate content exception.</b> A brand may own its own disclaimers and its default
           system prompt; those are the institution's words, not a feature switch. Everything else it
-          carries is presentation, or the narrowing above.
+          carries is presentation, the narrowing above, or the feature folders below.
+        </li>
+        <li>
+          <b>A brand may ship its own UI and app-side tools - inside its folder.</b>
+          <code>brand.json</code> sets <code>ui.&lt;key&gt;: true</code>, and
+          <code>config/branding/&lt;folder&gt;/features/&lt;feature-key&gt;/index.js</code> exports
+          <code>{ key, fences?, personaBanner?, chatTool? }</code>. <code>config/brandFeatures.js</code>
+          globs those folders, keeps the ones the merged profile enables (an <code>extends</code> parent's
+          flag and module travel together) and hands out <code>brandFence</code>,
+          <code>brandPersonaBanners</code>, <code>brandChatTool</code> and
+          <code>brandFeatureFlag</code>. The renderer checks a brand fence before its built-in ones, the
+          persona banner renders the contributed row, and a contributed function tool runs inside the app:
+          in a bounded loop on the plain chat path and as a pi tool in the Browser agent. GAIA's course
+          material is the worked example: a quiz question and a learning page, each embedded by its
+          own fence. The code stays a brand file - not generic <code>components/</code>
+          code - and a brand still cannot add a module, a feature flag, a route or a setting.
         </li>
       </ol>
 
@@ -4538,6 +4553,12 @@ x-saia-bridge-depth: 2
             <td>One predicate per gated tutorial and use case, checked by the validator.</td>
             <td><span class="mono">config/featureGuides.js · config/useCases.js</span></td>
           </tr>
+          <tr>
+            <td>Brand features</td>
+            <td>A brand's own fence renderers, persona-banner row and app-side chat tools, gated by
+                <code>ui.&lt;key&gt;</code> in its <code>brand.json</code>.</td>
+            <td><span class="mono">config/brandFeatures.js · config/branding/&lt;folder&gt;/features/&lt;key&gt;/</span></td>
+          </tr>
         </tbody>
       </table>
 
@@ -4558,6 +4579,11 @@ x-saia-bridge-depth: 2
             finished.</li>
         <li><b>A new gated guide gets an availability entry.</b> Otherwise a tour points at an element a
             deployment does not render.</li>
+        <li><b>A brand feature stays in its brand folder.</b> <code>features/&lt;key&gt;/index.js</code>
+            may contribute a fence renderer, a banner row and an app-side tool, and nothing else. The gate is the
+            merged profile's <code>ui.&lt;key&gt;</code>, read through <code>brandFeatures.js</code>; a
+            feature that needs a module, a route or a setting is a deployment feature, not a brand
+            feature.</li>
         <li><b>A brand page describes what is actually deployed.</b> The copy lives with the brand, but it
             is still the operator's claim; <code>/sitemap</code> reads the live data instead of a list
             someone has to maintain.</li>
@@ -4583,6 +4609,10 @@ x-saia-bridge-depth: 2
         <li>Brand-owned pages cannot be validated against the code. An operator who copies another
             institution's About text onto a narrower deployment states features this site does not
             have.</li>
+        <li>A brand feature's tool needs a model that supports tools, and it is offered only on the plain
+            chat path or in the Browser agent - a request routed to the tool gateway
+            (<code>enable_tools</code>) drops function tools, so the feature stays quiet there instead of
+            promising a block the reply cannot produce.</li>
       </ul>
 
       <h2>Where to look</h2>
@@ -4590,6 +4620,9 @@ x-saia-bridge-depth: 2
         <li><span class="mono">docs/deployment-profiles.md</span> - the full design, including the schema</li>
         <li><span class="mono">front/src/config/deployment.js</span> - selection and fallback</li>
         <li><span class="mono">front/src/utils/modules.js</span> - the accessors</li>
+        <li><span class="mono">front/src/config/brandFeatures.js</span> - brand-owned fence renderers,
+            banner rows and chat tools; the GAIA course material lives in
+            <span class="mono">config/branding/gaia/features/course-material/</span></li>
         <li><span class="mono">front/src/config/brands.js</span> - resolution, theme and surface tokens</li>
         <li><span class="mono">front/src/config/brandPolicy.js</span> - what a brand may narrow, and the
             summary both readers use</li>
@@ -4615,7 +4648,7 @@ x-saia-bridge-depth: 2
       <p>
         Sources: the repository at <span class="mono">gwdg/chat-ai</span>, its developer notes and the
         feature documents under <span class="mono">docs/</span>. Facts are checked against the code on
-        23 November 2026; this page is a reading aid, not a specification.
+        25 November 2026; this page is a reading aid, not a specification.
       </p>
       <p>
         Not covered here on purpose: visual polish and sidebar work, tutorial copy, and internal

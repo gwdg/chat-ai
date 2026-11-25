@@ -8,6 +8,7 @@ GAIA is the AI study assistant for students of the University of Göttingen. You
 - Upload a script, a set of slides or a paper and ask for a summary, an explanation or a list of the key terms.
 - Draft, shorten, translate and revise texts.
 - Have your own reasoning checked, or ask for practice questions on a topic.
+- Open a course page (for example C programming) and work through its skills, a practice quiz and self-learning pages.
 
 Everything happens in a normal conversation. Your chats are stored in this browser, not in a course account.
 
@@ -15,7 +16,7 @@ Everything happens in a normal conversation. Your chats are stored in this brows
 
 This app is a general chat assistant, not a course platform. In particular it has
 
-- no quiz mode and no graded exercises,
+- no graded exercises: the practice quiz on a course page is graded locally, stores no progress and counts towards no grade,
 - no tutoring sessions, learning plans or progress tracking,
 - no automatic assessment of what you have understood,
 - no search over the course material of a lecture,

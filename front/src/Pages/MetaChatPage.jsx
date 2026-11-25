@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
-import { useSearchParams } from "react-router";
+import { useSearchParams, useNavigate } from "react-router";
 import ChattyLogo from "../components/Others/ChattyLogo";
 
 import { getDefaultConversation } from "../utils/conversationUtils";
@@ -50,6 +50,7 @@ export default function MetaChatPage() {
   useSettingsDeepLink({ localState, userData, modelsData });
   const { startGuide, isActive } = useFeatureGuide();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const [loaded, setLoaded] = useState(false);
   const [openCatalog, setOpenCatalog] = useState(null);
@@ -59,6 +60,16 @@ export default function MetaChatPage() {
   const catalogRef = useRef(null);
   const latestStateRef = useRef(localState);
   const loadedRef = useRef(false);
+
+  useEffect(() => {
+    const onStartCourse = (event) => {
+      const courseId = String(event.detail?.courseId || "").trim();
+      if (courseId) navigate(`/course/${courseId}`);
+    };
+    window.addEventListener("chatai:start-course", onStartCourse);
+    return () =>
+      window.removeEventListener("chatai:start-course", onStartCourse);
+  }, [navigate]);
 
   useEffect(() => {
     if (isActive) setOpenCatalog(null);

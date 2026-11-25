@@ -1,5 +1,9 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import MarkdownRenderer from "./MarkdownRenderer";
+import {
+  AssistantMessageContext,
+  resolveMessageIndex,
+} from "./AssistantMessageContext";
 import FeatureGuideCard from "../../Others/FeatureGuideCard";
 import UseCaseGuideCard from "../../Others/UseCaseGuideCard";
 import Typing from "./Typing";
@@ -40,6 +44,51 @@ export default React.memo(({ localState, setLocalState, message_index, modelsDat
   const textareaRefs = useRef([]);
   const message = localState.messages[message_index];
   const loading = message?.loading || false;
+  // The value a fence reads must stay stable while its own card updates the
+  // message: a changing context value would re-render the whole message (and
+  // parse its markdown again) on every quiz keystroke.
+  const latestLocalState = useRef(localState);
+  latestLocalState.current = localState;
+  // A streamed reply has no id until the store writes it, so the identity is
+  // the id when there is one and this position otherwise.
+  const assistantMessageId = message?.id ?? null;
+  const assistantMessageContext = useMemo(() => {
+    if (!message || typeof setLocalState !== "function") return null;
+    const locate = (messages) =>
+      resolveMessageIndex(messages, {
+        messageId: assistantMessageId,
+        fallbackIndex: message_index,
+      });
+    return {
+      messageId: assistantMessageId,
+      getMessage: () => {
+        const messages = latestLocalState.current?.messages || [];
+        const index = locate(messages);
+        return (index >= 0 && messages[index]) || null;
+      },
+      setMessageMeta: (patch) => {
+        setLocalState((previous) => {
+          const messages = Array.isArray(previous?.messages)
+            ? previous.messages
+            : [];
+          const index = locate(messages);
+          if (index < 0) return previous;
+          const current = messages[index];
+          const metaPatch =
+            typeof patch === "function" ? patch(current?.meta || {}) : patch;
+          if (!metaPatch || Object.keys(metaPatch).length === 0) {
+            return previous;
+          }
+          const nextMessages = [...messages];
+          nextMessages[index] = {
+            ...current,
+            meta: { ...(current?.meta || {}), ...metaPatch },
+          };
+          return { ...previous, messages: nextMessages };
+        });
+      },
+    };
+  }, [assistantMessageId, message_index, setLocalState]);
   const guideFeatureId = loading
     ? null
     : getFeatureGuideMarker(message?.content?.[0]?.text);
@@ -343,13 +392,17 @@ export default React.memo(({ localState, setLocalState, message_index, modelsDat
           {/* Display message content */}
           {!editMode && !feedbackMode && (
             <div className="flex flex-col gap-4">
-              {isAgentTurn ? (
-                <AgentSteps agentMessages={message.meta.agent} isLoading={loading} renderMode={renderMode} />
-              ) : (
-                <MarkdownRenderer isLoading={loading} renderMode={renderMode}>
-                  {message.content[0]?.text}
-                </MarkdownRenderer>
-              )}
+              <AssistantMessageContext.Provider
+                value={assistantMessageContext}
+              >
+                {isAgentTurn ? (
+                  <AgentSteps agentMessages={message.meta.agent} isLoading={loading} renderMode={renderMode} />
+                ) : (
+                  <MarkdownRenderer isLoading={loading} renderMode={renderMode}>
+                    {message.content[0]?.text}
+                  </MarkdownRenderer>
+                )}
+              </AssistantMessageContext.Provider>
               {guideFeatureId && (
                 <FeatureGuideCard featureId={guideFeatureId} />
               )}

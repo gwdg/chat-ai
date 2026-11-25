@@ -16,6 +16,7 @@ export type PersonaInfo = {
   description?: string
   category?: string
   path?: string
+  courseId?: string
 }
 
 export type ConversationSettings = {

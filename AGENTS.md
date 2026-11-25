@@ -1300,6 +1300,13 @@ document's own CSS; relaxed adds `allow-scripts` so an interactive file behaves 
 HTML block. Both modes take the CSP from `utils/htmlPreview.js#buildHtmlCsp` — the same policy the
 fenced HTML block uses — and drop external references according to `html_load_external`.
 
+`autoHeight` (used by the course learning page embedded in a chat reply) instead sizes the frame to
+the document: the frame's opaque origin means the parent cannot read its size, so a reporter script
+appended after sanitization posts the height of the body's in-flow children up and the frame follows
+it. It cannot use `scrollHeight` (that never drops below the frame's own viewport, so a page would only
+grow) and it only works while scripts run, so `heightClass` stays the height until the first
+measurement and in strict mode.
+
 The tree selects a **set**: a plain click selects one row, Shift extends from the row clicked last
 (the DOM order of `[data-row-key]`), and Ctrl/Cmd toggles one row in or out of it. `selection` holds a
 `describeNode()` record per row — provider, source path, and what may be done to it — and `selected`
@@ -2137,6 +2144,34 @@ while editing:
   `CollapsibleFooter`, the `brand-sidebar` surface). By exception a brand may own its own
   disclaimers (`disclaimer`, `chatDisclaimer`) and default system prompt (`systemPrompt`)
   — the admin approved these on 2026-11-19. Never let a brand value turn something on.
+- **A brand may ship its own UI and app-side chat tools from its folder.** This is the
+  narrow exception to "presentation only": `brand.json` sets `ui.<key>: true`, and
+  `config/branding/<folder>/features/<feature-key>/index.js` exports
+  `{ key, fences?, personaBanner?, chatTool? }`. `config/brandFeatures.js` globs those
+  folders, keeps only features the **merged** profile enables (`ui.<key> === true`, so
+  `extends` inherits flag and module together) and exposes `brandFence`,
+  `brandPersonaBanners`, `brandChatTool` and `brandFeatureFlag`. The gate uses the
+  module's declared `key`, not the folder name (`course-material` vs `course_material`).
+  `MarkdownRenderer` checks `brandFence(language)` before the built-in fences (and its
+  `pre()` bypass); `PersonaChatBanner` renders `brandPersonaBanners()`. A contributed
+  `chatTool` runs inside the app in a bounded function-tool loop on the plain chat path
+  (`utils/sendMessage.jsx`) and as a pi `AgentTool` in `agent/runAgent.ts`;
+  `utils/brandChatTools.js` returns nothing for a model without tool support, a
+  `speech` turn, or a request that goes to the tool gateway (`enable_tools`), which drops
+  function tools. A brand still cannot add a module, feature flag, route or setting; its
+  `features/` code is presentation plus app-side tools only. The GAIA course material
+  (`branding/gaia/features/course-material/`) is the worked example: one folder registers a
+  quiz card and a learning-page block (two fences) and both of their tools through
+  `combineTools`. They are GAIA files, never generic `components/` code, and both tool results
+  carry only ids: the quiz result must not include answer options, `correct` or
+  `explanation`, and the page result must not include the page's HTML. The quiz card keeps the
+  answer the user gave on the assistant message (`meta.quizAnswers[questionId]`, through the
+  `AssistantMessageContext` a fence reads), so it survives a reload and travels in the sync/backup
+  payload; the course page's practice quiz stays in memory. A reply streamed in the open tab has no
+  `id` until the store writes its row (and the next save can assign another one), so that context
+  identifies the message by `id` when it has one and by its position in `messages` otherwise
+  (`resolveMessageIndex`); keying it on `id` alone silently drops everything a fence stores for the
+  reply currently on screen.
 - **The brand's model/feature policy is read from module state.** `BrandProvider` is
   mounted in `main.jsx`; it calls `setCurrentBrand(brand)` during render and `App` calls
   `useBrand()` so a claim-resolved brand re-renders the tree. Non-React accessors read

@@ -8,6 +8,7 @@ GAIA ist der KI-Lernassistent für Studierende der Universität Göttingen. Du k
 - Ein Skript, einen Foliensatz oder eine Arbeit hochladen und um eine Zusammenfassung, eine Erklärung oder eine Liste der wichtigsten Begriffe bitten.
 - Texte entwerfen, kürzen, übersetzen und überarbeiten.
 - Deine eigene Argumentation prüfen lassen oder Übungsfragen zu einem Thema erfragen.
+- Eine Kursseite öffnen (zum Beispiel C-Programmierung) und dort die Fähigkeiten (Skills), ein Übungsquiz und Lernseiten durchgehen.
 
 Alles läuft in einem normalen Gespräch. Deine Chats werden in diesem Browser gespeichert, nicht in einem Kurskonto.
 
@@ -15,7 +16,7 @@ Alles läuft in einem normalen Gespräch. Deine Chats werden in diesem Browser g
 
 Diese App ist ein allgemeiner Chat-Assistent und keine Lernplattform. Insbesondere gibt es
 
-- keinen Quizmodus und keine benoteten Aufgaben,
+- keine benoteten Aufgaben: Das Übungsquiz auf einer Kursseite bewertet nur lokal, speichert keinen Fortschritt und fließt in keine Note ein,
 - keine Tutoring-Sitzungen, Lernpläne oder Fortschrittsverfolgung,
 - keine automatische Einschätzung deines Wissensstands,
 - keine Suche in den Materialien einer Vorlesung,

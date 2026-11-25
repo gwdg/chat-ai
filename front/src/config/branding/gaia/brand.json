@@ -53,6 +53,9 @@
       }
     ]
   },
+  "ui": {
+    "course_material": true
+  },
   "shape": {
     "radiusSelector": "0.25rem",
     "radiusField": "1rem",

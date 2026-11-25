@@ -4,6 +4,7 @@ import {
   getPersonaDownloadUrl,
   getPersonaMarkers,
   hasPersonaStartLink,
+  isCourseAssetPath,
   isIgnoredPersonaFolder,
   isIgnoredPersonaPath,
   loadPersonaCatalog,
@@ -44,6 +45,13 @@ describe("persona catalog", () => {
     expect(isIgnoredPersonaPath("writing/editor.json")).toBe(false);
   });
 
+  it("treats nested course JSON as material, not as a persona", () => {
+    expect(isCourseAssetPath("courses/c/skills.json")).toBe(true);
+    expect(isCourseAssetPath("courses/c/nested/quiz.json")).toBe(true);
+    expect(isCourseAssetPath("courses/c.json")).toBe(false);
+    expect(isCourseAssetPath("writing/editor.json")).toBe(false);
+  });
+
   it("fetches a persona and caches it", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response('{"title":"Tutor","subtitle":"Helps study"}', { status: 200 }),
@@ -72,5 +80,38 @@ describe("persona catalog", () => {
     expect(personas).toEqual([
       expect.objectContaining({ id: "writing/editor.json", title: "editor" }),
     ]);
+  });
+
+  it("lists a course persona once and exposes its course block", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes("api.github.com")) {
+        return new Response(
+          JSON.stringify({
+            tree: [
+              { path: "courses/c-programmierung.json", type: "blob" },
+              { path: "courses/c-programmierung/skills.json", type: "blob" },
+              { path: "courses/c-programmierung/quiz.json", type: "blob" },
+            ],
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response(
+        JSON.stringify({
+          title: "C-Programmierung",
+          course: { id: "c-programmierung", title: "C course" },
+        }),
+        { status: 200 },
+      );
+    });
+
+    const personas = await loadPersonaCatalog({ force: true });
+
+    expect(personas).toHaveLength(1);
+    expect(personas[0]).toMatchObject({
+      path: "courses/c-programmierung.json",
+      course: { id: "c-programmierung", title: "C course" },
+    });
   });
 });

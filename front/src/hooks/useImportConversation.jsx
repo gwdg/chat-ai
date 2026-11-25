@@ -405,6 +405,14 @@ export function useImportConversation() {
               description: personaDescription,
             }
           : null;
+      // A persona that carries a course keeps the id, so the chat banner can
+      // link back to `/course/<id>`.
+      const personaCourseId = String(
+        explicitPersona?.courseId || data?.course?.id || "",
+      ).trim();
+      if (personaInfo && personaCourseId) {
+        personaInfo.courseId = personaCourseId;
+      }
 
       // Create new conversation
       const newId = await createConversation(

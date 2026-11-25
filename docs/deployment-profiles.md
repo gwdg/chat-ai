@@ -92,6 +92,20 @@ front/src/config/branding/
     mark.svg
     mark-dark.svg
     favicon.ico
+  gaia/
+    brand.json               also sets "ui": { "course_material": true }
+    features/
+      course-material/        UI + chat tools that only this brand ships
+        index.js              key, fences, personaBanner, chatTool
+        CourseQuizBlock.jsx   renders a ```gaia-quiz fence
+        CoursePageBlock.jsx   renders a ```gaia-page fence
+        CourseMaterialAsk.jsx hint row + ask buttons in the persona chat banner
+        courseMaterialText.js shared search helpers
+        courseQuizPrompt.js   quiz fence parse/selection, tool result text
+        coursePagePrompt.js   page fence parse/selection, tool result text
+        courseQuizTool.ts     the show_course_quiz function tool
+        coursePageTool.ts     the show_course_page function tool
+        combineTools.ts       merges both tools into the one chatTool
   restricted/
     brand.json               generic example of a restricted brand (JSON only)
 
@@ -109,6 +123,7 @@ front/src/config/deployment.js     build-time accessors (features, layout, rules
 front/src/config/brandConfig.js    deployment's brand selection (default, field, rules)
 front/src/config/brandPolicy.js    brand restrictions: model/module/feature/external policy
 front/src/config/brands.js         brand loader, lookup + claim rules
+front/src/config/brandFeatures.js  brand-owned UI and chat tools (features/<key>/index.js)
 front/src/config/BrandProvider.jsx brand context, document/title/favicon updates
 ```
 
@@ -440,6 +455,43 @@ were migrated from the old build-time `branding/mpg-ohb/` folder). A deployment
 becomes the MPG look with `"brands": { "default": "mpg" }` in its profile; for a
 visit, `?brand=MPG` (or the aliases `mpg-ohb` / `ohb`) selects it. Chat AI and
 UGOE define none of the new surfaces, so they render exactly as before.
+
+### 5.1 Brand-owned UI and chat tools
+
+A brand may ship its own presentation and its own app-side chat tools, but only
+inside its folder. `brand.json` switches them on in a `ui` object, and the code
+lives in `branding/<folder>/features/<feature-key>/index.js`:
+
+```jsonc
+// brand.json
+{ "ui": { "course_material": true } }
+```
+
+```js
+// features/course-material/index.js
+export default {
+  key: "course_material",          // the `ui` flag, not necessarily the folder name
+  fences: { "gaia-quiz": CourseQuizBlock, "gaia-page": CoursePageBlock },
+  personaBanner: CourseMaterialAsk, // one row in PersonaChatBanner
+  chatTool: ({ persona }) => …,    // OpenAI function tools + their runner
+};
+```
+
+`config/brandFeatures.js` loads every such folder with `import.meta.glob`, keeps
+the ones the **merged** profile enables (`ui.<key> === true`, so an `extends`
+parent's flag and module are inherited together) and exposes `brandFence`,
+`brandPersonaBanners`, `brandChatTool` and `brandFeatureFlag`. The fence branch is
+checked in `MarkdownRenderer` before the built-in renderers; the banner row is
+rendered by `PersonaChatBanner`; and a contributed tool runs inside the app — on
+the plain chat path (`utils/sendMessage.jsx`, a bounded function-tool loop) and in
+the Browser agent (`agent/runAgent.ts`). A chat whose request goes to the tool
+gateway (`enable_tools`) cannot carry function tools, so `utils/brandChatTools.js`
+returns nothing there.
+
+This is deliberately narrower than a deployment: a brand still cannot add a
+module, a feature flag, a route or a setting, and nothing here may widen a
+restriction. The GAIA course-material feature is the worked example; it is switched
+on in `gaia/brand.json` and inherited by `gaia-tutor`.
 
 ## 6. Runtime behaviour
 
