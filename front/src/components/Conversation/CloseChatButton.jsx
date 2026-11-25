@@ -64,18 +64,16 @@ export default function CloseChatButton({ localState, setLocalState }) {
     : t("conversation.close_chat");
 
   return (
-    <div className="absolute right-2 top-2 z-20">
-      <Tooltip text={label}>
-        <button
-          type="button"
-          onClick={handleClose}
-          data-guide="close-chat"
-          aria-label={label}
-          className="btn btn-ghost btn-sm btn-square rounded-full bg-base-100/80 text-base-content/70 backdrop-blur hover:bg-error/10 hover:text-error"
-        >
-          <X className="h-4 w-4" />
-        </button>
-      </Tooltip>
-    </div>
+    <Tooltip text={label}>
+      <button
+        type="button"
+        onClick={handleClose}
+        aria-label={label}
+        data-guide="close-chat"
+        className="btn btn-circle shadow-lg"
+      >
+        <X className="cursor-pointer h-5 w-5 text-base-content/70 hover:text-error transition-colors" />
+      </button>
+    </Tooltip>
   );
 }

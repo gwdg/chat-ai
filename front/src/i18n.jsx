@@ -5,6 +5,7 @@ import LanguageDetector from "i18next-browser-languagedetector";
 // Import the JSON resource files
 import en from './i18n/en';
 import de from './i18n/de';
+import { initialLanguage } from './utils/language';
 
 i18n
   // detect user language
@@ -17,6 +18,10 @@ i18n
   .init({
     debug: false,
     fallbackLng: "en",
+    // A stored explicit choice (utils/language.js) wins over detection; the
+    // detector still runs when nothing was chosen, so the first visit follows
+    // the browser language.
+    lng: initialLanguage(),
     interpolation: {
       escapeValue: false, // not needed for react as it escapes by default
     },

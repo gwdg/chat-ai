@@ -1,4 +1,6 @@
 // PDF processing function
+import { authHeaders } from "./authHeaders";
+
 export const processFile = async (file) => {
   try {
     const formData = new FormData();
@@ -12,6 +14,7 @@ export const processFile = async (file) => {
       import.meta.env.VITE_BACKEND_ENDPOINT + "/documents/convert/file",
       {
         method: "POST",
+        headers: authHeaders(),
         body: formData,
       }
     );

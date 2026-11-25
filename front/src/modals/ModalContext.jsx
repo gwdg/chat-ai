@@ -12,6 +12,7 @@ import HelpMemoryModal from "./Help/HelpMemoryModal";
 import HelpChoiceProposer from "./Help/HelpChoiceProposer";
 import UserSettingsModal from "./UserSettings/UserSettingsModal";
 import UserMemoryModal from "./UserSettings/UserMemoryModal";
+import SyncOnboardingModal from "./UserSettings/SyncOnboardingModal";
 import ShareSettingsModal from "./Chat/ShareSettingsModal";
 import ClearCacheModal from "./UserSettings/ClearCacheModal";
 import ErrorBadRequestModal from "./Alert/ErrorBadRequestModal";
@@ -22,12 +23,12 @@ import ExportChatModal from "../components/Sidebar/Modals/ExportChatModal";
 import ImportPersonaModal from "../components/Sidebar/Modals/ImportPersonaModal";
 import FolderEditorModal from "../components/Sidebar/Modals/FolderEditorModal";
 import DeleteFolderModal from "../components/Sidebar/Modals/DeleteFolderModal";
+import DeleteUnsortedChatsModal from "../components/Sidebar/Modals/DeleteUnsortedChatsModal";
 import MoveChatModal from "../components/Sidebar/Modals/MoveChatModal";
 import OrganizeChatsModal from "../components/Sidebar/Modals/OrganizeChatsModal";
 import ClearMemoryModal from "./UserSettings/ClearMemoryModal";
 import ConfirmActionModal from "./Alert/ConfirmActionModal";
 import FolderAccessModal from "./Alert/FolderAccessModal";
-import PreviewModal from "./Chat/PreviewModal";
 import UnsentFilesModal from "./Alert/UnsentFilesModal";
 import UnprocessedFilesModal from "./Alert/UnprocessedFilesModal";
 import ServiceOfflineModal from "./Alert/ServiceOfflineModal";
@@ -46,6 +47,21 @@ import WelcomeModal from "./Help/WelcomeModal";
 import HelpMCPModal from "./Help/HelpMCPModal";
 import ImportSettingsDisclaimerModal from "./Alert/ImportSettingsDisclaimerModal";
 import HelpReasoningModal from "./Help/HelpReasoningModal";
+import CreateWorkspaceModal from "./Workspace/CreateWorkspaceModal";
+import AddSourceModal from "./Workspace/AddSourceModal";
+import TransferConfirmModal from "./Workspace/TransferConfirmModal";
+import MoveToModal from "./Workspace/MoveToModal";
+import AddMountModal from "./Workspace/AddMountModal";
+import AttachChatModal from "./Workspace/AttachChatModal";
+import AttachAgentModal from "./Workspace/AttachAgentModal";
+import AttachAgentSessionModal from "./Workspace/AttachAgentSessionModal";
+import CreateEntryModal from "./Workspace/CreateEntryModal";
+import McpServerModal from "./McpServer/McpServerModal";
+import McpServerDetailsModal from "./McpServer/McpServerDetailsModal";
+import AddAgentModal from "./Agent/AddAgentModal";
+import AgentToolsModal from "./Agent/AgentToolsModal";
+import RenameAgentSessionModal from "./Agent/RenameAgentSessionModal";
+import BugReportModal from "./Feedback/BugReportModal";
 
 const ModalContext = createContext();
 
@@ -112,6 +128,13 @@ export function ModalProvider({ children }) {
       {modalType === "deleteFolder" && (
         <DeleteFolderModal isOpen onClose={closeModal} {...modalProps} />
       )}
+      {modalType === "deleteUnsortedChats" && (
+        <DeleteUnsortedChatsModal
+          isOpen
+          onClose={closeModal}
+          {...modalProps}
+        />
+      )}
       {/* Chat Modals */}
       {modalType === "shareSettings" && (
         <ShareSettingsModal isOpen onClose={closeModal} {...modalProps} />
@@ -154,6 +177,9 @@ export function ModalProvider({ children }) {
       {modalType === "userSettings" && (
         <UserSettingsModal isOpen onClose={closeModal} {...modalProps} />
       )}
+      {modalType === "syncOnboarding" && (
+        <SyncOnboardingModal isOpen onClose={closeModal} {...modalProps} />
+      )}
       {modalType === "userMemory" && (
         <UserMemoryModal isOpen onClose={closeModal} {...modalProps} />
       )}
@@ -189,8 +215,53 @@ export function ModalProvider({ children }) {
       {modalType === "organizeChats" && (
         <OrganizeChatsModal isOpen onClose={closeModal} {...modalProps} />
       )}
-      {modalType === "preview" && (
-        <PreviewModal isOpen onClose={closeModal} {...modalProps} />
+      {modalType === "workspaceCreate" && (
+        <CreateWorkspaceModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "workspaceEdit" && (
+        <CreateWorkspaceModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "workspaceAddSource" && (
+        <AddSourceModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "workspaceTransfer" && (
+        <TransferConfirmModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "workspaceMoveTo" && (
+        <MoveToModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "workspaceAddMount" && (
+        <AddMountModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "workspaceAttachChat" && (
+        <AttachChatModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "workspaceAttachAgent" && (
+        <AttachAgentModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "workspaceAttachAgentSession" && (
+        <AttachAgentSessionModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "workspaceCreateEntry" && (
+        <CreateEntryModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "mcpServerEdit" && (
+        <McpServerModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "mcpServerDetails" && (
+        <McpServerDetailsModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "agentAdd" && (
+        <AddAgentModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "agentEdit" && (
+        <AddAgentModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "agentSessionRename" && (
+        <RenameAgentSessionModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "agentTools" && (
+        <AgentToolsModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {modalType === "summarizeChat" && (
         <SummarizeChatModal isOpen onClose={closeModal} {...modalProps} />
@@ -226,6 +297,9 @@ export function ModalProvider({ children }) {
           dispatch={dispatch}
           {...modalProps}
         />
+      )}
+      {modalType === "bugReport" && (
+        <BugReportModal isOpen onClose={closeModal} {...modalProps} />
       )}
     </ModalContext.Provider>
   );

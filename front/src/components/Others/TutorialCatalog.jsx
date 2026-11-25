@@ -6,6 +6,7 @@ import { Book, ChevronRight, Search, StarFilled } from "@carbon/icons-react";
 import {
   FEATURE_CATEGORIES,
   featureGuides,
+  isFeatureGuideAvailable,
 } from "../../config/featureGuides";
 import { selectCompletedTutorials } from "../../Redux/reducers/interfaceSettingsSlice";
 import { useFeatureGuide } from "../../context/FeatureGuideContext";
@@ -32,6 +33,7 @@ export default function TutorialCatalog({ open: controlledOpen, onOpenChange }) 
         ids: ids.filter((id) => {
           const guide = featureGuides[id];
           if (!guide) return false;
+          if (!isFeatureGuideAvailable(id)) return false;
           if (hideCompleted && completed.includes(id)) return false;
           if (!normalizedQuery) return true;
           return t(guide.titleKey).toLowerCase().includes(normalizedQuery);
@@ -46,7 +48,7 @@ export default function TutorialCatalog({ open: controlledOpen, onOpenChange }) 
   };
 
   return (
-    <div className="relative inline-flex">
+    <div className="inline-flex">
       <button
         type="button"
         className="btn btn-accent btn-xs gap-1"

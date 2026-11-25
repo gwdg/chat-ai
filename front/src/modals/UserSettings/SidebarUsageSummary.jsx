@@ -146,6 +146,59 @@ function getLimitEntryLabel(entryKey, t) {
   return entryKey.charAt(0).toUpperCase() + entryKey.slice(1);
 }
 
+// The deployment may report one budget for the account and none of the
+// internal/external split. The Usage tab reads exactly this `limits` object, so
+// the sidebar falls back to it rather than showing nothing.
+function compactLabelFor(metric, t) {
+  if (metric.key.endsWith("_user_monthly")) {
+    return t("user_settings.usage.personal_monthly");
+  }
+  if (metric.key.endsWith("_user_total")) {
+    return t("user_settings.usage.personal_total");
+  }
+  if (metric.key.endsWith("_org_monthly")) {
+    return t("user_settings.usage.organization_monthly");
+  }
+  if (metric.key.endsWith("_org_total")) {
+    return t("user_settings.usage.organization_total");
+  }
+  return metric.label;
+}
+
+function buildFlatScope(limits, t) {
+  const sections = [];
+
+  Object.entries(limits ?? {}).forEach(([entryKey, entry]) => {
+    const metrics = buildLimitMetrics(entry, `usage_${entryKey}`, t);
+    if (!metrics.length) return;
+
+    sections.push({
+      key: `usage_limits_${entryKey}`,
+      groupKey: "usage_limits",
+      groupLabel: null,
+      title: getLimitEntryLabel(entryKey, t),
+      metrics,
+    });
+  });
+
+  if (!sections.length) return null;
+
+  const allMetrics = sections.flatMap((section) => section.metrics);
+  const primary =
+    allMetrics.find((metric) => metric.key === "usage_user_monthly") ??
+    allMetrics.find((metric) => metric.key === "usage_org_monthly") ??
+    allMetrics[0];
+
+  return {
+    sections,
+    compact: {
+      ...primary,
+      key: "usage_compact",
+      label: compactLabelFor(primary, t),
+    },
+  };
+}
+
 function buildScope(scopeKey, scopeLabel, scopeData, t) {
   const sections = [];
 
@@ -217,10 +270,11 @@ function buildScope(scopeKey, scopeLabel, scopeData, t) {
   };
 }
 
-export default function SidebarUsageSummary({ data }) {
+export default function SidebarUsageSummary({ data, onOpenUsage = null }) {
   const { t } = useTranslation();
   const sections = [];
   const collapsedMetrics = [];
+  let flat = false;
 
   SCOPES.forEach(({ key, labelKey }) => {
     const scope = buildScope(key, t(labelKey), data?.[key], t);
@@ -230,15 +284,23 @@ export default function SidebarUsageSummary({ data }) {
     collapsedMetrics.push(scope.compact);
   });
 
-  if (!sections.length) return null;
+  if (!sections.length) {
+    const flatScope = buildFlatScope(data?.limits, t);
+    if (!flatScope) return null;
+
+    sections.push(...flatScope.sections);
+    collapsedMetrics.push(flatScope.compact);
+    flat = true;
+  }
 
   return (
     <UsageDetailsCard
       label={t("user_settings.usage.title")}
       sections={sections}
       collapsedMetrics={collapsedMetrics}
-      collapsedColumns
-      expandedTable
+      collapsedColumns={!flat}
+      expandedTable={!flat}
+      onOpenLabel={onOpenUsage}
     />
   );
 }

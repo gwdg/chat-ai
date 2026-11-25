@@ -6,10 +6,14 @@ import { useToast } from "./useToast";
 import { MetaChatSendContext } from "../context/MetaChatContext";
 import {
   selectAllMemories,
+  selectDefaultMemoryGroup,
+  selectGlobalMcpServers,
+  selectMemoryGroups,
   selectMemoryMode,
   selectSetTitleOnce,
   selectSuggestUserPrompts,
   selectTimeout,
+  selectMcpToolPolicy,
 } from "../Redux/reducers/userSettingsReducer";
 
 export function useSendMessage() {
@@ -18,9 +22,13 @@ export function useSendMessage() {
   const { notifyError, notifySuccess } = useToast();
   const timeout = useSelector(selectTimeout);
   const memories = useSelector(selectAllMemories);
+  const globalMcpServers = useSelector(selectGlobalMcpServers);
+  const memoryGroups = useSelector(selectMemoryGroups);
+  const defaultMemoryGroup = useSelector(selectDefaultMemoryGroup);
   const memoryMode = useSelector(selectMemoryMode);
   const suggestUserPrompts = useSelector(selectSuggestUserPrompts);
   const setTitleOnce = useSelector(selectSetTitleOnce);
+  const mcpToolPolicy = useSelector(selectMcpToolPolicy);
   const metaSendMessage = useContext(MetaChatSendContext);
 
   if (metaSendMessage) return metaSendMessage;
@@ -35,17 +43,34 @@ export function useSendMessage() {
           ? Number(override)
           : memoryMode;
 
+    const groupOverride = localState?.settings?.memory_group_override;
+    const requestedGroup =
+      groupOverride && groupOverride !== "default"
+        ? groupOverride
+        : defaultMemoryGroup;
+    const effectiveMemoryGroup =
+      requestedGroup === "default" ||
+      memoryGroups.some((group) => group.id === requestedGroup)
+        ? requestedGroup
+        : "default";
+    const groupMemories = memories.filter(
+      (memory) => (memory.groupId ?? "default") === effectiveMemoryGroup,
+    );
+
     try {
       await sendMessage({
         localState,
         setLocalState,
-        memories,
+        memories: groupMemories,
+        globalMcpServers,
+        mcpToolPolicy,
         dispatch,
         openModal,
         notifyError,
         notifySuccess,
         timeout,
         memoryMode: effectiveMemoryMode,
+        memoryGroupId: effectiveMemoryGroup,
         suggestUserPrompts,
         formSubmission,
         setTitleOnce,

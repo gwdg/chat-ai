@@ -34,11 +34,174 @@ describe("Meta chat action markers", () => {
     expect(proposals[6]).toMatchObject({
       type: "mcp_server",
       op: "add",
-      serverScope: "local",
       url: "localhost:9000",
     });
     expect(proposals[7]).toMatchObject({ type: "add_memory", text: "remember this" });
     expect(proposals[8]).toMatchObject({ type: "delete_memory", index: 1 });
+  });
+
+  it("parses global MCP server proposals", () => {
+    const proposals = getMetaActionProposals(
+      '[[MCP_SERVER:{"op":"add","server":"local","target":"global","name":"Files","url":"localhost:9000"}]]',
+    );
+    expect(proposals).toEqual([
+      {
+        type: "mcp_server",
+        op: "add",
+        scope: "global",
+        conversationId: null,
+        entryId: "",
+        name: "Files",
+        url: "localhost:9000",
+        enabled: undefined,
+        authorization: undefined,
+      },
+    ]);
+  });
+
+  it("parses a valid MCP tool policy and drops an invalid one", () => {
+    const valid = getMetaActionProposals(
+      '[[SET_SETTING:{"key":"mcp_tool_policy","value":"never"}]]',
+    );
+    expect(valid).toEqual([
+      { type: "setting", key: "mcp_tool_policy", value: "never" },
+    ]);
+
+    const invalid = getMetaActionProposals(
+      '[[SET_SETTING:{"key":"mcp_tool_policy","value":"sometimes"}]]',
+    );
+    expect(invalid).toEqual([]);
+  });
+
+  it("drops a legacy gateway server proposal", () => {
+    const proposals = getMetaActionProposals(
+      '[[MCP_SERVER:{"op":"add","server":"remote","target":"all","serverId":"server-1"}]]',
+    );
+    expect(proposals).toEqual([]);
+  });
+
+  it("accepts a server proposal without a kind as a local server", () => {
+    const proposals = getMetaActionProposals(
+      '[[MCP_SERVER:{"op":"add","target":"all","url":"localhost:9000"}]]',
+    );
+    expect(proposals[0]).toMatchObject({ type: "mcp_server", url: "localhost:9000" });
+  });
+
+  it("parses encryption key assignments and removals", () => {
+    const proposals = getMetaActionProposals(
+      [
+        '[[E2EE_ASSIGN:{"modelId":"qwen-a","key":"Node A"}]]',
+        '[[E2EE_ASSIGN:{"modelId":"qwen-b","keyId":"node-b"}]]',
+        '[[E2EE_ASSIGN:{"modelId":"qwen-c","key":null}]]',
+        '[[E2EE_ASSIGN:{"key":"Node A"}]]',
+      ].join("\n"),
+    );
+
+    expect(proposals).toEqual([
+      { type: "e2ee_assign", modelId: "qwen-a", key: "Node A" },
+      { type: "e2ee_assign", modelId: "qwen-b", key: "node-b" },
+      { type: "e2ee_assign", modelId: "qwen-c", key: null },
+    ]);
+  });
+
+  it("parses workspace and agent pin proposals", () => {
+    const proposals = getMetaActionProposals(
+      [
+        '[[PIN_WORKSPACE:{"id":"w1","pinned":true}]]',
+        '[[PIN_AGENT:{"id":"a1","value":false}]]',
+      ].join("\n"),
+    );
+
+    expect(proposals).toEqual([
+      { type: "pin_workspace", workspaceId: "w1", pinned: true },
+      { type: "pin_agent", agentId: "a1", pinned: false },
+    ]);
+  });
+
+  it("requires an id and a boolean pinned value for the new pin proposals", () => {
+    const proposals = getMetaActionProposals(
+      [
+        '[[PIN_WORKSPACE:{"id":"","pinned":true}]]',
+        '[[PIN_AGENT:{"id":"a1"}]]',
+      ].join("\n"),
+    );
+
+    expect(proposals).toEqual([]);
+  });
+
+  it("parses well-formed CREATE_CHAT proposals", () => {
+    const proposals = getMetaActionProposals(
+      '[[CREATE_CHAT:{"title":"Plan","folderName":"Work","settings":{"model":"m1","temperature":0.7,"tools":{"web_search":true}},"messages":[{"role":"system","content":"Be concise"},{"role":"user","content":"Start"}]}]]',
+    );
+    expect(proposals).toHaveLength(1);
+    expect(proposals[0]).toMatchObject({
+      type: "create_chat",
+      title: "Plan",
+      folderName: "Work",
+      settings: { model: "m1", temperature: 0.7, tools: { web_search: true } },
+      messages: [
+        { role: "system", text: "Be concise" },
+        { role: "user", text: "Start" },
+      ],
+    });
+  });
+
+  it("rejects malformed CREATE_CHAT proposals", () => {
+    const proposals = getMetaActionProposals(
+      '[[CREATE_CHAT:{"title":"Bad","messages":[{"role":"tool","content":"nope"}]}]]',
+    );
+    expect(proposals).toEqual([]);
+  });
+
+  it("accepts an optional target group for memory proposals", () => {
+    const proposals = getMetaActionProposals(
+      '[[ADD_MEMORY:{"text":"remember this","group":"Private"}]]',
+    );
+    expect(proposals).toEqual([
+      { type: "add_memory", text: "remember this", group: "Private" },
+    ]);
+  });
+
+  it("accepts the browser storage tool setting", () => {
+    const proposals = getMetaActionProposals(
+      '[[SET_CONVERSATION_SETTING:{"id":"c1","key":"browser_storage","value":true}]]',
+    );
+    expect(proposals).toHaveLength(1);
+    expect(proposals[0]).toMatchObject({
+      type: "conversation_setting",
+      scope: "conversation",
+      conversationId: "c1",
+      key: "browser_storage",
+      value: true,
+    });
+  });
+
+  it("accepts the workspace writing tool setting", () => {
+    const proposals = getMetaActionProposals(
+      '[[SET_CONVERSATION_SETTING:{"id":"c1","key":"workspace_write_access","value":false}]]',
+    );
+    expect(proposals).toHaveLength(1);
+    expect(proposals[0]).toMatchObject({
+      type: "conversation_setting",
+      scope: "conversation",
+      conversationId: "c1",
+      key: "workspace_write_access",
+      value: false,
+    });
+  });
+
+  it("accepts the Arcana Tools tool setting", () => {
+    const proposals = getMetaActionProposals(
+      '[[SET_CONVERSATION_SETTING:{"id":"c1","key":"arcana_tools","value":true}]]',
+    );
+    expect(proposals).toHaveLength(1);
+    expect(proposals[0]).toMatchObject({
+      type: "conversation_setting",
+      scope: "conversation",
+      conversationId: "c1",
+      key: "arcana_tools",
+      value: true,
+    });
   });
 
   it("accepts the reasoning streaming preference", () => {
@@ -67,8 +230,10 @@ describe("Meta chat action markers", () => {
     const text = [
       "Done.",
       '[[RENAME_CHAT:{"id":"c1","title":"New"}]]',
-      '[[MCP_SERVER:{"op":"remove","server":"remote","target":"all","serverId":"server-1"}]]',
+      '[[MCP_SERVER:{"op":"remove","server":"local","target":"all","url":"localhost:9000"}]]',
       '[[PIN_CHAT:{"id":"c1","pinned":true}]]',
+      '[[PIN_WORKSPACE:{"id":"w1","pinned":true}]]',
+      '[[PIN_AGENT:{"id":"a1","pinned":false}]]',
     ].join("\n");
     expect(stripMetaActionMarkers(text)).toBe("Done.");
   });

@@ -46,7 +46,7 @@ const styleHasExternalUrl = (value) => {
   return false;
 };
 
-export const blockExternalRefHook = (node, data) => {
+const blockExternalRefHook = (node, data) => {
   const name = (data.attrName || "").toLowerCase();
   if (URL_ATTRS.has(name) && isExternalUrl(data.attrValue)) {
     data.keepAttr = false;

@@ -1,8 +1,10 @@
 const TIKZJAX_OPTIONS = {
   assetBaseUrl: "/tikzjax",
   renderTimeout: 30000,
-  maxRetries: 1,
-  restartWorkerOnFail: true,
+  // A deterministic TeX error is not fixed by restarting the worker and
+  // retrying; doing so only delays the error by another 30 seconds.
+  maxRetries: 0,
+  restartWorkerOnFail: false,
   workerMode: "direct",
   worker: { mode: "direct" },
   workerPool: { enabled: false },
@@ -45,7 +47,28 @@ const TIKZ_ENVIRONMENT = /\\begin\{(tikzpicture|tikzcd)\}[\s\S]*?\\end\{\1\}/g;
 const TIKZ_PREAMBLE_COMMAND =
   /^\s*\\(tikzset|pgfplotsset|usepgfplotslibrary|definecolor)\b/;
 
+// Longer than TikZJax's own render timeout so its TeX error can be reported.
+const TIKZ_OUTER_TIMEOUT_MS = 45000;
+
 let tikzJaxPromise;
+let tikzRenderQueue = Promise.resolve();
+let tikzErrorSink = null;
+let tikzConsolePatched = false;
+
+// TikZJax reports the TeX log through console.warn. Capture the error for the
+// current snippet so LatexBlock can show it instead of a generic failure.
+const patchTikzWarnings = () => {
+  if (tikzConsolePatched) return;
+  tikzConsolePatched = true;
+  const warn = console.warn.bind(console);
+  console.warn = (...args) => {
+    if (tikzErrorSink && args[0] === "TikZJax rendering failed:") {
+      const error = args[1];
+      tikzErrorSink(error?.message || String(error));
+    }
+    warn(...args);
+  };
+};
 
 const loadTikzJax = () => {
   if (window.TikzJax) {
@@ -62,11 +85,30 @@ const loadTikzJax = () => {
   document.head.appendChild(link);
 
   tikzJaxPromise = new Promise((resolve, reject) => {
+    // TikZJax registers an unload listener only for cleanup, but some
+    // deployments disable unload via Permissions-Policy and Chrome logs a
+    // violation for it. Ignore just that listener while the script starts.
+    const nativeAddEventListener = window.addEventListener;
+    const addWithoutUnload = function (type, listener, options) {
+      if (type === "unload") return;
+      return nativeAddEventListener.call(this, type, listener, options);
+    };
+    const restoreAddEventListener = () => {
+      if (window.addEventListener === addWithoutUnload) {
+        window.addEventListener = nativeAddEventListener;
+      }
+    };
+    window.addEventListener = addWithoutUnload;
+
     const script = document.createElement("script");
     script.src = "/tikzjax/tikzjax.js";
     script.async = true;
-    script.onload = () => resolve();
+    script.onload = () => {
+      restoreAddEventListener();
+      resolve();
+    };
     script.onerror = () => {
+      restoreAddEventListener();
       tikzJaxPromise = undefined;
       reject(new Error("Failed to load TikZJax"));
     };
@@ -78,6 +120,14 @@ const loadTikzJax = () => {
 
 const renderTikzSnippet = (source, options) =>
   new Promise((resolve, reject) => {
+    patchTikzWarnings();
+    let failureMessage = "";
+    const previousSink = tikzErrorSink;
+    const sink = (message) => {
+      failureMessage = message;
+    };
+    tikzErrorSink = sink;
+
     const host = document.createElement("div");
     host.style.cssText =
       "position:fixed;left:0;top:0;width:1px;height:1px;opacity:0.01;overflow:hidden;pointer-events:none;z-index:-1;";
@@ -103,12 +153,13 @@ const renderTikzSnippet = (source, options) =>
       clearTimeout(timer);
       observer?.disconnect();
       host.remove();
+      if (tikzErrorSink === sink) tikzErrorSink = previousSink;
     };
 
     const timer = setTimeout(() => {
       cleanup();
       reject(new Error("TikZ rendering timed out"));
-    }, 20000);
+    }, TIKZ_OUTER_TIMEOUT_MS);
 
     observer = new MutationObserver(() => {
       const svg = host.querySelector("svg:not(.tikzjax-loader)");
@@ -119,7 +170,7 @@ const renderTikzSnippet = (source, options) =>
         resolve(output);
       } else if (broken) {
         cleanup();
-        reject(new Error("TikZ rendering failed"));
+        reject(new Error(failureMessage || "TikZ rendering failed"));
       }
     });
     observer.observe(host, { childList: true, subtree: true });
@@ -187,13 +238,33 @@ export const extractTikz = (source) => {
   };
 };
 
-export const renderTikzSnippets = async (snippets, options) => {
-  if (!snippets.length) return [];
+export const renderTikzSnippets = (snippets, options) => {
+  if (!snippets.length) return Promise.resolve([]);
 
-  await loadTikzJax();
-  const output = [];
-  for (const snippet of snippets) {
-    output.push(await renderTikzSnippet(snippet.source, options));
-  }
-  return output;
+  const run = async () => {
+    await loadTikzJax();
+    const output = [];
+    for (const snippet of snippets) {
+      output.push(await renderTikzSnippet(snippet.source, options));
+    }
+    return output;
+  };
+
+  const result = tikzRenderQueue.then(run, run);
+  tikzRenderQueue = result.then(
+    () => undefined,
+    () => undefined
+  );
+  return result;
+};
+
+// TeX's interactive error log is long. Keep the first real error, up to the
+// prompt, for the block's error message.
+export const formatLatexError = (message) => {
+  const text = String(message || "").trim();
+  const start = text.search(/^! /m);
+  if (start < 0) return text;
+  const tail = text.slice(start);
+  const prompt = tail.search(/^\? /m);
+  return (prompt >= 0 ? tail.slice(0, prompt) : tail).trim();
 };

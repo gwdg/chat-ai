@@ -1,7 +1,23 @@
 import { v4 as uuidv4 } from "uuid";
 import { getConversation, getFolder, listConversationMetas } from "../db";
+import { currentBrand, localizeBrandValue } from "../config/brands";
+import {
+  brandFixedModel,
+  isBrandExternalAllowed,
+} from "../config/brandPolicy";
 import { processContentItems } from "./sendMessage";
 import packageJson from "../../package.json";
+import i18n from "../i18n";
+
+const DEFAULT_SYSTEM_PROMPT = "You are a helpful assistant.";
+
+/** The active brand's localized system prompt, or the Chat AI default. */
+export const getDefaultSystemPrompt = () => {
+  const prompt = localizeBrandValue(currentBrand()?.systemPrompt, i18n.language);
+  return (
+    (typeof prompt === "string" ? prompt.trim() : "") || DEFAULT_SYSTEM_PROMPT
+  );
+};
 
 export const getDefaultSettings = (userSettings = {}) => {
   // Get environment settings
@@ -26,6 +42,7 @@ export const getDefaultSettings = (userSettings = {}) => {
     top_p: 0.5,
     memory: 0,
     memory_mode_override: "default",
+    memory_group_override: "default",
     enable_tools: false,
     reasoning_effort: null,
     tools: {
@@ -33,12 +50,13 @@ export const getDefaultSettings = (userSettings = {}) => {
       "image_generation": true,
       "image_modification": true,
       "audio_generation": true,
+      "arcana_tools": false,
       "arcana": true,
       "mcp": false,
-      "mcp_remote": false,
-      // Agent mode only
-      "write_access": false,
-      "codemode": true,
+      // Agent mode only. Access storage is on by default: the model may read and write the files
+      // of this chat (see agent/storageAccess.ts). An attached workspace has its own write switch.
+      "workspace_write_access": true,
+      "browser_storage": true,
       "create_docx": true,
     },
     audio: {
@@ -56,7 +74,47 @@ export const getDefaultSettings = (userSettings = {}) => {
       userSettings?.[key] ?? envSettings?.[key] ?? defaultSettings[key]
     ])
   );
+  const tools = mergedSettings.tools;
+  // `arcana_v2` and `remote_file_access` are the previous names of the toggle.
+  if (tools && typeof tools === "object" && tools.arcana_tools === undefined) {
+    const legacy =
+      tools.arcana_v2 !== undefined ? tools.arcana_v2 : tools.remote_file_access;
+    if (legacy !== undefined) {
+      mergedSettings.tools = { ...tools, arcana_tools: legacy };
+      delete mergedSettings.tools.arcana_v2;
+      delete mergedSettings.tools.remote_file_access;
+    }
+  }
+  applyBrandRestrictionsToDefaults(mergedSettings);
   return mergedSettings ;
+};
+
+/**
+ * A brand may fix the model and switch off options that talk to third parties.
+ * This is the default for new conversations; existing ones are narrowed again at
+ * send time (utils/sendMessage.jsx, agent/tools.ts, agent/mcp.ts).
+ */
+const applyBrandRestrictionsToDefaults = (settings) => {
+  const fixedModel = brandFixedModel();
+  // Unknown capabilities are safer than the previous model's: the model selector
+  // replaces this stub with the real entry from `/models` once it loads, and a
+  // stale name would show the wrong model until then.
+  if (fixedModel && settings.model?.id !== fixedModel) {
+    settings.model = { id: fixedModel, name: fixedModel, input: [], output: [] };
+  }
+  if (!isBrandExternalAllowed("web_search")) {
+    settings.enable_web_search = false;
+  }
+  if (settings.tools && typeof settings.tools === "object") {
+    settings.tools = { ...settings.tools };
+    if (!isBrandExternalAllowed("web_search")) {
+      settings.tools.web_search = false;
+      settings.tools.fetch_url = false;
+    }
+    if (!isBrandExternalAllowed("mcp")) {
+      settings.tools.mcp = false;
+    }
+  }
 };
 
 export const getDefaultChatAIModel = (userSettings = {}) => {
@@ -89,7 +147,7 @@ export const getDefaultConversation = (userSettings = {}, folderId = null) => {
         content: [
           {
             type: "text",
-            text: "You are a helpful assistant."
+            text: getDefaultSystemPrompt()
           }
         ],
       }, {

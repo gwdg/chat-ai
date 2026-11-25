@@ -6,6 +6,7 @@ import { ChevronDown, ChevronRight, Idea, Search, StarFilled } from "@carbon/ico
 import {
   USE_CASE_CATEGORIES,
   buildUseCaseGuide,
+  isUseCaseAvailable,
   useCases,
 } from "../../config/useCases";
 import { useFeatureGuide } from "../../context/FeatureGuideContext";
@@ -34,6 +35,7 @@ export default function UseCaseCatalog({ open: controlledOpen, onOpenChange }) {
         ids: ids.filter((id) => {
           const useCase = useCases[id];
           if (!useCase) return false;
+          if (!isUseCaseAvailable(id)) return false;
           if (hideCompleted && completed.includes(id)) return false;
           if (!normalizedQuery) return true;
           const text = `${t(`use_cases.${id}.title`)} ${t(
@@ -58,7 +60,7 @@ export default function UseCaseCatalog({ open: controlledOpen, onOpenChange }) {
   };
 
   return (
-    <div className="relative inline-flex">
+    <div className="inline-flex">
       <button
         type="button"
         className="btn btn-accent btn-xs gap-1"

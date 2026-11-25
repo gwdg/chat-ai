@@ -9,6 +9,7 @@ import fs from "fs";
 import path from "path";
 import { Readable, pipeline } from "stream"; // Node's stream module
 import OpenAI from "openai";
+import { registerBridge } from "./bridge.mjs";
 
 const app = express();
 
@@ -22,6 +23,26 @@ let apiEndpoint = "https://chat-ai.academiccloud.de/v1";
 let apiKey = "";
 let serviceName = "Chat AI Dev";
 let testMode = false;
+let remoteFilesEndpoint =
+  process.env.REMOTE_FILES_ENDPOINT ||
+  process.env.SAIA_RAG_WEB_ENDPOINT ||
+  "http://localhost:8000/arcanas/api/v1";
+let remoteFilesArcana =
+  process.env.REMOTE_FILES_ARCANA ||
+  process.env.SAIA_RAG_WEB_ARCANA ||
+  "remote-files";
+let bridgePublicUrl = process.env.BRIDGE_PUBLIC_URL || "";
+// Bug report delivery. The browser posts to `/feedback` here; this service
+// forwards the multipart body to a receiver that understands GAIA's format (a
+// JSON `payload` field plus `screenshots`). Empty means the route answers 501
+// and the front end hides the entry point via `feedbackPath`.
+let feedbackEndpoint = process.env.FEEDBACK_ENDPOINT || "";
+let feedbackToken = process.env.FEEDBACK_TOKEN || "";
+// Bridge credentials may also live in back.json: a native checkout started with
+// `npm run start` has no environment file, and the bridge fails closed without
+// them. The env var still wins, so a deployment can override the file.
+let bridgeSharedSecret = process.env.BRIDGE_SHARED_SECRET || "";
+let bridgeCorsOrigins = process.env.CORS_ORIGINS || "";
 
 // Load configuration
 try {
@@ -38,6 +59,64 @@ try {
   apiKey = config.apiKey;
   serviceName = config.serviceName;
   testMode = config.testMode === true;
+  const configuredRemoteFilesEndpoint =
+    config.remoteFilesEndpoint || config.saiaRagWebEndpoint;
+  if (
+    typeof configuredRemoteFilesEndpoint === "string" &&
+    configuredRemoteFilesEndpoint.trim()
+  ) {
+    remoteFilesEndpoint = configuredRemoteFilesEndpoint.trim();
+  }
+  const configuredRemoteFilesArcana =
+    config.remoteFilesArcana || config.saiaRagWebArcana;
+  if (
+    typeof configuredRemoteFilesArcana === "string" &&
+    configuredRemoteFilesArcana.trim()
+  ) {
+    remoteFilesArcana = configuredRemoteFilesArcana.trim();
+  }
+  if (
+    typeof config.bridgePublicUrl === "string" &&
+    config.bridgePublicUrl.trim()
+  ) {
+    bridgePublicUrl = config.bridgePublicUrl.trim();
+  }
+  if (
+    typeof config.feedbackEndpoint === "string" &&
+    config.feedbackEndpoint.trim()
+  ) {
+    feedbackEndpoint = config.feedbackEndpoint.trim();
+    console.log("Feedback endpoint: set");
+  }
+  if (
+    typeof config.feedbackToken === "string" &&
+    config.feedbackToken.trim() &&
+    !process.env.FEEDBACK_TOKEN
+  ) {
+    feedbackToken = config.feedbackToken.trim();
+    console.log("Feedback token: set");
+  }
+  if (
+    typeof config.bridgeSharedSecret === "string" &&
+    config.bridgeSharedSecret.trim() &&
+    !process.env.BRIDGE_SHARED_SECRET
+  ) {
+    bridgeSharedSecret = config.bridgeSharedSecret.trim();
+    console.log("Bridge shared secret: set");
+  }
+  // A list is accepted so a front end served from another origin (the usual
+  // `front` on :8080 → `back` on :8081 dev pair) can be named without shell quoting.
+  const configuredCorsOrigins = Array.isArray(config.corsOrigins)
+    ? config.corsOrigins.join(",")
+    : config.corsOrigins;
+  if (
+    typeof configuredCorsOrigins === "string" &&
+    configuredCorsOrigins.trim() &&
+    !process.env.CORS_ORIGINS
+  ) {
+    bridgeCorsOrigins = configuredCorsOrigins.trim();
+    console.log("Bridge CORS origins:", bridgeCorsOrigins);
+  }
   if (testMode) {
     console.log("TEST MODE ENABLED: no upstream calls will be made.");
   }
@@ -110,7 +189,13 @@ app.use((err, req, res, next) => {
 });
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
-app.use(cors());
+// Non-bridge routes keep the previous wildcard CORS behaviour. Bridge routes
+// own their allowlist in registerBridge, so this must never add a second
+// Access-Control-Allow-Origin header there.
+app.use((req, res, next) => {
+  if (req.path.startsWith("/bridge")) return next();
+  return cors()(req, res, next);
+});
 
 // Function to process file with docling
 async function processFile(file, inference_id) {
@@ -191,7 +276,24 @@ app.get("/models", async (req, res) => {
       headers.Authorization = "Bearer " + inference_id;
     }
     const response = await fetch(url, { method: "GET", headers });
-    res.status(200).json(await response.json());
+    const data = await response.json();
+    // Testing: only the external OpenAI models accept raw `file` content parts.
+    // Local SAIA engines reject them with "Unsupported chat content part type".
+    if (Array.isArray(data?.data)) {
+      data.data = data.data.map((model) => {
+        const input = Array.isArray(model.input) ? model.input : [];
+        const supportsFiles =
+          typeof model.id === "string" && model.id.startsWith("openai-");
+        return {
+          ...model,
+          input:
+            supportsFiles && !input.includes("pdf")
+              ? [...input, "pdf"]
+              : input,
+        };
+      });
+    }
+    res.status(200).json(data);
   } catch (error) {
     console.error(`Error: ${error}`);
     res.status(500).json({ error: "Failed to fetch models." });
@@ -365,6 +467,631 @@ app.post("/images/generations", (req, res) =>
 );
 app.post("/websearch", (req, res) => forward(req, res, "/websearch", JSON.stringify(req.body ?? {}), "application/json"));
 
+// Bug report forwarding. The browser posts GAIA's multipart shape (a JSON
+// `payload` field plus `screenshots`); the body passes through unchanged, so a
+// receiver does not need a Chat AI-specific schema. The caller's identity
+// headers go along, which is how a receiver behind the same OIDC gateway knows
+// who filed the report. `feedbackToken` (back.json or FEEDBACK_TOKEN) is for a
+// receiver that wants a shared secret instead. Without a configured endpoint the
+// route answers 501; the front end then hides the footer entry point entirely
+// (`feedbackPath`).
+app.post("/feedback", async (req, res) => {
+  if (!feedbackEndpoint) {
+    return res.status(501).json({ error: "Feedback is not configured." });
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30 * 1000);
+  res.on("close", () => controller.abort());
+  try {
+    const headers = {};
+    if (feedbackToken) headers.Authorization = `Bearer ${feedbackToken}`;
+    for (const name of [
+      "inference-id",
+      "x-auth-claim-uid",
+      "oidc_claim_uid",
+      "oidc_claim_email",
+    ]) {
+      const value = req.headers[name];
+      if (value) headers[name] = value;
+    }
+    const upstream = await globalThis.fetch(feedbackEndpoint, {
+      method: "POST",
+      headers,
+      body: multipart(req),
+      signal: controller.signal,
+    });
+    const type = upstream.headers.get("content-type");
+    const body = await upstream.text();
+    res.status(upstream.status);
+    res.setHeader("Content-Type", type || "application/json");
+    res.send(body);
+  } catch (error) {
+    if (controller.signal.aborted && res.headersSent) return;
+    console.error("Error in /feedback:", error);
+    if (!res.headersSent) res.status(502);
+    res.end("Feedback delivery failed.");
+  } finally {
+    clearTimeout(timer);
+  }
+});
+
+// Remote file store. Files live in a dedicated saia-rag-web Arcana and are
+// accessed through the saia-rag-web backend with the user's OIDC header.
+const REMOTE_FILE_NAME_PREFIX = "rf_";
+
+function remoteRelative(value) {
+  const pathValue = String(value ?? "").replace(/\\/g, "/").replace(/^\/+/, "");
+  const segments = pathValue
+    .split("/")
+    .filter((segment) => segment && segment !== ".");
+  if (segments.some((segment) => segment === ".." || segment.includes("\0"))) {
+    const error = new Error("Invalid remote file path");
+    error.status = 400;
+    throw error;
+  }
+  return segments.join("/");
+}
+
+function remoteRouteParam(value) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function remoteApiBase() {
+  const base = remoteFilesEndpoint.replace(/\/+$/, "");
+  return /\/api\/v1$/.test(base) ? base : `${base}/api/v1`;
+}
+
+function remoteAuthHeaders(req) {
+  const uid =
+    req.headers["x-auth-claim-uid"] ||
+    req.headers["x-consumer-custom-id"] ||
+    req.headers["oidc_claim_uid"] ||
+    req.headers["inference-id"];
+  return uid ? { "x-auth-claim-uid": uid } : {};
+}
+
+async function remoteApi(req, pathname, init = {}) {
+  const url = `${remoteApiBase()}${pathname}`;
+  try {
+    return await globalThis.fetch(url, {
+      ...init,
+      headers: { ...remoteAuthHeaders(req), ...(init.headers ?? {}) },
+    });
+  } catch (error) {
+    const code = error?.cause?.code || error?.code;
+    const wrapped = new Error(
+      `saia-rag-web is not reachable at ${remoteApiBase()}${code ? ` (${code})` : ""}. ` +
+        'Start the local dummy with "npm run dummy:rag" from back/, or set remoteFilesEndpoint in back.json.'
+    );
+    wrapped.status = 502;
+    wrapped.cause = error;
+    throw wrapped;
+  }
+}
+
+async function remoteRequestError(response) {
+  const text = await response.text().catch(() => "");
+  let message = text;
+  try {
+    const parsed = JSON.parse(text);
+    message = parsed?.detail || parsed?.error || text;
+  } catch {
+    // not JSON
+  }
+  const error = new Error(
+    message || `saia-rag-web request failed (${response.status})`
+  );
+  error.status =
+    response.status >= 400 && response.status < 500 ? response.status : 502;
+  return error;
+}
+
+const remoteArcanaPath = () => `/arcana/${encodeURIComponent(remoteFilesArcana)}`;
+
+const encodeRemoteName = (relative) =>
+  `${REMOTE_FILE_NAME_PREFIX}${Buffer.from(relative, "utf8").toString("base64url")}`;
+
+function decodeRemoteName(name) {
+  if (typeof name !== "string" || !name.startsWith(REMOTE_FILE_NAME_PREFIX)) {
+    return null;
+  }
+  try {
+    return Buffer.from(
+      name.slice(REMOTE_FILE_NAME_PREFIX.length),
+      "base64url"
+    ).toString("utf8");
+  } catch {
+    return null;
+  }
+}
+
+async function ensureRemoteArcana(req) {
+  const response = await remoteApi(req, "/arcana/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: remoteFilesArcana, embedding_model: "" }),
+  });
+  if (response.status === 400) return;
+  if (!response.ok) throw await remoteRequestError(response);
+}
+
+async function listStoredRemotePaths(req) {
+  const response = await remoteApi(
+    req,
+    `${remoteArcanaPath()}/files/?grouped=false`
+  );
+  if (response.status === 404) return [];
+  if (!response.ok) throw await remoteRequestError(response);
+  const files = await response.json();
+  if (!Array.isArray(files)) return [];
+  return files.map((file) => decodeRemoteName(file?.name)).filter(Boolean);
+}
+
+function remoteEntries(relative, paths) {
+  const prefix = relative ? `${relative}/` : "";
+  const entries = new Map();
+  for (const pathValue of paths) {
+    if (!pathValue.startsWith(prefix) || pathValue === relative) continue;
+    const segments = pathValue.slice(prefix.length).split("/").filter(Boolean);
+    if (!segments.length) continue;
+    const name = segments[0];
+    const childPath = relative ? `${relative}/${name}` : name;
+    const type = segments.length > 1 ? "directory" : "file";
+    const existing = entries.get(childPath);
+    if (!existing || existing.type !== "directory") {
+      entries.set(childPath, { name, path: childPath, type });
+    }
+  }
+  return [...entries.values()].sort(
+    (a, b) =>
+      Number(b.type === "directory") - Number(a.type === "directory") ||
+      a.name.localeCompare(b.name)
+  );
+}
+
+function sendRemoteError(res, error) {
+  if (error?.status) {
+    return res.status(error.status).json({ error: error.message });
+  }
+  console.error("Remote files error:", error);
+  return res.status(502).json({ error: "Remote file backend request failed." });
+}
+
+async function readRemoteFileOrList(req, res, requested) {
+  try {
+    const relative = remoteRelative(requested);
+    const paths = await listStoredRemotePaths(req);
+    const entries = remoteEntries(relative, paths);
+    if (!relative || entries.length) {
+      return res.status(200).json({
+        path: relative,
+        type: "directory",
+        entries,
+      });
+    }
+    if (!paths.includes(relative)) {
+      return res.status(404).json({ error: "Remote file not found" });
+    }
+    const encoding = req.query?.encoding === "base64" ? "base64" : "utf8";
+    const response = await remoteApi(
+      req,
+      `${remoteArcanaPath()}/files/${encodeURIComponent(encodeRemoteName(relative))}/download`
+    );
+    if (!response.ok) throw await remoteRequestError(response);
+    const content = Buffer.from(await response.arrayBuffer());
+    return res.status(200).json({
+      path: relative,
+      type: "file",
+      encoding,
+      content: content.toString(encoding),
+      size: content.length,
+      modified: new Date().toISOString(),
+    });
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+}
+
+function remoteFileForm(name, data) {
+  const form = new globalThis.FormData();
+  form.append(
+    "file",
+    new Blob([data], { type: "application/octet-stream" }),
+    name
+  );
+  return form;
+}
+
+async function writeRemoteFile(req, res, requested) {
+  try {
+    const relative = remoteRelative(requested ?? req.body?.path ?? req.query?.path);
+    if (!relative) {
+      return res.status(422).json({ error: "A file path is required" });
+    }
+    if (typeof req.body?.content !== "string") {
+      return res.status(422).json({ error: "content must be a string" });
+    }
+    const encoding = req.body?.encoding === "base64" ? "base64" : "utf8";
+    const data = Buffer.from(req.body.content, encoding);
+    const name = encodeRemoteName(relative);
+    await ensureRemoteArcana(req);
+    let response = await remoteApi(req, `${remoteArcanaPath()}/files/`, {
+      method: "POST",
+      body: remoteFileForm(name, data),
+    });
+    if (response.status === 400) {
+      response = await remoteApi(
+        req,
+        `${remoteArcanaPath()}/files/${encodeURIComponent(name)}`,
+        { method: "PUT", body: remoteFileForm(name, data) }
+      );
+    }
+    if (!response.ok) throw await remoteRequestError(response);
+    return res.status(200).json({
+      path: relative,
+      type: "file",
+      size: data.length,
+      modified: new Date().toISOString(),
+    });
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+}
+
+async function deleteRemoteFile(req, res, requested) {
+  try {
+    const relative = remoteRelative(requested ?? req.body?.path ?? req.query?.path);
+    if (!relative) {
+      return res.status(422).json({ error: "A file path is required" });
+    }
+    const paths = await listStoredRemotePaths(req);
+    const targets = paths.filter(
+      (pathValue) =>
+        pathValue === relative || pathValue.startsWith(`${relative}/`)
+    );
+    if (!targets.length) {
+      return res.status(404).json({ error: "Remote file not found" });
+    }
+    for (const target of targets) {
+      const response = await remoteApi(
+        req,
+        `${remoteArcanaPath()}/files/${encodeURIComponent(encodeRemoteName(target))}`,
+        { method: "DELETE" }
+      );
+      if (!response.ok && response.status !== 404) {
+        throw await remoteRequestError(response);
+      }
+    }
+    return res.status(200).json({
+      path: relative,
+      deleted: true,
+      deletedCount: targets.length,
+    });
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+}
+
+app.get("/remote-files", (req, res) =>
+  readRemoteFileOrList(req, res, req.query?.path)
+);
+app.get(/^\/remote-files\/(.+)$/, (req, res) =>
+  readRemoteFileOrList(req, res, remoteRouteParam(req.params[0]))
+);
+app.put("/remote-files", (req, res) =>
+  writeRemoteFile(req, res, req.body?.path ?? req.query?.path)
+);
+app.put(/^\/remote-files\/(.+)$/, (req, res) =>
+  writeRemoteFile(req, res, remoteRouteParam(req.params[0]))
+);
+app.post("/remote-files", (req, res) => {
+  const operation = String(req.body?.operation ?? "write").toLowerCase();
+  if (operation === "read" || operation === "list") {
+    return readRemoteFileOrList(req, res, req.body?.path ?? req.query?.path);
+  }
+  if (operation === "delete" || operation === "remove") {
+    return deleteRemoteFile(req, res, req.body?.path ?? req.query?.path);
+  }
+  return writeRemoteFile(req, res, req.body?.path ?? req.query?.path);
+});
+app.delete("/remote-files", (req, res) =>
+  deleteRemoteFile(req, res, req.body?.path ?? req.query?.path)
+);
+app.delete(/^\/remote-files\/(.+)$/, (req, res) =>
+  deleteRemoteFile(req, res, remoteRouteParam(req.params[0]))
+);
+
+// `/arcana-v2/*` is the old name of these routes; keep it working for older
+// front-end builds and bookmarks. A path-less middleware is required: Express
+// restores `req.url` when a mounted path is trimmed, which undoes the rewrite.
+app.use((req, _res, next) => {
+  const legacy = "/arcana-v2";
+  if (req.url === legacy || req.url.startsWith(`${legacy}/`) || req.url.startsWith(`${legacy}?`)) {
+    req.url = `/arcana-tools${req.url.slice(legacy.length)}`;
+  }
+  next();
+});
+
+const encodeArcana = (value) => encodeURIComponent(String(value ?? ""));
+const arcanaToolsPath = (name) => `/arcana/${encodeArcana(name)}`;
+
+async function proxyArcanaJson(req, pathname, init = {}) {
+  const response = await remoteApi(req, pathname, init);
+  if (!response.ok) throw await remoteRequestError(response);
+  const text = await response.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
+app.get("/arcana-tools/arcanas", async (req, res) => {
+  try {
+    const arcanas = await proxyArcanaJson(req, "/arcana/");
+    return res.status(200).json(
+      Array.isArray(arcanas)
+        ? arcanas.filter((arcana) => arcana?.name !== remoteFilesArcana)
+        : []
+    );
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
+
+app.post("/arcana-tools/arcanas", async (req, res) => {
+  try {
+    const name = String(req.body?.name ?? "").trim();
+    if (!name) {
+      return res.status(422).json({ error: "An Arcana name is required" });
+    }
+    const embeddingModel =
+      typeof req.body?.embedding_model === "string"
+        ? req.body.embedding_model
+        : "";
+    const result = await proxyArcanaJson(req, "/arcana/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, embedding_model: embeddingModel }),
+    });
+    return res.status(200).json(result ?? { name });
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
+
+app.get("/arcana-tools/arcanas/:name", async (req, res) => {
+  try {
+    const arcana = await proxyArcanaJson(req, arcanaToolsPath(req.params.name));
+    return res.status(200).json(arcana);
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
+
+app.get("/arcana-tools/arcanas/:name/quota", async (req, res) => {
+  try {
+    const quota = await proxyArcanaJson(
+      req,
+      `${arcanaToolsPath(req.params.name)}/quota`
+    );
+    return res.status(200).json(quota);
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
+
+app.get("/arcana-tools/arcanas/:name/files", async (req, res) => {
+  try {
+    const files = await proxyArcanaJson(
+      req,
+      `${arcanaToolsPath(req.params.name)}/files/?grouped=false`
+    );
+    return res.status(200).json(files);
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
+
+app.get("/arcana-tools/arcanas/:name/files/:file/download", async (req, res) => {
+  try {
+    const response = await remoteApi(
+      req,
+      `${arcanaToolsPath(req.params.name)}/files/${encodeArcana(req.params.file)}/download`
+    );
+    if (!response.ok) throw await remoteRequestError(response);
+    const content = Buffer.from(await response.arrayBuffer());
+    const encoding = req.query?.encoding === "base64" ? "base64" : "utf8";
+    return res.status(200).json({
+      arcana: req.params.name,
+      file: req.params.file,
+      encoding,
+      content: content.toString(encoding),
+      size: content.length,
+    });
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
+
+async function handleArcanaFileWrite(req, res, replace) {
+  try {
+    const name = req.params.name;
+    const filename = replace
+      ? req.params.file
+      : String(req.body?.filename ?? "").trim();
+    if (!filename) {
+      return res.status(422).json({ error: "A file name is required" });
+    }
+    if (typeof req.body?.content !== "string") {
+      return res.status(422).json({ error: "content must be a string" });
+    }
+    const encoding = req.body?.encoding === "base64" ? "base64" : "utf8";
+    const data = Buffer.from(req.body.content, encoding);
+    const form = new globalThis.FormData();
+    form.append(
+      "file",
+      new Blob([data], { type: "application/octet-stream" }),
+      filename
+    );
+    const pathname = replace
+      ? `${arcanaToolsPath(name)}/files/${encodeArcana(filename)}`
+      : `${arcanaToolsPath(name)}/files/`;
+    const result = await proxyArcanaJson(req, pathname, {
+      method: replace ? "PUT" : "POST",
+      body: form,
+    });
+    return res.status(200).json({
+      arcana: name,
+      file: filename,
+      [replace ? "replaced" : "uploaded"]: true,
+      size: data.length,
+      result,
+    });
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+}
+
+app.post("/arcana-tools/arcanas/:name/files", (req, res) =>
+  handleArcanaFileWrite(req, res, false)
+);
+app.put("/arcana-tools/arcanas/:name/files/:file", (req, res) =>
+  handleArcanaFileWrite(req, res, true)
+);
+
+app.delete("/arcana-tools/arcanas/:name/files/:file", async (req, res) => {
+  try {
+    const result = await proxyArcanaJson(
+      req,
+      `${arcanaToolsPath(req.params.name)}/files/${encodeArcana(req.params.file)}`,
+      { method: "DELETE" }
+    );
+    return res.status(200).json({
+      arcana: req.params.name,
+      file: req.params.file,
+      deleted: true,
+      result,
+    });
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
+
+app.post("/arcana-tools/arcanas/:name/index", async (req, res) => {
+  try {
+    const result = await proxyArcanaJson(
+      req,
+      `${arcanaToolsPath(req.params.name)}/generate-index`,
+      { method: "POST" }
+    );
+    return res.status(200).json(result);
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
+
+app.get("/arcana-tools/arcanas/:name/index/status", async (req, res) => {
+  try {
+    const result = await proxyArcanaJson(
+      req,
+      `${arcanaToolsPath(req.params.name)}/index-status`
+    );
+    return res.status(200).json(result);
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
+
+app.get("/arcana-tools/arcanas/:name/index/running", async (req, res) => {
+  try {
+    const result = await proxyArcanaJson(
+      req,
+      `${arcanaToolsPath(req.params.name)}/index-job-running`
+    );
+    return res.status(200).json(result);
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
+
+app.get("/arcana-tools/arcanas/:name/index/jobs/:jobId", async (req, res) => {
+  try {
+    const result = await proxyArcanaJson(
+      req,
+      `${arcanaToolsPath(req.params.name)}/index-job/${encodeArcana(req.params.jobId)}`
+    );
+    return res.status(200).json(result);
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
+
+app.delete("/arcana-tools/arcanas/:name/index", async (req, res) => {
+  try {
+    const result = await proxyArcanaJson(
+      req,
+      `${arcanaToolsPath(req.params.name)}/delete-index`,
+      { method: "DELETE" }
+    );
+    return res.status(200).json(result);
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
+
+app.get("/arcana-tools/arcanas/:name/members", async (req, res) => {
+  try {
+    const result = await proxyArcanaJson(
+      req,
+      `${arcanaToolsPath(req.params.name)}/members`
+    );
+    return res.status(200).json(result);
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
+
+app.post("/arcana-tools/arcanas/:name/members", async (req, res) => {
+  try {
+    const user = String(req.body?.user ?? "").trim();
+    if (!user) {
+      return res.status(422).json({ error: "A user name is required" });
+    }
+    const role = req.body?.role === "editor" ? "editor" : "reader";
+    const result = await proxyArcanaJson(
+      req,
+      `${arcanaToolsPath(req.params.name)}/members`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user, role }),
+      }
+    );
+    return res.status(200).json(result);
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
+
+app.delete("/arcana-tools/arcanas/:name/members/:member", async (req, res) => {
+  try {
+    const result = await proxyArcanaJson(
+      req,
+      `${arcanaToolsPath(req.params.name)}/members/${encodeArcana(req.params.member)}`,
+      { method: "DELETE" }
+    );
+    return res.status(200).json(result);
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
+
 // Build a sophisticated JSON form for a requested tool in test mode. The shape
 // matches what the frontend's ToolForm component renders: { tool_id, title,
 // description, fields[] } with declarative HTML input types.
@@ -492,6 +1219,61 @@ app.post("/chat/completions", async (req, res) => {
   const mcp_servers = req.body["mcp-servers"] || null;
   const inference_id = req.headers["inference-id"];
   const uid = req.headers["oidc_claim_uid"];
+
+  // ----- END-TO-END ENCRYPTED CHAT -----
+  // The body is a sealed envelope only the model node can open, so nothing here
+  // may validate or rebuild it: `messages` is inside the ciphertext, and adding
+  // a cleartext field would break the envelope. The node seals its answer the
+  // same way; this proxy only routes bytes, so a keyed model can never fall back
+  // to a cleartext request or response.
+  if (
+    req.body &&
+    typeof req.body === "object" &&
+    req.body.e2ee &&
+    typeof req.body.e2ee === "object"
+  ) {
+    const e2eeModel = req.body.model;
+    if (typeof e2eeModel !== "string" || !e2eeModel) {
+      return res.status(422).json({ error: "Invalid model provided" });
+    }
+    const controller = new AbortController();
+    res.on("close", () => controller.abort());
+    try {
+      const upstream = await globalThis.fetch(`${apiEndpoint}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "inference-service": e2eeModel,
+          "inference-portal": serviceName,
+          ...(uid ? { user: uid } : {}),
+          ...(inference_id ? { "inference-id": inference_id } : {}),
+          ...(apiKey || inference_id
+            ? { Authorization: "Bearer " + (apiKey || inference_id) }
+            : {}),
+        },
+        body: JSON.stringify(req.body),
+        signal: controller.signal,
+      });
+      res.status(upstream.status);
+      const contentType = upstream.headers.get("content-type");
+      if (contentType) res.setHeader("Content-Type", contentType);
+      const e2eeStatus = upstream.headers.get("x-saia-e2ee");
+      if (e2eeStatus) res.setHeader("x-saia-e2ee", e2eeStatus);
+      if (upstream.body) {
+        pipeline(Readable.fromWeb(upstream.body), res, () => {});
+      } else {
+        res.end();
+      }
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      console.error("Error in encrypted /chat/completions:", error);
+      if (!res.headersSent) res.status(502);
+      res.end("Upstream request failed.");
+    }
+    return;
+  }
+  // ----- END END-TO-END ENCRYPTED CHAT -----
+
   if (!Array.isArray(messages)) {
     return res.status(422).json({ error: "Invalid messages provided" });
   }
@@ -657,6 +1439,15 @@ app.post("/chat/completions", async (req, res) => {
           if (tool.type === "audio_generation") {
             params.tools.push({type: "audio_generation"});
           }
+          // The gateway still calls this tool `arcana_v2`; our own name is
+          // `arcana_tools` (and `remote_file_access` before it).
+          if (
+            tool.type === "remote_file_access" ||
+            tool.type === "arcana_v2" ||
+            tool.type === "arcana_tools"
+          ) {
+            params.tools.push({type: "arcana_v2"});
+          }
           if (tool.type === "arcana" && (!params.arcana || !params.arcana.id)) {
             params.tools.push({type: "arcana_list_files"});
             params.tools.push({type: "arcana_get_file_content"});
@@ -782,6 +1573,15 @@ app.post("/chat/completions", async (req, res) => {
 });
 
 // Start Chat AI Backend App
-app.listen(port, () => {
-  console.log(`Chat AI backend listening on port ${port}`);
+const server = app.listen(port, () => {
+  console.log(`Chat AI Backend listening on port ${port}`);
+});
+
+registerBridge({
+  app,
+  server,
+  publicUrl: bridgePublicUrl,
+  secret: bridgeSharedSecret,
+  corsOrigins: bridgeCorsOrigins,
+  allowAnonymous: process.env.BRIDGE_ALLOW_ANON === "1",
 });

@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Checkmark } from "@carbon/icons-react";
 
 import { createFolder } from "../../db";
-import { DEFAULT_TOPIC_ICON, TOPIC_ICONS, topicIconById } from "./topicIcons";
+import { DEFAULT_TOPIC_ICON, topicIconById } from "./topicIcons";
 import { TOPIC_COLORS, topicColorById } from "./topicColors";
+import IconColorPicker from "./IconColorPicker";
 
 /**
  * Create a topic — an anchored bubble, not a full-screen dialog.
@@ -40,13 +40,23 @@ export default function TopicCreateBubble({
 
   const [name, setName] = useState("");
   const [iconId, setIconId] = useState(DEFAULT_TOPIC_ICON.id);
-  const [colorId, setColorId] = useState(TOPIC_COLORS[0].id);
+  const [colorId, setColorId] = useState<string>(TOPIC_COLORS[0].id);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   const inputRef = useRef<HTMLInputElement | null>(null);
   const bubbleRef = useRef<HTMLDivElement | null>(null);
+  const pickerSnapshotRef = useRef<{ iconId: string; colorId: string }>({
+    iconId: DEFAULT_TOPIC_ICON.id,
+    colorId: TOPIC_COLORS[0].id,
+  });
+
+  const cancelPicker = useCallback(() => {
+    setIconId(pickerSnapshotRef.current.iconId);
+    setColorId(pickerSnapshotRef.current.colorId);
+    setPickerOpen(false);
+  }, []);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -69,7 +79,7 @@ export default function TopicCreateBubble({
     };
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      if (pickerOpen) setPickerOpen(false);
+      if (pickerOpen) cancelPicker();
       else onClose();
     };
     // Deferred, so the click that opened the bubble does not close it.
@@ -83,12 +93,17 @@ export default function TopicCreateBubble({
       document.removeEventListener("mousedown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [isOpen, pickerOpen, onClose]);
+  }, [isOpen, pickerOpen, onClose, cancelPicker]);
 
   if (!isOpen) return null;
 
   const ActiveIcon = topicIconById(iconId).Icon;
   const activeColor = topicColorById(colorId);
+
+  const openPicker = () => {
+    pickerSnapshotRef.current = { iconId, colorId };
+    setPickerOpen(true);
+  };
 
   const applySuggestion = (suggestion: (typeof SUGGESTIONS)[number]) => {
     setName(t(`folders.suggestion_${suggestion.key}`));
@@ -142,85 +157,15 @@ export default function TopicCreateBubble({
       {pickerOpen ? (
         /* Icon and colour picker */
         <div className="relative flex flex-col gap-3">
-          <div className="flex justify-center pt-1">
-            <div
-              className="h-14 w-14 rounded-2xl flex items-center justify-center"
-              style={{ backgroundColor: activeColor.hex }}
-            >
-              <ActiveIcon size={28} className="text-white" />
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-center gap-1.5">
-            {TOPIC_COLORS.map((color) => {
-              const selected = color.id === colorId;
-              return (
-                <button
-                  key={color.id}
-                  type="button"
-                  onClick={() => setColorId(color.id)}
-                  aria-label={color.label}
-                  aria-pressed={selected}
-                  title={color.label}
-                  className="relative h-7 w-7 shrink-0 rounded-full cursor-pointer transition-transform"
-                  style={{
-                    backgroundColor: color.hex,
-                    transform: selected ? "scale(1.1)" : undefined,
-                  }}
-                >
-                  {selected && (
-                    <Checkmark
-                      size={16}
-                      className="absolute inset-0 m-auto text-white"
-                    />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="h-px bg-base-300" />
-              
-          <div className="grid grid-cols-7 gap-1 max-h-44 overflow-y-auto">
-            
-            {TOPIC_ICONS.map(({ id, label, Icon }) => {
-              const selected = id === iconId;
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setIconId(id)}
-                  title={label}
-                  aria-label={label}
-                  aria-pressed={selected}
-                  className={`h-9 w-9 rounded-lg flex items-center justify-center cursor-pointer transition-colors ${
-                    selected
-                      ? ""
-                      : "text-base-content/70 hover:bg-base-200"
-                  }`}
-                  style={
-                    selected
-                      ? {
-                          backgroundColor: `${activeColor.hex}22`,
-                          color: activeColor.hex,
-                        }
-                      : undefined
-                  }
-                >
-                  <Icon size={20} />
-                </button>
-              );
-            })}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setPickerOpen(false)}
-            className="self-end rounded-xl px-4 py-1.5 text-sm font-medium cursor-pointer
-                       bg-accent text-white hover:bg-accent/90 transition-colors"
-          >
-            {t("folders.done")}
-          </button>
+          <IconColorPicker
+            icon={iconId}
+            color={colorId}
+            onIconChange={setIconId}
+            onColorChange={setColorId}
+            onCancel={cancelPicker}
+            onDone={() => setPickerOpen(false)}
+            testIdPrefix="topic-create"
+          />
         </div>
       ) : (
         /* Name and icon */
@@ -238,7 +183,7 @@ export default function TopicCreateBubble({
             
             <button
               type="button"
-              onClick={() => setPickerOpen(true)}
+              onClick={openPicker}
               aria-label={t("folders.choose_icon")}
               title={t("folders.choose_icon")}
               className="shrink-0 h-8 w-8 rounded-lg flex items-center justify-center

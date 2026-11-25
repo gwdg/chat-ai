@@ -15,6 +15,8 @@ import {
 import { faCalendar, faRectangleList } from '@fortawesome/free-regular-svg-icons'
 
 import DemandIndicator from "./DemandIndicator";
+import E2eeLock from "../Others/E2eeLock";
+import { modelSupportsReasoning } from "../../utils/modelCapabilities";
 
 import type { ExtendedModelInfo } from "../../types/models";
 
@@ -33,7 +35,7 @@ const sortOptions = [
   { value: "context-asc", label: "Context (low→high)" },
 ];
 
-export default function ModelSelectorSimple({ selectedModel, modelsData, onChange, listOnly = false, onSelected }: { selectedModel: Object | undefined, modelsData: ExtendedModelInfo[], onChange?: (model: ExtendedModelInfo) => void, listOnly?: boolean, onSelected?: () => void }) {
+export default function ModelSelectorSimple({ selectedModel, modelsData, onChange, inHeader = false, listOnly = false, onSelected }: { selectedModel: Object | undefined, modelsData: ExtendedModelInfo[], onChange?: (model: ExtendedModelInfo) => void, inHeader?: boolean, listOnly?: boolean, onSelected?: () => void }) {
 
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
@@ -188,17 +190,18 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
         tabIndex={idx} data-index={idx} data-id={model.id}
         className="item cursor-pointer px-2 py-1 hover:bg-base-200 rounded-2xl border border-base-300"
       >
-        <div className="flex justify-between md:flex-row flex-col ">
-          <div className="flex items-center md:gap-2 gap-1">
-            <div className="pl-1">
+        <div className="flex flex-wrap justify-between gap-1 min-w-0">
+          <div className="flex items-center md:gap-2 gap-1 min-w-0">
+            <div className="pl-1 shrink-0">
               <DemandIndicator demand={model.demand} status={model?.status} />
             </div>
-            <span className="font-medium">{model.name}</span>
+            <span className="font-medium truncate min-w-0">{model.name}</span>
+            <E2eeLock modelId={model.id} size={12} />
             <SecureIndicator external={model.external} />
             <Chip text={model.company} />
 
           </div>
-          <div className="grid grid-cols-[6rem_6rem_4.5rem] items-center gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-[6rem_6rem_4.5rem] items-center">
             <span className="text-xs text-base-content/70">
               <FontAwesomeIcon icon={faCalendar} className="mr-1" />
               {model.releaseDate && model.releaseDate !== "" ? model.releaseDate : "-"}
@@ -216,7 +219,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
               {model.input.includes("image") && <Tooltip text={"Image Input"}><FontAwesomeIcon icon={faImage} /></Tooltip>}
               {model.input.includes("video") && <Tooltip text={"Video Input"}><FontAwesomeIcon icon={faVideo} /></Tooltip>}
               {model.input.includes("audio") && <Tooltip text={"Audio Input"}><FontAwesomeIcon icon={faMicrophone} /></Tooltip>}
-              {model.output.includes("thought") && <Tooltip text={"Thinking"}><FontAwesomeIcon icon={faBrain} /></Tooltip>}
+              {modelSupportsReasoning(model) && <Tooltip text={"Thinking"}><FontAwesomeIcon icon={faBrain} /></Tooltip>}
               
             </div>
           </div>
@@ -237,6 +240,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
             <DemandIndicator demand={model.demand} status={model?.status} />
           </div>
           <span className="font-medium">{model.name}</span>
+          <E2eeLock modelId={model.id} size={12} />
           <SecureIndicator external={model.external} />
           <span className="text-xs text-base-content/70">
             <FontAwesomeIcon icon={faCalendar} className="mr-1" />
@@ -255,7 +259,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
             {model.input.includes("image") && <Tooltip text={"Image Input"}><FontAwesomeIcon icon={faImage} /></Tooltip>}
             {model.input.includes("video") && <Tooltip text={"Video Input"}><FontAwesomeIcon icon={faVideo} /></Tooltip>}
             {model.input.includes("audio") && <Tooltip text={"Audio Input"}><FontAwesomeIcon icon={faMicrophone} /></Tooltip>}
-            {model.output.includes("thought") && <Tooltip text={"Thinking"}><FontAwesomeIcon icon={faBrain} /></Tooltip>}
+            {modelSupportsReasoning(model) && <Tooltip text={"Thinking"}><FontAwesomeIcon icon={faBrain} /></Tooltip>}
           </div>
           {/*
             <span className="text-xs text-base-content/70">
@@ -285,6 +289,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
                 <SecureIndicator external={model.external} />
               </span>
               {model.name}
+              <E2eeLock modelId={model.id} size={12} className="ml-1" />
             </div>
             <Chip text={model.company} />
 
@@ -304,7 +309,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
             </span>*/}
           </div>
           <div className="flex items-center gap-1">
-            {model.output.includes("thought") && (
+            {modelSupportsReasoning(model) && (
               <Tooltip text={"Thinking"}>
                 <div className="text-accent size-9 inline-grid place-items-center rounded-xl border border-base-300" aria-label="Text input">
                   <FontAwesomeIcon icon={faBrain} />
@@ -349,22 +354,23 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
       {!listOnly && (
       <button
         onClick={() => setDropdownOpen(!dropdownOpen)}
-        className="h-13 min-h-[4rem] w-full text-left desktop:w-full border border-base-300 rounded-2xl shadow-md bg-base-100 px-3 py-2.5 shadow-sm hover:border-primary/60 focus:ring-2 focus:ring-primary/30">
+        className={`${inHeader ? "h-11 min-h-0 px-2 py-1.5" : "h-13 min-h-[4rem] px-3 py-2.5"} w-full text-left desktop:w-full border border-base-300 rounded-2xl shadow-md bg-base-100 shadow-sm hover:border-primary/60 focus:ring-2 focus:ring-primary/30`}>
         
         {/** Selected Model View **/}
-        <div className="flex justify-between">
-          <div className="flex items-center justify-between gap-2">
-            <div className="pl-2">
+        <div className="flex items-center justify-between gap-2 min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="pl-2 shrink-0">
               <DemandIndicator demand={selectedModel?.demand} status={selectedModel?.status} />
             </div>
-            <span className="font-medium">{selectedModel?.name}</span>
+            <span className="font-medium truncate min-w-0">{selectedModel?.name}</span>
+            <E2eeLock modelId={selectedModel?.id} size={13} />
             {selectedModel?.external == true && (<Chip text={"External"} colorPreset={"orange"} />)}
             <Chip text={selectedModel?.company} />
-            <span className="text-xs text-base-content/70 hidden sm:inline-block">
+            <span className="text-xs text-base-content/70 hidden sm:inline-block shrink-0">
               <FontAwesomeIcon icon={faCalendar} />
               {selectedModel?.releaseDate}
             </span>
-            <span className="text-xs text-base-content/70 hidden sm:inline-block">
+            <span className="text-xs text-base-content/70 hidden sm:inline-block shrink-0">
               <FontAwesomeIcon icon={faCircleDot} className="mr-1" />
               Context {selectedModel?.contextLength !== "" ? selectedModel?.contextLength : "-"}
             </span>
@@ -375,11 +381,11 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
             </span>*/}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <div className="ml-2 flex items-center gap-1 text-accent">
               {selectedModel?.input.includes("image") && <Tooltip text={"Image Input"}><FontAwesomeIcon icon={faImage} /></Tooltip>}
               {selectedModel?.input.includes("video") && <Tooltip text={"Video Input"}><FontAwesomeIcon icon={faVideo} /></Tooltip>}
-              {selectedModel?.output.includes("thought") && <Tooltip text={"Thinking"}><FontAwesomeIcon icon={faBrain} /></Tooltip>}
+              {modelSupportsReasoning(selectedModel) && <Tooltip text={"Thinking"}><FontAwesomeIcon icon={faBrain} /></Tooltip>}
 
             </div>
             <FontAwesomeIcon icon={faChevronDown} />
@@ -392,7 +398,9 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
       {/** Dropdown Panel — rendered inline when there is no trigger **/}
       <div className={listOnly
         ? "bg-base-100 w-full rounded-2xl pb-2"
-        : `${dropdownOpen ? "" : "hidden"} bg-base-100 absolute z-50 mt-1 w-full rounded-2xl border border-base-300 shadow-2xl dark:shadow-dark pb-4`}>
+        : `${dropdownOpen ? "" : "hidden"} ${inHeader
+          ? "fixed left-2 right-2 top-14 mt-1 z-50 w-auto"
+          : "absolute mt-1 w-full min-w-[22rem] max-w-[calc(100vw-1rem)]"} bg-base-100 rounded-2xl border border-base-300 shadow-2xl dark:shadow-dark pb-4`}>
 
         <div className="px-4 pt-4 pb-2">
           <div className="flex items-center gap-2 rounded-xl border border-base-300 bg-base-200 px-3 py-2 text-xs text-base-content/70">

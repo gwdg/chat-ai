@@ -1,0 +1,34 @@
+{
+  "id": "gaia-tutor",
+  "extends": "gaia",
+  "aliases": ["gaia tutor", "gaia-tutors", "tutor", "teaching-staff"],
+  "institute": {
+    "description": {
+      "en": "GAIA for teaching staff. Agents, workspaces and model tools are available for preparing courses and supporting students.",
+      "de": "GAIA für Lehrende. Agenten, Workspaces und Modellwerkzeuge stehen für die Kursvorbereitung und die Unterstützung von Studierenden zur Verfügung."
+    }
+  },
+  "restrictions": {
+    "notice": {
+      "en": "Teaching staff can use agents, workspaces and MCP servers. Only the models operated by GWDG are offered.",
+      "de": "Lehrende können Agenten, Workspaces und MCP-Server nutzen. Es werden nur die von der GWDG betriebenen Modelle angeboten."
+    },
+    "modules": {
+      "agent": true,
+      "agents": true,
+      "arcanas": true
+    },
+    "features": {
+      "workspaces": true,
+      "mcp_servers": true,
+      "import_git": false,
+      "e2ee": false
+    },
+    "external": {
+      "web_search": false,
+      "external_models": true,
+      "mcp": true,
+      "external_references": false
+    }
+  }
+}

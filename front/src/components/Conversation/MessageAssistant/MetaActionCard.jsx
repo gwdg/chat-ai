@@ -13,18 +13,49 @@ import {
   Undo2,
 } from "lucide-react";
 import { normalizeMcpUrl } from "../../../agent/mcp";
+import {
+  getAgents,
+  setAgentPinned,
+  useAgents,
+} from "../../../agents/agentStore";
+import {
+  deleteOpencodeSession,
+  interruptOpencodeSession,
+  sendOpencodePrompt,
+} from "../../../apis/opencodeAgents";
+import {
+  createAgentSession,
+  deleteAgentSession,
+  switchAgentSession,
+} from "../../../agents/agentSessions";
 
 import {
   assignConversationToFolder,
+  createConversation,
+  deleteConversation,
   ensureFolder,
+  getConversation,
   getConversationMeta,
   getFolder,
+  newId,
   setConversationPinned,
   setFolderPinned,
   updateConversationMeta,
   useConversationList,
   useFolderList,
 } from "../../../db";
+import {
+  attachWorkspaceAgent,
+  attachWorkspaceChat,
+  detachWorkspaceAgent,
+  detachWorkspaceChat,
+  getWorkspace,
+  hasWorkspaceAgentLink,
+  hasWorkspaceChatLink,
+  setWorkspacePinned,
+  useWorkspaceList,
+} from "../../../db/workspaceDb";
+import { getDefaultSettings } from "../../../utils/conversationUtils";
 import { useToast } from "../../../hooks/useToast";
 import {
   importUserSettings,
@@ -34,27 +65,39 @@ import {
 
 const cloneMcpServers = (servers) => JSON.parse(JSON.stringify(servers ?? []));
 
+const CONVERSATION_TOOL_SETTING_KEYS = new Set([
+  "browser_storage",
+  "workspace_write_access",
+  "arcana_tools",
+]);
+
+const readConversationSetting = (settings, key) =>
+  CONVERSATION_TOOL_SETTING_KEYS.has(key)
+    ? settings?.tools?.[key]
+    : settings?.[key];
+
+/** `user_settings` values a Meta proposal can read and write. */
+const readUserSetting = (settings, key) => {
+  if (key === "sync_enabled") return settings?.sync?.enabled === true;
+  if (key === "sync_auto") return settings?.sync?.auto !== false;
+  return settings?.[key];
+};
+
 const readMcpServers = (settings) => {
   const raw = settings?.mcp_servers;
-  if (Array.isArray(raw)) return raw.map((server) => ({ ...server }));
-  if (typeof raw === "string" && raw.trim()) {
-    return [{ id: raw.trim(), enabled: true }];
+  if (Array.isArray(raw)) {
+    return raw
+      .filter((server) => server && typeof server.url === "string")
+      .map((server) => ({ ...server }));
   }
   return [];
 };
 
 const mcpServerMatches = (server, action) => {
   if (!server || typeof server !== "object") return false;
-  if (action.serverScope === "local") {
-    if (typeof server.url !== "string") return false;
-    const url = normalizeMcpUrl(action.url);
-    return !!url && normalizeMcpUrl(server.url) === url;
-  }
-  return (
-    typeof server.id === "string" &&
-    typeof server.url !== "string" &&
-    server.id.trim() === action.serverId
-  );
+  if (typeof server.url !== "string") return false;
+  const url = normalizeMcpUrl(action.url);
+  return !!url && normalizeMcpUrl(server.url) === url;
 };
 
 const withAuthorization = (entry, authorization) => {
@@ -66,7 +109,7 @@ const withAuthorization = (entry, authorization) => {
 };
 
 const applyMcpAction = (servers, action) => {
-  if (action.serverScope === "local" && !normalizeMcpUrl(action.url)) {
+  if (!normalizeMcpUrl(action.url)) {
     throw new Error("Invalid MCP server URL");
   }
   const next = servers.map((server) => ({ ...server }));
@@ -81,15 +124,13 @@ const applyMcpAction = (servers, action) => {
   if (action.op === "add") {
     if (index >= 0) {
       const entry = { ...next[index] };
+      if (action.name) entry.name = action.name;
       if (action.enabled !== undefined) entry.enabled = action.enabled;
       if (action.authorization !== undefined) withAuthorization(entry, action.authorization);
       next[index] = entry;
       return next;
     }
-    const entry =
-      action.serverScope === "local"
-        ? { url: action.url, enabled: action.enabled !== false }
-        : { id: action.serverId, enabled: action.enabled !== false };
+    const entry = { url: action.url, enabled: action.enabled !== false };
     if (action.authorization) entry.headers = { Authorization: action.authorization };
     next.push(entry);
     return next;
@@ -101,6 +142,131 @@ const applyMcpAction = (servers, action) => {
   if (action.authorization !== undefined) withAuthorization(entry, action.authorization);
   next[index] = entry;
   return next;
+};
+
+const globalMcpMatches = (server, action, forAdd = false) => {
+  if (action.entryId && server.id === action.entryId) return true;
+  const url = normalizeMcpUrl(action.url);
+  const sameUrl = !!url && normalizeMcpUrl(server.url) === url;
+  if (!sameUrl) return false;
+  if (forAdd && action.name) {
+    return (server.name || "").trim() === action.name.trim();
+  }
+  return true;
+};
+
+const applyGlobalMcpAction = (servers, action) => {
+  if ((action.op === "add" || action.url) && !normalizeMcpUrl(action.url)) {
+    throw new Error("Invalid MCP server URL");
+  }
+  const next = cloneMcpServers(servers);
+  const index = next.findIndex((server) =>
+    globalMcpMatches(server, action, action.op === "add"),
+  );
+
+  if (action.op === "remove") {
+    if (index < 0) throw new Error("MCP server not found");
+    next.splice(index, 1);
+    return next;
+  }
+
+  const entry = index >= 0 ? { ...next[index] } : { id: newId() };
+  if (action.name) entry.name = action.name;
+  if (action.url) entry.url = action.url;
+  if (action.authorization !== undefined) {
+    withAuthorization(entry, action.authorization);
+  }
+  if (index >= 0) next[index] = entry;
+  else next.push(entry);
+  return next;
+};
+
+const normalizeCreatedMessage = (message) => ({
+  role: message?.role,
+  text: Array.isArray(message?.content)
+    ? message.content
+        .filter((part) => part?.type === "text")
+        .map((part) => part.text || "")
+        .join("\n")
+    : String(message?.content ?? ""),
+});
+
+const buildCreateChatPayload = (
+  action,
+  userSettings,
+  modelsData,
+  folderId = null,
+) => {
+  const base = getDefaultSettings(userSettings);
+  const settings = {
+    ...base,
+    tools: { ...(base.tools || {}) },
+    audio: { ...(base.audio || {}) },
+    arcana: { ...(base.arcana || {}) },
+  };
+  const overrides = action.settings || {};
+
+  if (overrides.model) {
+    const model = (modelsData || []).find(
+      (item) => item.id === overrides.model || item.name === overrides.model,
+    );
+    if (!model) throw new Error("Model not found");
+    settings.model = model;
+  }
+  if (overrides.temperature !== undefined) {
+    settings.temperature = overrides.temperature;
+  }
+  if (overrides.top_p !== undefined) settings.top_p = overrides.top_p;
+  if (overrides.reasoning_effort !== undefined) {
+    settings.reasoning_effort = overrides.reasoning_effort;
+  }
+  if (overrides.memory_mode_override !== undefined) {
+    settings.memory_mode_override = overrides.memory_mode_override;
+  }
+  if (overrides.memory_group_override !== undefined) {
+    const groups = new Set([
+      "default",
+      ...(userSettings.memory_groups || []).map((group) => group.id),
+    ]);
+    if (!groups.has(overrides.memory_group_override)) {
+      throw new Error("Memory group not found");
+    }
+    settings.memory_group_override = overrides.memory_group_override;
+  }
+  if (overrides.enable_tools !== undefined) {
+    settings.enable_tools = overrides.enable_tools;
+  }
+  if (overrides.enable_web_search !== undefined) {
+    settings.enable_web_search = overrides.enable_web_search;
+  }
+  if (overrides.tools) {
+    settings.tools = { ...settings.tools, ...overrides.tools };
+  }
+
+  const globalServers = userSettings.mcp_servers || [];
+  const localIds = new Set(
+    globalServers
+      .filter((server) => typeof server?.url === "string")
+      .map((server) => server.id),
+  );
+  if (Array.isArray(overrides.mcp_local_server_ids)) {
+    settings.mcp_local_server_ids = overrides.mcp_local_server_ids.filter(
+      (id) => localIds.has(id),
+    );
+  }
+
+  const messages = (action.messages || []).map((message, index) => ({
+    idx: index,
+    role: message.role,
+    content: [{ type: "text", text: message.text }],
+  }));
+
+  return {
+    title: action.title || "New Chat",
+    settings,
+    messages,
+    folderId,
+  };
 };
 
 export default function MetaActionCard({
@@ -115,11 +281,52 @@ export default function MetaActionCard({
   const { notifySuccess, notifyError } = useToast();
   const conversations = useConversationList() || [];
   const folders = useFolderList() || [];
+  const workspaces = useWorkspaceList() || [];
+  const agents = useAgents() || [];
   const userSettings = useSelector(selectUserSettings);
   const memories = useSelector(selectAllMemories);
+  const memoryGroups = userSettings.memory_groups ?? [];
+  const defaultMemoryGroupId = userSettings.default_memory_group ?? "default";
+  const groupOverride = localState?.settings?.memory_group_override;
+  const requestedMemoryGroup =
+    groupOverride && groupOverride !== "default"
+      ? groupOverride
+      : defaultMemoryGroupId;
+  const effectiveMemoryGroupId =
+    requestedMemoryGroup === "default" ||
+    memoryGroups.some((group) => group.id === requestedMemoryGroup)
+      ? requestedMemoryGroup
+      : "default";
+
+  const resolveMemoryGroupId = (value) => {
+    const raw = typeof value === "string" ? value.trim() : "";
+    if (!raw) return effectiveMemoryGroupId;
+    const groups = [{ id: "default", name: "Default" }, ...memoryGroups];
+    const lower = raw.toLowerCase();
+    return (
+      groups.find(
+        (group) =>
+          group.id.toLowerCase() === lower ||
+          String(group.name).toLowerCase() === lower,
+      )?.id ?? null
+    );
+  };
+
+  const memoryGroupLabel = (value) => {
+    if (!value) return "";
+    const id = resolveMemoryGroupId(value);
+    if (!id) return value;
+    if (id === "default") return "Default";
+    return memoryGroups.find((group) => group.id === id)?.name ?? value;
+  };
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
   const [reverting, setReverting] = useState(false);
+  const reversible = !actions.some(
+    (action) =>
+      action.type === "agent_action" ||
+      (action.type === "agent_session" && action.op === "delete"),
+  );
   const [error, setError] = useState("");
   const previousState = useRef(null);
 
@@ -141,6 +348,10 @@ export default function MetaActionCard({
     conversations.map((conversation) => [conversation.id, conversation]),
   );
   const folderById = new Map(folders.map((folder) => [folder.id, folder]));
+  const workspaceById = new Map(
+    workspaces.map((workspace) => [workspace.id, workspace]),
+  );
+  const agentById = new Map(agents.map((agent) => [agent.id, agent]));
   const originalTitles = useRef(new Map());
 
   const settingLabels = {
@@ -149,6 +360,7 @@ export default function MetaActionCard({
     set_title_once:
       "user_settings.chat_preferences.suggestions.title_once.label",
     conversation_summaries: "user_settings.chat_preferences.summaries.label",
+    show_timestamps: "user_settings.chat_preferences.messages.timestamps.label",
     send_with_enter: "user_settings.chat_preferences.submission.label",
     html_render_mode: "user_settings.chat_preferences.html_render.label",
     html_load_external:
@@ -157,17 +369,26 @@ export default function MetaActionCard({
       "user_settings.chat_preferences.html_render.sanitization.label",
     render_typst: "user_settings.chat_preferences.typst.label",
     render_latex: "user_settings.chat_preferences.latex.label",
+    render_graphviz: "user_settings.chat_preferences.graphviz.label",
+    render_vega: "user_settings.chat_preferences.vega.label",
+    render_chartjs: "user_settings.chat_preferences.chartjs.label",
     collapse_reasoning_while_streaming:
       "user_settings.chat_preferences.reasoning_streaming.label",
     document_conversion_mode:
       "user_settings.chat_preferences.document_conversion.label",
+    mcp_tool_policy: "user_settings.chat_preferences.mcp_tools.label",
     timeout: "user_settings.timeout.title",
+    sync_enabled: "user_settings.data.sync.enable_label",
+    sync_auto: "user_settings.data.sync.auto_label",
     temperature: "meta_chat.setting_temperature",
     top_p: "meta_chat.setting_top_p",
     reasoning_effort: "settings.reasoning_effort.title",
     memory_mode_override: "settings.memory_mode.label",
     enable_tools: "settings.tools_title",
     enable_web_search: "settings.label_web_search",
+    browser_storage: "settings.label_browser_storage",
+    workspace_write_access: "settings.label_write_access",
+    arcana_tools: "settings.label_arcana_tools",
   };
 
   const formatSettingValue = (key, value) => {
@@ -202,6 +423,12 @@ export default function MetaActionCard({
       return t(`user_settings.chat_preferences.submission.options.${name}.label`, {
         defaultValue: String(value),
       });
+    }
+    if (key === "mcp_tool_policy") {
+      return t(
+        `user_settings.chat_preferences.mcp_tools.options.${value}.label`,
+        { defaultValue: String(value) },
+      );
     }
     if (key === "timeout") {
       return `${Math.round(Number(value) / 1000)} ${t(
@@ -244,6 +471,9 @@ export default function MetaActionCard({
     memories[index]?.text ||
     t("meta_chat.memory_item", { index: index + 1 });
 
+  const promptPreview = (text) =>
+    text.length > 60 ? `${text.slice(0, 60)}…` : text;
+
   const summaryFor = (action) => {
     if (action.type === "rename") {
       return t("meta_chat.rename_summary", {
@@ -274,6 +504,27 @@ export default function MetaActionCard({
         },
       );
     }
+    if (action.type === "pin_workspace") {
+      return t(
+        action.pinned
+          ? "meta_chat.pin_workspace_summary"
+          : "meta_chat.unpin_workspace_summary",
+        {
+          workspace:
+            workspaceById.get(action.workspaceId)?.name || action.workspaceId,
+        },
+      );
+    }
+    if (action.type === "pin_agent") {
+      return t(
+        action.pinned
+          ? "meta_chat.pin_agent_summary"
+          : "meta_chat.unpin_agent_summary",
+        {
+          agent: agentById.get(action.agentId)?.name || action.agentId,
+        },
+      );
+    }
     if (action.type === "setting") {
       return t("meta_chat.setting_summary", {
         setting: t(settingLabels[action.key] || action.key, {
@@ -300,31 +551,84 @@ export default function MetaActionCard({
         title: titleFor(action.conversationId),
       });
     }
-    if (action.type === "mcp_server") {
-      const target =
-        action.scope === "all"
-          ? t("meta_chat.mcp_target_all")
-          : titleFor(action.conversationId);
-      const name =
-        action.serverScope === "local" ? action.url : action.serverId;
+    if (action.type === "create_chat") {
+      return t("meta_chat.create_chat_summary", {
+        title: action.title || t("conversation.untitled"),
+        count: action.messages?.length ?? 0,
+      });
+    }
+    if (action.type === "agent_action") {
+      if (action.op === "prompt") {
+        const text = typeof action.text === "string" ? action.text : "";
+        return t("meta_chat.agent_prompt_summary", {
+          chars: text.length,
+          agent: action.agentId,
+          preview: promptPreview(text),
+        });
+      }
+      return t("meta_chat.agent_interrupt_summary", {
+        agent: action.agentId,
+      });
+    }
+    if (action.type === "agent_session") {
       return t(
-        `meta_chat.mcp_${action.op}_${action.serverScope}_summary`,
-        { name, target },
+        `meta_chat.agent_session_${action.op}_summary`,
+        { agent: action.agentId, session: action.sessionId || action.title },
       );
     }
+    if (action.type === "workspace_link") {
+      return t(
+        `meta_chat.workspace_${action.op}_summary`,
+        { workspace: action.workspaceId, target: action.targetId },
+      );
+    }
+    if (action.type === "mcp_server") {
+      const target =
+        action.scope === "global"
+          ? t("meta_chat.mcp_target_global")
+          : action.scope === "all"
+            ? t("meta_chat.mcp_target_all")
+            : titleFor(action.conversationId);
+      const name = action.name || action.url;
+      return t(`meta_chat.mcp_${action.op}_summary`, { name, target });
+    }
     if (action.type === "add_memory") {
-      return t("meta_chat.add_memory_summary", { text: action.text });
+      return action.group
+        ? t("meta_chat.add_memory_group_summary", {
+            text: action.text,
+            group: memoryGroupLabel(action.group),
+          })
+        : t("meta_chat.add_memory_summary", { text: action.text });
     }
     if (action.type === "update_memory") {
-      return t("meta_chat.update_memory_summary", {
-        from: memoryText(action.index),
-        to: action.text,
-      });
+      return action.group
+        ? t("meta_chat.update_memory_group_summary", {
+            from: memoryText(action.index),
+            to: action.text,
+            group: memoryGroupLabel(action.group),
+          })
+        : t("meta_chat.update_memory_summary", {
+            from: memoryText(action.index),
+            to: action.text,
+          });
     }
     if (action.type === "delete_memory") {
       return t("meta_chat.delete_memory_summary", {
         text: memoryText(action.index),
       });
+    }
+    if (action.type === "e2ee_assign") {
+      const key = (userSettings.e2ee_keys ?? []).find(
+        (entry) =>
+          entry.id === action.key ||
+          (entry.name || "").toLowerCase() === (action.key || "").toLowerCase(),
+      );
+      return action.key
+        ? t("meta_chat.e2ee_assign_summary", {
+            model: action.modelId,
+            key: key?.name || action.key,
+          })
+        : t("meta_chat.e2ee_clear_summary", { model: action.modelId });
     }
     return t("meta_chat.clear_memories_summary");
   };
@@ -366,7 +670,9 @@ export default function MetaActionCard({
 
     try {
       const prepared = [];
+      const createdChats = [];
       const settingUpdates = {};
+      const e2eeAssignments = [];
       const memoryActions = actions.filter((action) =>
         [
           "add_memory",
@@ -383,7 +689,22 @@ export default function MetaActionCard({
           continue;
         }
 
+        if (action.type === "e2ee_assign") {
+          e2eeAssignments.push(action);
+          continue;
+        }
+
         if (action.type === "conversation_setting") {
+          continue;
+        }
+
+        if (
+          action.type === "mcp_server" ||
+          action.type === "create_chat" ||
+          action.type === "workspace_link" ||
+          action.type === "agent_action" ||
+          action.type === "agent_session"
+        ) {
           continue;
         }
 
@@ -417,6 +738,34 @@ export default function MetaActionCard({
           prepared.push({
             ...action,
             previousPinned: folder.pinned === true,
+          });
+          continue;
+        }
+
+        if (action.type === "pin_workspace") {
+          const workspace =
+            workspaceById.get(action.workspaceId) ||
+            (await getWorkspace(action.workspaceId));
+          if (!workspace) {
+            throw new Error("Workspace not found");
+          }
+          prepared.push({
+            ...action,
+            previousPinned: workspace.pinned === true,
+          });
+          continue;
+        }
+
+        if (action.type === "pin_agent") {
+          const agent = getAgents().find(
+            (item) => item.id === action.agentId,
+          );
+          if (!agent) {
+            throw new Error("Agent not found");
+          }
+          prepared.push({
+            ...action,
+            previousPinned: agent.pinned === true,
           });
           continue;
         }
@@ -470,24 +819,35 @@ export default function MetaActionCard({
               .filter((action) => action.type === "delete_memory")
               .map((action) => action.index),
           );
-          const updatesByIndex = new Map(
-            memoryActions
-              .filter((action) => action.type === "update_memory")
-              .map((action) => [action.index, action.text]),
-          );
+          const updatesByIndex = new Map();
+          for (const action of memoryActions) {
+            if (action.type !== "update_memory") continue;
+            const update = { text: action.text };
+            if (action.group) {
+              const groupId = resolveMemoryGroupId(action.group);
+              if (!groupId) throw new Error("Memory group not found");
+              update.groupId = groupId;
+            }
+            updatesByIndex.set(action.index, update);
+          }
           updatedMemories = memories
             .map((memory, index) =>
               updatesByIndex.has(index)
-                ? { ...memory, text: updatesByIndex.get(index) }
+                ? { ...memory, ...updatesByIndex.get(index) }
                 : memory,
             )
             .filter((_, index) => !deletionIndexes.has(index));
           for (const action of memoryActions) {
             if (action.type !== "add_memory") continue;
+            const groupId = action.group
+              ? resolveMemoryGroupId(action.group)
+              : effectiveMemoryGroupId;
+            if (!groupId) throw new Error("Memory group not found");
             updatedMemories.push({
               id: `meta-${Date.now()}-${updatedMemories.length}`,
               text: action.text,
               createdAt: new Date().toISOString(),
+              groupId,
             });
           }
         }
@@ -519,7 +879,10 @@ export default function MetaActionCard({
             if (!model) throw new Error("Model not found");
             nextValue = model;
           }
-          entry.previous[action.key] = conversation.settings?.[action.key];
+          entry.previous[action.key] = readConversationSetting(
+            conversation.settings,
+            action.key,
+          );
           entry.expected[action.key] = nextValue;
           conversationSettingsPlan.set(conversation.id, entry);
         }
@@ -532,7 +895,9 @@ export default function MetaActionCard({
       }
 
       const mcpPlan = new Map();
-      for (const action of actions.filter((item) => item.type === "mcp_server")) {
+      for (const action of actions.filter(
+        (item) => item.type === "mcp_server" && item.scope !== "global",
+      )) {
         const targets =
           action.scope === "all"
             ? conversations
@@ -552,10 +917,71 @@ export default function MetaActionCard({
         }
       }
       if (
-        actions.some((action) => action.type === "mcp_server") &&
+        actions.some(
+          (action) =>
+            action.type === "mcp_server" && action.scope !== "global",
+        ) &&
         mcpPlan.size === 0
       ) {
         throw new Error("No conversations found");
+      }
+
+      const globalMcpActions = actions.filter(
+        (action) => action.type === "mcp_server" && action.scope === "global",
+      );
+      let globalMcpSnapshot = null;
+      if (globalMcpActions.length > 0) {
+        const previous = cloneMcpServers(userSettings.mcp_servers);
+        let expected = previous;
+        for (const action of globalMcpActions) {
+          expected = applyGlobalMcpAction(expected, action);
+        }
+        globalMcpSnapshot = { previous, expected };
+      }
+
+      const workspaceLinks = [];
+      for (const action of actions.filter(
+        (item) => item.type === "workspace_link",
+      )) {
+        const exists =
+          action.targetKind === "agent"
+            ? await hasWorkspaceAgentLink(
+                action.workspaceId,
+                action.targetId,
+              )
+            : await hasWorkspaceChatLink(
+                action.workspaceId,
+                action.targetId,
+              );
+        workspaceLinks.push({
+          ...action,
+          previous: exists,
+          expected: action.op === "attach",
+        });
+      }
+
+      let e2eeModelsSnapshot = null;
+      if (e2eeAssignments.length > 0) {
+        const knownKeys = Array.isArray(userSettings.e2ee_keys)
+          ? userSettings.e2ee_keys
+          : [];
+        const previous = { ...(userSettings.e2ee_models || {}) };
+        const expected = { ...previous };
+        for (const action of e2eeAssignments) {
+          if (!action.key) {
+            delete expected[action.modelId];
+            continue;
+          }
+          const needle = action.key.toLowerCase();
+          const key =
+            knownKeys.find((entry) => entry.id === action.key) ||
+            knownKeys.find(
+              (entry) => (entry.name || "").toLowerCase() === needle,
+            );
+          if (!key) throw new Error("Encryption key not found");
+          expected[action.modelId] = key.id;
+        }
+        e2eeModelsSnapshot = { previous, expected };
       }
 
       previousState.current = {
@@ -584,6 +1010,22 @@ export default function MetaActionCard({
               previousPinned: action.previousPinned === true,
             };
           }
+          if (action.type === "pin_workspace") {
+            return {
+              type: "pin_workspace",
+              workspaceId: action.workspaceId,
+              expectedPinned: action.pinned === true,
+              previousPinned: action.previousPinned === true,
+            };
+          }
+          if (action.type === "pin_agent") {
+            return {
+              type: "pin_agent",
+              agentId: action.agentId,
+              expectedPinned: action.pinned === true,
+              previousPinned: action.previousPinned === true,
+            };
+          }
           return {
             type: "move",
             conversationId: action.conversationId,
@@ -594,7 +1036,10 @@ export default function MetaActionCard({
         settings: Object.fromEntries(
           Object.entries(settingUpdates).map(([key, expected]) => [
             key,
-            { previous: userSettings[key], expected },
+            {
+              previous: readUserSetting(userSettings, key),
+              expected,
+            },
           ]),
         ),
         memories: updatedMemories
@@ -615,6 +1060,16 @@ export default function MetaActionCard({
           previous: cloneMcpServers(entry.previous),
           expected: cloneMcpServers(entry.expected),
         })),
+        globalMcpServers: globalMcpSnapshot
+          ? {
+              previous: cloneMcpServers(globalMcpSnapshot.previous),
+              expected: cloneMcpServers(globalMcpSnapshot.expected),
+            }
+          : null,
+        createdChats,
+        workspaceLinks: workspaceLinks.map((link) => ({ ...link })),
+        agentSessions: [],
+        e2eeModels: e2eeModelsSnapshot,
       };
 
       for (const action of prepared) {
@@ -632,6 +1087,16 @@ export default function MetaActionCard({
 
         if (action.type === "pin_topic") {
           await setFolderPinned(action.topicId, action.pinned);
+          continue;
+        }
+
+        if (action.type === "pin_workspace") {
+          await setWorkspacePinned(action.workspaceId, action.pinned);
+          continue;
+        }
+
+        if (action.type === "pin_agent") {
+          setAgentPinned(action.agentId, action.pinned);
           continue;
         }
 
@@ -679,8 +1144,103 @@ export default function MetaActionCard({
         );
       }
 
+      const createChatActions = actions.filter(
+        (action) => action.type === "create_chat",
+      );
+      for (const action of createChatActions) {
+        let folderId = action.folderId || null;
+        if (folderId) {
+          const folder = await getFolder(folderId);
+          if (!folder) throw new Error("Topic not found");
+        } else if (action.folderName) {
+          folderId = await ensureFolder(action.folderName);
+        }
+        const payload = buildCreateChatPayload(
+          action,
+          userSettings,
+          modelsData,
+          folderId,
+        );
+        const id = await createConversation(payload);
+        if (action.pinned) {
+          await updateConversationMeta(id, { pinned: true });
+        }
+        createdChats.push({
+          id,
+          title: payload.title,
+          settings: payload.settings,
+          messages: payload.messages.map(normalizeCreatedMessage),
+        });
+      }
+
+      for (const action of actions.filter(
+        (item) => item.type === "agent_session",
+      )) {
+        const agent = getAgents().find((item) => item.id === action.agentId);
+        if (!agent) throw new Error("Agent not found");
+        const previousSessionId = agent.sessionId || null;
+        if (action.op === "delete") {
+          await deleteAgentSession(agent, { id: action.sessionId });
+        } else if (action.op === "create") {
+          const session = await createAgentSession(agent, action.title);
+          previousState.current.agentSessions.push({
+            agentId: agent.id,
+            previousSessionId,
+            expectedSessionId: session.id,
+            createdSessionId: session.id,
+          });
+          window.dispatchEvent(
+            new CustomEvent("chatai:agent-sessions-changed", {
+              detail: { agentId: agent.id },
+            }),
+          );
+        } else {
+          switchAgentSession(agent, action.sessionId);
+          previousState.current.agentSessions.push({
+            agentId: agent.id,
+            previousSessionId,
+            expectedSessionId: action.sessionId,
+          });
+        }
+      }
+
+      for (const action of actions.filter(
+        (item) => item.type === "agent_action",
+      )) {
+        const agent = getAgents().find((item) => item.id === action.agentId);
+        if (!agent?.sessionId) throw new Error("Agent not found");
+        if (action.op === "prompt") {
+          await sendOpencodePrompt(agent, agent.sessionId, action.text, []);
+        } else {
+          await interruptOpencodeSession(agent, agent.sessionId);
+        }
+      }
+
+      for (const link of workspaceLinks) {
+        const attach = link.op === "attach";
+        if (link.targetKind === "agent") {
+          if (attach) {
+            await attachWorkspaceAgent(link.workspaceId, link.targetId);
+          } else {
+            await detachWorkspaceAgent(link.workspaceId, link.targetId);
+          }
+        } else if (attach) {
+          await attachWorkspaceChat(link.workspaceId, link.targetId);
+        } else {
+          await detachWorkspaceChat(link.workspaceId, link.targetId);
+        }
+      }
+
+      if (globalMcpSnapshot) {
+        dispatch(
+          importUserSettings({ mcp_servers: globalMcpSnapshot.expected }),
+        );
+      }
       if (Object.keys(settingUpdates).length > 0) {
         dispatch(importUserSettings(settingUpdates));
+      }
+      if (e2eeModelsSnapshot) {
+        dispatch(importUserSettings({ e2ee_models: e2eeModelsSnapshot.expected }));
       }
       if (updatedMemories) {
         dispatch(importUserSettings({ memories: updatedMemories }));
@@ -712,12 +1272,23 @@ export default function MetaActionCard({
 
   const applyConversationSettingValues = (settings, values) => {
     const next = { ...(settings || {}) };
+    let tools;
     for (const [key, value] of Object.entries(values)) {
+      if (CONVERSATION_TOOL_SETTING_KEYS.has(key)) {
+        tools ??= { ...(next.tools || {}) };
+        if (value === undefined) delete tools[key];
+        else tools[key] = value;
+        continue;
+      }
       if (value === undefined) {
         delete next[key];
       } else {
         next[key] = value;
       }
+    }
+    if (tools) {
+      if (Object.keys(tools).length) next.tools = tools;
+      else delete next.tools;
     }
     return next;
   };
@@ -742,6 +1313,27 @@ export default function MetaActionCard({
           continue;
         }
 
+        if (chat.type === "pin_workspace") {
+          const workspace = await getWorkspace(chat.workspaceId);
+          if (
+            !workspace ||
+            (workspace.pinned === true) !== chat.expectedPinned
+          ) {
+            throw new Error("Workspace pinned state changed");
+          }
+          continue;
+        }
+
+        if (chat.type === "pin_agent") {
+          const agent = getAgents().find(
+            (item) => item.id === chat.agentId,
+          );
+          if (!agent || (agent.pinned === true) !== chat.expectedPinned) {
+            throw new Error("Agent pinned state changed");
+          }
+          continue;
+        }
+
         const current = await getConversationMeta(chat.conversationId);
         if (!current) throw new Error("Conversation not found");
         if (chat.type === "rename") {
@@ -760,16 +1352,27 @@ export default function MetaActionCard({
       }
 
       for (const [key, values] of Object.entries(snapshot.settings)) {
-        if (!valuesEqual(userSettings[key], values.expected)) {
+        if (!valuesEqual(readUserSetting(userSettings, key), values.expected)) {
           throw new Error("Setting changed");
         }
+      }
+
+      if (
+        snapshot.e2eeModels &&
+        !valuesEqual(
+          userSettings.e2ee_models || {},
+          snapshot.e2eeModels.expected,
+        )
+      ) {
+        throw new Error("Encryption assignment changed");
       }
 
       for (const entry of snapshot.conversationSettings || []) {
         const current = await getConversationMeta(entry.id);
         if (!current) throw new Error("Conversation not found");
         for (const [key, expected] of Object.entries(entry.expected)) {
-          if (!conversationSettingMatches(key, current.settings?.[key], expected)) {
+          const currentValue = readConversationSetting(current.settings, key);
+          if (!conversationSettingMatches(key, currentValue, expected)) {
             throw new Error("Conversation setting changed");
           }
         }
@@ -784,6 +1387,49 @@ export default function MetaActionCard({
       }
 
       if (
+        snapshot.globalMcpServers &&
+        !valuesEqual(
+          userSettings.mcp_servers ?? [],
+          snapshot.globalMcpServers.expected,
+        )
+      ) {
+        throw new Error("MCP servers changed");
+      }
+
+      for (const link of snapshot.workspaceLinks || []) {
+        const exists =
+          link.targetKind === "agent"
+            ? await hasWorkspaceAgentLink(link.workspaceId, link.targetId)
+            : await hasWorkspaceChatLink(link.workspaceId, link.targetId);
+        if (exists !== link.expected) {
+          throw new Error("Workspace link changed");
+        }
+      }
+
+      for (const entry of snapshot.agentSessions || []) {
+        const agent = getAgents().find((item) => item.id === entry.agentId);
+        if (!agent) throw new Error("Agent not found");
+        if (agent.sessionId !== entry.expectedSessionId) {
+          throw new Error("Agent session changed");
+        }
+      }
+
+      for (const chat of snapshot.createdChats || []) {
+        const current = await getConversation(chat.id);
+        if (!current) throw new Error("Created chat no longer exists");
+        if ((current.title || "") !== chat.title) {
+          throw new Error("Created chat changed");
+        }
+        if (!valuesEqual(current.settings, chat.settings)) {
+          throw new Error("Created chat changed");
+        }
+        const messages = (current.messages || []).map(normalizeCreatedMessage);
+        if (!valuesEqual(messages, chat.messages)) {
+          throw new Error("Created chat changed");
+        }
+      }
+
+      if (
         snapshot.memories &&
         !valuesEqual(memories, snapshot.memories.expected)
       ) {
@@ -793,6 +1439,16 @@ export default function MetaActionCard({
       for (const chat of snapshot.chats) {
         if (chat.type === "pin_topic") {
           await setFolderPinned(chat.topicId, chat.previousPinned);
+          continue;
+        }
+
+        if (chat.type === "pin_workspace") {
+          await setWorkspacePinned(chat.workspaceId, chat.previousPinned);
+          continue;
+        }
+
+        if (chat.type === "pin_agent") {
+          setAgentPinned(chat.agentId, chat.previousPinned);
           continue;
         }
 
@@ -852,14 +1508,57 @@ export default function MetaActionCard({
         );
       }
 
+      for (const entry of snapshot.agentSessions || []) {
+        const agent = getAgents().find((item) => item.id === entry.agentId);
+        if (!agent) throw new Error("Agent not found");
+        if (entry.createdSessionId) {
+          await deleteOpencodeSession(agent, entry.createdSessionId).catch(
+            () => {},
+          );
+        }
+        if (entry.previousSessionId) {
+          switchAgentSession(agent, entry.previousSessionId);
+        }
+      }
+
+      for (const link of snapshot.workspaceLinks || []) {
+        if (link.previous) {
+          if (link.targetKind === "agent") {
+            await attachWorkspaceAgent(link.workspaceId, link.targetId);
+          } else {
+            await attachWorkspaceChat(link.workspaceId, link.targetId);
+          }
+        } else if (link.targetKind === "agent") {
+          await detachWorkspaceAgent(link.workspaceId, link.targetId);
+        } else {
+          await detachWorkspaceChat(link.workspaceId, link.targetId);
+        }
+      }
+
+      for (const chat of snapshot.createdChats || []) {
+        await deleteConversation(chat.id);
+      }
+
       const previousSettings = Object.fromEntries(
         Object.entries(snapshot.settings).map(([key, values]) => [
           key,
           values.previous,
         ]),
       );
+      if (snapshot.globalMcpServers) {
+        dispatch(
+          importUserSettings({
+            mcp_servers: snapshot.globalMcpServers.previous,
+          }),
+        );
+      }
       if (Object.keys(previousSettings).length > 0) {
         dispatch(importUserSettings(previousSettings));
+      }
+      if (snapshot.e2eeModels) {
+        dispatch(
+          importUserSettings({ e2ee_models: snapshot.e2eeModels.previous }),
+        );
       }
       if (snapshot.memories) {
         dispatch(
@@ -900,7 +1599,7 @@ export default function MetaActionCard({
           <ul className="mt-1.5 space-y-0.5 text-[11px] leading-snug text-base-content">
             {actions.map((action, index) => (
               <li
-                key={`${action.type}:${action.conversationId || action.topicId}:${index}`}
+                key={`${action.type}:${action.conversationId || action.topicId || action.workspaceId || action.agentId}:${index}`}
                 className="flex items-start gap-1.5"
               >
                 {action.type === "rename" ? (
@@ -916,7 +1615,9 @@ export default function MetaActionCard({
                     aria-hidden="true"
                   />
                 ) : action.type === "pin" ||
-                  action.type === "pin_topic" ? (
+                  action.type === "pin_topic" ||
+                  action.type === "pin_workspace" ||
+                  action.type === "pin_agent" ? (
                   <Pin
                     size={12}
                     className="mt-0.5 shrink-0 text-warning"
@@ -952,10 +1653,44 @@ export default function MetaActionCard({
             ))}
           </ul>
 
+          {actions
+            .filter(
+              (action) =>
+                action.type === "agent_action" &&
+                action.op === "prompt" &&
+                typeof action.text === "string" &&
+                action.text.length > 0,
+            )
+            .map((action, index) => (
+              <div key={`agent-prompt:${index}`} className="mt-2 min-w-0">
+                <div className="flex items-baseline justify-between gap-2 text-[11px] leading-snug">
+                  <p className="font-medium text-base-content">
+                    {t("meta_chat.agent_prompt_text_label")}
+                  </p>
+                  <p className="shrink-0 text-base-content/70">
+                    {t("meta_chat.agent_prompt_meta", {
+                      agent: action.agentId,
+                      chars: action.text.length,
+                    })}
+                  </p>
+                </div>
+                <pre className="mt-1 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded border border-base-300 bg-base-200 p-2 font-mono text-xs text-base-content">
+                  {action.text}
+                </pre>
+                <p className="mt-1 text-[11px] leading-snug text-base-content/70">
+                  {t("meta_chat.agent_prompt_notice")}
+                </p>
+              </div>
+            ))}
+
           {error && <p className="mt-1.5 text-[11px] text-error">{error}</p>}
 
           <div className="mt-2 flex justify-end gap-1.5">
-            {applied ? (
+            {applied && !reversible ? (
+              <span className="text-[11px] text-base-content/60">
+                {t("meta_chat.applied_not_reversible")}
+              </span>
+            ) : applied ? (
               <button
                 type="button"
                 className="btn btn-ghost btn-xs gap-1.5"

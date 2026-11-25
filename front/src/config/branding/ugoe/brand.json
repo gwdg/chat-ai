@@ -1,0 +1,129 @@
+{
+  "id": "ugoe",
+  "aliases": [
+    "uni-goettingen",
+    "uni-goettingen.de",
+    "goettingen",
+    "göttingen"
+  ],
+  "name": "Chat AI",
+  "shortName": "Chat AI",
+  "homeUrl": "https://www.uni-goettingen.de/",
+  "logo": {
+    "alt": "Chat AI · Georg-August-Universität Göttingen",
+    "headerVariant": "mark"
+  },
+  "assets": {
+    "full": "logo.svg",
+    "fullDark": "logo-dark.svg",
+    "small": "logo.svg",
+    "smallDark": "logo-dark.svg",
+    "mark": "mark.svg",
+    "markDark": "mark-dark.svg",
+    "favicon": "favicon.ico"
+  },
+  "theme": {
+    "light": {
+      "primary": "#13306a",
+      "primaryContent": "#ffffff",
+      "secondary": "#0078a3",
+      "secondaryContent": "#ffffff",
+      "accent": "#0078a3",
+      "accentContent": "#ffffff",
+      "base100": "#ffffff",
+      "base200": "#e4eef5",
+      "base300": "#cfdee8",
+      "baseContent": "#2b2b2b",
+      "info": "#0078a3",
+      "infoContent": "#ffffff",
+      "chat": "#d6e7f1"
+    },
+    "dark": {
+      "primary": "#8ab8cf",
+      "primaryContent": "#0d1b26",
+      "secondary": "#63b0d0",
+      "secondaryContent": "#0d1b26",
+      "accent": "#8ab8cf",
+      "accentContent": "#0d1b26",
+      "base100": "#232a33",
+      "base200": "#171d24",
+      "base300": "#39434f",
+      "baseContent": "#f2f4f7",
+      "info": "#8ab8cf",
+      "infoContent": "#0d1b26",
+      "chat": "#2b3440"
+    }
+  },
+  "surfaces": {
+    "sidebar": {
+      "light": {
+        "background": "#d7e7f1",
+        "hover": "#c5dbea",
+        "border": "#b2cddf",
+        "content": "#10233a",
+        "accent": "#13306a"
+      },
+      "dark": {
+        "background": "#1b2b38",
+        "hover": "#243748",
+        "border": "#31505f",
+        "content": "#e6f0f6",
+        "accent": "#8ab8cf"
+      }
+    }
+  },
+  "services": false,
+  "institute": {
+    "name": {
+      "en": "Georg-August-Universität Göttingen",
+      "de": "Georg-August-Universität Göttingen"
+    },
+    "unit": {
+      "en": "GWDG – Gesellschaft für wissenschaftliche Datenverarbeitung mbH Göttingen",
+      "de": "GWDG – Gesellschaft für wissenschaftliche Datenverarbeitung mbH Göttingen"
+    },
+    "description": {
+      "en": "This Chat AI is provided for members of the University of Göttingen. GWDG operates the service and its models on the university's behalf.",
+      "de": "Diese Chat-AI steht Angehörigen der Universität Göttingen zur Verfügung. Die GWDG betreibt den Dienst und seine Modelle im Auftrag der Universität."
+    },
+    "contact": "mailto:support@gwdg.de",
+    "links": [
+      {
+        "label": {
+          "en": "Chat AI documentation",
+          "de": "Chat-AI-Dokumentation"
+        },
+        "url": "https://docs.hpc.gwdg.de/services/chat-ai/index.html"
+      },
+      {
+        "label": {
+          "en": "Data privacy for UGOE",
+          "de": "Datenschutz für UGOE"
+        },
+        "url": "https://uni-goettingen.de/de/439479.html"
+      }
+    ]
+  },
+  "restrictions": {
+    "notice": {
+      "en": "Only the models operated by GWDG are offered here. Options that would send your data to third-party providers — web search and models marked as external — are switched off.",
+      "de": "Hier werden nur die von der GWDG betriebenen Modelle angeboten. Optionen, die Ihre Daten an Dritte senden würden — Websuche und als extern gekennzeichnete Modelle — sind deaktiviert."
+    },
+    "external": {
+      "web_search": false,
+      "external_models": false
+    }
+  },
+  "footer": {
+    "isoCertified": false,
+    "links": {
+      "privacy": {
+        "label": {
+          "en": "Data Privacy for UGOE",
+          "de": "Datenschutz für UGOE"
+        },
+        "url": "https://uni-goettingen.de/de/439479.html"
+      }
+    }
+  }
+}

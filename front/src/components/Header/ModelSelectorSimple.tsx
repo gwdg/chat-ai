@@ -18,7 +18,9 @@ import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { BaseModelInfo } from "../../types/models";
+import { modelSupportsReasoning } from "../../utils/modelCapabilities";
 import Tooltip from "../Others/Tooltip";
+import E2eeLock from "../Others/E2eeLock";
 import DemandIndicator from "./DemandIndicator";
 
 const isExternalModel = (model: { name?: string } | undefined) =>
@@ -138,13 +140,14 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
               </Tooltip>
             )}
             <span className="font-medium truncate">{model.name}</span>
+            <E2eeLock modelId={model.id} size={12} />
           </div>
           <div className="ml-2 flex shrink-0 items-center gap-1 text-accent">
             {model.input?.includes("image") && <Tooltip text={"Image Input"}><FontAwesomeIcon icon={faImage} /></Tooltip>}
             {model.input?.includes("video") && <Tooltip text={"Video Input"}><FontAwesomeIcon icon={faVideo} /></Tooltip>}
             {model.input?.includes("audio") && <Tooltip text={"Audio Input"}><FontAwesomeIcon icon={faMicrophone} /></Tooltip>}
             {model.input?.includes("arcana") && <Tooltip text={"Arcana Input"}><FontAwesomeIcon icon={faBookOpen} /></Tooltip>}
-            {model.output?.includes("thought") && <Tooltip text={"Thinking"}><FontAwesomeIcon icon={faBrain} /></Tooltip>}
+            {modelSupportsReasoning(model) && <Tooltip text={"Thinking"}><FontAwesomeIcon icon={faBrain} /></Tooltip>}
           </div>
         </div>
       </div>
@@ -170,6 +173,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
               <DemandIndicator demand={selectedModel?.demand} status={selectedModel?.status} />
             </div>
             <span className="font-medium truncate">{selectedModel?.name}</span>
+            <E2eeLock modelId={selectedModel?.id} size={13} />
           </div>
 
           <div className="flex items-center gap-2">
@@ -178,7 +182,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
               {selectedModel?.input?.includes("video") && <Tooltip text={"Video Input"} placement="bottom"><FontAwesomeIcon icon={faVideo} /></Tooltip>}
               {selectedModel?.input?.includes("audio") && <Tooltip text={"Audio Input"} placement="bottom"><FontAwesomeIcon icon={faMicrophone} /></Tooltip>}
               {selectedModel?.input?.includes("arcana") && <Tooltip text={"Arcana Input"} placement="bottom"><FontAwesomeIcon icon={faBookOpen} /></Tooltip>}
-              {selectedModel?.output?.includes("thought") && <Tooltip text={"Thinking"} placement="bottom"><FontAwesomeIcon icon={faBrain} /></Tooltip>}
+              {modelSupportsReasoning(selectedModel) && <Tooltip text={"Thinking"} placement="bottom"><FontAwesomeIcon icon={faBrain} /></Tooltip>}
 
             </div>
             <FontAwesomeIcon icon={faChevronDown} />

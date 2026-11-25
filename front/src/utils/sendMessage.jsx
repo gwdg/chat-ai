@@ -1,5 +1,4 @@
 /* eslint-disable no-unused-vars */
-import OpenAI from "openai";
 import { useSelector } from "react-redux";
 import { editMemory, addMemory, selectAllMemories } from "../Redux/reducers/userSettingsReducer";
 import { chatCompletions } from "../apis/chatCompletions";
@@ -8,9 +7,19 @@ import generateChoiceProposal from "../apis/generateChoiceProposal";
 import generateTitle from "../apis/generateTitle";
 import { loadFile, loadFileMeta, saveFile, updateConversation, updateConversationMeta } from "../db";
 import { getFileType, readFileAsBase64, readFileAsText } from "./attachments";
-import { isAgentEnabled } from "../apis/agentEndpoints";
-import { remoteMcpEnabled } from "../agent/mcp";
+import { isAgentEnabled, modelSupportsTools } from "../apis/agentEndpoints";
+import { resolveMcpServers } from "../agent/mcp";
+import { isArcanasEnabled, isChoicesEnabled, isFeedbackEnabled, isToolsEnabled } from "./modules";
+import { isBrandExternalAllowed } from "../config/brandPolicy";
 import { confirmMcpNameChange } from "./mcpNameChange";
+import { BINARY_DOCUMENT_TYPES, modelSupportsFileType } from "./modelCapabilities";
+
+/**
+ * The Browser agent is the default workflow. A model without tool support cannot run it, so that
+ * chat uses the plain chat path instead and never gets a tool.
+ */
+export const shouldUseBrowserAgent = (model) =>
+  isAgentEnabled() && modelSupportsTools(model);
 
 // Text to be appended to system prompt for memories
 const memoryExplanation = "The following list of memories was gathered by the system from previous conversations and may be irrelevant now. You may refer to relevant items only if justified to provide a more personalized and contextual response. Do not make any assumptions based on memories, instead focus on the user messages and requests:"
@@ -23,6 +32,8 @@ export async function processContentItems({
   ignoreVideo = false, 
   ignoreDocs = false,
   convertDocs = true,
+  sendRawDocuments = false,
+  model = null,
 }) {
   const output = [];
   for (const item of items) {
@@ -100,7 +111,11 @@ export async function processContentItems({
           }
         });
       }
-      else if (convertDocs) {
+      else if (
+        convertDocs &&
+        !(BINARY_DOCUMENT_TYPES.includes(fileType) &&
+          (sendRawDocuments || modelSupportsFileType(model, fileType)))
+      ) {
         if (fileType === "pdf") {
           // Shouldn't send unprocessed PDF file
           continue;
@@ -215,6 +230,7 @@ export async function buildConversationForAPI(localState, { forceAudioInput = fa
             ignoreImages,
             ignoreAudio: ignoreAudioForMessage,
             ignoreVideo,
+            model,
         })
         };
       }
@@ -303,27 +319,46 @@ const sendMessage = async ({
   dispatch,
   timeout,
   memoryMode = 0,
+  memoryGroupId = "default",
+  globalMcpServers = [],
+  mcpToolPolicy = "ask",
   suggestUserPrompts = false,
   formSubmission = null,
   setTitleOnce = true,
   speechMode = false,
 }) => {
   const conversationId = localState.id
+  const effectiveMcpServers = resolveMcpServers(
+    localState.settings,
+    globalMcpServers,
+  )
   // Index of the assistant placeholder this turn will stream into. Using a
   // fixed index keeps updates correct when a barge-in starts another turn
   // before this one has fully unwound.
   const assistantIndex = localState.messages.length
 
   try {
-    const feedbackModule = import.meta.env.VITE_MODULE_FEEDBACK === "true";
-    const toolsModule = import.meta.env.VITE_MODULE_TOOLS === "true";
-    const choicesModule = import.meta.env.VITE_MODULE_CHOICES === "true";
+    const feedbackModule = isFeedbackEnabled();
+    const toolsModule = isToolsEnabled();
+    const choicesModule = isChoicesEnabled();
 
+    const arcanasModule = isArcanasEnabled();
     const isExternalModel =
       typeof localState.settings.model?.name === "string" &&
       localState.settings.model.name.toLowerCase().includes("external");
-    const isToolsEnabled = toolsModule && !isExternalModel && localState.settings?.enable_tools;
-    const isArcanaSupported = isToolsEnabled && !!localState.settings.tools.arcana   
+    // A model without tool support never gets a tool. It uses the plain chat workflow instead of
+    // the Browser agent, which needs tools to act on files.
+    const useBrowserAgent = shouldUseBrowserAgent(localState.settings.model);
+    const modelSupports = modelSupportsTools(localState.settings.model);
+    // Named separately from the `isToolsEnabled()` module gate above: a local
+    // binding with that name would shadow the import and throw a TDZ error.
+    const toolsActive =
+      modelSupports &&
+      toolsModule &&
+      !isExternalModel &&
+      localState.settings?.enable_tools;
+    const isArcanaSupported =
+      arcanasModule && toolsActive && !!localState.settings.tools.arcana;
   
     let finalConversationForState; // For local state updates
     let conversationForAPI = await buildConversationForAPI(localState, {
@@ -343,20 +378,38 @@ const sendMessage = async ({
     }
     
     // Handle tools
-    if (isToolsEnabled || speechMode) {
+    if (toolsActive || speechMode) {
       // Inject the current date and time to the system prompt in human-readable format
       const currentDate = new Date().toLocaleString();
       systemPromptAPI = `\n\n--- Begin System Context ---\nCurrent Date: ${currentDate}\n--- End System Context ---` + systemPromptAPI;
       // Convert tools dictionary to OpenAI-compatible tools list
-      if (isToolsEnabled) {
+      if (toolsActive) {
+        // A brand may forbid the options that leave the institution (see
+        // config/brandPolicy.js); drop them from the request even when an older
+        // conversation still carries the toggle.
+        const blockedToolTypes = new Set();
+        if (!isBrandExternalAllowed("web_search")) {
+          blockedToolTypes.add("web_search");
+          blockedToolTypes.add("fetch_url");
+        }
+        if (!isBrandExternalAllowed("mcp")) blockedToolTypes.add("mcp");
         conversationForAPI.settings.tools = Object.entries(localState.settings.tools)
-                  .filter(([_, enabled]) => enabled)
+                  .filter(
+                    ([toolKey, enabled]) =>
+                      enabled &&
+                      !blockedToolTypes.has(toolKey) &&
+                      (arcanasModule ||
+                        (toolKey !== "arcana" &&
+                          toolKey !== "arcana_tools" &&
+                          toolKey !== "arcana_v2"))
+                  )
                   .map(([toolKey]) => ({ type: toolKey }));
         if (conversationForAPI.settings?.arcana?.id && conversationForAPI.settings.arcana.id !== "") {
           conversationForAPI.settings.arcana.limit = 3;
         }
-        if (!remoteMcpEnabled(localState.settings)) delete conversationForAPI.settings.mcp_servers;
-        if (!localState.settings.tools.arcana) delete conversationForAPI.settings.arcana;
+        if (!arcanasModule || !localState.settings.tools.arcana) {
+          delete conversationForAPI.settings.arcana;
+        }
       } else {
         conversationForAPI.settings.tools = [];
         conversationForAPI.settings.enable_tools = true;
@@ -367,6 +420,16 @@ const sendMessage = async ({
     } else {
       delete conversationForAPI.settings.enable_tools;
       delete conversationForAPI.settings.tools;
+      delete conversationForAPI.settings.function_tools;
+      delete conversationForAPI.settings.tool_choice;
+    }
+
+    // Legacy switch some gateways still read; never send it against a brand's policy.
+    if (
+      conversationForAPI.settings &&
+      !isBrandExternalAllowed("web_search")
+    ) {
+      conversationForAPI.settings.enable_web_search = false;
     }
 
     // Clean conversation for API call
@@ -443,17 +506,30 @@ const sendMessage = async ({
       return;
     }
     // Pushing message into conversation history
-    setLocalState((prev) => ({
-      ...prev,
-      // Add two new placeholder messages
-      messages: [
-        ...prev.messages,
-        { role: "assistant", content: [{ type: "text", text: ""}], loading: true },
-        { role: "user", content: [{ type: "text", text: "" }] },
-      ],
-      hasFirstPrompt: true,
-      flush: true // Save to DB immediately
-    }));
+    setLocalState((prev) => {
+      const now = Date.now();
+      const messages = [...prev.messages];
+      const lastIndex = messages.length - 1;
+      if (messages[lastIndex]?.role === "user" && !messages[lastIndex].createdAt) {
+        messages[lastIndex] = { ...messages[lastIndex], createdAt: now };
+      }
+      return {
+        ...prev,
+        // Add two new placeholder messages
+        messages: [
+          ...messages,
+          {
+            role: "assistant",
+            content: [{ type: "text", text: "" }],
+            loading: true,
+            createdAt: now,
+          },
+          { role: "user", content: [{ type: "text", text: "" }] },
+        ],
+        hasFirstPrompt: true,
+        flush: true // Save to DB immediately
+      };
+    });
 
     // Stream assistant response into localState
     async function getChatChunk(conversationId, messageId = null) {
@@ -563,6 +639,7 @@ const sendMessage = async ({
             const messages = [...prev.messages];
             if (!messages[assistantIndex]) return prev;
             messages[assistantIndex] = {
+              ...messages[assistantIndex],
               role: "assistant",
               content: currentContent,
               loading: true,
@@ -595,6 +672,7 @@ const sendMessage = async ({
           const messages = [...prev.messages];
           if (!messages[assistantIndex]) return prev;
           messages[assistantIndex] = {
+            ...messages[assistantIndex],
             role: "assistant",
             content: currentContent,
             loading: true,
@@ -627,6 +705,7 @@ const sendMessage = async ({
           }
           const messages = [...prev.messages];
           messages[messages.length - 2] = {
+            ...messages[messages.length - 2],
             role: "assistant",
             content: [{ type: "text", text }, ...files],
             loading: true,
@@ -647,7 +726,8 @@ const sendMessage = async ({
         // Up to and including the new user message
         uiMessages: localState.messages,
         systemPrompt: systemPromptAPI,
-        settings: localState.settings,
+        settings: { ...localState.settings, mcp_servers: effectiveMcpServers },
+        mcpToolPolicy,
         onUpdate: showTurn,
         onMcpNameMismatch: handleMcpNameMismatch,
       });
@@ -668,7 +748,7 @@ const sendMessage = async ({
     let choicesProposed = [];
     try {
       // Get chat completion response
-      chatChunk = isAgentEnabled()
+      chatChunk = useBrowserAgent
         ? await getAgentChunk(conversationId)
         : await getChatChunk(conversationId);
       responseContent = chatChunk?.answer || ""
@@ -715,20 +795,27 @@ const sendMessage = async ({
         if (prev.id !== conversationId) {
           // Handle save when conversation is not active, ideally save directly into DB (TODO)
           const messages = [...localState.messages,
-            { role: "assistant", content: responseContent, loading: false, meta },
+            { role: "assistant", content: responseContent, loading: false, meta, createdAt: Date.now() },
             { role: "user", content: [{ type: "text", text: "" }] },
           ];
-          updateConversation(
+          // The topic is not part of this snapshot's contract: a move may have
+          // happened while the response was streaming, and writing the old
+          // folderId back would undo it.
+          const { folderId: _folderId, ...snapshot } = localState;
+          void updateConversation(
             conversationId,
-            { ...localState, messages, hasFirstPrompt: true },
+            { ...snapshot, messages, hasFirstPrompt: true },
             true
-          );
+          ).catch((error) => {
+            console.error("Failed to save inactive conversation:", error);
+          });
           return prev;
         }
         const choices = choicesProposed;
         const messages = [...prev.messages];
         if (!messages[assistantIndex]) return prev;
         messages[assistantIndex] = {
+          ...messages[assistantIndex],
           role: "assistant",
           content: responseContent,
           loading: false,
@@ -797,9 +884,15 @@ const sendMessage = async ({
           const memoryText = jsonResponse.memory_sentence.trim();
           if (jsonResponse.replace) {
             const line_number = jsonResponse.line_number - 1;
-            dispatch(editMemory({ index: line_number, text: memoryText }));
+            dispatch(
+              editMemory({
+                index: line_number,
+                text: memoryText,
+                groupId: memoryGroupId,
+              }),
+            );
           } else {
-            dispatch(addMemory({ text: memoryText }));
+            dispatch(addMemory({ text: memoryText, groupId: memoryGroupId }));
           }
           notifySuccess("Memory updated successfully.");
         }

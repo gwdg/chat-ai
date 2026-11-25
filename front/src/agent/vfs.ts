@@ -11,6 +11,10 @@ export interface Entry {
 export interface Vfs {
   readFile(path: string): Promise<Uint8Array>;
   writeFile(path: string, data: Uint8Array | string): Promise<void>;
+  /** Appends to a file, creating the file and its missing parents; UTF-8 text unless stated. */
+  appendFile?(path: string, data: Uint8Array | string): Promise<void>;
+  /** Renames in place and resolves to the new path. `newName` is a plain name, never a path. */
+  rename?(path: string, newName: string): Promise<string>;
   mkdir(path: string): Promise<void>;
   readdir(path: string): Promise<Entry[]>;
   /** Resolves to null when the path does not exist. */
@@ -23,7 +27,18 @@ export interface Vfs {
 export const enoent = (path: string) =>
   Object.assign(new Error(`ENOENT: no such file or directory, '${path}'`), { code: "ENOENT" });
 
-export const parts = (path: string) => path.split("/").filter((p) => p && p !== ".");
+export const parts = (path: string) => {
+  const resolved: string[] = [];
+  for (const part of path.split("/")) {
+    if (!part || part === ".") continue;
+    if (part === "..") {
+      resolved.pop();
+      continue;
+    }
+    resolved.push(part);
+  }
+  return resolved;
+};
 export const normalize = (path: string) => `/${parts(path).join("/")}`;
 const toBytes = (data: Uint8Array | string) => (typeof data === "string" ? new TextEncoder().encode(data) : data);
 
@@ -67,6 +82,72 @@ export class HandleFs implements Vfs {
 
   async mkdir(path: string) {
     await this.dir(parts(path), true);
+  }
+
+  async appendFile(path: string, data: Uint8Array | string) {
+    const segments = parts(path);
+    const name = segments.pop();
+    if (!name) throw new Error(`Not a file path: ${path}`);
+    const dir = await this.dir(segments, true);
+    const handle = await dir.getFileHandle(name, { create: true });
+    const size = (await handle.getFile()).size;
+    const writable = await handle.createWritable({ keepExistingData: true });
+    try {
+      await writable.seek(size);
+      await writable.write(toBytes(data) as Uint8Array<ArrayBuffer>);
+    } finally {
+      await writable.close();
+    }
+  }
+
+  /**
+   * Renames in place. OPFS `move()` is used when the browser has it; otherwise the entry is
+   * copied and the source removed, never the other way round. An existing destination is refused,
+   * because a rename must not overwrite.
+   */
+  async rename(path: string, newName: string): Promise<string> {
+    const normalized = normalize(path);
+    if (normalized === "/") throw new Error("The root cannot be renamed");
+    const name = String(newName ?? "").trim();
+    if (!name || name === "." || name === ".." || /[/\\]/.test(name)) {
+      throw new Error(`"${newName}" is not a file name`);
+    }
+    const segments = parts(normalized);
+    const current = segments.pop()!;
+    if (name === current) return normalized;
+    const parent = segments.length ? `/${segments.join("/")}` : "/";
+    const target = normalize(`${parent === "/" ? "" : parent}/${name}`);
+    if (await this.stat(target)) {
+      throw new Error(`${target} already exists`);
+    }
+    const dir = await this.dir(segments);
+    let handle: FileSystemHandle;
+    try {
+      handle = await dir.getFileHandle(current);
+    } catch {
+      handle = await dir.getDirectoryHandle(current);
+    }
+    const move = (handle as unknown as { move?: (name: string) => Promise<void> }).move;
+    if (typeof move === "function") {
+      await move.call(handle, name);
+    } else {
+      await this.copyTo(normalized, target);
+      await this.remove(normalized);
+    }
+    return target;
+  }
+
+  private async copyTo(from: string, to: string): Promise<void> {
+    const info = await this.stat(from);
+    if (!info) throw enoent(from);
+    if (!info.dir) {
+      await this.writeFile(to, await this.readFile(from));
+      return;
+    }
+    await this.mkdir(to);
+    for (const child of await this.readdir(from)) {
+      await this.copyTo(`${from === "/" ? "" : from}/${child.name}`, `${to}/${child.name}`);
+    }
   }
 
   async readdir(path: string) {
@@ -162,6 +243,25 @@ export class MountFs implements Vfs {
     return fs.writeFile(p, data);
   }
 
+  async appendFile(path: string, data: Uint8Array | string) {
+    const [fs, p] = this.route(path);
+    if (!fs.appendFile) throw new Error(`Cannot append in ${path}`);
+    return fs.appendFile(p, data);
+  }
+
+  async rename(path: string, newName: string) {
+    const [fs, p] = this.route(path);
+    // Renaming a mount point would detach the user's folder from the path the workspace shows.
+    if (p === "/" && fs !== this.base) {
+      throw new Error(`Cannot rename the mount point ${path}`);
+    }
+    if (!fs.rename) throw new Error(`Cannot rename ${path}`);
+    await fs.rename(p, newName);
+    const key = normalize(path);
+    const at = key.lastIndexOf("/");
+    return normalize(`${at <= 0 ? "" : key.slice(0, at)}/${newName}`);
+  }
+
   mkdir(path: string) {
     const [fs, p] = this.route(path);
     return fs.mkdir(p);
@@ -220,6 +320,20 @@ export function observe(fs: Vfs, onChange: (change: Change) => void): Vfs {
       await fs.writeFile(path, data);
       onChange({ path: normalize(path), kind: "write" });
     },
+    async appendFile(path, data) {
+      if (!fs.appendFile) throw new Error(`Cannot append in ${path}`);
+      await fs.appendFile(path, data);
+      onChange({ path: normalize(path), kind: "write" });
+    },
+    async rename(path, newName) {
+      if (!fs.rename) throw new Error(`Cannot rename ${path}`);
+      const target = await fs.rename(path, newName);
+      onChange({ path: normalize(path), kind: "remove" });
+      // Only a file that still exists becomes an attachment; a renamed folder is just a move.
+      const stat = await fs.stat(target).catch(() => null);
+      if (stat && !stat.dir) onChange({ path: normalize(target), kind: "write" });
+      return target;
+    },
     async remove(path) {
       await fs.remove(path);
       onChange({ path: normalize(path), kind: "remove" });
@@ -273,6 +387,16 @@ export class PermissionFs implements Vfs {
   async writeFile(path: string, data: Uint8Array | string) {
     await this.ready();
     return this.inner.writeFile(path, data);
+  }
+
+  async appendFile(path: string, data: Uint8Array | string) {
+    await this.ready();
+    return this.inner.appendFile(path, data);
+  }
+
+  async rename(path: string, newName: string) {
+    await this.ready();
+    return this.inner.rename(path, newName);
   }
 
   async mkdir(path: string) {

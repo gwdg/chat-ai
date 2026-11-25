@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, memo, useCallback, useMemo } from "react";
 import { useSelector } from "react-redux";
-import { Code2, Eye } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import { useNavigate } from "react-router";
 import {
+  Bot,
+  FileText,
   Folder,
   GraduationCap,
   MessageCircle,
@@ -14,15 +15,24 @@ import {
 } from "lucide-react";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
-import DOMPurify from "dompurify";
+import {
+  buildHtmlCsp,
+  htmlCspMeta,
+  relocateHeadAssets,
+  sanitizeHtmlFragment,
+  sanitizeSvgHtml,
+  stripMetaRefresh,
+} from "../../../utils/htmlPreview";
 
-import "katex/dist/katex.min.css";
 import ThinkingBlock from "./ThinkingBlock";
 import ReferencesSection from "./ReferencesSection";
 import Code from "./Code";
 import MermaidDiagram from "./MermaidDiagram";
+import GraphvizDiagram from "./GraphvizDiagram";
+import RenderToolbar from "./RenderToolbar";
+import VegaLiteChart from "./VegaLiteChart";
+import ChartJsChart from "./ChartJsChart";
 import {
   selectHtmlRenderMode,
   selectHtmlLoadExternal,
@@ -37,6 +47,8 @@ import {
 } from "../../../utils/externalRefs";
 import { stripPersonaMarkers } from "../../../utils/personaCatalog";
 import { stripMetaActionMarkers } from "../../../utils/metaActions";
+import { detectJsonDiagram } from "../../../utils/diagramSpec";
+import { downloadHtml, renderedFilename } from "../../../utils/download";
 
 // Markdown images load automatically, so keep them on the same origin when
 // external references are disabled. Plain links are not fetched until clicked.
@@ -51,12 +63,13 @@ const MarkdownImage = ({ src, alt, ...props }) => {
 };
 
 // Conversation links produced by the Meta chat navigate inside the SPA.
-const MarkdownLink = ({ href, children }) => {
+const MarkdownLink = ({ href, children, plain = false }) => {
   const navigate = useNavigate();
   const className =
     "text-info hover:text-info underline transition-colors text-sm";
   const actionLinkClassName =
     "btn btn-accent btn-xs ml-1 inline-flex w-fit gap-1 align-middle";
+  const linkClassName = plain ? className : actionLinkClassName;
 
   if (
     typeof href === "string" &&
@@ -69,13 +82,56 @@ const MarkdownLink = ({ href, children }) => {
       <a
         href={href}
         data-guide={isMessage ? "message-citation" : undefined}
-        className={actionLinkClassName}
+        className={linkClassName}
         onClick={(event) => {
           event.preventDefault();
           navigate(href);
         }}
       >
-        <Icon size={12} aria-hidden="true" />
+        {!plain && <Icon size={12} aria-hidden="true" />}
+        {children}
+      </a>
+    );
+  }
+
+  const agentFileMatch =
+    typeof href === "string" &&
+    href.match(/^\/agent\/([^/?#]+)\?file=(.+)$/);
+  if (agentFileMatch) {
+    const agentId = decodeURIComponent(agentFileMatch[1]);
+    const filePath = decodeURIComponent(agentFileMatch[2]);
+    return (
+      <a
+        href={href}
+        className={linkClassName}
+        onClick={(event) => {
+          event.preventDefault();
+          const handled = !window.dispatchEvent(
+            new CustomEvent("chatai:preview-agent-file", {
+              detail: { agentId, path: filePath },
+              cancelable: true,
+            }),
+          );
+          if (!handled) navigate(href);
+        }}
+      >
+        {!plain && <FileText size={12} aria-hidden="true" />}
+        {children}
+      </a>
+    );
+  }
+
+  if (typeof href === "string" && href.startsWith("/agent/")) {
+    return (
+      <a
+        href={href}
+        className={linkClassName}
+        onClick={(event) => {
+          event.preventDefault();
+          navigate(href);
+        }}
+      >
+        {!plain && <Bot size={12} aria-hidden="true" />}
         {children}
       </a>
     );
@@ -83,22 +139,25 @@ const MarkdownLink = ({ href, children }) => {
 
   const settingsMatch =
     typeof href === "string" &&
-    href.match(/^\/settings\/(profile|chat|memories|data)$/);
+    href.match(
+      /^\/settings\/(profile\/(?:user|institution)|(?:profile|chat|memories|data)(?:\/(?:manage|backup|sync))?)$/,
+    );
   if (settingsMatch) {
+    const tab = settingsMatch[1];
     return (
       <a
         href={href}
-        className={actionLinkClassName}
+        className={linkClassName}
         onClick={(event) => {
           event.preventDefault();
           window.dispatchEvent(
             new CustomEvent("chatai:open-settings", {
-              detail: { tab: settingsMatch[1] },
+              detail: { tab },
             }),
           );
         }}
       >
-        <Settings size={12} aria-hidden="true" />
+        {!plain && <Settings size={12} aria-hidden="true" />}
         {children}
       </a>
     );
@@ -110,7 +169,7 @@ const MarkdownLink = ({ href, children }) => {
     return (
       <a
         href={href}
-        className={actionLinkClassName}
+        className={linkClassName}
         onClick={(event) => {
           event.preventDefault();
           window.dispatchEvent(
@@ -120,7 +179,7 @@ const MarkdownLink = ({ href, children }) => {
           );
         }}
       >
-        <GraduationCap size={12} aria-hidden="true" />
+        {!plain && <GraduationCap size={12} aria-hidden="true" />}
         {children}
       </a>
     );
@@ -133,7 +192,7 @@ const MarkdownLink = ({ href, children }) => {
     return (
       <a
         href={href}
-        className={actionLinkClassName}
+        className={linkClassName}
         onClick={(event) => {
           event.preventDefault();
           window.dispatchEvent(
@@ -143,7 +202,7 @@ const MarkdownLink = ({ href, children }) => {
           );
         }}
       >
-        <PlayCircle size={12} aria-hidden="true" />
+        {!plain && <PlayCircle size={12} aria-hidden="true" />}
         {children}
       </a>
     );
@@ -171,10 +230,30 @@ const MarkdownLink = ({ href, children }) => {
 /* --------------------------------------------
  * Shared renderer components (unchanged styles)
  * -------------------------------------------- */
+const plainCode = ({ className, children, node }) => {
+  const match = /language-([\w.-]+)/.exec(className || "");
+  const content = String(children).replace(/\n$/, "");
+  const isCodeBlock = node?.parent?.tagName === "pre";
+  const hasNewlines = content.includes("\n");
+  const isMultiLine =
+    node?.position && node.position.start.line !== node.position.end.line;
+  const isInline = !isCodeBlock && !hasNewlines && !isMultiLine;
+
+  if (isInline) {
+    return (
+      <code className="px-1.5 py-0.5 rounded bg-base-200 text-primary font-mono text-xs">
+        {content}
+      </code>
+    );
+  }
+
+  return <Code language={match ? match[1] : null}>{content}</Code>;
+};
+
 export const rendererComponents = {
   img: MarkdownImage,
   code({ className, children, node }) {
-    const match = /language-(\w+)/.exec(className || "");
+    const match = /language-([\w.-]+)/.exec(className || "");
     const content = String(children).replace(/\n$/, "");
     const isCodeBlock = node?.parent?.tagName === "pre";
     const hasNewlines = content.includes("\n");
@@ -194,6 +273,29 @@ export const rendererComponents = {
 
     if (language === "mermaid") {
       return <MermaidDiagram content={content} />;
+    }
+
+    if (language === "dot" || language === "graphviz") {
+      return <GraphvizDiagram content={content} language={language} />;
+    }
+
+    if (language === "vega" || language === "vega-lite" || language === "vegalite") {
+      return <VegaLiteChart content={content} language={language} />;
+    }
+
+    if (language === "chart" || language === "chartjs" || language === "chart.js") {
+      return <ChartJsChart content={content} language={language} />;
+    }
+
+    if (language === "json") {
+      const diagram = detectJsonDiagram(content);
+      if (diagram?.type === "vega") {
+        return <VegaLiteChart content={content} language={diagram.language} />;
+      }
+      if (diagram?.type === "chartjs") {
+        return <ChartJsChart content={content} language="chartjs" />;
+      }
+      return <Code language="json">{content}</Code>;
     }
 
     if (language === "html") {
@@ -218,6 +320,17 @@ export const rendererComponents = {
   },
 
   pre({ children, ...props }) {
+    // The renderers below lay out their own block (toolbar, preview, download
+    // prompt). Wrapping them in <pre> made their prose inherit monospace and
+    // `white-space: pre`, so it was clipped instead of wrapping on narrow
+    // screens. react-markdown passes the raw <code> child here, so decide from
+    // its language class before the code renderer runs.
+    const language = /language-([\w.-]+)/
+      .exec(children?.props?.className || "")?.[1]
+      ?.toLowerCase();
+    if (["html", "latex", "tex", "typst", "typ"].includes(language)) {
+      return <>{children}</>;
+    }
     return <pre {...props}>{children}</pre>;
   },
 
@@ -334,15 +447,27 @@ export const rendererComponents = {
   inlineMath: ({ value }) => <span className="katex">{value}</span>,
 };
 
+export const thinkingRendererComponents = {
+  ...rendererComponents,
+  code: plainCode,
+};
+
+const PlainMarkdownLink = (props) => <MarkdownLink {...props} plain />;
+
+export const plainRendererComponents = {
+  ...rendererComponents,
+  a: PlainMarkdownLink,
+};
+
 /* ------------------------------------------------
  * LaTeX preprocessor
  * ------------------------------------------------ */
-const preprocessLaTeX = (content) => {
+export const preprocessLaTeX = (content) => {
   if (!content) return "";
 
   const codeBlocks = [];
   let processedContent = content.replace(
-    /(```[\s\S]*?```|`[^`\n]+`)/g,
+    /(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]+`)/g,
     (match, code) => {
       codeBlocks.push(code);
       return `<<CODE_BLOCK_${codeBlocks.length - 1}>>`;
@@ -397,87 +522,11 @@ const preprocessLaTeX = (content) => {
  * turns raw HTML into live elements, so any raw <script>, event handler, or
  * <iframe> fetching a local-network URL would run. Sanitize every raw HTML
  * fragment with DOMPurify (allowlist-based) before rehype-raw parses it.
+ *
+ * The allowlists, the sanitizers and the CSP are shared with the HTML document
+ * preview in utils/htmlPreview.js, so a fenced block and a previewed .html file
+ * follow the same rules.
  * ------------------------------------------------ */
-const SAFE_HTML_TAGS = [
-  "a", "abbr", "b", "bdi", "bdo", "blockquote", "br", "caption", "cite",
-  "code", "col", "colgroup", "dd", "del", "details", "dfn", "div", "dl",
-  "dt", "em", "figcaption", "figure", "h1", "h2", "h3", "h4", "h5", "h6",
-  "hr", "i", "img", "ins", "kbd", "li", "mark", "ol", "p", "pre", "q",
-  "s", "samp", "small", "span", "strong", "sub", "summary", "sup", "table",
-  "tbody", "td", "tfoot", "th", "thead", "tr", "u", "ul", "var",
-];
-
-const SAFE_HTML_ATTRS = [
-  "href", "src", "alt", "title", "width", "height",
-  "colspan", "rowspan", "scope", "start", "type", "value",
-  "datetime", "cite", "open",
-];
-
-// Extra tags/attributes permitted only when the user opts into relaxed
-// sanitization so interactive HTML (buttons, forms, iframes, scripts, inline
-// styles) can run. Untrusted model output can execute code with this setting.
-const RELAXED_HTML_TAGS = [
-  "button", "form", "iframe", "input", "label", "legend", "option", "select",
-  "style", "textarea", "script", "canvas", "audio", "video", "source",
-  "progress", "meter", "output", "fieldset", "datalist", "optgroup",
-];
-const RELAXED_HTML_ATTRS = [
-  "style", "class", "id", "name", "for", "action", "method", "target",
-  "placeholder", "checked", "selected", "disabled", "readonly", "required",
-  "rows", "cols", "maxlength", "min", "max", "step", "pattern", "autocomplete",
-  "contenteditable", "tabindex", "role", "aria-label", "controls", "autoplay",
-  "loop", "muted", "poster", "frameborder", "allow", "allowfullscreen",
-  "sandbox", "download", "rel", "data", "onclick", "onchange", "oninput",
-  "onkeydown", "onkeyup", "onkeypress", "onmouseover", "onmouseout",
-  "onmousedown", "onmouseup", "onfocus", "onblur", "onsubmit", "onload",
-  "onerror",
-];
-
-// Like sanitizeHtmlFragment but also permits embedded <svg> (including filters
-// and gradients) so fenced HTML blocks can render SVG diagrams. It uses
-// DOMPurify's battle-tested HTML + SVG profiles (correct geometry/presentation
-// attributes) while explicitly forbidding the dangerous elements those profiles
-// would otherwise allow — same hardening as sanitizeHtmlFragment.
-//
-// When loadExternal is false, URL-bearing attributes that point to an external
-// host are dropped for privacy, so the browser never contacts third parties.
-// This covers src, href, xlink:href, poster, action, formaction, data, srcset
-// and CSS url() inside style. Same-page anchors, relative paths, data: URIs
-// and mailto: are kept (see utils/externalRefs.js).
-const sanitizeHtmlFragment = (html, relaxed = false, loadExternal = true) =>
-  sanitizeExternalRefs(loadExternal, () =>
-    DOMPurify.sanitize(html, {
-      ALLOWED_TAGS: relaxed ? [...SAFE_HTML_TAGS, ...RELAXED_HTML_TAGS] : SAFE_HTML_TAGS,
-      ALLOWED_ATTR: relaxed ? [...SAFE_HTML_ATTRS, ...RELAXED_HTML_ATTRS] : SAFE_HTML_ATTRS,
-      ALLOW_DATA_ATTR: relaxed,
-    })
-  );
-
-const sanitizeSvgHtml = (html, loadExternal = true, relaxed = false) =>
-  sanitizeExternalRefs(loadExternal, () =>
-    DOMPurify.sanitize(html, {
-    USE_PROFILES: { html: true, svg: true, svgFilters: true },
-    // Relaxed mode allows scripts, and the SAFE_FOR_XML mXSS heuristic
-    // force-removes any script/style whose text contains markup-like text
-    // (e.g. `</b>` inside a JS template literal), which is normal in
-    // interactive documents. The output only ever runs in the sandboxed
-    // iframe, so skip that heuristic once the user has opted into scripts.
-    SAFE_FOR_XML: !relaxed,
-    FORBID_TAGS: relaxed
-      ? []
-      : [
-          "iframe", "object", "embed", "form", "input", "textarea", "select",
-          "button", "script", "style", "link", "meta", "base", "math",
-          "foreignObject",
-        ],
-    FORBID_ATTR: relaxed ? [] : ["style"],
-    ALLOW_DATA_ATTR: relaxed,
-    ADD_TAGS: relaxed ? RELAXED_HTML_TAGS : [],
-    ADD_ATTR: relaxed ? RELAXED_HTML_ATTRS : [],
-    ALLOW_UNKNOWN_PROTOCOLS: relaxed,
-    })
-  );
-
 // remark plugin: scrub raw html nodes in the mdast tree so rehype-raw never
 // turns dangerous markup into live elements. Runs before rehype-raw parses.
 const remarkSanitizeHtml = ({ loadExternal = true } = {}) => (tree) => {
@@ -496,83 +545,6 @@ const remarkSanitizeHtml = ({ loadExternal = true } = {}) => (tree) => {
   };
   visit(tree);
 };
-
-// DOMPurify discards <head> content entirely (it only returns body content).
-// Well-formed pages put their CSS/JS in <head>, so without this the whole
-// stylesheet would be lost. Move <style>, <script> and stylesheet <link>
-// elements out of <head> and into <body> so they survive sanitization.
-const relocateHeadAssets = (html) => {
-  const headMatch = html.match(/<head\b[^>]*>([\s\S]*?)<\/head>/i);
-  if (!headMatch) return html;
-  const assets = [];
-  headMatch[1].replace(
-    /<style\b[^>]*>[\s\S]*?<\/style>|<script\b[^>]*>[\s\S]*?<\/script>|<link\b[^>]*rel=["']stylesheet["'][^>]*\/?>/gi,
-    (m) => {
-      assets.push(m);
-      return "";
-    }
-  );
-  if (!assets.length) return html;
-  let result = html.replace(/<head\b[^>]*>[\s\S]*?<\/head>/i, "");
-  const closeIdx = result.search(/<\/body>/i);
-  const insert = assets.join("\n");
-  if (closeIdx !== -1) {
-    result = result.slice(0, closeIdx) + insert + "\n" + result.slice(closeIdx);
-  } else {
-    result = result + insert;
-  }
-  return result;
-};
-
-// Content-Security-Policy for the sandboxed HTML preview. Attribute filtering
-// (sanitizeExternalRefs) cannot stop inline JS from calling fetch()/Image, so
-// the browser enforces the network policy as well. The policy is derived from
-// the two user settings:
-//
-//   external references off -> no network at all, only data:/blob: assets
-//   relaxed off             -> no scripts, so connect-src can stay 'none'
-//   relaxed on              -> inline JS runs, but with external refs off its
-//                              fetch/XHR/WebSocket/beacon calls are blocked
-//
-// `frame-ancestors`, `report-uri` and `report-to` are ignored when a policy is
-// delivered through a <meta> tag; do not rely on them here.
-const buildHtmlCsp = ({ relaxed, loadExternal }) => {
-  const script = relaxed
-    ? loadExternal
-      ? "* 'unsafe-inline' 'unsafe-eval'"
-      : "'unsafe-inline' 'unsafe-eval'"
-    : "'none'";
-  const media = loadExternal
-    ? "* data: blob:"
-    : relaxed
-      ? "data: blob:"
-      : "data:";
-  return [
-    "default-src 'none'",
-    `script-src ${script}`,
-    `connect-src ${relaxed && loadExternal ? "*" : "'none'"}`,
-    `img-src ${
-      loadExternal ? "* data: blob:" : relaxed ? "data: blob:" : "data:"
-    }`,
-    `media-src ${media}`,
-    `font-src ${loadExternal ? "* data:" : "data:"}`,
-    `style-src ${loadExternal ? "* 'unsafe-inline'" : "'unsafe-inline'"}`,
-    `object-src ${relaxed && loadExternal ? "*" : "'none'"}`,
-    `frame-src ${relaxed && loadExternal ? "*" : "'none'"}`,
-    `child-src ${relaxed && loadExternal ? "*" : "'none'"}`,
-    `worker-src ${relaxed ? (loadExternal ? "* blob:" : "blob:") : "'none'"}`,
-    "base-uri 'none'",
-    "form-action 'none'",
-  ].join("; ");
-};
-
-const htmlCspMeta = (csp) =>
-  `<meta http-equiv="Content-Security-Policy" content="${csp}">`;
-
-// <meta http-equiv="refresh"> navigates the frame without a user click and is
-// not covered by CSP, so it has to be removed from the sanitized output.
-const stripMetaRefresh = (html) =>
-  html.replace(/<meta\b[^>]*http-equiv\s*=\s*["']?\s*refresh\b[^>]*>/gi, "");
 
 // Renders a ```html fenced block. By default the fenced content is shown as
 // live HTML (mirrors the mermaid fence); a button lets the user toggle between
@@ -650,27 +622,24 @@ const HtmlBlock = memo(({ content, isLoading }) => {
   const forceCode = isLoading;
   const codeVisible = showCode || forceCode;
 
+  const handleDownload = () => {
+    downloadHtml(
+      `<!doctype html><html><head><meta charset="utf-8"></head><body>${safeHtml}</body></html>`,
+      renderedFilename("html-document", "html")
+    );
+  };
+
   return (
     <div className="relative my-2">
-      <button
-        type="button"
-        onClick={() => setShowCode((prev) => !prev)}
-        disabled={forceCode}
-        aria-pressed={!codeVisible}
-        className="absolute -top-3 right-2 z-10 inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-base-300 bg-base-100 px-2 py-1 text-[11px] font-medium text-base-content/70 shadow-sm transition-colors hover:bg-base-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {codeVisible ? (
-          <>
-            <Eye className="h-3.5 w-3.5" aria-hidden="true" />
-            {t("conversation.html_block.render")} ({sanitizationLabel})
-          </>
-        ) : (
-          <>
-            <Code2 className="h-3.5 w-3.5" aria-hidden="true" />
-            {t("conversation.html_block.show_code")}
-          </>
-        )}
-      </button>
+      <RenderToolbar
+        showCode={codeVisible}
+        onToggle={() => setShowCode((prev) => !prev)}
+        toggleDisabled={forceCode}
+        renderLabel={`${t("conversation.html_block.render")} (${sanitizationLabel})`}
+        showCodeLabel={t("conversation.html_block.show_code")}
+        onDownload={!codeVisible ? handleDownload : undefined}
+        downloadLabel={t("conversation.download_rendered")}
+      />
 
       {codeVisible ? (
         <div className="pt-3">
@@ -863,6 +832,41 @@ const useStreamingProcessor = (content, isLoading) => {
   };
 };
 
+// KaTeX (JS + CSS + fonts) is only fetched once some message contains math.
+// Until it arrives, math falls back to the plain math/inlineMath components.
+const MATH_HINT = /\$|\\\(|\\\[|\\begin\{/;
+let rehypeKatexPlugin = null;
+let katexPromise;
+const loadKatex = () => {
+  if (!katexPromise) {
+    katexPromise = Promise.all([
+      import("rehype-katex"),
+      import("katex/dist/katex.min.css"),
+    ])
+      .then(([mod]) => (rehypeKatexPlugin = mod.default))
+      .catch((err) => {
+        katexPromise = undefined;
+        throw err;
+      });
+  }
+  return katexPromise;
+};
+
+const useRehypeKatex = (wanted) => {
+  const [plugin, setPlugin] = useState(rehypeKatexPlugin);
+  useEffect(() => {
+    if (!wanted || plugin) return;
+    let active = true;
+    loadKatex()
+      .then((p) => active && setPlugin(() => p))
+      .catch((err) => console.error("Failed to load KaTeX:", err));
+    return () => {
+      active = false;
+    };
+  }, [wanted, plugin]);
+  return plugin;
+};
+
 export const SafeMarkdown = ({
   children: markdownContent,
   components,
@@ -870,6 +874,11 @@ export const SafeMarkdown = ({
   renderHtml = false,
   loadExternal = true,
 }) => {
+  const rehypeKatex = useRehypeKatex(
+    enableKatex &&
+      typeof markdownContent === "string" &&
+      MATH_HINT.test(markdownContent)
+  );
   if (!markdownContent || typeof markdownContent !== "string") return null;
 
   try {
@@ -884,7 +893,7 @@ export const SafeMarkdown = ({
 
     const rehypePlugins = [];
     if (renderHtml) rehypePlugins.push(rehypeRaw);
-    if (enableKatex)
+    if (enableKatex && rehypeKatex)
       rehypePlugins.push([
         rehypeKatex,
         {
@@ -1050,28 +1059,31 @@ const MarkdownRenderer = memo(
       return isLoading ? referencesContent : processedReferences;
     }, [isLoading, referencesContent, processedReferences]);
 
-    const renderContentByMode = useCallback((content) => {
-      const contentToRender = content.trim();
+    const renderContentByMode = useCallback(
+      (content, { thinking = false } = {}) => {
+        const contentToRender = content.trim();
 
-      // rendererComponents but with the html fence wired to receive isLoading
-      // so HtmlBlock can avoid rendering partial HTML while streaming.
-      const components = {
-        ...rendererComponents,
-        code(props) {
-          const match = /language-(\w+)/.exec(props.className || "");
-          if (match && match[1] === "html") {
-            return (
-              <HtmlBlock
-                content={String(props.children).replace(/\n$/, "")}
-                isLoading={isLoading}
-              />
-            );
-          }
-          return rendererComponents.code(props);
-        },
-      };
+        // rendererComponents but with the html fence wired to receive isLoading
+        // so HtmlBlock can avoid rendering partial HTML while streaming.
+        const components = thinking
+          ? thinkingRendererComponents
+          : {
+              ...rendererComponents,
+              code(props) {
+                const match = /language-(\w+)/.exec(props.className || "");
+                if (match && match[1] === "html") {
+                  return (
+                    <HtmlBlock
+                      content={String(props.children).replace(/\n$/, "")}
+                      isLoading={isLoading}
+                    />
+                  );
+                }
+                return rendererComponents.code(props);
+              },
+            };
 
-      switch (renderMode) {
+        switch (renderMode) {
         case "Plaintext":
           return (
             <pre className="whitespace-pre-wrap font-mono text-sm overflow-x-auto">
@@ -1132,8 +1144,15 @@ const MarkdownRenderer = memo(
               {preprocessLaTeX(contentToRender)}
             </SafeMarkdown>
           );
-      }
-    }, [renderMode, isLoading, loadExternal]);
+        }
+      },
+      [renderMode, isLoading, loadExternal],
+    );
+
+    const renderThinkingContentByMode = useCallback(
+      (content) => renderContentByMode(content, { thinking: true }),
+      [renderContentByMode],
+    );
 
     if (!children) return null;
 
@@ -1150,7 +1169,9 @@ const MarkdownRenderer = memo(
               isStreaming={isStreaming && index === thinkingBlocks.length - 1}
               // Default keeps the block's own rendering, other modes follow the switch
               renderContent={
-                renderMode === "Default" ? undefined : renderContentByMode
+                renderMode === "Default"
+                  ? undefined
+                  : renderThinkingContentByMode
               }
             >
               {content}

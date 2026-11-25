@@ -1,8 +1,8 @@
  
 //Libraries
 import { useEffect, useRef, useState } from "react";
-import { Trans, useTranslation } from "react-i18next";
-import { useDispatch, useSelector } from "react-redux";
+import { Trans } from "react-i18next";
+import { useSelector } from "react-redux";
 
 //Components
 
@@ -32,8 +32,6 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
   const conversations = useConversationList();
 
   //Hooks
-  const { t } = useTranslation();
-  const dispatch = useDispatch();
   const userSettings = useSelector(selectUserSettings);
   const settings = localState.settings;
   const tools = settings?.tools || {};

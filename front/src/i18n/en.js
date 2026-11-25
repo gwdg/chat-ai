@@ -1,7 +1,39 @@
 export default {
+  errors: {
+    app_title: "Something went wrong",
+    app_message:
+      "The interface could not be rendered. Your saved chats are still in this browser unless you clear site data. Reload to try again.",
+    database_title: "Local database unavailable",
+    database_version:
+      "This browser contains a newer local database version than this app build supports. Open the matching app version or a newer build. Do not clear site data.",
+    database_blocked:
+      "Another Chat AI tab is blocking the local database. Close the other tabs and reload.",
+    database_quota:
+      "The browser storage is full or unavailable. Export a backup, free some space, and reload.",
+    database_generic:
+      "The local database could not be opened. Your data may still be present. Reload or close other Chat AI tabs.",
+    database_stalled:
+      "The local database is taking unusually long to open. Another Chat AI tab or window is most likely still using it — close every other Chat AI tab and window, then retry. If that does not help, reload the page.",
+    data_safe_title: "Your data is safe",
+    data_safe:
+      "Nothing has been deleted. Your chats, files and settings are still stored in this browser — only this page could not open them.",
+    save_data: "Save all my data",
+    save_data_hint:
+      "You can keep a copy of everything as a file: it downloads to your computer and can be imported again later.",
+    save_data_saving: "Preparing your file…",
+    save_data_done: "Your file has been downloaded.",
+    save_data_failed:
+      "The local database could not be read, so the file was not created. Close the other Chat AI tabs and windows and try again.",
+    retry: "Retry",
+    details: "Details",
+    support_before: "If this does not go away on its own, please contact",
+    support_after: ".",
+    reload: "Reload",
+  },
   // Common phrases
   common: {
     loading: "Loading...",
+    back: "Back",
     undo: "Undo",
     scroll: "Scroll to bottom",
     scroll_to_top: "Scroll to top",
@@ -9,12 +41,20 @@ export default {
     next_message: "Scroll to next message",
     previous_message: "Scroll to previous message",
     rename: "Rename",
+    edit: "Edit",
     create: "Create",
     save: "Save",
     import: "Import Chat",
     export: "Export Chat",
     summarize: "Summarize",
     summarizing: "Summarizing...",
+    received_words_one: "Received {{count}} word…",
+    received_words_other: "Received {{count}} words…",
+    reasoning_words_one: "Model is reasoning — {{count}} word received…",
+    reasoning_words_other: "Model is reasoning — {{count}} words received…",
+    elapsed_seconds: "{{count}} s",
+    created: "Created {{date}}",
+    modified: "Modified {{date}}",
     summarize_success: "Summary created in a new conversation.",
     summary_title: "Summary of {{title}}",
     summarize_error: "Summarization failed. Your conversation is unchanged.",
@@ -23,7 +63,6 @@ export default {
     send: "Send",
     send_shortcut: "Send (Enter)",
     send_shortcut_shift_enter: "Send (Shift+Enter)",
-    stop: "Stop",
     share: "Share",
     delete: "Delete",
     cancel: "Cancel",
@@ -60,18 +99,28 @@ export default {
     rename_tooltip: "Rename: {{title}}",
     shortcut_new_conversation: "Ctrl + Shift + O",
     user_section: "User",
+    sync_now: "Sync now",
+    sync_running: "Syncing…",
+    sync_settings: "Open sync settings",
+    sync_done: "Sync complete: {{pulled}} pulled, {{pushed}} pushed.",
+    sync_failed: "Sync failed: {{error}}",
+    sync_auto_on: "Automatic synchronization on — pause it",
+    sync_auto_off: "Automatic synchronization off — resume it",
   },
   folders: {
     title: "Chats",
     all: "All chats",
     uncategorized: "Unsorted Chats",
-    by_date: "All chats by date",
-    by_created: "All chats by creation date",
+    by_date: "By date",
+    by_created: "By creation date",
+    by_size: "By storage size",
     sort_label: "Sort chats",
     sort_by_topic: "By topic",
     sort_by_date: "By date",
     sort_by_created: "By creation date",
+    sort_by_size: "By storage size",
     modified: "Modified {{date}}",
+    storage_size: "Browser storage {{size}}",
     dateBuckets: {
       today: "Today",
       yesterday: "Yesterday",
@@ -79,9 +128,14 @@ export default {
       lastMonth: "Last month",
       older: "Older",
     },
+    topics_label: "Topics",
     create_button: "New topic",
     expand_topic: "Expand topic",
     collapse_topic: "Collapse topic",
+    expand_all_topics: "Expand all topics",
+    collapse_all_topics: "Collapse all topics",
+    expand_all_chats: "Expand all chats",
+    collapse_all_chats: "Collapse all chats",
     empty_topic: "Drag a chat here.",
     search_label: "Search",
     search_action: "Search chats",
@@ -92,6 +146,14 @@ export default {
     edit_title: "Edit topic",
     delete_title: "Delete topic",
     topic_options: "Topic options",
+    unsorted_options: "Unsorted chats options",
+    remove_all_unsorted: "Remove all chats",
+    delete_unsorted_title: "Remove all unsorted chats",
+    delete_unsorted_description:
+      "Delete all {{count}} chats that are not in a topic? This cannot be undone.",
+    removed_unsorted_chats: "Removed {{count}} unsorted chats.",
+    remove_unsorted_error:
+      "Could not remove the unsorted chats: {{error}}",
     pinned: "Pinned",
     pin_action: "Pin chat",
     unpin_action: "Unpin chat",
@@ -120,6 +182,7 @@ export default {
     create_inline: "Create",
   },
   topic_view: {
+    kind: "Topic",
     chat_count_one: "{{count}} chat",
     chat_count_other: "{{count}} chats",
     empty_title: "No chats in this topic yet",
@@ -133,8 +196,8 @@ export default {
     loading: "Loading topic…",
   },
   sorter: {
-    button: "Sort & organize",
-    title: "Sort & organize chats",
+    button: "Smart Sort",
+    title: "Smart Sort",
     intro:
       "Review the suggestions below. Nothing is changed until you apply them.",
     ai_model_note:
@@ -188,9 +251,24 @@ export default {
     },
   },
   meta_chat: {
+    name: "Chatty",
     title: "Meta chat",
     prompt_placeholder: "Ask the meta chat!",
     open: "Metachat: ask about your chats",
+    help_label: "Help/Meta Assistant Chatty",
+    help_tooltip:
+      "Open the Meta chat: ask about your chats, topics, settings, and memories, or get step-by-step guidance for Chat AI features. Proposed changes apply only after you confirm them.",
+    last_checked: "Last checked: {{date}}",
+    changes_title: "What's New",
+    files_tab: "Workspace",
+    sessions_tab: "Sessions",
+    agents_tab: "Agents",
+    sessions_empty: "No chats in this workspace yet.",
+    collapse_changes: "Collapse What's New",
+    expand_changes: "Expand What's New",
+    resize_changes: "Resize What's New",
+    check_now: "Check now",
+    changes_empty: "No check yet. Click “Check now” to inspect chats, agents, MCP servers, and recent agent files.",
     banner_description: "Metachat can help you in two ways:",
     purposes: {
       tutor: "Learn how to use Chat AI features",
@@ -204,6 +282,7 @@ export default {
       "These changes modify your chats, settings, or memories. Review them before applying.",
     accept_changes: "Accept changes",
     applying_changes: "Applying…",
+    applied_not_reversible: "Applied — this action cannot be reverted.",
     changes_applied: "Changes applied",
     revert_changes: "Revert changes",
     reverting: "Reverting…",
@@ -217,23 +296,42 @@ export default {
     unpin_summary: "Unpin “{{title}}”",
     pin_topic_summary: "Pin topic “{{topic}}”",
     unpin_topic_summary: "Unpin topic “{{topic}}”",
+    pin_workspace_summary: "Pin workspace “{{workspace}}”",
+    unpin_workspace_summary: "Unpin workspace “{{workspace}}”",
+    pin_agent_summary: "Pin agent “{{agent}}”",
+    unpin_agent_summary: "Unpin agent “{{agent}}”",
     setting_summary: "Change {{setting}} from “{{from}}” to “{{to}}”",
     setting_temperature: "Temperature",
     setting_top_p: "Top-p",
     conversation_setting_all_summary:
       "Set {{setting}} to “{{value}}” for all chats",
     conversation_setting_summary: "Set {{setting}} to “{{value}}” in “{{title}}”",
+    create_chat_summary: "Create chat “{{title}}” with {{count}} initial messages",
     mcp_target_all: "all chats",
-    mcp_add_local_summary: "Add local MCP server {{name}} to {{target}}",
-    mcp_add_remote_summary: "Add remote MCP server {{name}} to {{target}}",
-    mcp_remove_local_summary: "Remove local MCP server {{name}} from {{target}}",
-    mcp_remove_remote_summary: "Remove remote MCP server {{name}} from {{target}}",
-    mcp_update_local_summary: "Update local MCP server {{name}} in {{target}}",
-    mcp_update_remote_summary: "Update remote MCP server {{name}} in {{target}}",
+    mcp_target_global: "the MCP server list",
+    agent_prompt_summary:
+      "Send {{chars}} characters to agent {{agent}}: “{{preview}}”",
+    agent_prompt_text_label: "Prompt text",
+    agent_prompt_meta: "Agent {{agent}} · {{chars}} characters",
+    agent_prompt_notice:
+      "This text is sent verbatim to the agent, which can run commands on its machine.",
+    agent_interrupt_summary: "Interrupt agent {{agent}}",
+    agent_session_create_summary: "Create a new session on agent {{agent}}",
+    agent_session_switch_summary: "Switch to session {{session}} on agent {{agent}}",
+    agent_session_delete_summary: "Remove session {{session}} from agent {{agent}}",
+    workspace_attach_summary: "Attach workspace {{workspace}} to {{target}}",
+    workspace_detach_summary: "Detach workspace {{workspace}} from {{target}}",
+    mcp_add_summary: "Add MCP server {{name}} to {{target}}",
+    mcp_remove_summary: "Remove MCP server {{name}} from {{target}}",
+    mcp_update_summary: "Update MCP server {{name}} in {{target}}",
     add_memory_summary: "Add memory “{{text}}”",
+    add_memory_group_summary: "Add memory “{{text}}” to group “{{group}}”",
     update_memory_summary: "Update memory “{{from}}” to “{{to}}”",
+    update_memory_group_summary: "Update memory “{{from}}” to “{{to}}” in group “{{group}}”",
     delete_memory_summary: "Delete memory “{{text}}”",
     clear_memories_summary: "Delete all saved memories",
+    e2ee_assign_summary: "Encrypt model {{model}} with key “{{key}}”",
+    e2ee_clear_summary: "Stop encrypting model {{model}}",
     memory_item: "Memory {{index}}",
     setting_on: "on",
     setting_off: "off",
@@ -241,6 +339,122 @@ export default {
     unsorted_topic: "Unsorted",
     error: "Could not answer. Please try again.",
     no_model: "No default model is configured.",
+  },
+  e2ee: {
+    badge: "End-to-end encrypted",
+    description:
+      "A bound key adds a second layer of encryption on top of the transport encryption that already protects every request: your message is sealed in this browser and stays ciphertext until it reaches the machine that runs the model, usually a GPU. Keys are distributed out of band, so import only from a source you trust.",
+    keys_title: "Encryption keys",
+    no_keys: "No keys yet. Add one above.",
+    invalid_key: "Not a valid 32-byte X25519 public key",
+    download: "Download public key",
+    remove: "Remove",
+    remove_confirm: "Remove this key and its model bindings?",
+    removed: "Key removed",
+    clear_all: "Remove all keys",
+    clear_all_confirm: "Remove every key and model binding?",
+    clear_all_done: "All encryption keys removed",
+    test: "Test",
+    test_all: "Test all",
+    test_ok: "Key works: {{count}} model(s) answered the sealed test.",
+    test_failed: "No sealed answer from {{models}} ({{reason}}).",
+    test_no_models: "Bind this key to a model before testing it",
+    test_no_bindings: "No key is bound to a model, so there is nothing to test.",
+    test_all_done: "{{working}} of {{tested}} tested keys work.",
+    test_failed_keys: "Failing: {{keys}}",
+    status_working: "Works",
+    status_working_hint:
+      "The last sealed test request passed for {{count}} model(s)",
+    status_failed: "Test failed",
+    status_failed_hint:
+      "The last sealed test request did not pass for any bound model",
+    status_untested: "Not tested",
+    status_untested_hint:
+      "The key is well formed, but it has not been tested against a model",
+    verifying: "Testing key…",
+    verified_added: "Key tested and bound to {{count}} model(s)",
+    added_unverified:
+      "Key added without a test. Enter at least one known model so it can be checked.",
+    add_keys_title: "Add encryption keys",
+    add_keys_description:
+      "Each key is tested with one sealed request per model before it is stored. Models that fail the test stay unencrypted.",
+    verify_failed_all:
+      "The key was not added: the test request for {{model}} failed ({{reason}}).",
+    verify_failed_models:
+      "Not encrypted because the test failed for {{models}} ({{reason}}).",
+    no_models_matched:
+      "None of these are known models: {{models}}. The key was not added.",
+    import_method: "How to add a key",
+    modes: {
+      published: "Published keys",
+      paste: "Paste or file",
+      url: "From URL",
+      directory: "Key directory",
+    },
+    published_url: "Key base URL",
+    published_hint:
+      "Use only a key URL you trust. Each downloaded key is tested against its model before it is stored.",
+    published_load: "Load keys for all models",
+    published_loading: "Loading keys…",
+    published_url_required: "Enter the URL of the key directory.",
+    published_progress_fetch: "Downloading keys… {{done}}/{{total}}",
+    published_progress_verify: "Verifying keys… {{done}}/{{total}}",
+    published_imported: "Imported {{count}} verified key(s)",
+    published_none:
+      "No key passed verification. Check the key base URL and that the models have an E2EE node.",
+    published_none_needed: "Every model already has a usable key.",
+    published_summary:
+      "{{imported}} imported · {{missing}} without a published key · {{failed}} failed",
+    published_failed_title: "Not imported:",
+    published_more: "and {{count}} more",
+    models_field: "Applies to models",
+    models_field_placeholder: "qwen3-235b-a22b, Mistral Large",
+    models_field_hint:
+      "Comma-separated model ids or names; a bridged \"(External)\" entry is a separate model. Unknown entries are skipped.",
+    unknown_models: "Key added, but these are not known models: {{models}}",
+    fallback_name: "Key {{fingerprint}}",
+    public_key: "Public key",
+    public_key_placeholder: "Base64url X25519 public key",
+    add_key: "Add key",
+    choose_file: "Choose .pub file…",
+    key_url: "Key URL",
+    fetch_key: "Download key",
+    directory_url: "Directory URL",
+    import_directory: "Import directory",
+    directory_imported: "Imported {{count}} keys",
+    directory_hint:
+      "One document with every key and its model bindings. Each key is still tested before it is stored.",
+    choose_folder: "Choose key folder…",
+    folder_hint:
+      "Reads every .pub file in a local folder. Files that are not valid public keys are reported and skipped.",
+    folder_imported: "Imported {{count}} keys, bound {{bound}} models",
+    folder_partial:
+      "Imported {{count}} keys ({{bound}} models). Skipped {{skipped}} file(s): {{files}}",
+    folder_empty: "No .pub files in that folder.",
+    folder_no_valid: "No valid public key in that folder ({{count}} file(s) rejected).",
+    folder_unsupported:
+      "This browser cannot open a folder here. Use the directory URL instead, or open the app over HTTPS or localhost.",
+    folder_error: "Could not read the folder: {{reason}}",
+    import_error: "Could not import the key.",
+    models_title: "Unencrypted models",
+    models_keyed: "{{count}} encrypted",
+    models_description:
+      "These models are used by an internal feature and have no working key, so their requests only get the transport encryption.",
+    models_empty:
+      "No model used by an internal feature is missing a key.",
+    used_for: "Used for",
+    features: {
+      titles: "Titles",
+      memory: "Memory",
+      proposals: "Proposals",
+      summaries: "Summaries",
+      image_analysis: "Image analysis",
+    },
+    models_blocked: "Key missing or invalid",
+    not_encrypted: "Not encrypted",
+    model_not_offered: "Not in model list",
+    model_not_offered_hint:
+      "An internal feature is configured to use this model, but the deployment's model list does not contain it, so no key can be bound to it here.",
   },
   mcp_confirmation: {
     title: "Run MCP tool?",
@@ -253,6 +467,89 @@ export default {
     denied: "The user denied running the MCP tool “{{tool}}” on {{server}}.",
   },
   feature_guide: {
+    workspace_overview: {
+      title: "Workspaces",
+      step1: "The right-hand panel belongs to the workspace: What's new opens first, Files shows what the workspace stores, and Agents shows how it runs.",
+      step2: "Sources can join a workspace at any time: Manage Workspace in its options menu opens the same dialog as Create workspace.",
+      step3: "Browse the tree in the Files tab. The pill on each row says where that entry lives: browser, device, arcana, MCP or agent.",
+      step4: "Choose how this workspace runs its agent: in the browser, through an OpenCode server, or with the Remote agent.",
+    },
+    manage_chat_data: {
+      title: "Manage the files of a chat",
+      step1: "Access storage is on by default and sits at the top of the Workspace menu, which appears while the chat belongs to a workspace. Switch it off to give the model no file tools at all; attachments are still included in the message where possible. A chat without a workspace has no such menu — attach it from the workspace first.",
+      step2: "Choose Manage Workspace to manage the files behind this switch. One attached workspace opens its editor — the same dialog as Create workspace, with its storage locations, its name, icon and colour, and Apply Changes. With several, the menu turns into the list of attached workspaces: pick one to open that workspace's editor, or use the back arrow to return to these settings.",
+    },
+    workspace_saia_fs: {
+      title: "Your SAIA files in a workspace",
+      step1: "Start a new workspace with Create workspace. Its Sources rail is where a workspace gets its files.",
+      step2: "SAIA Files is your account folder. It is listed only while this deployment's saia-fs service answers its health check; open it to pick a folder and add it to the workspace.",
+    },
+    workspace_edit_storage: {
+      title: "Manage a workspace",
+      step1: "Open the options menu of a workspace in the sidebar and choose Manage Workspace.",
+      step2:
+        "Manage Workspace is Create workspace for a workspace that already exists: rename it, change its icon and colour, and edit its storage in the same dialog. Pick a folder, mount a source, or add a local folder, a repository or an MCP server; storage changes are saved as you make them, and Apply Changes saves the name, icon and colour.",
+    },
+    workspace_clone: {
+      title: "Import a Git repository",
+      step1: "Open Create workspace, pick Git repository on the left, choose the local agent that runs the clone, then press Create.",
+    },
+    workspace_upload: {
+      title: "Upload files into a workspace",
+      step1: "Open a workspace, pick the Files tab on the right and choose Add file; the browser asks for a file from this computer.",
+      step2: "The uploaded file appears in the folder you are viewing.",
+    },
+    workspace_multiselect: {
+      title: "Remove a file from a workspace",
+      step1: "The Files tab on the right lists everything the workspace stores, each row with its origin pill.",
+      step2: "Every row ends with a trash button; it removes that file or folder after a confirmation.",
+    },
+    arcana_filesystem: {
+      title: "Use an Arcana filesystem",
+      step1: "Every workspace already includes an Arcana filesystem source, listed in the Files tab.",
+      step2: "Each Arcana appears as a folder; open one to browse its files.",
+    },
+    attach_from_workspace: {
+      title: "Attach files from a workspace",
+      step1: "Attach this chat to a workspace with the workspace button in the prompt box.",
+      step2:
+        "Click the attach button and choose From workspace, then pick a file from the workspace tree.",
+      step3: "Send the message with the attached file.",
+    },
+    agent_recovery: {
+      title: "Recover an agent session",
+      step1: "Open the agent's tools from the composer. If the agent server is unreachable, exports use the local cache instead.",
+      step2: "Open the Recovery tab to see how much history is cached for this session.",
+      step3: "Restore into new session writes the cached transcript into the instructions of a new session. Review the size and confirm first.",
+    },
+    remote_agents: {
+      title: "Spawn a remote agent",
+      step1: "Use the + button in the Agents section to add an agent. Pick the GWDG HPC agentic service and its HPC project, or connect an OpenCode server.",
+      step2: "Agents appear in the list; click one to open its chat on the right.",
+      step3:
+        "Expand an agent with the chevron to see each workspace with the sessions attached there, plus “Unassigned sessions”. Click a session to switch, use + to create one, or open the ... menu to rename it, move it to a workspace, or close it.",
+    },
+    close_group_sessions: {
+      title: "Close all sessions of a group",
+      step1:
+        "Expand an agent to see its sessions grouped by workspace and under “Unassigned sessions”.",
+      step2: "The trash icon in the group header closes every session of that group. Running turns are interrupted first, and you must confirm the action in a dialog before any session is removed.",
+    },
+    session_workspaces: {
+      title: "Move a session between workspaces",
+      step1:
+        "Expand an agent to see its sessions grouped by the workspaces the agent is attached to.",
+      step2:
+        "Drag a session row onto another workspace group to move it there. The session is detached from its old workspace and attached to the new one, and both groups update right away.",
+      step3:
+        "A workspace can also attach a session itself: open its “…” menu and choose Attach agent session, then pick a session. The list groups the unattached sessions by agent.",
+    },
+    agent_workspace_access: {
+      title: "Give an agent access to workspace files",
+      step1: "Open an agent. The left panel is its file browser.",
+      step2: "Open the workspace button next to the prompt box and turn Agent workspace access on to provide the reverse proxy for this agent. Attach a workspace, choose which one the bridge uses, allow writes if the agent may change files, and keep this tab open while the agent works.",
+      step3: "The same panel holds the MCP options. MCP tools lets the agent call your configured MCP servers through this tab; Inject external MCP tools also registers the servers OpenCode reaches itself, so those keep working without the tab while the rest stay on the bridge. Both routes belong to the session that is open: another session of the same agent, and every session of another agent, cannot use them.",
+    },
     catalog: {
       open: "Browse tutorials",
       close: "Hide tutorials",
@@ -276,6 +573,7 @@ export default {
       tools: "Tools and RAG",
       chats: "Chats and organization",
       personas: "Personas",
+      workspace: "Workspaces",
       settings: "Settings",
       other: "More",
     },
@@ -365,9 +663,15 @@ export default {
       step2: "Enable tools.",
       step3: "Select Image Modification, then attach or describe the image.",
     },
+    browser_storage: {
+      title: "Enable browser storage",
+      step1: "Open Browser & local tools from the prompt box.",
+      step2:
+        "Select Browser storage so the assistant can read and write files in this chat's browser workspace.",
+    },
     image_analysis: {
       title: "Analyze images",
-      step1: "Open Browser & local tools from the prompt box.",
+      step1: "Open GWDG Tools from the prompt box.",
       step2: "Select Analyze images so the assistant can analyze image files with SAIA's Gemma vision model.",
     },
     audio_generation: {
@@ -376,12 +680,28 @@ export default {
       step2: "Enable tools.",
       step3: "Select Audio Generation, then describe the audio you want.",
     },
-    mcp_server: {
-      title: "Connect an MCP server",
+    arcana_tools: {
+      title: "Use Arcana Tools",
       step1: "Open GWDG Tools from the prompt box.",
       step2: "Enable tools.",
-      step3: "Select MCP Server.",
-      step4: "Enter the MCP server configuration in the field below.",
+      step3:
+        "Select Arcana Tools so the assistant can inspect Arcana collections, manage their files and indexes, and handle sharing.",
+    },
+    diagram_renderers: {
+      title: "Render diagrams from code blocks",
+      step1: "Ask for a fenced code block: ```dot for Graphviz, ```vega-lite for Vega-Lite, or ```chart for a Chart.js JSON config.",
+      step2: "Send the message. The block is rendered locally as an SVG or canvas chart.",
+    },
+    mcp_server: {
+      title: "Connect an MCP server",
+      step1: "Add an MCP server in the sidebar's MCP Servers section.",
+      scan: "Or let the app search for local servers: Scan probes every port above 5000 on this machine for a /mcp endpoint and adds what it finds.",
+      step2: "Enter the server URL and test the connection.",
+      details:
+        "Double-click a configured server, or open its options menu and choose Details, to see the name, version, protocol version, capabilities and tools it reports.",
+      step3: "Open GWDG Tools, enable MCP Servers, and select the configured server.",
+      policy:
+        "In Settings → Advanced, choose whether chat turns may call tools of your MCP servers: Ask (the default, confirm each call), Always, or Never. This only affects your MCP servers; Chat AI's own file, workspace and agent tools stay available.",
     },
     tools_overview: {
       title: "Use GWDG Tools",
@@ -401,10 +721,21 @@ export default {
       step2: "Name the topic and choose an icon and color.",
       step3:
         "Drag chats into topics, or use the conversation menu to move them.",
+      step4:
+        "Use the button next to Create topic to collapse or expand all topics at once.",
+    },
+    attach_chat_to_workspace: {
+      title: "Attach a chat to a workspace",
+      step1:
+        "Drag a chat from the sidebar onto a workspace row to attach it.",
+      step2:
+        "The attached chat appears under the workspace. Its files are available there too.",
+      step3:
+        "Drag the chat out of the workspace onto a topic to detach it again.",
     },
     sort_organize: {
-      title: "Sort & organize chats",
-      step1: "Click Sort & organize in the sidebar header.",
+      title: "Smart Sort",
+      step1: "Click Smart Sort in the sidebar header.",
       step2:
         "Review the suggested topics, titles, and deletions. Nothing changes until you apply them.",
       step3:
@@ -413,7 +744,8 @@ export default {
     sort_group_chats: {
       title: "Sort and group chats",
       step1: "Open the sort menu in the sidebar.",
-      step2: "Choose grouping by topic, date, or creation date.",
+      step2:
+        "Choose grouping by topic, date, creation date, or browser storage size.",
     },
     pin_chat: {
       title: "Pin a chat",
@@ -426,6 +758,20 @@ export default {
       step1: "Open the options menu of a topic in the sidebar.",
       step2:
         "Choose Pin topic. Pinned topics stay in the pinned area at the top, regardless of the selected grouping.",
+    },
+    pin_workspace: {
+      title: "Pin a workspace",
+      step1: "Open the options menu of a workspace in the sidebar.",
+      step2:
+        "Choose Pin workspace. It is added to the pinned section at the top, above the chats, and stays in the workspace list.",
+      step3:
+        "Click the pin again in the pinned section to unpin the workspace.",
+    },
+    pin_agent: {
+      title: "Pin an agent",
+      step1: "Open the options menu of an agent in the sidebar.",
+      step2:
+        "Choose Pin agent. It is added to the pinned section at the top, above the chats, and stays in the agent list.",
     },
     close_chat: {
       title: "Close a chat",
@@ -469,8 +815,17 @@ export default {
     settings_overview: {
       title: "Change settings",
       step1: "Open your user settings from the profile or the sidebar.",
-      step2: "Choose the Chat tab. Memories and Data contain the other settings.",
-      step3: "Change a preference such as rendering or document conversion. Changes are saved automatically.",
+      step2: "Choose the Chat tab. Usage, Advanced, Memories and Data hold the other settings.",
+      step3: "Change a preference such as document conversion. Changes are saved automatically.",
+      step4: "Rendering engines and the reasoning indicator sit in the Advanced tab.",
+    },
+    institution: {
+      title: "See what your institution restricts",
+      step1: "Open your user settings from the profile or the sidebar.",
+      step2: "Choose the Profile tab.",
+      step3: "Open the Institution tab beside User.",
+      step4:
+        "The Institution section names who provides this installation and lists every limitation that applies here, such as a fixed model, disabled features and blocked external communication, with the contact and links.",
     },
     memories: {
       title: "Manage memories",
@@ -482,12 +837,39 @@ export default {
       title: "Open chat preferences",
       step1: "Open your user settings.",
       step2:
-        "Choose the Chat tab to change the default model, send key, summaries, rendering, and document conversion.",
+        "Choose the Chat tab to change the default model, send key, summaries, timestamps and document conversion; rendering is in the Advanced tab.",
+    },
+    advanced_mode: {
+      title: "Show agents and MCP servers in the sidebar",
+      step1: "Open your user settings.",
+      step2: "Choose the Advanced tab.",
+      step3:
+        "Turn on Advanced mode to add the Agents and MCP Servers sections to the sidebar. With it off the sidebar shows chats, topics and workspaces only.",
+    },
+    e2ee: {
+      title: "Encrypt a model end to end",
+      step1: "Open your user settings.",
+      step2: "Choose the Encryption tab.",
+      step3:
+        "Import the model's public key: paste it, choose a .pub file, load it from a URL, import a key directory, or pick a local folder and read every .pub file in it.",
+      step_published:
+        "Or load the keys the deployment publishes: the key base URL is prefilled from the configuration, and Load keys for all models imports and verifies every published .pub file.",
+      step4:
+        "Enter the models the key applies to when you add it. They then show a green lock and every request through them is encrypted in this browser.",
+      step_test:
+        "Test a key again against the models it is bound to. A key that answers the sealed test is marked green; an untested or failed key is not.",
+    },
+    message_timestamps: {
+      title: "Show message timestamps",
+      step1: "Open your user settings.",
+      step2: "Choose the Chat tab.",
+      step3:
+        "In the Messages section, turn on Show message timestamps to see when each message was sent.",
     },
     rendering: {
       title: "Configure rendering",
       step1: "Open your user settings.",
-      step2: "Choose the Chat tab.",
+      step2: "Choose the Advanced tab.",
       step3:
         "Enable Typst or LaTeX rendering. HTML rendering and external references are configured here too.",
     },
@@ -511,9 +893,59 @@ export default {
       step3:
         "Export local data or clear chats, memories, settings, and attachments.",
     },
+    sync_setup: {
+      title: "Encrypted server synchronization",
+      step1: "Open your user settings.",
+      step2: "Choose the Data tab.",
+      subtab: "Open the Server synchronization section.",
+      step3:
+        "The encrypted server synchronization keeps settings, conversations, workspaces and agents in step across your devices. Everything is encrypted in this browser before it is uploaded, and the passphrase is never stored.",
+      step4:
+        "Switch the server synchronization on, then create it with a passphrase you can remember, or unlock the copy another device already created for this account. Once it is open, you can add a passkey on this device so a reload does not ask for the passphrase again.",
+    },
+    backup_create: {
+      title: "Create an encrypted backup",
+      step1: "Open your user settings.",
+      step2: "Choose the Data tab.",
+      subtab: "Open the Encrypted backup section.",
+      step3:
+        "Under Encrypted backup, one file carries all chats, topics, settings, workspaces and agents. It is encrypted in this browser and stamped with the date and time.",
+      step4:
+        "Create it with a passphrase you can remember. The same passphrase restores the file later; matching items are overwritten and nothing is deleted.",
+    },
+    backup_restore: {
+      title: "Restore an encrypted backup",
+      step1: "Open your user settings.",
+      step2: "Choose the Data tab.",
+      subtab: "Open the Encrypted backup section.",
+      step3:
+        "Choose the backup file and type the passphrase it was created with. Confirm that matching items may be overwritten, then restore: items with the same id are replaced, new ones are added, and nothing is deleted.",
+    },
+    language_picker: {
+      title: "Change the language",
+      step1:
+        "Open the language menu in the footer. English and German switch the interface immediately; Automatic follows your browser language again.",
+    },
+    pwa_install: {
+      title: "Install the app",
+      step1:
+        "Use the install button in the footer to open your browser's installation dialog. The app then starts in its own window, without the address bar.",
+    },
+    bug_report: {
+      title: "Report a problem",
+      step1:
+        "Open the bug report from the footer: choose a type, describe what happened and attach a screenshot if it helps.",
+    },
     dark_mode: {
       title: "Switch theme",
       step1: "Use the theme toggle in the footer to switch between light and dark mode.",
+    },
+    brand_consent: {
+      title: "Review your consents",
+      step1: "Open your user settings.",
+      step2: "Choose the Advanced tab.",
+      step3:
+        "Change the voluntary consents here; the terms of use and privacy links sit below the switches.",
     },
     feedback: {
       title: "Send feedback",
@@ -549,10 +981,10 @@ export default {
         "Click a cited message to jump to the exact message and highlight it.",
     },
     meta_chat_pins: {
-      title: "Pin chats and topics with the Meta chat",
+      title: "Pin chats, topics, workspaces and agents with the Meta chat",
       step1: "Open the Meta chat from the AI icon in the sidebar.",
       step2:
-        "Ask it to pin or unpin a chat or topic, for example: “Pin the Pricing discussion chat” or “Unpin the Research topic.”",
+        "Ask it to pin or unpin a chat, topic, workspace or agent, for example: “Pin the Pricing discussion chat” or “Unpin the Research topic.”",
       step3:
         "Review the proposed pin change and click Accept changes. Nothing is applied before you accept.",
     },
@@ -563,6 +995,30 @@ export default {
         "Ask it to take you somewhere, for example: “Take me to chat settings” or “Open the chat about pricing.”",
       step3:
         "Ask it to search your chats, for example: “Find where we decided the pricing model” or “What are the action items?”. Click a cited message to jump to it.",
+    },
+    meta_chat_agents: {
+      title: "Work with agents from the Meta chat",
+      step1: "Open the Meta chat from the AI icon in the sidebar.",
+      step2: "Ask for agent status or history, for example: “Check all agents and show recent files.”",
+      step3: "Ask it to fetch a file, for example: “Show random.png from Research agent,” or review a prompt/interrupt proposal before accepting.",
+    },
+    meta_chat_workspaces: {
+      title: "Attach workspaces from the Meta chat",
+      step1: "Open the Meta chat from the AI icon in the sidebar.",
+      step2: "Ask it to list workspaces and attach one, for example: “Attach Research workspace to agent 1.”",
+      step3: "Review the workspace-link proposal and click Accept changes.",
+    },
+    meta_chat_digest: {
+      title: "Get a what's-new digest",
+      step1: "Open the Meta chat from the AI icon in the sidebar.",
+      step2: "The banner shows when the last check ran. It is updated after each what's-new answer.",
+      step3: "Ask “What's new?” to see changed chats, new topics and memories, agent status across all sessions and subagents, new or changed sessions, and recently modified agent files.",
+    },
+    meta_chat_mcp: {
+      title: "Manage MCP servers from the Meta chat",
+      step1: "Open the MCP Servers section in the sidebar or add a server there.",
+      step2: "Return to the Meta chat from the AI icon.",
+      step3: "Ask it to test servers, list their tools, or add/update/remove one. Sidebar changes require Accept.",
     },
     meta_chat_usage: {
       title: "Use the Meta chat",
@@ -676,6 +1132,16 @@ export default {
       step1: "Click the speaker icon under an assistant message.",
       step2: "Use the stop button to end playback at any time.",
     },
+    backup_migration: {
+      title: "Move your chats to a new device",
+      description:
+        "Carry chats, topics, settings, workspaces and agents to another browser with one encrypted backup file.",
+      step1:
+        "Create the backup under Encrypted backup, with a passphrase you can remember.",
+      step2: "Copy the downloaded file to the other device or browser.",
+      step3:
+        "Restore it there with the same passphrase. Matching items are overwritten, new ones are added, and nothing is deleted.",
+    },
   },
   // Chat settings
   settings: {
@@ -683,6 +1149,9 @@ export default {
       label: "Memories",
       description: "Choose how this conversation uses your saved memories.",
       help_label: "Learn about memories",
+      default_group_name: "Default",
+      group_label: "Memory group",
+      group_default: "Default ({{group}})",
       options: {
         default: {
           label: "Default",
@@ -782,23 +1251,29 @@ export default {
     tools_title: "GWDG Tools",
     tools_enable_all: "Enable all",
     tools_disable_all: "Disable all",
+    tools_enable_to_configure: "Turn this tool on to configure it.",
+    tool_details: "{{name}} settings",
     chat_settings: "Chat settings",
     label_web_search: "Web Search",
     label_image_generation: "Image Generation",
     label_image_modification: "Image Modification",
     label_image_analysis: "Analyze images",
     label_audio_generation: "Audio Generation",
+    label_arcana_tools: "Arcana Tools",
     label_arcana: "Arcana",
     label_mcp_server: "MCP Server",
     label_write_access: "Allow write",
-    label_codemode: "Codemode",
+    label_browser_storage: "Browser storage",
     label_create_docx: "Word document",
+    tools_requires_browser_storage: "Enable browser storage or share a local folder first",
+    tools_requires_workspace: "Attach a workspace first",
     tools_agent_unavailable: "Not available in agent mode",
     label_tool_limit: "Limit tool calls per response",
     tool_limit_hint: "Maximum tool invocations per response; calls made together count once",
     tools_agent_external: "This model runs without tools",
+    model_no_tools_warning:
+      "This model does not support tools. The chat runs without file access, web search, or MCP tools.",
     placeholder_arcana_id: "Arcana id",
-    placeholder_mcp_id: "Server id",
     placeholder_mcp_url: "http://localhost:3000/mcp",
     placeholder_mcp_auth: "Authorization header (optional)",
     mcp_add: "Add MCP server",
@@ -808,11 +1283,12 @@ export default {
     mcp_test_failed: "MCP test failed: {{error}}",
     mcp_test_invalid_url: "Enter a valid MCP server URL first.",
     mcp_toggle: "Use this server",
-    mcp_gateway_first: "Without agent mode only the first server is used, as a gateway server id.",
   },
 
   // Conversation
   conversation: {
+    meta_tokens: "tokens",
+    meta_cost: "cost",
     local_tools: "Browser & local tools",
     mount_folder: "Share local folder",
     folder_mounted: "Folder available to the assistant at {{path}}",
@@ -847,6 +1323,8 @@ export default {
     prompt: {
       placeholder: "Ask me",
       attach: "Attach File",
+      attach_device: "From device",
+      attach_workspace: "From workspace",
       attach_media: "Attach Media",
       attachments: "Attachments",
       clear_attachments: "Clear all",
@@ -862,20 +1340,38 @@ export default {
       process_browser: "Process (browser)",
       process_server: "Process (server)",
       must_process: "File must be processed",
+      optional_process: "Optional: convert to text",
     },
     reasoning: "Reasoning Process",
+    code: "Code",
+    code_lines: "{{count}} lines",
+    show_code: "Show code",
+    hide_code: "Hide code",
     copy_reasoning: "Copy reasoning process",
     reasoning_streaming: "Reasoning in progress",
     reasoning_streaming_label: "Thinking",
     reasoning_received_words_one: "{{count}} word received",
     reasoning_received_words_other: "{{count}} words received",
     action: "Action",
+    download_rendered: "Download rendered document",
     html_block: {
       render: "Render HTML",
       show_code: "Show code",
     },
     typst_block: {
       render: "Render as Typst",
+      show_code: "Show code",
+    },
+    graphviz_block: {
+      render: "Render as Graphviz",
+      show_code: "Show code",
+    },
+    vega_block: {
+      render: "Render as Vega-Lite",
+      show_code: "Show code",
+    },
+    chartjs_block: {
+      render: "Render as Chart.js",
       show_code: "Show code",
     },
     latex_block: {
@@ -892,10 +1388,12 @@ export default {
   },
   // Footer
   footer: {
+    sitemap: "Sitemap",
+    help: "Help",
     imprint: "Imprint",
     terms: "Terms of Use",
     docs: "Docs",
-    privacy: "Privacy",
+    privacy: "Data Privacy (ChatAI)",
     faq: "FAQ",
     contact: "Contact Us",
     about: "About",
@@ -909,8 +1407,17 @@ export default {
       navigation_label: "Profile settings sections",
       profile: {
         label: "Profile",
-        title: "Profile and usage",
-        description: "Review your account details and usage information.",
+        title: "Profile",
+        description: "Review your account details.",
+      },
+      usage: {
+        label: "Usage",
+      },
+      advanced: {
+        label: "Advanced",
+        title: "Advanced settings",
+        description:
+          "Rendering engines, the reasoning indicator and the advanced sidebar sections.",
       },
       chat: {
         label: "Chat",
@@ -923,20 +1430,74 @@ export default {
         title: "Saved memories",
         description: "Review and manage details Chat AI has learned.",
       },
+      encryption: {
+        label: "Encryption",
+        title: "End-to-end encryption",
+        description:
+          "Manage the public keys of encryption-capable models and choose which models use them.",
+      },
       data: {
         label: "Data",
         title: "Data and privacy",
-        description: "Export or remove data stored in this browser.",
+        description:
+          "Manage local data, download an encrypted backup, and keep your devices in step with encrypted server synchronization.",
+      },
+    },
+    profile: {
+      sections: {
+        label: "Profile sections",
+        user: "User",
+        institution: "Institution",
       },
     },
     account: {
       username: "Username",
       email: "Email address",
+      institute: {
+        title: "Institution",
+        description:
+          "This Chat AI installation is provided by your institution, which may narrow the options available here.",
+        limitations: "Limitations for this institution",
+        links: "Links",
+        contact: "Contact",
+        model: "Model choice",
+        model_fixed: "Fixed to {{model}}",
+        model_allowed: "Limited to {{models}}",
+        modules_label: "Disabled modules",
+        features_label: "Disabled features",
+        external_label: "Blocked external communication",
+        modules: {
+          tools: "Tools",
+          feedback: "Feedback",
+          choices: "Follow-up suggestions",
+          agent: "Browser agent",
+          agents: "Agents",
+          arcanas: "Arcana Tools",
+          speech: "Speech output",
+          sync: "Server synchronization",
+        },
+        features: {
+          meta_chat: "Meta chat",
+          workspaces: "Workspaces",
+          mcp_servers: "MCP servers",
+          e2ee: "End-to-end encryption",
+          tutorials: "Tutorials",
+          import_git: "Cloning Git repositories",
+        },
+        external: {
+          web_search: "Web search",
+          external_models: "External models",
+          mcp: "MCP servers",
+          external_references: "External references in rendered content",
+        },
+      },
     },
     usage: {
       title: "Usage",
       description:
         "Monitor your monthly usage and organization budget usage.",
+      empty: "No usage limits are recorded for this account.",
+      expand: "Show details",
       monthly: "Monthly",
       total: "Total",
       personal: "Personal",
@@ -993,10 +1554,8 @@ export default {
         },
       },
       suggestions: {
-        section_label: "Suggestions",
         label: "Suggest follow-up prompts",
         description: "Show suggested ways to continue after each response.",
-        help_label: "Learn about follow-up prompts",
         title_once: {
           label: "Set title only on first prompt",
           description:
@@ -1004,10 +1563,46 @@ export default {
         },
       },
       summaries: {
-        section_label: "Conversation summaries",
         label: "Show summaries on hover",
         description:
           "Generate a short summary when you switch away from a chat, then show it when hovering over that chat in the sidebar.",
+      },
+      sidebar: {
+        advanced: {
+          label: "Advanced mode",
+          description:
+            "Show Agents and MCP servers in the sidebar. When this is off, the sidebar shows only chats and workspaces.",
+        },
+      },
+      mcp_tools: {
+        label: "MCP tool calls in chats",
+        description:
+          "Choose whether the assistant may call tools of the MCP servers you added. The app's own file, workspace and agent tools are not affected.",
+        note: "This setting only covers your MCP servers; Chat AI's own read, write and workspace tools are always available.",
+        options: {
+          ask: {
+            label: "Ask",
+            description:
+              "Ask before each MCP tool call. You can allow a tool for the current chat.",
+          },
+          always: {
+            label: "Always",
+            description:
+              "Run MCP tools without asking. Only use this with servers you trust.",
+          },
+          never: {
+            label: "Never",
+            description:
+              "Do not offer tools of your MCP servers in chats. The app's own tools stay available.",
+          },
+        },
+      },
+      messages: {
+        timestamps: {
+          label: "Show message timestamps",
+          description:
+            "Display the date and time each message was sent below the message.",
+        },
       },
       submission: {
         label: "Send message with",
@@ -1081,6 +1676,21 @@ export default {
         description:
           "Choose whether LaTeX code blocks are rendered by default. You can still render or show code for each block.",
       },
+      graphviz: {
+        label: "Render Graphviz diagrams",
+        description:
+          "Render ```dot and ```graphviz blocks locally. The first render downloads the Graphviz engine (about 1.4 MB) after your confirmation.",
+      },
+      vega: {
+        label: "Render Vega-Lite charts",
+        description:
+          "Render ```vega-lite and ```vega blocks locally. External data URLs stay blocked unless external references are enabled.",
+      },
+      chartjs: {
+        label: "Render Chart.js charts",
+        description:
+          "Render ```chart and ```chartjs blocks locally from a Chart.js JSON configuration.",
+      },
       reasoning_streaming: {
         label: "Keep reasoning collapsed while streaming",
         description:
@@ -1124,10 +1734,181 @@ export default {
       title: "Manage Data",
       description:
         "Export a copy of your local data or permanently remove chats, memories, settings, and attachments from this browser.",
+      sections: {
+        label: "Data sections",
+        manage: "Manage data",
+        backup: "Encrypted backup",
+        sync: "Server synchronization",
+      },
       export_success: "Local data exported successfully.",
       export_error: "Local data could not be exported.",
+      storage_title: "Browser storage",
+      storage_unavailable: "Storage information is not available in this browser.",
+      storage_persisted:
+        "Persistent storage is enabled. The browser should keep your chats when storage is low.",
+      storage_not_persisted:
+        "Persistent storage is not enabled. The browser may remove local chats when storage is low or the site is inactive. Export a backup regularly.",
+      storage_usage: "Using {{used}} of {{quota}}.",
+      storage_request: "Request persistent storage",
+      storage_requesting: "Requesting…",
+      storage_request_granted:
+        "Persistent storage was granted. The browser should keep your chats when storage is low.",
+      storage_request_denied:
+        "The browser did not make storage persistent. Chrome grants this only to installed apps or sites you use regularly; Firefox may ask for permission. See the browser console for details.",
+      storage_request_unsupported:
+        "This browser does not support requesting persistent storage.",
+      storage_request_failed: "Persistent storage request failed: {{error}}",
+      backup: {
+        title: "Encrypted backup",
+        description:
+          "Download one encrypted file of all chats, topics, settings, workspaces and agents, and restore it later with the same passphrase.",
+        notice:
+          "The backup is encrypted in this browser before it is downloaded. The passphrase is never stored and cannot be recovered; without it the file cannot be opened. Keep the file and the passphrase somewhere safe.",
+        create_title: "Create a backup",
+        create_description:
+          "The file is stamped with the current date and time. Files larger than 8 MB are left out and reported.",
+        passphrase: "Passphrase",
+        passphrase_confirm: "Repeat passphrase",
+        passphrase_hint: "At least {{count}} characters.",
+        create_button: "Create and download backup",
+        creating: "Creating backup…",
+        created: "Backup {{file}} downloaded ({{records}} items).",
+        missing_passphrase: "Enter a passphrase.",
+        mismatch: "The passphrases do not match.",
+        create_error: "The backup could not be created: {{error}}",
+        restore_title: "Restore a backup",
+        restore_description:
+          "Choose a backup file and enter its passphrase. The backup is merged into this browser: items with the same id are overwritten and nothing is deleted.",
+        choose_file: "Backup file",
+        choose_file_first: "Choose a backup file first.",
+        file_summary: "Backup from {{date}} · {{records}} items",
+        inspect_error: "This is not a readable Chat AI backup: {{error}}",
+        restore_passphrase: "Backup passphrase",
+        restore_confirm:
+          "I understand that matching chats, topics, workspaces, agents and settings are overwritten.",
+        confirm_required: "Confirm that the restore may overwrite matching items.",
+        restore_button: "Restore backup",
+        restoring: "Restoring…",
+        restored: "Backup restored: {{records}} items.",
+        restore_error: "The backup could not be restored: {{error}}",
+        unknown_namespaces: "Data from a newer version was skipped: {{namespaces}}.",
+      },
+      sync: {
+        title: "Encrypted server synchronization",
+        description:
+          "Keep conversations, settings, workspaces and agents in step across your devices by storing an encrypted copy on your SAIA filesystem.",
+        notice:
+          "Everything is encrypted in this browser before it is uploaded. The passphrase never leaves your device, the server cannot read the copy, and without the passphrase the data cannot be recovered. Use a passphrase you can remember and keep it safe.",
+        enable_label: "Store an encrypted copy on my SAIA filesystem",
+        enable_description:
+          "Off by default. Nothing is uploaded until you create or unlock the copy below.",
+        create_title: "Create the encrypted copy",
+        create_description:
+          "The passphrase protects the key that encrypts the archive. Losing it means losing access to the copy.",
+        unlock_title: "Unlock the existing copy",
+        unlock_description:
+          "Another device already created a copy for this account. Enter its passphrase to use it here.",
+        passphrase: "Passphrase",
+        passphrase_confirm: "Repeat passphrase",
+        passphrase_hint: "At least {{count}} characters.",
+        create_button: "Create encrypted copy",
+        unlock_button: "Unlock",
+        checking: "Checking the server…",
+        check_again: "Check again",
+        exists_hint:
+          "A copy already exists. Unlock it, or replace it with a new vault and re-upload everything.",
+        replace_warning:
+          "Replacing the vault makes every uploaded file unreadable. This device uploads its data again.",
+        replace_button: "Replace the vault",
+        unlocked_title: "Connected",
+        vault: "Vault",
+        device: "This device",
+        last_sync: "Last sync",
+        never: "Not synced yet",
+        conflicts: "Conflicts",
+        skipped: "Skipped files",
+        skipped_hint:
+          "Files larger than 8 MB are not uploaded. The chat or workspace keeps a placeholder.",
+        conflict_hint:
+          "Conflicts keep both versions. A conversation is copied with “ (conflict copy)” in its title.",
+        sync_now: "Sync now",
+        syncing: "Syncing…",
+        lock: "Lock vault",
+        auto_label: "Sync automatically",
+        auto_description:
+          "Runs every five minutes while this tab is open and the vault is unlocked.",
+        change_title: "Change the passphrase",
+        change_button: "Change passphrase",
+        changed: "The passphrase was changed. The archive was not re-encrypted.",
+        rotate_title: "Replace the vault",
+        rotate_description:
+          "Creates a new vault key and a new key derivation salt. Every uploaded file becomes unreadable, then this device uploads its data again. Use this to revoke a device that should no longer read the copy.",
+        rotate_button: "Replace vault and re-upload",
+        rotated: "The vault was replaced. Run a sync to upload this device again.",
+        cleanup: "Clean up remote files",
+        cleanup_description:
+          "Deletes record revisions and attachments that no device index references any more.",
+        cleanup_done: "Removed {{records}} revisions and {{assets}} attachments.",
+        disable_hint:
+          "Turning the server synchronization off stops syncing and locks the vault. The encrypted files stay on your filesystem until you clean them up or delete them there.",
+        passkey_title: "Passkey on this device",
+        passkey_description:
+          "Keep the vault unlocked across reloads without saving the passphrase. The passkey stores only a wrapped copy of the vault key; the key itself stays in your browser's memory.",
+        passkey_add: "Add a passkey",
+        passkey_default_label: "Sync vault",
+        passkey_label: "Passkey name",
+        passkey_label_placeholder: "e.g. Work laptop",
+        passkey_enrolled: "Enrolled: {{label}}",
+        passkey_forget: "Forget this passkey",
+        passkey_unlock: "Unlock with passkey",
+        passkey_unlock_hint:
+          "Your browser asks for the passkey (fingerprint, face or device PIN) and the vault opens without the passphrase.",
+        passkey_session_hint:
+          "This session unlocked with a passkey. After a reload it is requested again automatically; your browser may need a click first.",
+        passkey_click_hint:
+          "Browsers may require a click before showing the passkey prompt.",
+        passkey_added:
+          "The passkey was added. This device can unlock the vault after a reload.",
+        passkey_unlocked: "Unlocked with the passkey.",
+        passkey_forgotten:
+          "The passkey was forgotten. The passphrase still opens the vault.",
+        passkey_unsupported:
+          "This browser cannot use passkeys. The passphrase remains the only way to unlock the vault here.",
+        onboarding_title: "Keep your chats in step across devices",
+        onboarding_intro:
+          "Chat AI can keep an encrypted copy of your conversations, topics, settings, workspaces and agents in your SAIA filesystem. Your other devices read that copy, so a chat you start here continues there.",
+        onboarding_point_encrypted:
+          "Encrypted before upload: everything is encrypted in this browser, the passphrase never leaves your device, and the server cannot read the copy.",
+        onboarding_point_passphrase:
+          "One passphrase protects the key. Without it the copy cannot be recovered, so use a passphrase you can remember and keep safe (at least {{min}} characters).",
+        onboarding_point_passkey:
+          "Optional passkey: once the copy is open, a passkey on this device (fingerprint, face or device PIN) opens it again after a reload without asking for the passphrase. Only a wrapped copy of the vault key is stored in this browser.",
+        onboarding_point_nothing:
+          "Nothing is uploaded until you create the copy, and you can switch the synchronization off whenever you want.",
+        onboarding_where:
+          "The copy lives in your SAIA filesystem account folder. If another device already created one for this account, unlock that copy instead of creating a second one.",
+        onboarding_privacy:
+          "The passphrase and the vault key are never stored. The Meta chat cannot read them and cannot create or unlock the copy; that stays in Data settings.",
+        onboarding_setup: "Set up synchronization",
+        onboarding_existing_title:
+          "An encrypted synchronization already exists for this account",
+        onboarding_existing_intro:
+          "Another device already stores an encrypted copy of your conversations, topics, settings, workspaces and agents in your SAIA filesystem. Set that copy up on this device to read it — you need the passphrase it was created with.",
+        onboarding_existing_point_passphrase:
+          "Enter the passphrase that copy was created with on the other device. Without it the copy cannot be read here, and there is no recovery.",
+        onboarding_existing_point_nothing:
+          "Nothing is uploaded from this device until you unlock that copy, and you can switch the synchronization off whenever you want.",
+        onboarding_existing_setup: "Set it up on this device",
+        onboarding_later: "Not now",
+        onboarding_footer:
+          "You can find this later in User settings → Data → Server synchronization.",
+        missing_passphrase: "Enter the passphrase.",
+        mismatch: "The passphrases do not match.",
+        session_expired: "The vault was locked. Enter the passphrase again.",
+        error: "Sync failed: {{error}}",
+      },
     },
-    clear_data_button: "Clear Data",
+    clear_data_button: "Delete All Local Data",
     import_data_button: "Import Data",
     export_data_button: "Export Data",
     memory: {
@@ -1135,6 +1916,18 @@ export default {
       description:
         "Manage your personal memories that help the AI remember important details about you. You currently have {{count}} memories saved.",
       manage: "Manage Memory",
+      groups: {
+        title: "Memory groups",
+        description:
+          "Group memories like folders. The default group is used unless a chat selects another group.",
+        default_name: "Default",
+        default_label: "Default group",
+        default_badge: "Default",
+        name_placeholder: "New group name",
+        add: "Add",
+        rename: "Rename group",
+        delete: "Delete group",
+      },
     },
     logout: "Logout",
   },
@@ -1173,6 +1966,7 @@ export default {
   // Memory Modal
   memory: {
     userMemory: "User Memory",
+    userMemoryGroup: "User Memory (Group: {{group}})",
     memoryCount_one: "{{count}} memory stored",
     memoryCount_other: "{{count}} memories stored",
     addNew: "Add New Memory",
@@ -1248,7 +2042,7 @@ export default {
     temperature:
       "A low temperature (e.g., 0-1) produces more predictable and logical responses, while higher temperatures (e.g., above 1) increase the possibility of more creative and unconventional responses. You can adjust the temperature setting to achieve different levels of predictability and creativity.",
     tools:
-      "Tools are a new and experimental feature designed to extend the capabilities of Chat AI. They allow the model to perform additional actions or access additional resources in order to provide more useful, accurate, or specialized responses. Current tools include Arcana (for all models) and Web Search (optional), with more tools planned for the future. As this feature is still evolving, functionality and available tools may change over time.",
+      "Tools are a new and experimental feature designed to extend the capabilities of Chat AI. They allow the model to perform additional actions or access additional resources in order to provide more useful, accurate, or specialized responses. Current tools include Arcana, Arcana Tools, Web Search, image and audio generation, and MCP servers. Arcana Tools lets the assistant inspect and manage Arcana collections, their files, indexes, and sharing. As this feature is still evolving, functionality and available tools may change over time.",
     web_search:
       "The web search tool allows the AI to look up the latest information from the internet to improve its responses. When enabled, the AI can generate search queries based on your question and the full conversation history, send them to a search engine (such as Google), and use the retrieved results to provide more accurate and up-to-date answers. This is especially useful for topics where current or rapidly changing information is important.",
     top_p:
@@ -1265,7 +2059,7 @@ export default {
   },
   // Tour
   tour: {
-    welcome_message: "Welcome to Chat AI",
+    welcome_message: "Welcome to {{app}}",
     start_tour: "Start Tour",
     skip_tour: "Skip tour",
     description:
@@ -1309,12 +2103,23 @@ export default {
     bad_request:
       "Bad request was sent: Please clear conversation, reattempt within the limit, and save your chat history for future reference.",
     clear_data:
-      "Caution! Clearing data will erase all your conversations, history, and settings. Are you sure?",
+      "Caution! This permanently deletes all conversations, attachments, and local settings from this browser. Export a backup first if you may need them. Are you sure?",
     clear_messages:
       "Are you sure you want to erase all messages in this conversation?",
+    clear_agent_history:
+      "Clear this agent's history? This deletes the OpenCode session and starts a new one without the previous context.",
+    clear_agent_history_yes: "Clear history",
     close_chat:
       "Close this chat? It will be removed from your conversations.",
     close_chat_yes: "Close chat",
+    close_agent_session: "Close this session? It will be removed from OpenCode.",
+    close_agent_session_yes: "Close session",
+    close_agent_group_sessions:
+      "Close all {{count}} sessions in “{{group}}”? Running turns are interrupted and the sessions are removed from OpenCode.",
+    close_agent_group_sessions_yes: "Close all sessions",
+    restore_agent_sessions:
+      "Create new sessions on the agent server and write each cached transcript into its instructions? The old sessions are not recreated, and the cached history is sent to this agent's server.",
+    restore_agent_sessions_yes: "Restore sessions",
     regenerate_confirm:
       "Regenerating will delete this response and every message after it, and will apply your current settings. This cannot be undone. To keep this conversation intact, use “Continue in a new chat” instead.",
     regenerate_yes: "Regenerate",
@@ -1332,6 +2137,8 @@ export default {
     yes: "Yes, clear everything",
     system_prompt_empty: "System prompt is empty. Model may not respond.",
     data_security_notice: "Your data will be processed securely within our servers. No information will be transmitted outside of the GWDG.",
+    data_security_notice_e2ee:
+      "Your data will be processed securely within our servers. No information will be transmitted outside of the GWDG. This model is additionally end-to-end encrypted: your messages are sealed in this browser.",
     data_security_warning: 
       "You are using an external model or external tools. Your messages may be processed outside of GWDG. Custom settings and GWDG tools may not be available. Please refrain from entering confidential or personal data.",
     data_security_warning_mpg:
@@ -1375,6 +2182,730 @@ export default {
       `MCP servers can be hosted outside of GWDG. When enabled, the AI may send data to configured MCP servers to fulfill tool requests.\n\nOnly allow this if you trust the configured MCP servers and you will not share any confidential, personal, or sensitive information with them.`,
     web_search_disclaimer: `When web search is enabled, the AI may generate search queries based on your message and the full conversation history, and send them to a search engine (e.g., Google) to retrieve up-to-date information. This helps provide more accurate and current responses.\n\nBy clicking “I Understand,” you agree that your input may be processed in this way and acknowledge that you will not share any confidential, personal, or sensitive information while web search is active.`,
   },
+  document_panel: {
+    resize: "Resize preview",
+    back_to_chat: "Back",
+  },
+  mcp: {
+    section_title: "MCP Servers",
+    add: "Add MCP server",
+    add_empty: "Add an MCP server",
+    edit_title: "Edit MCP server",
+    empty: "No MCP servers configured yet.",
+    name_label: "Name",
+    name_placeholder: "My file server",
+    url_label: "Server URL",
+    auth_label: "Authorization (optional)",
+    test: "Test connection",
+    remove: "Remove",
+    options: "MCP server options",
+    tooltip: "MCP servers expose extra tools and files to the assistant through the Model Context Protocol. This app connects to them directly from this device.",
+    configured: "Configured MCP Servers",
+    policy_never_notice:
+      "MCP tool calls in chats are set to Never in Settings → Advanced, so these servers are not used in chats. Your selection is kept and applies again when you switch the setting. Chat AI's own file and workspace tools stay available.",
+    invalid_url: "Invalid MCP server URL. Edit the server to fix it.",
+    status_unchecked: "Not tested — click to test",
+    status_checking: "Testing connection",
+    status_ready: "Connected",
+    status_error: "Not reachable — click to retry",
+    details: "Details",
+    details_title: "MCP server details",
+    details_name: "Configured as",
+    details_server_name: "Server name",
+    details_address: "Address",
+    details_version: "Version",
+    details_protocol: "Protocol version",
+    details_website: "Website",
+    details_description: "Description",
+    details_capabilities: "Capabilities",
+    details_tools: "Tools ({{count}})",
+    details_no_tools: "This server exposes no tools.",
+    details_instructions: "Instructions",
+    details_loading: "Reading what the server reports…",
+    details_failed: "Could not read the server details.",
+    details_retry: "Try again",
+    details_none: "Not provided",
+    none_configured: "Add a server in the MCP Servers section first.",
+    scan_title: "Scan for local MCP servers",
+    scan_hint:
+      "Checks every port above 5000 on this device for a /mcp endpoint and adds every server it finds. Only works when this app is opened in a browser on the same machine.",
+    scan_action: "Scan",
+    scan_cancel: "Stop",
+    scan_progress:
+      "{{scanned}} of {{total}} ports checked · {{found}} found",
+    scan_server_name: "Local MCP server (port {{port}})",
+    scan_done: "Added {{servers}} local MCP server(s).",
+    scan_empty: "No local MCP server found on ports above 5000.",
+    scan_failed: "Scan failed: {{error}}",
+  },
+  agents: {
+    section_title: "Agents",
+    sessions: "Sessions",
+    new_session: "New session",
+    no_sessions: "No sessions yet.",
+    no_workspace_sessions: "No sessions attached to this workspace yet.",
+    unassigned_sessions: "Unassigned sessions",
+    no_unassigned_sessions: "Every session is attached to a workspace.",
+    sessions_in_workspace: "Sessions in {{workspace}}",
+    detach_session: "Remove from workspace",
+    attach_to_workspace: "Attach to workspace",
+    offline_cached:
+      "The agent is not reachable. Showing the history cached at {{time}}.",
+    offline_no_cache:
+      "The agent is not reachable and no history has been cached for this session yet.",
+    sessions_cached:
+      "The agent is not reachable. These sessions come from the local cache.",
+    sessions_cached_short: "cached",
+    restore_sessions_banner_one:
+      "The agent is reachable, but 1 cached session no longer exists on its server. Restore it from the local cache?",
+    restore_sessions_banner_other:
+      "The agent is reachable, but {{count}} cached sessions no longer exist on its server. Restore them from the local cache?",
+    restore_sessions_action: "Restore from cache",
+    restore_sessions_busy: "Restoring…",
+    restore_sessions_done_one:
+      "Restored {{count}} session from the local cache.",
+    restore_sessions_done_other:
+      "Restored {{count}} sessions from the local cache.",
+    restore_sessions_none: "There was no cached history to restore.",
+    restored_history:
+      "This transcript was restored into the session's instructions from the local cache. The agent server has no messages for it yet.",
+    restore_session_title: "{{name}} (restored)",
+    session_missing:
+      "This session no longer exists on the agent server and no cached history is available. Clear the history to start a new session.",
+    subagent_short: "sub",
+    rename_session: "Rename session",
+    close_session: "Close session",
+    session_options: "Session options",
+    session_renamed: "Session renamed",
+    session_closed: "Session closed",
+    close_group_sessions: "Close all sessions in this group",
+    group_sessions_closed_one: "1 session closed.",
+    group_sessions_closed_other: "{{count}} sessions closed.",
+    group_sessions_failed_one: "1 session could not be closed: {{message}}",
+    group_sessions_failed_other:
+      "{{count}} sessions could not be closed: {{message}}",
+    session_name_placeholder: "Session name",
+    tooltip: "Remote agents running on GWDG infrastructure.",
+    status_ready: "Connected and idle",
+    status_working: "Working",
+    status_error: "Connection issue",
+    status_checking: "Checking connection",
+    bridge: {
+      title: "Agent workspace access",
+      none: "No workspace bridge",
+      disabled_hint:
+        "Off. The agent cannot see workspace files. Turn access on to provide the reverse proxy for this agent.",
+      use_workspace: "Use for the bridge",
+      working: "Agent bridge working",
+      connecting: "Agent bridge connecting…",
+      not_working: "Agent bridge not working",
+      off: "Agent bridge off",
+      unavailable: "Agent bridge not available",
+      unavailable_detail: "No bridge endpoint at {{url}} (HTTP {{status}}).",
+      disabled_by_server:
+        "An older back service refuses bridge sessions when it has no shared secret (HTTP 503). Update it, or set bridgeSharedSecret in back.json (or BRIDGE_SHARED_SECRET) and the same value as bridgeKey in front.json, then restart both services.",
+      key_rejected:
+        "The back service rejected the bridge key (HTTP 401). bridgeKey in front.json must match bridgeSharedSecret in back.json (or BRIDGE_SHARED_SECRET).",
+      unreachable:
+        "The browser could not reach the bridge at {{url}}. Check that the service is running and that the app origin is allowed: a front end on another port is a different origin, so name it in corsOrigins in back.json (or CORS_ORIGINS).",
+      unavailable_hint:
+        "This deployment does not provide the agent bridge. It is served by the Chat AI back service (/bridge/*) or by the SAIA agent service (/agents/<id>/bridge).",
+      offline_hint:
+        "The browser lost its connection to the bridge. It reconnects automatically.",
+      disabled_after_failure:
+        "Access was switched off because the bridge could not start. Turn it on to try again.",
+      needs_workspace:
+        "Attach a workspace first. The bridge exposes only attached workspaces.",
+      options: "Options",
+      writable: "Allow writes",
+      writable_hint:
+        "Lets the agent create, change and delete files in the attached workspace. Without it the workspace stays read-only.",
+      mcp: "MCP tools",
+      mcp_hint:
+        "Lets the agent call the configured MCP servers through this browser session; this needs agent workspace access. Their results and data leave the app through those servers.",
+      mcp_servers: "MCP servers",
+      inject: "Inject external MCP tools",
+      inject_hint:
+        "OpenCode connects to the MCP servers it can reach that need no password, so their tools work without this tab and without workspace access. The others stay on the local MCP relay.",
+      inject_running: "Adding MCP servers to OpenCode…",
+      inject_summary: "Direct in OpenCode: {{direct}} · via bridge: {{bridge}}",
+      inject_fallback:
+        "OpenCode could not connect {{servers}}, so they stay on the bridge relay",
+      inject_relay_off_one:
+        "The MCP tools switch above is off, so {{count}} server is not relayed in this session.",
+      inject_relay_off_other:
+        "The MCP tools switch above is off, so {{count}} servers are not relayed in this session.",
+      inject_none: "No MCP server without a password is configured.",
+      inject_error: "Could not add the MCP servers to OpenCode: {{message}}",
+      wrapped_summary:
+        "MCP servers with a stored token, as native stdio: {{count}}",
+      wrapped_failed:
+        "The stdio proxy for {{servers}} could not start, so they stay on the bridge relay",
+      session_scope:
+        "Both routes are limited to the session that is open: the entries carry its id and every other session of this agent is denied, including its subagents' siblings.",
+      rescope_failed:
+        "Could not move the bridge to this session: {{message}}",
+      keep_open: "Keep this tab open. Workspace files and the MCP servers kept on the bridge are available only while the browser is connected.",
+      tab_warning: "The agent bridge needs this tab to stay connected. Workspace files and the MCP servers kept on the bridge may stop until you return.",
+      start_failed: "Could not start the workspace bridge: {{message}}",
+    },
+    spawn: "Spawn agent",
+    add_empty: "Add an agent",
+    add_title: "Add agent",
+    name_label: "Agent name",
+    name_placeholder: "e.g. Research assistant",
+    edit_title: "Edit agent",
+    options: "Agent options",
+    pin_action: "Pin agent",
+    unpin_action: "Unpin agent",
+    connection_label: "Connection",
+    mode_service: "GWDG HPC agentic service",
+    mode_external: "OpenCode server",
+    hpc_project_hint: "Select one of the HPC projects available to you.",
+    default_name: "OpenCode agent",
+    service_hint:
+      "The agent service starts an OpenCode container for this agent and stops it when you remove the agent. No server URL or password is needed.",
+    service_unavailable:
+      "The GWDG HPC agentic service is not enabled for your account.",
+    service_request_access:
+      "If you are eligible for an HPC account, you can request access to this service by sending a request to support@gwdg.de.",
+    service_checking:
+      "Checking whether the GWDG HPC agentic service is available for your account…",
+    service_forced_hint:
+      "In a deployment agents run through the agent service (SAIA). Direct OpenCode connections are only possible when Chat AI runs locally.",
+    hpc_project_label: "HPC project",
+    server_url_label: "opencode server",
+    server_password_label: "Server password",
+    connect_hint:
+      "The agent connects directly to your opencode serve instance with these credentials.",
+    connect_failed: "Could not connect to the opencode server: {{error}}",
+    connecting: "Connecting…",
+    add: "Add agent",
+    empty: "No agents yet.",
+    not_found: "Agent not found.",
+    remove: "Remove agent",
+    clear_history: "Clear agent history",
+    removed_locally: "Agent removed locally; its server could not be reached or authenticated.",
+    service_conflict_removed:
+      "Agent {{name}} was removed: the agent service can no longer run it ({{status}}). Add a new agent to continue.",
+    service_conflict_unknown: "unusable state",
+    workspaces: "Workspace",
+    workspaces_hint:
+      "Attach this agent to workspaces. The first attached workspace becomes the active bridge unless another is selected.",
+    workspaces_empty: "No workspaces available.",
+    workspace_active: "Active",
+    plan: "Plan",
+    shell: "Shell",
+    shell_tooltip: "Send this input directly to the terminal. Output appears in the chat.",
+    shell_placeholder: "Enter a shell command…",
+    shell_running: "Running command…",
+    shell_status_running: "Running",
+    shell_status_done: "Done",
+    shell_status_failed: "Failed",
+    shell_status_aborted: "Aborted",
+    shell_exit: "Exit code {{code}}",
+    shell_timeout: "The shell command did not finish in time.",
+    shell_copy: "Copy output",
+    shell_copied: "Shell output copied.",
+    shell_abort: "Abort shell command",
+    plan_tooltip: "Switch the OpenCode agent between Plan mode and its normal build mode.",
+    commands_tooltip: "Run an OpenCode command in this session.",
+    tools: {
+      title: "OpenCode tools",
+      tabs: {
+        changes: "Changes",
+        permissions: "Permissions",
+        policies: "Policies",
+        stats: "Usage",
+        mcp: "MCP",
+        connection: "Connection",
+        recovery: "Recovery",
+      },
+      workspace: "Workspace / Git",
+      tracked_files: "Tracked files",
+      export_md: "Export MD",
+      export_json: "Export JSON",
+      exported: "Agent history exported.",
+      exported_cached:
+        "Agent server unreachable — exported cached history.",
+      export_no_cache:
+        "The agent server is unreachable and no cached history is available.",
+      recovery_hint:
+        "Exports fall back to the local cache when the agent server is unreachable. A cached transcript can also be restored into a new session.",
+      cache_messages: "Cached messages: {{count}}",
+      cache_synced: "Last cached: {{date}}",
+      cache_never: "No cached history for this session yet.",
+      restore_action: "Restore into new session",
+      restore_hint:
+        "Writes the cached transcript into the instructions of a new session.",
+      restore_confirm_title: "Create a new session from the cache?",
+      restore_warning:
+        "This creates a new session and writes {{size}} of cached transcript into its instructions. The current session is not changed. Chat data is sent to this agent's server.",
+      restore_cancel: "Cancel",
+      restore_confirm: "Create session",
+      restore_created: "Restored the cached history into a new session.",
+      restore_empty: "No cached history is available to restore.",
+      restore_session_title: "{{name}} (restored history)",
+      restore_failed: "The new session could not be created.",
+      policies_hint:
+        "Policies automatically answer future permission requests for this agent. Use a wildcard such as bash* or * carefully.",
+      policy_action: "Action pattern",
+      policy_decision: "Decision",
+      policy_once: "Allow once",
+      policy_always: "Always allow",
+      policy_reject: "Reject",
+      policy_add: "Add policy",
+      no_policies: "No permission policies.",
+      test_connection: "Test connection",
+      copy_diagnostics: "Copy diagnostics",
+      copied: "Copied.",
+      no_diagnostics: "No diagnostics loaded.",
+      mcp_reconnected: "MCP server reconnected.",
+      reconnect: "Reconnect",
+      unsupported_field: "Unsupported field: {{field}}",
+      working: "Working…",
+      submit: "Submit",
+      mcp_synced: "MCP server added to OpenCode.",
+      mcp_removed: "MCP server removed from OpenCode.",
+      reverted: "Session reverted.",
+      revert: "Revert to message",
+      revert_cleared: "Staged revert cleared.",
+      clear_revert: "Clear revert",
+      no_changes: "No file changes.",
+      no_messages: "No messages available",
+      no_saved_permissions: "No saved permissions.",
+      permission_removed: "Permission removed.",
+      remove: "Remove",
+      no_stats: "No statistics available.",
+      opencode_mcp: "OpenCode MCP servers",
+      no_mcp: "No MCP servers configured in OpenCode.",
+      chatai_mcp: "Chat AI MCP servers",
+      no_chatai_mcp: "No MCP server with an address is configured in Chat AI.",
+      add_to_opencode: "Add to OpenCode",
+      added: "Added to OpenCode",
+      mcp_transfer_hint:
+        "Adding a server sends its name, URL and configured headers (including authorization) to your local OpenCode server. Chat data is not copied.",
+    },
+    hpc_project: "HPC project {{n}}",
+    remote_hint: "Runs on GWDG infrastructure",
+    chat_empty: "No messages yet. Ask the agent something.",
+    form_result_title: "Form results",
+    form_submitted: "Submitted",
+    form_yes: "Yes",
+    form_no: "No",
+    form_not_answered: "Not answered",
+    form_custom_answer: "Type your own answer",
+    tool_call: "Tool call",
+    tool_input: "Input",
+    tool_output: "Output",
+    open_preview: "Preview",
+    open_preview_of: "Preview {{name}}",
+    reasoning: "Reasoning",
+    files: "Files",
+    search_files: "Search files",
+    search: "Search",
+    no_search_results: "No matching files.",
+    send: "Send",
+    working: "Agent is working…",
+    package_message: "Message from the package owner",
+    session_busy: "This agent is still working. Wait for it to finish or stop it before sending another message.",
+    chat_timeout: "The agent did not finish in time.",
+    aborted_by_user: "Aborted by user",
+    permission_title: "Permission required",
+    permission_once: "Allow once",
+    permission_always: "Always allow",
+    permission_reject: "Reject",
+    commands: "Commands",
+    compact_command: "Compact the conversation",
+  },
+  workspace: {
+    new_folder: "New folder",
+    new_file: "New file",
+    upload_file: "Upload file",
+    add_file: "Add file",
+    upload_success: "Uploaded {{count}} file(s)",
+    upload_not_supported: "This source does not support uploads.",
+    create_in: "Create in {{path}}",
+    folder_name_placeholder: "Folder name",
+    file_name_placeholder: "File name",
+    entry_name_invalid: "Names cannot contain slashes.",
+    rename_entry: "Rename entry",
+    rename_in: "Rename in {{path}}",
+    rename_success: "Renamed to {{name}}.",
+    git_log: "Git log",
+    git_log_empty: "No Git log entries found.",
+    root_empty_hint: "Create a folder or file, or mount a folder from a source.",
+    edit_title: "Manage Workspace",
+    edit_storage: "Edit storage",
+    manage_workspace: "Manage Workspace",
+    file_manager: "File manager",
+    resize_files_split: "Resize file tree and preview",
+    back_to_workspace: "Back to workspace",
+    edit_storage_hint:
+      "Storage locations of {{name}}. Every change is applied immediately.",
+    edit_storage_hint_no_name: "Every change is applied immediately.",
+    workspace_options: "Workspace options",
+    pin_action: "Pin Workspace",
+    unpin_action: "Unpin Workspace",
+    workspace_root: "Workspace Root",
+    tab_preview: "Preview",
+    tab_agents: "Agents",
+    root_hint: "Files and folders kept in this workspace.",
+    storage: "Storage",
+    available_storage: "Available storage",
+    add_folder: "Add folder",
+    clone_repo_url: "Public repository URL",
+    clone_branch: "Branch or tag (optional)",
+    clone_default_branch: "Default branch",
+    clone_folder: "Target subfolder",
+    clone_agent: "Agent for git clone",
+    clone_agent_required: "Select a local agent to run the clone.",
+    clone_configure_agent_soon: "Configure another agent (coming soon)",
+    clone_remote_agent_soon: "Remote agent (coming soon)",
+    clone_target: "Clone into storage",
+    clone_target_browser: "Browser storage",
+    clone_target_local: "Choose a local folder…",
+    clone_target_agent: "Agent storage ({{name}})",
+    clone_target_agent_selected: "Agent storage: {{name}}",
+    clone_target_local_selected: "Local folder: {{name}}",
+    clone_target_required: "Select a writable storage target.",
+    clone_target_missing: "The selected storage is no longer available.",
+    clone_target_exists: "The target subfolder already exists.",
+    clone_no_agent: "No local OpenCode agent is configured. Add a local agent before cloning.",
+    mount_local_hint: "The selected folder is mounted read-write at its folder name.",
+    mount_local_action: "Mount folder",
+    choose_local_folder: "Choose local folder…",
+    clone_prepare: "Clone and inspect",
+    clone_preparing: "Preparing clone…",
+    clone_progress_clone: "Cloning repository with the agent…",
+    clone_progress_manifest: "Reading manifest…",
+    clone_progress_measure: "Measuring repository…",
+    clone_progress_copy: "Copying repository into storage…",
+    clone_progress_files: "Copying {{files}} files · {{size}}",
+    clone_progress_agent_storage: "Keeping clone in agent storage…",
+    clone_progress_agent: "Creating agent…",
+    clone_progress_chats: "Creating chats…",
+    clone_progress_mount: "Mounting folder…",
+    clone_applying: "Applying workspace setup…",
+    clone_confirm_title: "Confirm repository import",
+    clone_confirm_intro: "Review what will be created. Nothing has been copied into your workspace yet.",
+    clone_summary_repo: "Repository",
+    clone_summary_workspace: "Workspace",
+    clone_summary_agent: "Agent",
+    clone_summary_chats: "Chats",
+    clone_summary_files: "{{files}} files{{size}}",
+    clone_manifest_warning: "The manifest is untrusted repository content. It can configure chats and an agent, but cannot provide commands, scripts, credentials, or server URLs.",
+    clone_manifest_present: "A workspace manifest was found. This clone copies repository files only; it does not create chats or agents.",
+    clone_manifest_none: "No workspace manifest was found. Only repository files will be copied.",
+    clone_browser_hint: "The repository is copied into this workspace's browser storage.",
+    clone_review_action: "Copy into workspace",
+    clone_confirm_action: "Create workspace",
+    clone_new_session: "New session",
+    clone_agent_connection: "Create the agent using this local connection",
+    clone_continue: "Continue",
+    clone_discard: "Discard",
+    clone_discarded: "Clone discarded.",
+    kind_git: "Git repository",
+    sources_included: "Included",
+    source_included_hint:
+      "Created automatically with the workspace and cannot be removed here.",
+    row_pending: "Pending",
+    row_working: "Working…",
+    row_done: "Done",
+    row_failed: "Failed · {{message}}",
+    clone_row_remove: "Remove source",
+    advanced: "Advanced",
+    create_applying: "Creating workspace…",
+
+    mounts: "Folders",
+    no_mounts: "Add a folder from any source to this workspace.",
+    remove_mount: "Remove folder",
+    mount_source: "Source",
+    mount_source_path: "Folder in the source",
+    mount_parent: "Folder in the workspace",
+    make_read_only: "Make read-only",
+    make_writable: "Make writable",
+    make_source_read_only: "Make source read-only",
+    make_source_writable: "Make source writable",
+    source_read_only_error: "This source is read-only.",
+    source_read_only: "Read-only source",
+    source_unavailable: "This source is unavailable.",
+    source_read_only_hint: "Block writes and deletions in this source.",
+    mount_read_only_error: "This mount is read-only.",
+    cannot_move_mount: "Mounted folders cannot be moved.",
+    mount_read_only: "Read-only",
+    mount_read_only_hint: "Do not allow changes through this mount.",
+    folder_picker_up: "Up one level",
+    folder_picker_loading: "Loading folders…",
+    folder_picker_empty: "No subfolders here.",
+    folder_picker_result: "Mounts at {{path}}",
+    folder_picker_error: "Could not load folders.",
+    mount_source_required: "Select a source.",
+    mount_target_folder: "The workspace already has a folder at {{path}}.",
+    mount_target_nonempty: "The folder {{path}} already contains files.",
+    mount_target_file: "A file already exists at {{path}}.",
+    mount_target_covers: "The folder {{path}} already contains a mounted folder.",
+    mount_target_nested: "{{path}} is inside the mounted folder {{mount}}.",
+    mount_target_reserved: "The folder {{path}} is reserved for chat uploads.",
+    attached_chats: "Chats",
+    attached_items: "Attached chats, agents and sessions",
+    no_attached_chats: "No chats attached yet.",
+    attach_chat: "Attach chat",
+    attach_chat_error: "Could not attach the chat to the workspace",
+    attach_session_error: "Could not attach the session to the workspace",
+    new_chat: "New chat in this workspace",
+    detach_chat: "Detach chat",
+    attach_chat_hint: "Attach any chat to this workspace.",
+    attach_agent: "Attach agent",
+    attach_agent_hint:
+      "Attach an agent to this workspace. The agent can then use it as a bridge workspace.",
+    attach_agent_session: "Attach Agent Session",
+    attach_agent_session_hint:
+      "Pick the sessions of this agent that belong to this workspace. Other workspaces keep their own list.",
+    attach_agent_session_picker_hint:
+      "Pick a session to attach to this workspace. Its agent is attached too when it is not in the workspace yet.",
+    no_unattached_sessions: "Every session is already attached to this workspace.",
+    session_attached: "{{name}} attached to this workspace.",
+    no_available_agents: "No unattached agents available.",
+    agents: "Agents",
+    agent: {
+      title: "Agent",
+      browser_title: "In-browser Pi agent",
+      browser_description:
+        "Runs in the browser. No shell, but it can read and write files in the workspace.",
+      opencode_title: "OpenCode server",
+      opencode_description:
+        "Connect to an OpenCode server by address and use it with Chat AI.",
+      remote_title: "Remote agent",
+      remote_description:
+        "The GWDG HPC agentic service agent that also appears in the sidebar.",
+      choose_existing: "Choose an existing agent",
+      add_new: "Add new agent",
+      no_agents: "No agents of this kind yet.",
+      in_use: "In use",
+      available: "Available",
+      back: "Back",
+    },
+    no_attached_agents: "No agents attached yet.",
+    detach_agent: "Detach agent",
+    chat_workspaces: "Workspace",
+    chat_workspaces_attached_hint:
+      "This chat is attached to {{names}} and can use all files there.",
+    access_storage: "Access storage",
+    access_storage_hint:
+      "The model may read the files of this chat and of its attached workspaces. It may always write in this chat; an attached workspace has its own switch below.",
+    access_storage_off_hint:
+      "The model gets no file tools. Attachments are still included in the message where their text can be read.",
+    workspace_write_access_hint:
+      "Let the model change files in the attached workspaces.",
+    settings_title: "Local agent",
+    attach_from_workspace: "Attach from workspace",
+    attach_from_workspace_hint:
+      "Pick a file from an attached workspace and add it to this message.",
+    attach_from_workspace_loading: "Loading files…",
+    sidebar_title: "Workspaces",
+    new_workspace: "New workspace",
+    empty_sidebar_title: "Create a workspace",
+    create_title: "Create workspace",
+    name_label: "Workspace name",
+    name_placeholder: "e.g. Research",
+    create_workspace: "Create workspace",
+    apply_changes: "Apply Changes",
+    apply_applying: "Saving…",
+    create_tree_title: "Workspace",
+    create_add: "Add to workspace",
+    create_empty_hint:
+      "Nothing added yet — pick a folder or a repository on the left.",
+    create_sources_hint:
+      "Pick a folder or clone a repository — it appears in the workspace.",
+    name_required: "Enter a workspace name",
+    name_prompt: "Select a name for your workspace",
+    name_taken: "A workspace with this name already exists",
+    create_error: "Could not create the workspace",
+    update_error: "Could not save the workspace",
+    not_found: "Workspace not found",
+    files_title: "Workspace files",
+    detach: "Detach",
+    detach_hint: "Detach this folder from the workspace",
+    detach_mount_only:
+      "Only a folder mounted into this workspace can be detached",
+    kind: "Workspace",
+    chat_count_one: "{{count}} chat",
+    chat_count_other: "{{count}} chats",
+    empty_title: "No chats in this workspace yet",
+    empty_body: "Write a prompt below to start the first chat here.",
+    composer_placeholder: "Ask anything — starts a new chat in {{name}}",
+    files_tab: "Files",
+    preview_tab: "Preview",
+    storage_browser_private: "Private to this workspace",
+    repositories: "Repositories",
+    repositories_count_one: "{{count}} repository",
+    repositories_count_other: "{{count}} repositories",
+    storage_mcp_servers: "MCP servers",
+    connect_mcp: "Connect MCP server",
+    clone_repository: "Clone repository",
+    mcp_transport_streamable_http: "Streamable HTTP",
+    mcp_transport_sse: "SSE",
+    delete_workspace: "Delete Workspace",
+    delete_confirm:
+      "Delete this workspace? Its source list and transfer history are removed. Device files stay on this device; Arcana files stay in their collection.",
+    delete_error: "Could not delete the workspace",
+    sources: "Sources",
+    source_browser: {
+      title: "Storage locations",
+      source_broken: "{{name}} is not working right now.",
+      source_needs_permission:
+        "{{name}} has lost access permission — open it and allow access again.",
+      source_unreachable:
+        "{{name}} could not be reached — the service is not answering right now.",
+      source_error_detail: "{{name}} could not be opened: {{detail}}",
+      device: "Your Device",
+      chats: "Browser",
+      arcanas: "Arcanas",
+      mcp: "MCP",
+      saia_fs: "SAIA Files",
+      saia_hint: "Your SAIA account folder",
+      add_to_workspace: "Add to Workspace",
+      add_to_workspace_count: "Add to Workspace ({{count}})",
+      unmount: "Unmount",
+      unmount_count: "Unmount ({{count}})",
+      unmount_hint:
+        "Remove this folder from Chat AI entirely — every workspace stops using it and it leaves this list. You can add it again at any time.",
+      selected_one: "{{count}} selected",
+      selected_many: "{{count}} selected",
+      empty: "Nothing here yet",
+      add_current_folder: "Add this folder to the workspace",
+      add_current_dir: "Add current dir to workspace",
+      empty_folder_hint:
+        "The folder is empty now, but it stays linked: files you create or upload here later appear in it.",
+      loading: "Loading...",
+      unavailable: "This source is unavailable.",
+      back: "Back",
+      select_all: "Select all",
+      clear: "Clear",
+      add_device_folder: "Add folder from this device",
+      device_empty_title: "There's nothing here yet.",
+      device_empty_body:
+        "Drag and drop a folder here, or click to mount one from this device.",
+      device_drop_rejected:
+        "That drop did not carry a folder. Click to mount a folder from this device.",
+      in_workspace: "In workspace",
+      untitled_chat: "Untitled chat",
+      pick_source: "Pick a source on the left to browse its files.",
+      added: "Added {{count}} items",
+      added_one: "Added {{count}} item",
+      added_other: "Added {{count}} items",
+      add_failed: "{{count}} items failed",
+      add_failed_one: "{{count}} item failed",
+      add_failed_other: "{{count}} items failed",
+      adding_progress: "Adding {{done}} of {{total}}…",
+      folders_one: "{{count}} folder",
+      folders_other: "{{count}} folders",
+      chats_count_one: "{{count}} chat",
+      chats_count_other: "{{count}} chats",
+      collections_one: "{{count}} collection",
+      collections_other: "{{count}} collections",
+      servers_one: "{{count}} server",
+      servers_other: "{{count}} servers",
+      usage: "{{used}} of {{quota}} used",
+      chat_usage: "{{used}} of {{quota}} used — shared with this app",
+    },
+    storage_badge_browser: "browser",
+    storage_badge_device: "device",
+    storage_badge_arcana: "arcana",
+    storage_badge_mcp: "MCP",
+    storage_badge_agent: "agent",
+    storage_badge_saia: "SAIA",
+    add_source: "Add source",
+    source_kind: "Source type",
+    choose_folder: "Choose folder…",
+    no_sources: "Add a local folder, a Git repository, or an MCP server.",
+    select_source: "Select a source to browse its files.",
+    source_label: "Label",
+    source_folder: "Folder",
+    choose_folder_required: "Choose a folder first.",
+    no_folder_chosen: "No folder chosen yet.",
+    source_browser_label: "Browser storage",
+    kind_browser: "Browser",
+    kind_local: "Local folder",
+    kind_agent: "Agent filesystem",
+    kind_chat: "Chat folder",
+    kind_arcana: "Arcana",
+    "kind_arcana-filesystem": "Arcana filesystem",
+    kind_mcp: "MCP",
+    "kind_saia-fs": "SAIA filesystem",
+    local_hint:
+      "The browser asks for access to the folder. The folder stays on this device and is never uploaded.",
+    local_unsupported: "This browser cannot open local folders.",
+    local_insecure:
+      "Opening local folders needs a secure page: use https:// or http://localhost.",
+    local_aborted:
+      "No folder was taken over. If no dialog appeared, Chrome blocked the folder dialog or the system file dialog could not open. Check the site permission for editing files and use a normal project folder, not your whole home or downloads folder.",
+    mcp_endpoint: "MCP endpoint",
+    mcp_transport: "Transport",
+    mcp_allowlist: "Tool allowlist (comma separated, optional)",
+    mcp_hint:
+      "Use an MCP server with streamable-HTTP or SSE transport and CORS headers. Only file tools it advertises are used.",
+    mcp_required: "Enter an MCP endpoint",
+    device_only_hint: "This source is available on this device only.",
+    device_only: "This device only",
+    unavailable_on_device: "Unavailable on this device",
+    reconnect: "Reconnect folder",
+    status_error: "Error",
+    root: "Root",
+    retry: "Retry",
+    refresh: "Refresh",
+    empty_folder: "This folder is empty.",
+    folder_open_failed: "Could not open “{{name}}”",
+    drop_hint: "Drop files here to copy them into this source.",
+    load_more: "Load more",
+    select_all: "Select all",
+    clear_selection: "Clear selection",
+    selected_count_one: "{{count}} item selected",
+    selected_count_other: "{{count}} items selected",
+    download: "Download",
+    downloading: "Saving files…",
+    preview_too_large: "This file is too large to preview.",
+    preview_unavailable: "No preview is available for this file type.",
+    remove_source: "Remove source",
+    remove_source_confirm:
+      "Remove this source from the workspace? Files themselves are not deleted.",
+    transfer_title: "Transfer files",
+    transfer_summary:
+      "{{strategy}} {{count}} item(s) ({{size}}) from {{from}} to {{to}}?",
+    transfer_move_note:
+      "The original is deleted only after the copy is verified.",
+    transfer_copy_note: "The original stays in the source.",
+    transfer_move: "Move",
+    transfer_copy: "Copy",
+    move_to: "Move to…",
+    move_selection_hint_one:
+      "Move the selected item to another source? The original is deleted only after the copy is verified.",
+    move_selection_hint_other:
+      "Move the {{count}} selected items to another source? The original is deleted only after the copy is verified.",
+    delete_file_confirm: "Delete this file? This cannot be undone.",
+    delete_folder_confirm:
+      "Delete this folder and everything inside it? This cannot be undone.",
+    delete_selection_confirm_one:
+      "Delete the selected item? This cannot be undone.",
+    delete_selection_confirm_other:
+      "Delete the {{count}} selected items? This cannot be undone.",
+    delete_success: "Deleted {{name}}.",
+    delete_selection_success_one: "Deleted {{count}} item.",
+    delete_selection_success_other: "Deleted {{count}} items.",
+    move_to_hint: "Move “{{name}}” to another source? The original is deleted only after the copy is verified.",
+    move_to_target: "Destination source",
+    move_to_no_targets: "Add another source first.",
+    transferring: "Transferring…",
+    transfer_success_one: "Transferred {{count}} item.",
+    transfer_success_other: "Transferred {{count}} items.",
+    transfer_blocked: "This transfer cannot be started.",
+    transfer_conflict: "“{{name}}” already exists at the destination.",
+    transfer_conflict_many:
+      "{{count}} items already exist at the destination.",
+    transfer_multiple_sources: "several sources",
+  },
+
   // Landing page
   landing: {
     title: "You are not logged in",
@@ -1415,6 +2946,13 @@ export default {
     image_failed: "Failed to load image",
     video_failed: "Failed to load video",
     video_unsupported: "Your browser does not support the video tag.",
+    html_mode: "HTML rendering",
+    html_strict: "Strict",
+    html_relaxed: "Relaxed",
+    html_relaxed_hint:
+      "Strict only shows the page; relaxed also runs its scripts. Network access follows the \"Load external references\" preference, as in rendered HTML blocks.",
+    html_relaxed_warning:
+      "This page can run scripts and load external resources.",
     pdf_failed: "Failed to display PDF",
     pdf_mobile_title: "PDF preview is not available on mobile devices",
     pdf_mobile_hint: "Please use a desktop browser to preview PDF files",
@@ -1423,6 +2961,13 @@ export default {
     pdf_missing_title: "PDF content not available",
     pdf_missing_hint: "The original PDF file data is not available for preview",
     docx_failed: "Failed to display Word document",
+    describe_image: "Describe image",
+    describe_unavailable: "No vision model is available for this deployment",
+    describe_byline: "Automatically described with {{model}}",
+    describe_opened: "Opened {{name}}",
+    describe_saved: "Saved {{name}}",
+    describe_downloaded: "Downloaded {{name}}",
+    describe_failed: "Could not describe the image: {{message}}",
     save: "Save to device",
     save_failed: "Failed to download file",
     download_aria: "Download file",
@@ -1434,9 +2979,34 @@ export default {
       "Failed to render Typst document. Showing source instead:",
   },
   latex: {
+    download_failed: "Failed to download the LaTeX document.",
     rendering: "Rendering LaTeX document...",
     render_error:
       "Failed to render LaTeX document. Showing source instead:",
+  },
+  wasm_download: {
+    title: "Download {{feature}} renderer?",
+    body: "Rendering this block downloads WebAssembly and fonts the first time. They stay in your browser cache afterwards.",
+    size: "About {{size}} MB",
+    confirm: "Download and render",
+    keep_code: "Keep as code",
+    feature_typst: "Typst",
+    feature_latex: "LaTeX",
+    feature_tikz: "TikZ",
+    feature_graphviz: "Graphviz",
+  },
+  graphviz: {
+    rendering: "Rendering Graphviz diagram...",
+    render_error: "Failed to render Graphviz diagram.",
+  },
+  vega: {
+    rendering: "Rendering chart...",
+    render_error: "Failed to render Vega-Lite chart.",
+    external_blocked: "This chart loads external data from {{url}}. Enable external references to render it.",
+  },
+  chartjs: {
+    rendering: "Rendering chart...",
+    render_error: "Failed to render Chart.js chart.",
   },
   // Announcement
   announcement: "",
@@ -1448,5 +3018,94 @@ export default {
     edit: "Edit",
     tool_call: "Tool call",
     select_placeholder: "Select…",
+  },
+  // Theme selector (footer): light/dark plus any extra brand themes
+  theme: {
+    label: "Switch theme",
+    light: "Light",
+    dark: "Dark",
+    brand_themes: "Brand themes",
+  },
+  // Brand consent gate and its later settings section
+  consent: {
+    terms_checkbox: "I have read the terms of use.",
+    terms_required: "Please accept the terms of use to continue.",
+    continue: "Continue",
+    back: "Back",
+    save: "Save and continue",
+    settings_title: "Your consents",
+    settings_intro:
+      "Participation is voluntary. You can change these choices at any time.",
+    accepted_on: "Accepted on {{date}}.",
+    not_accepted_yet: "Not accepted yet on this device.",
+  },
+  // Dev-only preview at /dev/tool-form
+  tool_form_demo: {
+    title: "Tool form test",
+    description:
+      "Development-only preview of the form that tool results render in a chat. Submitting shows the values here instead of sending a message.",
+    submitted: "Submitted values",
+  },
+
+  // Footer: language picker, PWA install, bug report
+  language: {
+    label: "Language",
+    automatic: "Automatic (browser language)",
+    auto_short: "Auto",
+    english: "English",
+    german: "German",
+  },
+  pwa: {
+    install: "Install this app",
+  },
+  // Brand-owned information pages (/about, /accessibility) and the sitemap
+  info: {
+    back_to_chat: "Back to chat",
+    page_external: "This page is provided by the institution behind this app.",
+    open_page: "Open the page",
+  },
+  about: {
+    title: "About",
+  },
+  accessibility: {
+    title: "Accessibility",
+  },
+  sitemap: {
+    title: "Sitemap",
+    general: "General",
+    pages: "Information",
+  },
+  bug_report: {
+    title: "Report a problem",
+    intro:
+      "Describe what happened. The report goes to the operators of this service, together with the page address and your browser version.",
+    type_label: "Type",
+    type_bug: "Bug",
+    type_feedback: "Feedback",
+    type_accessibility: "Accessibility",
+    type_other: "Other",
+    message_label: "Description",
+    message_placeholder:
+      "What did you do, what did you expect, and what happened instead?",
+    screenshot_label: "Screenshots (optional)",
+    screenshot_hint: "Up to {{count}} files, {{size}} each (PNG, JPEG or WebP).",
+    email_label: "Contact address (optional)",
+    email_placeholder: "you@example.org",
+    diagnostics_label: "Diagnostics that will be sent",
+    unavailable:
+      "This deployment has no feedback receiver, so the report cannot be sent. You can copy it and pass it on to the operator instead.",
+    copy: "Copy report",
+    copied: "Copied",
+    sent: "Thank you — the report was sent.",
+    success: "Report sent.",
+    sending: "Sending…",
+    submit: "Send report",
+    error_type: "Only PNG, JPEG and WebP images can be attached.",
+    error_size: "Each screenshot may be at most {{size}}.",
+    error_count: "You can attach at most {{count}} screenshots.",
+    error_description: "Please describe the problem.",
+    error_rejected:
+      "The report was rejected. Please shorten it or remove an attachment.",
+    error_failed: "The report could not be sent. Please try again later.",
   },
 };

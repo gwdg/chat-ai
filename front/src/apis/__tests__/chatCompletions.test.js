@@ -45,42 +45,14 @@ describe("chatCompletions request shaping", () => {
     expect(params.enable_tools).toBeUndefined();
   });
 
-  it("forwards the first enabled remote MCP server", async () => {
-    const iterator = chatCompletions(
-      conversation({
-        tools: { mcp: false, mcp_remote: true },
-        mcp_servers: [
-          { id: "server-1", enabled: true },
-          { id: "server-2", enabled: false },
-        ],
-      }),
-      5000,
-      false,
-    );
-    await iterator.next();
-
-    expect(create.mock.calls[0][0]["mcp-servers"]).toEqual(["server-1"]);
-  });
-
-  it("keeps remote MCPs working for old conversations that only set tools.mcp", async () => {
+  it("never sends an MCP field: servers are connected in the browser", async () => {
     const iterator = chatCompletions(
       conversation({
         tools: { mcp: true },
-        mcp_servers: [{ id: "server-1", enabled: true }],
-      }),
-      5000,
-      false,
-    );
-    await iterator.next();
-
-    expect(create.mock.calls[0][0]["mcp-servers"]).toEqual(["server-1"]);
-  });
-
-  it("does not send local agent MCP URLs to the gateway", async () => {
-    const iterator = chatCompletions(
-      conversation({
-        tools: { mcp: true, mcp_remote: false },
-        mcp_servers: [{ url: "http://localhost:9000/mcp", enabled: true }],
+        mcp_servers: [
+          { url: "http://localhost:9000/mcp", enabled: true },
+          { id: "legacy-gateway", enabled: true },
+        ],
       }),
       5000,
       false,

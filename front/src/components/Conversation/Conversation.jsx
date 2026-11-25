@@ -6,7 +6,10 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 
 // Hooks
 import { selectShowSettings } from "../../Redux/reducers/interfaceSettingsSlice";
+import { useBrand } from "../../config/BrandProvider";
 import Prompt from "../Prompt/Prompt";
+import BrandChatWarning from "./BrandChatWarning";
+import BrandDisclaimer from "./BrandDisclaimer";
 import EmptyConversation from "./EmptyConversation";
 import HallucinationWarning from "./HallucinationWarning";
 import MessageAssistant from "./MessageAssistant/MessageAssistant";
@@ -21,11 +24,14 @@ export default function Conversation({
   setLocalState,
   modelsData,
   userData,
+  hideCloseButton = false,
 }) {
   const showSettings = useSelector(selectShowSettings);
   const { t } = useTranslation();
+  const { brand } = useBrand();
   const [searchParams] = useSearchParams();
   const targetMessageId = searchParams.get("message");
+  const hasBrandChatDisclaimer = Boolean(brand?.chatDisclaimer);
 
   // UI
   const [copied, setCopied] = useState(false);
@@ -36,7 +42,6 @@ export default function Conversation({
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [showTopScrollButtons, setShowTopScrollButtons] = useState(false);
-  const [showCloseButton, setShowCloseButton] = useState(true);
   const [highlightedMessageId, setHighlightedMessageId] = useState(null);
 
   // Refs
@@ -75,23 +80,11 @@ export default function Conversation({
       prev !== shouldShowBottom ? shouldShowBottom : prev
     );
 
-    const containerTop = el.getBoundingClientRect().top;
     const shouldShowTop = overflow && el.scrollTop > 8;
     setShowTopScrollButtons((prev) =>
       prev !== shouldShowTop ? shouldShowTop : prev
     );
 
-    const firstMessage = Object.keys(messageRefs.current)
-      .map(Number)
-      .sort((a, b) => a - b)
-      .map((index) => messageRefs.current[index])
-      .find((element) => element && element.getBoundingClientRect().height > 0);
-    const isOnFirstMessage =
-      !firstMessage ||
-      firstMessage.getBoundingClientRect().bottom > containerTop + 8;
-    setShowCloseButton((prev) =>
-      prev !== isOnFirstMessage ? isOnFirstMessage : prev
-    );
   }, [checkIfAtBottom, hasOverflow]);
 
   const scrollToBottom = useCallback((behavior = "auto") => {
@@ -375,10 +368,6 @@ export default function Conversation({
       className={`w-full flex flex-col gap-2 relative min-h-0 h-full overflow-hidden
                   ${emptyConversation ? "justify-start" : "justify-between"}`}
     >
-      {showCloseButton && (
-        <CloseChatButton localState={localState} setLocalState={setLocalState} />
-      )}
-
       {/* Empty conversation */}
       <div
         className={`flex flex-col space-y-16 md:max-h-[45vh] xl:max_h-[45vh] justify-end
@@ -408,8 +397,15 @@ export default function Conversation({
               : "scale-100 opacity-100 flex-1 min-h-0"
           }`}
       >
-        {/* Hallucination Warning */}
-        <HallucinationWarning />
+        {/* Close chat - floats over the top of the chat, so no band sits on top of it */}
+        {!hideCloseButton && localState?.id && (
+          <div className="absolute right-2 top-2 z-20">
+            <CloseChatButton
+              localState={localState}
+              setLocalState={setLocalState}
+            />
+          </div>
+        )}
 
         {/* Scrollable messages container */}
         <div className="relative flex-1 min-h-0">
@@ -424,6 +420,12 @@ export default function Conversation({
           <div
             className="p-1.5 flex flex-col gap-1.5 h-full md:max-w-[85vw] xl:max-w-[1300px] transition-[max-width] duration-300 ease-in-out motion-reduce:transition-none mx-auto"
           >
+            {/* The chat disclaimer scrolls with the messages instead of covering
+                the top of the conversation. */}
+            {!(
+              localState?.isMetaChat === true ||
+              localState?.id === "meta-chat"
+            ) && (hasBrandChatDisclaimer ? <BrandChatWarning /> : <HallucinationWarning />)}
             {localState.messages.slice(0, -1)?.map((message, message_index) => (
               <div
                 key={message_index}
@@ -541,16 +543,15 @@ export default function Conversation({
               </Tooltip>
             </div>
           )}
-          {/* Floating button - bottom right above the prompt box */}
-          {localState?.messages?.length >= 4 && (
-              <div className="absolute bottom-3 right-5 md:right-3 z-10 flex items-end">
-                {/* Undo Button */}
-                <UndoButton
-                  localState={localState}
-                  setLocalState={setLocalState}
-                />
-              </div>
-          )}
+          {/* Floating actions - bottom right above the prompt box */}
+          <div className="absolute bottom-3 right-5 md:right-3 z-10 flex flex-col items-center gap-2">
+            {localState?.messages?.length >= 4 && (
+              <UndoButton
+                localState={localState}
+                setLocalState={setLocalState}
+              />
+            )}
+          </div>
         </div>
       </div>
 
@@ -561,6 +562,7 @@ export default function Conversation({
         userData={userData}
         modelsData={modelsData}
       />
+      {emptyConversation && <BrandDisclaimer />}
       {emptyConversation && <Motto />}
     </div>
   );

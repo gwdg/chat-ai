@@ -5,32 +5,42 @@
 // tool calls, and tool results) in `meta.agent`, which is replayed as-is on the next turn.
 // Assistant messages without it (older chats, other models) are replayed from their text.
 import "./shims/globals";
-import { Agent, type AgentMessage } from "@earendil-works/pi-agent-core";
+import { Agent, type AgentMessage, type AgentTool } from "@earendil-works/pi-agent-core";
 import { createModels, createProvider, type Model } from "@earendil-works/pi-ai";
 import { openAICompletionsApi } from "@earendil-works/pi-ai/api/openai-completions.lazy";
-import { agentEndpoint, agentGatewayTools, markToolless, modelSupportsTools } from "../apis/agentEndpoints";
+import { agentApiKey, agentEndpoint, agentGatewayTools, markToolless, modelSupportsTools } from "../apis/agentEndpoints";
 import { onAbortRequest, reasoningParams } from "../apis/chatCompletions";
-import { loadFileMeta, saveFile } from "../db";
+import { loadFileMeta } from "../db";
 import { getFileType } from "../utils/attachments";
-import { prepareAttachment, UPLOADS, uploadPath } from "./prepare";
+import { ARTEFACTS, prepareAttachment, uploadPath } from "./prepare";
+import { createWrittenFiles, resultImages } from "./writtenFiles";
 import { addGatewayFields, gatewayFetch, gatewayRequestFields, nameResults, toAgentMessage } from "./gateway";
+import { e2eeFetch } from "../e2ee/fetch";
+import { attachmentsNote, hasReadableText, type AttachmentEntry } from "./attachmentContext";
 import i18n from "../i18n";
-import { activeMcpServers, connectMcpServers, McpUnavailableError, type McpServer, type McpTools } from "./mcp";
+import { activeMcpServers, connectMcpServers, McpUnavailableError, type McpServer, type McpToolPolicy, type McpTools } from "./mcp";
 import { beginMcpConfirmationSession } from "./mcpConfirmation";
 import { createTools } from "./tools";
+import { createConnectedAgentTools, type ConnectedAgentContext } from "./connectedAgentTools";
+import { createWorkspaceTools, type WorkspaceFileAccess, type WorkspaceToolContext } from "./workspaceTools";
+import { storageAccessEnabled, storageToolSettings, writeAccessEnabled } from "./storageAccess";
 import { type Change, observe } from "./vfs";
 import { getWorkspace, listMounts } from "./workspace";
+import { WorkspaceAgentVfs } from "../workspace/agentVfs";
+import { getChatWorkspaceBundle } from "../workspace/agentBridge";
 
 const PROVIDER = "chat-ai";
-// pi-ai insists on a key; the backend ignores it and adds the real one.
-const PROXY_KEY = "set-by-backend";
 
 const AGENT_PROMPT = `You have a virtual filesystem rooted at "/" that belongs to this conversation. There is no shell.
-Files the user attaches are placed under ${UPLOADS}/; documents and audio come with a converted text variant next to them.
+Files the user attaches are placed under ${ARTEFACTS}/; documents and audio come with a converted text variant next to them.
 Use the tools to read, write and edit files, to convert documents, to transcribe audio, to analyze images, and to generate speech, images and Word documents.
 Every file you write is shown to the user in the chat, so do not repeat a file's whole content in your answer.`;
 
-const NO_TOOLS_PROMPT = "You cannot call tools in this conversation; attached files are referenced by name only.";
+const NO_TOOLS_PROMPT = "You cannot call tools in this conversation. The text of attached text and document files is included in the message; other attachments are referenced by name only, so do not claim to have read those.";
+
+const NO_BROWSER_STORAGE_PROMPT = "The user has turned off access to storage for this conversation, so you cannot read or write files and have no file tools. The text of attached text and document files is included in the message; attachments whose text could not be extracted are referenced by name only, so do not claim to have read those.";
+
+const ARCANA_TOOLS_PROMPT = "Arcana Tools is enabled. Use these tools to inspect Arcana collections, manage their files, check or start indexing, and manage sharing. Ask the user for explicit confirmation before deleting files or an index, changing sharing, or uploading and replacing files unless they already asked for that exact change.";
 
 
 type ModelSpec = { id: string; name?: string; input?: string[] };
@@ -112,10 +122,18 @@ const toBase64 = (bytes: Uint8Array) => {
 
 /**
  * Makes sure a message's attachments are in the workspace (see prepare.ts) and returns a note
- * listing them, plus the images to send inline.
+ * listing them, plus the images to send inline. Without file access the agent has no tools to
+ * read them, so the text of readable attachments is inlined into the note instead.
  */
-async function ingestAttachments(conversationId: string, fs, items: any[], vision: boolean, audio: Map<string, InputAudio> | null) {
-  const lines: string[] = [];
+async function ingestAttachments(
+  conversationId: string,
+  fs,
+  items: any[],
+  vision: boolean,
+  audio: Map<string, InputAudio> | null,
+  inlineText: boolean,
+) {
+  const entries: AttachmentEntry[] = [];
   const images: { type: "image"; data: string; mimeType: string }[] = [];
   for (const item of items) {
     if (item.type !== "file" || !item.fileId) continue;
@@ -129,7 +147,16 @@ async function ingestAttachments(conversationId: string, fs, items: any[], visio
     const variants = [`${path}.md`, `${path}.txt`];
     const converted = [];
     for (const variant of variants) if (await fs.stat(variant)) converted.push(variant);
-    lines.push(`- ${path}${converted.length ? ` (text: ${converted.join(", ")})` : ""}`);
+    const text =
+      inlineText && hasReadableText(kind, converted.length > 0)
+        ? new TextDecoder().decode(await fs.readFile(converted[0] ?? path))
+        : undefined;
+    entries.push({
+      path,
+      name: meta.name,
+      variants: inlineText || !converted.length ? undefined : converted,
+      text,
+    });
     if (vision && kind === "image") {
       const bytes = await fs.readFile(path);
       images.push({ type: "image", data: toBase64(bytes), mimeType: meta.type || "image/png" });
@@ -139,7 +166,7 @@ async function ingestAttachments(conversationId: string, fs, items: any[], visio
       audio.set(path, { data: toBase64(await fs.readFile(path)), format });
     }
   }
-  return { note: lines.length ? `\n\n[Attached files]\n${lines.join("\n")}` : "", images };
+  return { note: attachmentsNote(entries), images };
 }
 
 type InputAudio = { data: string; format: "wav" | "mp3" };
@@ -173,13 +200,28 @@ function dropImages(messages: any[]) {
 }
 
 /** The UI conversation as pi messages. The last message must be the user's new prompt. */
-async function toAgentMessages(conversationId: string, fs, uiMessages: any[], spec: ModelSpec, vision: boolean, audio: Map<string, InputAudio> | null) {
+async function toAgentMessages(
+  conversationId: string,
+  fs,
+  uiMessages: any[],
+  spec: ModelSpec,
+  vision: boolean,
+  audio: Map<string, InputAudio> | null,
+  fileAccess: boolean,
+) {
   const out: AgentMessage[] = [];
   for (const message of uiMessages) {
     const items = Array.isArray(message.content) ? message.content : [{ type: "text", text: String(message.content ?? "") }];
     const text = items.filter((item) => item.type === "text").map((item) => item.text ?? "").join("\n");
     if (message.role === "user") {
-      const { note, images } = await ingestAttachments(conversationId, fs, items, vision, audio);
+      const { note, images } = await ingestAttachments(
+        conversationId,
+        fs,
+        items,
+        vision,
+        audio,
+        !fileAccess,
+      );
       const content = [{ type: "text" as const, text: `${text}${note}` }, ...images];
       if (!text.trim() && !note && !images.length) continue;
       out.push({ role: "user", content, timestamp: message.createdAt ?? Date.now() });
@@ -210,6 +252,7 @@ export async function runAgentTurn({
   uiMessages,
   systemPrompt,
   settings,
+  mcpToolPolicy = "ask",
   onUpdate,
   onMcpNameMismatch,
 }: {
@@ -217,6 +260,8 @@ export async function runAgentTurn({
   uiMessages: any[];
   systemPrompt: string;
   settings: any;
+  /** Advanced setting: "ask" (default), "always", or "never" for user MCP servers. */
+  mcpToolPolicy?: McpToolPolicy;
   onUpdate: (update: TurnUpdate) => void;
   onMcpNameMismatch?: (server: McpServer, actualName: string) => Promise<boolean>;
 }): Promise<TurnResult> {
@@ -224,234 +269,325 @@ export async function runAgentTurn({
   const spec: ModelSpec = typeof settings.model === "string" ? { id: settings.model } : settings.model;
   const external = isExternalModel(spec);
   const useTools = modelSupportsTools(spec);
+  // Access storage is the master switch: with it off the model gets no data-access tools at all,
+  // even when a local folder is mounted or the chat is attached to a workspace.
+  const browserStorage = storageAccessEnabled(settings);
+  // `arcana_v2` and `remote_file_access` are the old names of this toggle.
+  const arcanaTools =
+    settings.tools?.arcana_tools === true ||
+    settings.tools?.arcana_v2 === true ||
+    settings.tools?.remote_file_access === true;
   const model = toModel(spec);
   const vision = model.input.includes("image");
 
   const storage = await getWorkspace(conversationId);
-  // Files written under UPLOADS are inputs (uploads and their converted variants), not results to show
-  const written = new Set<string>();
-  const workspace = observe(storage, (change: Change) => {
-    if (change.kind === "write" && !change.path.startsWith(`${UPLOADS}/`)) written.add(change.path);
-  });
-
-  // Audio files by upload path, sent as audio to models that take it
-  const audio = spec.input?.includes("audio") ? new Map<string, InputAudio>() : null;
-  const conversation = await toAgentMessages(conversationId, storage, uiMessages.filter((m) => m.role !== "system"), spec, vision, audio);
-  const prompt = conversation.pop();
-  if (!prompt || prompt.role !== "user") throw new Error("Nothing to send");
-
-  const models = createModels();
-  models.setProvider(
-    createProvider({
-      id: PROVIDER,
-      name: "Chat AI",
-      baseUrl: agentEndpoint(),
-      auth: { apiKey: { name: "Chat AI", resolve: async () => ({ auth: { apiKey: PROXY_KEY } }) } },
-      models: [model],
-      api: openAICompletionsApi(),
-    }),
+  const attachedWorkspace = await getChatWorkspaceBundle(conversationId).catch(
+    () => null,
   );
-
-  // Tool invocations per response: one model message with tool calls counts once, however many
-  // calls it batches. Past the limit the next batch is blocked; after that, tools are withdrawn.
-  const maxInvocations = settings.max_tool_calls ?? DEFAULT_MAX_TOOL_CALLS;
-  let invocations = 0;
-  let lastBatch: unknown;
-  let blockedBatch: unknown;
-  let toolsRevoked = false;
-  const beforeToolCall = async ({ assistantMessage }: { assistantMessage: unknown }) => {
-    if (assistantMessage !== lastBatch) {
-      lastBatch = assistantMessage;
-      if (maxInvocations > 0 && invocations >= maxInvocations) {
-        blockedBatch = assistantMessage;
-        toolsRevoked = true;
-      } else {
-        invocations++;
-      }
-    }
-    if (assistantMessage === blockedBatch) return { block: true, reason: TOOL_LIMIT_REASON };
-    return undefined;
-  };
-
-  const extra = { top_p: settings.top_p, ...reasoningParams(spec.id, settings) };
-  const gatewayFields = external || !agentGatewayTools() ? {} : gatewayRequestFields(settings);
-  const onPayload = (payload: any) => {
-    // Let the server pick the output limit, as the plain chat path does.
-    delete payload.max_tokens;
-    delete payload.max_completion_tokens;
-    Object.assign(payload, extra);
-    addGatewayFields(payload, gatewayFields);
-    if (!useTools || toolsRevoked) {
-      delete payload.tools;
-      payload.messages = flattenToolHistory(payload.messages);
-    }
-    if (external) {
-      // reasoningParams also sets this for OpenAI models, which reject it; back/ never forwarded it.
-      delete payload.chat_template_kwargs;
-      // OpenAI's reasoning models only accept the default sampling parameters.
-      if (/^openai-(gpt-?[5-9]|o\d)/.test(spec.id)) {
-        delete payload.temperature;
-        delete payload.top_p;
-      }
-    }
-    if (!vision) dropImages(payload.messages);
-    if (audio?.size) addInputAudio(payload.messages, audio);
-    return payload;
-  };
-
-  // The gateway's own tool use during a request, as pi messages. It belongs before the
-  // assistant message that request produced: `before` maps that message to it, for the
-  // following requests of this turn (transformContext) and the stored transcript (done).
-  let gatewayMessages: AgentMessage[] = [];
-  const before = new Map<AgentMessage, AgentMessage[]>();
-  const fetchFn = gatewayFetch((exchange) =>
-    gatewayMessages.push(toAgentMessage(exchange, { api: model.api, provider: PROVIDER, model: spec.id })),
-  );
-
-  const tools = useTools ? createTools(workspace, { vision, enabled: settings.tools }) : [];
-  // An enabled MCP server that cannot be reached stops the turn: the user turns it off or starts it
-  const servers = useTools ? activeMcpServers(settings) : [];
-  let mcp: McpTools | undefined;
-  if (servers.length) {
-    try {
-      mcp = await connectMcpServers(servers, new Set(tools.map((tool) => tool.name)), {
-        onNameMismatch: onMcpNameMismatch,
-      });
-    } catch (error) {
-      if (!(error instanceof McpUnavailableError)) throw error;
-      console.error(error);
-      throw new Error(i18n.t("alert.mcp_unreachable", { url: error.url }));
-    }
-    tools.push(...mcp.tools);
-  }
-
-  const mounts = listMounts(conversationId);
-  const agent = new Agent({
-    initialState: {
-      systemPrompt: [
-        systemPrompt,
-        useTools ? AGENT_PROMPT : NO_TOOLS_PROMPT,
-        useTools && mounts.length ? `The user's local folders are mounted at: ${mounts.join(", ")}.` : "",
-        useTools && settings.tools?.write_access !== true
-          ? "The user has turned off writing and editing files: you can read files but not change them."
-          : "",
-        `Current date: ${new Date().toLocaleString()}`,
-      ]
-        .filter(Boolean)
-        .join("\n\n"),
-      model,
-      tools,
-      messages: conversation,
-    },
-    beforeToolCall,
-    transformContext: async (messages) => nameResults(messages.flatMap((message) => [...(before.get(message) ?? []), message])),
-    streamFn: (m, context, options) => {
-      gatewayMessages = [];
-      return models.streamSimple(m, context, { ...options, temperature: settings.temperature, onPayload, fetch: fetchFn });
-    },
-  });
-
-  // Files the agent wrote, by path. A file written twice keeps one place in the message.
-  const files = new Map<string, string>();
-  const saveWritten = async () => {
-    for (const path of [...written]) {
-      written.delete(path);
-      try {
-        const bytes = await storage.readFile(path);
-        const name = path.split("/").pop() || "file";
-        const file = new File([bytes as Uint8Array<ArrayBuffer>], name, { type: guessType(name) });
-        files.set(path, saveFile(conversationId, file));
-      } catch (error) {
-        console.warn(`Could not attach ${path}:`, error);
-      }
-    }
-  };
-
-  const done: AgentMessage[] = [];
-  let streaming: AgentMessage | undefined;
-  const snapshot = (): TurnUpdate => {
-    const agentMessages = streaming ? [...done, streaming] : [...done];
-    return { agentMessages, text: agentText(agentMessages), files: [...files.values()].map((fileId) => ({ type: "file", fileId })) };
-  };
-
-  let error: string | undefined;
-  agent.subscribe(async (event) => {
-    switch (event.type) {
-      case "message_update":
-        streaming = event.message;
-        break;
-      case "message_end":
-        streaming = undefined;
-        if (event.message.role === "user") return;
-        if (event.message.role === "assistant" && gatewayMessages.length) {
-          before.set(event.message, gatewayMessages);
-          done.push(...nameResults(gatewayMessages));
-          gatewayMessages = [];
-        }
-        done.push(event.message);
-        if (event.message.role === "assistant" && event.message.stopReason === "error") {
-          error = event.message.errorMessage ?? "The model request failed.";
-        }
-        break;
-      case "tool_execution_end":
-        await saveWritten();
-        break;
-      default:
-        return;
-    }
-    onUpdate(snapshot());
-  });
-
-  const stopListening = onAbortRequest(() => agent.abort());
   try {
-    await agent.prompt(prompt);
+    // Writing is always on in the chat's own storage; an attached workspace has its own switch.
+    const writeAccess =
+      useTools &&
+      browserStorage &&
+      writeAccessEnabled(settings, {
+        attachedWorkspace: !!attachedWorkspace,
+      });
+    const agentStorage = attachedWorkspace
+      ? new WorkspaceAgentVfs(
+          storage,
+          attachedWorkspace.workspaceId,
+          attachedWorkspace.root,
+          attachedWorkspace.mounts,
+        )
+      : storage;
+    // Files the agent writes outside /artefacts become attachments of its reply.
+    const written = createWrittenFiles(conversationId, agentStorage);
+    const workspace = observe(agentStorage, (change: Change) => written.observe(change));
+    // Mounted folders show up in the prompt and count as local storage while access storage is on.
+    const mounts = [
+      ...listMounts(conversationId),
+      ...(attachedWorkspace?.mounts.map(({ mount }) => mount.path) ?? []),
+    ];
+
+    // Audio files by upload path, sent as audio to models that take it
+    const audio = spec.input?.includes("audio") ? new Map<string, InputAudio>() : null;
+    // `browserStorage` alone is not enough: a model without tool support cannot read the files either.
+    const conversation = await toAgentMessages(conversationId, agentStorage, uiMessages.filter((m) => m.role !== "system"), spec, vision, audio, useTools && browserStorage);
+    const prompt = conversation.pop();
+    if (!prompt || prompt.role !== "user") throw new Error("Nothing to send");
+
+    const models = createModels();
+    models.setProvider(
+      createProvider({
+        id: PROVIDER,
+        name: "Chat AI",
+        baseUrl: agentEndpoint(),
+        auth: { apiKey: { name: "Chat AI", resolve: async () => ({ auth: { apiKey: agentApiKey() } }) } },
+        models: [model],
+        api: openAICompletionsApi(),
+      }),
+    );
+
+    // Tool invocations per response: one model message with tool calls counts once, however many
+    // calls it batches. Past the limit the next batch is blocked; after that, tools are withdrawn.
+    const maxInvocations = settings.max_tool_calls ?? DEFAULT_MAX_TOOL_CALLS;
+    let invocations = 0;
+    let lastBatch: unknown;
+    let blockedBatch: unknown;
+    let toolsRevoked = false;
+    const beforeToolCall = async ({ assistantMessage }: { assistantMessage: unknown }) => {
+      if (assistantMessage !== lastBatch) {
+        lastBatch = assistantMessage;
+        if (maxInvocations > 0 && invocations >= maxInvocations) {
+          blockedBatch = assistantMessage;
+          toolsRevoked = true;
+        } else {
+          invocations++;
+        }
+      }
+      if (assistantMessage === blockedBatch) return { block: true, reason: TOOL_LIMIT_REASON };
+      return undefined;
+    };
+
+    const extra = { top_p: settings.top_p, ...reasoningParams(spec.id, settings) };
+    const gatewayFields = external || !agentGatewayTools() ? {} : gatewayRequestFields(settings);
+    const onPayload = (payload: any) => {
+      // Let the server pick the output limit, as the plain chat path does.
+      delete payload.max_tokens;
+      delete payload.max_completion_tokens;
+      Object.assign(payload, extra);
+      addGatewayFields(payload, gatewayFields);
+      if (!useTools || toolsRevoked) {
+        delete payload.tools;
+        payload.messages = flattenToolHistory(payload.messages);
+      }
+      if (external) {
+        // reasoningParams also sets this for OpenAI models, which reject it; back/ never forwarded it.
+        delete payload.chat_template_kwargs;
+        // OpenAI's reasoning models only accept the default sampling parameters.
+        if (/^openai-(gpt-?[5-9]|o\d)/.test(spec.id)) {
+          delete payload.temperature;
+          delete payload.top_p;
+        }
+      }
+      if (!vision) dropImages(payload.messages);
+      if (audio?.size) addInputAudio(payload.messages, audio);
+      return payload;
+    };
+
+    // The gateway's own tool use during a request, as pi messages. It belongs before the
+    // assistant message that request produced: `before` maps that message to it, for the
+    // following requests of this turn (transformContext) and the stored transcript (done).
+    let gatewayMessages: AgentMessage[] = [];
+    const before = new Map<AgentMessage, AgentMessage[]>();
+    // E2EE sits *under* the gateway wrapper, so the status-event filter only ever
+    // sees the decrypted stream.
+    const fetchFn = gatewayFetch(
+      (exchange) =>
+        gatewayMessages.push(toAgentMessage(exchange, { api: model.api, provider: PROVIDER, model: spec.id })),
+      e2eeFetch,
+    );
+
+    // The workspace tools also carry file access for sources that are not mounted into the
+    // virtual filesystem, so the media and document tools can address them too.
+    let workspaceContext: WorkspaceToolContext | null = null;
+    let workspaceFiles: WorkspaceFileAccess | undefined;
+    const workspaceToolList: AgentTool<any>[] = [];
+    if (useTools && browserStorage) {
+      try {
+        const workspaceTools = await createWorkspaceTools(
+          conversationId,
+          workspace,
+          attachedWorkspace?.workspaceId,
+          { writable: writeAccess },
+        );
+        workspaceToolList.push(...workspaceTools.tools);
+        workspaceContext = workspaceTools.context;
+        workspaceFiles = workspaceTools.files;
+      } catch (error) {
+        console.warn("Could not load workspace tools", error);
+      }
+    }
+    const tools = useTools
+      ? createTools(workspace, {
+          ...storageToolSettings(settings, {
+            vision,
+            attachedWorkspace: !!attachedWorkspace,
+            hasMounts: mounts.length > 0,
+          }),
+          files: workspaceFiles,
+        })
+      : [];
+    tools.push(...workspaceToolList);
+    let connectedAgentContext: ConnectedAgentContext | null = null;
+    if (useTools && browserStorage) {
+      try {
+        const connected = await createConnectedAgentTools(
+          conversationId,
+          workspace,
+        );
+        tools.push(...connected.tools);
+        connectedAgentContext = connected.context;
+      } catch (error) {
+        console.warn("Could not load connected agent tools", error);
+      }
+    }
+    // An enabled MCP server that cannot be reached stops the turn: the user turns it off or starts it.
+    // With the advanced policy set to "never", the user's MCP servers are not contacted at all;
+    // the agent's own file and workspace tools are unaffected.
+    const servers =
+      useTools && mcpToolPolicy !== "never" ? activeMcpServers(settings) : [];
+    let mcp: McpTools | undefined;
+    if (servers.length) {
+      try {
+        mcp = await connectMcpServers(servers, new Set(tools.map((tool) => tool.name)), {
+          onNameMismatch: onMcpNameMismatch,
+          confirm: mcpToolPolicy !== "always",
+        });
+      } catch (error) {
+        if (!(error instanceof McpUnavailableError)) throw error;
+        console.error(error);
+        throw new Error(i18n.t("alert.mcp_unreachable", { url: error.url }));
+      }
+      tools.push(...mcp.tools);
+    }
+
+    const agent = new Agent({
+      initialState: {
+        systemPrompt: [
+          systemPrompt,
+          useTools
+            ? browserStorage
+              ? AGENT_PROMPT
+              : NO_BROWSER_STORAGE_PROMPT
+            : NO_TOOLS_PROMPT,
+          useTools && arcanaTools ? ARCANA_TOOLS_PROMPT : "",
+          workspaceContext?.workspaces.length
+            ? `This chat is attached to the workspace(s) ${workspaceContext.workspaces
+                .map((workspace) => `${workspace.name} (${workspace.id})`)
+                .join(
+                  ", ",
+                )}. Use workspace_list for its sources, mounts and agents, workspace_list_agents for the agents attached to each workspace, and workspace_files, workspace_read_file, workspace_write_file and workspace_fetch_file for files in it, including sources that are not mounted. The read, ls and find tools work on the workspace root and its mounted folders, and the media and document tools (explain_image, convert_document, transcribe_audio, generate_speech, generate_image, edit_image, create_docx) take a source argument to address any of those sources by id, label or mount path, so a file that is not mounted is still reachable. This chat's own folder is mounted at /chats/${conversationId}: it belongs to the chat and stays there if the workspace is detached, so keep the chat's private files there and the shared ones in the workspace.`
+            : "",
+          connectedAgentContext?.workspaceIds.length
+            ? connectedAgentContext.agents.length
+              ? `Agents connected to this chat's workspace: ${connectedAgentContext.agents
+                  .map(({ agent }) => `${agent.name || agent.id} (${agent.id})`)
+                  .join(
+                    ", ",
+                  )}. They are available through connected_agents_status, connected_agent_list_sessions, connected_agent_history, connected_agent_switch_session, connected_agent_remove_session, connected_agent_files, connected_agent_read_file, and connected_agent_fetch_file. Access is limited to those agents and to the sessions attached to this chat's workspace; use connected_agent_list_sessions to see them, connected_agent_switch_session to change the active session, connected_agent_remove_session only when the user explicitly asks to remove one, and connected_agent_fetch_file for images, PDFs, and other binary files. Never claim to see sessions that are not listed.`
+              : "This chat is attached to a workspace, but no agents are attached to it. If the user asks about an agent, use connected_agents_status to check, then say that no agent is attached to this workspace. Do not claim to know or see one."
+            : "",
+          useTools && browserStorage && mounts.length ? `The user's folders are mounted at: ${mounts.join(", ")}.` : "",
+          useTools &&
+          browserStorage &&
+          !writeAccess
+            ? "The user has turned off writing and editing files: you can read files but not change them."
+            : "",
+          `Current date: ${new Date().toLocaleString()}`,
+        ]
+          .filter(Boolean)
+          .join("\n\n"),
+        model,
+        tools,
+        messages: conversation,
+      },
+      beforeToolCall,
+      transformContext: async (messages) => nameResults(messages.flatMap((message) => [...(before.get(message) ?? []), message])),
+      streamFn: (m, context, options) => {
+        gatewayMessages = [];
+        return models.streamSimple(m, context, { ...options, temperature: settings.temperature, onPayload, fetch: fetchFn });
+      },
+    });
+
+    const done: AgentMessage[] = [];
+    let streaming: AgentMessage | undefined;
+    const snapshot = (): TurnUpdate => {
+      const agentMessages = streaming ? [...done, streaming] : [...done];
+      return { agentMessages, text: agentText(agentMessages), files: written.items() };
+    };
+
+    // Arguments of each tool call, by id, to name the images its result carries after the path.
+    const toolArgs = new Map<string, any>();
+    // pi's read and MCP tools return images; attach them like a generated image.
+    const attachResultImages = async (event: {
+      toolCallId: string;
+      toolName: string;
+      result?: { content?: any[] };
+    }) => {
+      const path = toolArgs.get(event.toolCallId)?.path;
+      for (const image of resultImages(event.result, {
+        path: typeof path === "string" ? path : undefined,
+        toolName: event.toolName,
+      })) {
+        await written.attachImage(image);
+      }
+    };
+
+    let error: string | undefined;
+    agent.subscribe(async (event) => {
+      switch (event.type) {
+        case "message_update":
+          streaming = event.message;
+          break;
+        case "message_end":
+          streaming = undefined;
+          if (event.message.role === "user") return;
+          if (event.message.role === "assistant") {
+            for (const block of event.message.content ?? []) {
+              if (block?.type === "toolCall" && block.id) toolArgs.set(block.id, block.arguments);
+            }
+          }
+          if (event.message.role === "assistant" && gatewayMessages.length) {
+            before.set(event.message, gatewayMessages);
+            done.push(...nameResults(gatewayMessages));
+            gatewayMessages = [];
+          }
+          done.push(event.message);
+          if (event.message.role === "assistant" && event.message.stopReason === "error") {
+            error = event.message.errorMessage ?? "The model request failed.";
+          }
+          break;
+        case "tool_execution_end":
+          await written.save();
+          await attachResultImages(event);
+          break;
+        default:
+          return;
+      }
+      onUpdate(snapshot());
+    });
+
+    const stopListening = onAbortRequest(() => agent.abort());
+    try {
+      await agent.prompt(prompt);
+    } finally {
+      stopListening();
+    }
+    await written.save();
+
+    const usage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
+    for (const message of done) {
+      if (message.role !== "assistant") continue;
+      // Each call resends the conversation, so the last call's input is the context size.
+      usage.prompt_tokens = message.usage.input + message.usage.cacheRead;
+      usage.completion_tokens += message.usage.output;
+    }
+    usage.total_tokens = usage.prompt_tokens + usage.completion_tokens;
+
+    // vLLM without --enable-auto-tool-choice rejects any request with tools. If the very first
+    // request failed that way, remember the model and redo the turn without tools.
+    if (useTools && done.length === 1 && error && NO_TOOL_CALLING.test(error)) {
+      markToolless(spec.id);
+      return runAgentTurn({ conversationId, uiMessages, systemPrompt, settings, onUpdate });
+    }
+    return { ...snapshot(), usage, error };
   } finally {
-    stopListening();
+    attachedWorkspace?.close();
   }
-  await saveWritten();
-
-  const usage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
-  for (const message of done) {
-    if (message.role !== "assistant") continue;
-    // Each call resends the conversation, so the last call's input is the context size.
-    usage.prompt_tokens = message.usage.input + message.usage.cacheRead;
-    usage.completion_tokens += message.usage.output;
-  }
-  usage.total_tokens = usage.prompt_tokens + usage.completion_tokens;
-
-  // vLLM without --enable-auto-tool-choice rejects any request with tools. If the very first
-  // request failed that way, remember the model and redo the turn without tools.
-  if (useTools && done.length === 1 && error && NO_TOOL_CALLING.test(error)) {
-    markToolless(spec.id);
-    return runAgentTurn({ conversationId, uiMessages, systemPrompt, settings, onUpdate });
-  }
-  return { ...snapshot(), usage, error };
 }
 
 const DEFAULT_MAX_TOOL_CALLS = 10;
 const TOOL_LIMIT_REASON = "Tool limit exceeded for this response. The user can increase tool limits.";
 
-const NO_TOOL_CALLING = /tool[- ]choice|tool-call-parser|does not support tools|tools? (is|are) not supported/i;
-
-const TYPES: Record<string, string> = {
-  png: "image/png",
-  jpg: "image/jpeg",
-  jpeg: "image/jpeg",
-  gif: "image/gif",
-  webp: "image/webp",
-  svg: "image/svg+xml",
-  mp3: "audio/mpeg",
-  wav: "audio/wav",
-  ogg: "audio/ogg",
-  opus: "audio/ogg",
-  pdf: "application/pdf",
-  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  md: "text/markdown",
-  csv: "text/csv",
-  json: "application/json",
-  html: "text/html",
-  txt: "text/plain",
-};
-
-const guessType = (name: string) => TYPES[name.split(".").pop()?.toLowerCase() ?? ""] ?? "text/plain";
+const NO_TOOL_CALLING = /tool[- ]choice|tool-call-parser|does not support tool|tools? (is|are) not supported/i;

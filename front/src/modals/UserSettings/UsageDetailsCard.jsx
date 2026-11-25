@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import Tooltip from "../../components/Others/Tooltip";
 
 const NEAR_EXHAUSTED_PERCENT = 80;
@@ -118,7 +119,9 @@ export default function UsageDetailsCard({
   collapsedMetrics: collapsedOverride,
   collapsedColumns = false,
   expandedTable = false,
+  onOpenLabel = null,
 }) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
 
   const metrics = sections.flatMap((section) => section.metrics);
@@ -191,24 +194,64 @@ export default function UsageDetailsCard({
   const canExpand = metrics.length > 0;
   if (!metrics.length) return null;
 
+  // The whole block is the profile's way in; only the arrow is not, so it stops
+  // its own clicks. The label stays a real button for the keyboard.
   return (
-    <div className="w-full min-w-0 rounded-xl bg-base-200 px-3 py-2">
-      <button
-        type="button"
-        onClick={() => setIsOpen((open) => !open)}
-        aria-expanded={canExpand ? isOpen : undefined}
-        className="flex w-full items-center justify-between gap-2 text-left"
-      >
-        <span className="min-w-0 truncate text-[11px] font-medium text-base-content">
-          {label}
-        </span>
-        {canExpand && (
-          <ChevronDown
-            className={`h-3.5 w-3.5 shrink-0 text-base-content/50 transition-transform ${isOpen ? "rotate-180" : ""}`}
-            aria-hidden="true"
-          />
-        )}
-      </button>
+    <div
+      className={`w-full min-w-0 rounded-xl bg-base-200/40 px-3 py-2 ${
+        onOpenLabel ? "cursor-pointer" : ""
+      }`}
+      onClick={onOpenLabel ?? undefined}
+    >
+      {onOpenLabel ? (
+        <div className="flex w-full items-center gap-1">
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpenLabel();
+            }}
+            className="min-w-0 flex-1 cursor-pointer truncate text-left text-[11px] font-medium text-base-content focus-visible:underline focus-visible:outline-none"
+          >
+            {label}
+          </button>
+          {canExpand && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                setIsOpen((open) => !open);
+              }}
+              aria-expanded={isOpen}
+              aria-label={t("user_settings.usage.expand")}
+              title={t("user_settings.usage.expand")}
+              className="shrink-0 rounded p-0.5 hover:bg-base-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+            >
+              <ChevronDown
+                className={`h-3.5 w-3.5 text-base-content/50 transition-transform ${isOpen ? "" : "rotate-180"}`}
+                aria-hidden="true"
+              />
+            </button>
+          )}
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setIsOpen((open) => !open)}
+          aria-expanded={canExpand ? isOpen : undefined}
+          className="flex w-full items-center justify-between gap-2 text-left"
+        >
+          <span className="min-w-0 truncate text-[11px] font-medium text-base-content">
+            {label}
+          </span>
+          {canExpand && (
+            <ChevronDown
+              className={`h-3.5 w-3.5 shrink-0 text-base-content/50 transition-transform ${isOpen ? "" : "rotate-180"}`}
+              aria-hidden="true"
+            />
+          )}
+        </button>
+      )}
 
       {isOpen ? (
         expandedTable ? (

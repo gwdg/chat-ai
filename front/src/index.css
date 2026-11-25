@@ -536,6 +536,22 @@ body {
   animation: pulse-subtle 2s ease-in-out infinite;
 }
 
+/* A file the agent just created or changed: a dot that holds, then fades away. */
+@keyframes file-mark-fade {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+}
+
 /* Choice proposer suggestions */
 @keyframes choice-bar-in {
   from {

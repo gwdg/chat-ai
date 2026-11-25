@@ -1,0 +1,248 @@
+import { useEffect, useMemo, useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useParams, useSearchParams } from "react-router";
+
+import AnnouncementBar from "../components/Header/AnnouncementBar";
+import Header from "../components/Header/Header";
+import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
+import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
+import AgentConversation from "../components/Agent/AgentConversation";
+import AgentFilesPanel from "../components/Agent/AgentFilesPanel";
+import FilePreviewPanel from "../components/DocumentPanel/FilePreviewPanel";
+import { updateAgent, useAgent } from "../agents/agentStore";
+import {
+  attachedWorkspaces,
+  disableAgentBridgeAfterFailure,
+  isAgentBridgeEnabled,
+  resolveBridgeWorkspace,
+} from "../agents/agentBridgeAccess";
+import {
+  fetchAgentSessions,
+  switchAgentSession,
+} from "../agents/agentSessions";
+import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
+import { useUpdateUserData } from "../hooks/useUpdateUserData";
+import { useOpencodeFilePreview } from "../hooks/useOpencodeFilePreview";
+import { useAgentBridge } from "../hooks/useAgentBridge";
+import { useAgentMcpInjection } from "../hooks/useAgentMcpInjection";
+import { useAgentMcpScope } from "../hooks/useAgentMcpScope";
+import {
+  useAgentWorkspaceLinksState,
+  useWorkspaceList,
+  useWorkspaceMounts,
+  useWorkspaceSources,
+} from "../db/workspaceDb";
+import { useWorkspaceProviders } from "../workspace/useWorkspaceProviders";
+import { createWorkspaceRootProvider } from "../workspace/workspaceRoot";
+import { isBrandExternalAllowed } from "../config/brandPolicy";
+
+export default function AgentPage() {
+  const { t } = useTranslation();
+  const { agentId } = useParams();
+  const [searchParams] = useSearchParams();
+  const focusedFilePath = searchParams.get("file");
+  const sessionParam = searchParams.get("session");
+  const agent = useAgent(agentId);
+  const modelsData = useUpdateModelsData();
+  const userData = useUpdateUserData();
+  const { preview, openFile, toggleFile, openText, closePreview, download } =
+    useOpencodeFilePreview(agent);
+  // Tool cards of the conversation open the file they read or wrote in the same
+  // right-hand panel the file list uses, and close it when clicked again.
+  const openConversationFile = useCallback(
+    (path: string) => {
+      if (!agent?.id || !path) return;
+      void toggleFile({
+        sourceId: agent.id,
+        path,
+        name: path.split("/").filter(Boolean).pop() || path,
+        kind: "file",
+        local: false,
+      });
+    },
+    [agent?.id, toggleFile],
+  );
+  useEffect(() => {
+    if (!agent?.id || !sessionParam || sessionParam === agent.sessionId) return;
+    let cancelled = false;
+    fetchAgentSessions(agent)
+      .then((tree) => {
+        if (cancelled) return;
+        if (tree.all.some((session) => session.id === sessionParam)) {
+          switchAgentSession(agent, sessionParam);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [agent, sessionParam]);
+
+  useEffect(() => {
+    if (!agent || !focusedFilePath) return;
+    void openFile({
+      sourceId: agent.id,
+      path: focusedFilePath,
+      name: focusedFilePath.split("/").filter(Boolean).pop() || focusedFilePath,
+      kind: "file",
+      local: false,
+    });
+  }, [agent, focusedFilePath, openFile]);
+  // The workspace links stay `undefined` until Dexie answers: the effect below writes based
+  // on them, and the empty placeholder must never stand in for "this agent has none".
+  const workspaces = useWorkspaceList();
+  const agentLinksState = useAgentWorkspaceLinksState(agent?.id);
+  // Only attached workspaces can be exposed: the bridge must never fall back to another
+  // workspace of the account, or the agent would read files the user never connected to it.
+  const bridgeCandidates = useMemo(
+    () => attachedWorkspaces(workspaces, agentLinksState ?? []),
+    [agentLinksState, workspaces],
+  );
+  const bridgeWorkspace = resolveBridgeWorkspace(agent, bridgeCandidates);
+  const bridgeEnabled = isAgentBridgeEnabled(agent) && !!bridgeWorkspace;
+  const workspaceId = bridgeEnabled ? bridgeWorkspace.id : null;
+  const sources = useWorkspaceSources(workspaceId ?? undefined);
+  const mounts = useWorkspaceMounts(workspaceId ?? undefined);
+  const { providers } = useWorkspaceProviders(sources);
+  const rootProvider = useMemo(
+    () => (workspaceId ? createWorkspaceRootProvider(workspaceId) : null),
+    [workspaceId],
+  );
+  // An access flag without an attached workspace can only come from data written before the
+  // bridge required one; clear it so a workspace attached later does not silently switch on.
+  // The links are the attachment truth and stay `undefined` while Dexie answers: acting on
+  // the empty placeholder is what switched an enabled bridge off on every page mount.
+  useEffect(() => {
+    if (!agent || agentLinksState === undefined) return;
+    if (agentLinksState.length || !isAgentBridgeEnabled(agent)) return;
+    updateAgent(agent.id, { bridgeEnabled: false });
+  }, [agent, agentLinksState]);
+  // The bridge runs from this page; its switch, status and options live in the composer's
+  // workspace popover (components/Agent/AgentWorkspaceButton.jsx).
+  // Servers OpenCode can reach itself are registered there instead of being relayed through
+  // the browser, so the relay below only carries the rest. Injection needs neither the bridge
+  // nor a workspace: OpenCode dials those servers itself, and skipping them here is what keeps
+  // a bridge from offering the same server twice once it is started. Both routes are scoped to
+  // the session that is open — OpenCode's MCP registry is agent-wide — through the entry names
+  // and `useAgentMcpScope` below.
+  // A brand may forbid user-configured MCP servers (config/brandPolicy.js): then neither
+  // the browser relay nor the injection into OpenCode is offered.
+  const mcpAllowed = isBrandExternalAllowed("mcp");
+  const mcpInjection = useAgentMcpInjection({
+    agent,
+    enabled: mcpAllowed && agent?.bridgeInjectExternal === true,
+    sessionId: agent?.sessionId,
+  });
+  const injectedMcpUrls = useMemo(
+    () => mcpInjection.injected.map((server) => server.url),
+    [mcpInjection.injected],
+  );
+  const bridge = useAgentBridge({
+    agent,
+    sessionId: agent?.sessionId,
+    workspaceId,
+    writable: agent?.bridgeWritable === true,
+    mcp: mcpAllowed && agent?.bridgeMcp === true,
+    excludedMcpUrls: injectedMcpUrls,
+    // The same option that injects the password-free servers: an authenticated one becomes a
+    // stdio proxy, because a `remote` entry would carry its token onto the agent host.
+    wrapMcp: mcpAllowed && agent?.bridgeInjectExternal === true,
+    mounts,
+    providers,
+    rootProvider,
+  });
+  const scopedEntries = useMemo(
+    () => [
+      ...mcpInjection.injected.map((server) => server.entryName),
+      ...(bridge.entryName ? [bridge.entryName] : []),
+      // The stdio proxies are named after the session too, so they take part in the same
+      // deny-everywhere-else rules as the bridge and injected entries.
+      ...bridge.wrappedEntries.map((entry) => entry.name),
+    ],
+    [mcpInjection.injected, bridge.entryName, bridge.wrappedEntries],
+  );
+  // Denies both routes to every other session of this agent. Runs on its own, so neither hook
+  // has to know about the permission rules that make its entries session-private.
+  useAgentMcpScope({ agent, entryNames: scopedEntries });
+  // Reason of a bridge that could not start. Access is switched off in that case, so the hook
+  // reports "off" afterwards; the popover still shows why until access is turned on again.
+  const [bridgeFailure, setBridgeFailure] = useState("");
+
+  useEffect(() => {
+    if (!agent) return;
+    if (bridge.status === "error") {
+      if (disableAgentBridgeAfterFailure(agent)) {
+        setBridgeFailure(bridge.error || t("agents.bridge.not_working"));
+      }
+      return;
+    }
+    if (bridge.status === "online" || bridge.status === "connecting") {
+      setBridgeFailure("");
+    }
+  }, [agent, bridge.status, bridge.error, t]);
+
+  const sidebarState = useMemo(
+    () => ({ id: "", title: "", messages: [], folderId: null, settings: { model: "" } }),
+    [],
+  );
+
+  return (
+    <div className="h-dvh grid grid-rows-[auto_1fr]">
+      <div className="min-w-0 overflow-x-clip">
+        <AnnouncementBar />
+        <Header
+          className="md:hidden"
+          localState={sidebarState}
+          setLocalState={() => {}}
+          modelsData={modelsData}
+          userData={userData}
+        />
+      </div>
+      <div className="grid grid-cols-1 grid-rows-[1fr_auto] md:grid-cols-[auto_1fr] md:grid-rows-[1fr_auto] md:gap-x-2 gap-y-1 md:pt-1 bg-base-200 overflow-hidden">
+        <SidebarWrapper
+          localState={sidebarState}
+          setLocalState={() => {}}
+          userData={userData}
+          modelsData={modelsData}
+        />
+        <div className="flex min-h-0 min-w-0 gap-2">
+          {agent && (
+            <AgentFilesPanel
+              agent={agent}
+              onOpenFile={toggleFile}
+              onShowText={openText}
+            />
+          )}
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            {agent ? (
+              <AgentConversation
+                agent={agent}
+                modelsData={modelsData}
+                onOpenFile={openConversationFile}
+                bridgeStatus={bridge.status}
+                bridgeError={bridge.error}
+                bridgeFailure={bridgeFailure}
+                bridgeUnavailable={bridge.unavailable}
+                mcpInjection={mcpInjection}
+                wrappedMcp={bridge.wrappedEntries}
+                wrappedMcpFailed={bridge.wrappedFailed}
+              />
+            ) : (
+              <div className="flex flex-1 items-center justify-center text-sm text-base-content/60">
+                {t("agents.not_found")}
+              </div>
+            )}
+          </div>
+          {agent && preview && (
+            <FilePreviewPanel
+              preview={preview}
+              onClose={closePreview}
+              onDownload={download}
+            />
+          )}
+        </div>
+        <CollapsibleFooter className="row-start-3 col-span-full md:row-start-2 md:col-start-1 md:col-end-3" />
+      </div>
+    </div>
+  );
+}

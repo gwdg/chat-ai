@@ -1,19 +1,5 @@
 import getModelDefaults from "../config/getModelDefaults";
-import { isRemoteMcpServer, remoteMcpEnabled } from "../agent/mcp";
 import { createBackendClient } from "./openaiClient";
-
-// Only gateway server ids go to the backend. Local agent URLs stay in the browser.
-const gatewayMcpServers = (settings) => {
-  if (!remoteMcpEnabled(settings)) return [];
-  const servers = settings?.mcp_servers;
-  if (Array.isArray(servers)) {
-    return servers
-      .filter((server) => isRemoteMcpServer(server) && server.enabled !== false)
-      .map((server) => server.id.trim())
-      .filter(Boolean);
-  }
-  return typeof servers === "string" && servers.trim() ? [servers.trim()] : [];
-};
 
 // Request fields that set the reasoning effort for `model`, from its defaults and the conversation settings
 export function reasoningParams(model, settings) {
@@ -97,12 +83,6 @@ async function* chatCompletions (
 
     if (conversation.settings?.feedback) {
       params.feedback = conversation.settings.feedback;
-    }
-
-    // Remote server ids, or the first enabled local server as the gateway server id
-    const mcpServers = gatewayMcpServers(conversation.settings);
-    if (mcpServers.length) {
-      params["mcp-servers"] = mcpServers;
     }
 
     // Define openai object to call backend

@@ -14,8 +14,10 @@ export default function ConversationConflict({ isOpen, onClose, localState, setL
   const { notifySuccess, notifyError } = useToast();
 
   const handleOverwrite = async () => {
-    // Force save
-    const lastModified = await updateConversation(localState.id, localState, true);
+    // Force save. The topic is not the chat page's to write: it may have been
+    // moved (sidebar drag and drop) after this snapshot was taken.
+    const { folderId: _folderId, ...snapshot } = localState;
+    const lastModified = await updateConversation(snapshot.id, snapshot, true);
     localState.lastModified = lastModified;
     setUnsavedChanges(false);
     onClose();

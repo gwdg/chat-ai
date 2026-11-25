@@ -1,35 +1,77 @@
+import { Globe } from "@carbon/icons-react";
 import { useTranslation } from "react-i18next";
 
-import flag_english from "../../assets/flags/english.svg";
-import flag_german from "../../assets/flags/german.svg";
+import {
+  applyLanguageChoice,
+  LANGUAGE_AUTO,
+  readLanguageChoice,
+  SUPPORTED_LANGUAGES,
+} from "../../utils/language";
 
+const LANGUAGE_LABEL_KEY = {
+  en: "language.english",
+  de: "language.german",
+};
+
+/**
+ * Footer language picker. "Automatic" follows the browser and is the state a
+ * user never chose anything in; an explicit choice is stored by
+ * `utils/language.js` and applied before the first render on the next visit.
+ * Changing the language remounts the router (`App.jsx` keys it on
+ * `i18n.language`), so every translated label is rebuilt.
+ */
 export default function LanguageSelector() {
-  // Initialize internationalization hooks
-  const { i18n } = useTranslation();
-  // Language configuration object mapping language codes to their flag icons
-  const lngs = {
-    en: flag_english,
-    de: flag_german,
-  };
+  const { i18n, t } = useTranslation();
+  const choice = readLanguageChoice();
+
+  const choose = (value) => applyLanguageChoice(i18n, value);
 
   return (
-    <div className="flex gap-4 flex-col">
-      {/* Language Toggle Buttons */}
-      {Object.keys(lngs)
-        .filter((lng) => lng !== i18n.resolvedLanguage) // hide current language
-        .map((lng) => (
+    <div className="dropdown dropdown-end" data-guide="language-picker">
+      <div
+        tabIndex={0}
+        role="button"
+        className="btn btn-ghost btn-sm touch-manipulation gap-1 px-2"
+        aria-label={t("language.label")}
+        title={t("language.label")}
+        style={{ WebkitTapHighlightColor: "transparent" }}
+      >
+        <Globe size={20} className="flex-shrink-0 text-accent" />
+        <span className="hidden sm:inline text-xs uppercase">
+          {choice === LANGUAGE_AUTO
+            ? t("language.auto_short")
+            : choice.toUpperCase()}
+        </span>
+      </div>
+      <ul
+        tabIndex={0}
+        className="dropdown-content menu z-50 mt-2 w-48 rounded-box border border-base-300 bg-base-100 p-1 text-sm shadow-lg"
+      >
+        <li>
           <button
-            key={lng}
-            type="submit"
-            onClick={() => {
-              console.log("Language changed to:", lng);
-              i18n.changeLanguage(lng);
-            }}
-            className="cursor-pointer"
+            type="button"
+            className={choice === LANGUAGE_AUTO ? "active" : ""}
+            onClick={() => choose(LANGUAGE_AUTO)}
           >
-            <img src={lngs[lng]} alt={`${lng} language flag`} />
+            <Globe size={16} className="text-accent" />
+            {t("language.automatic")}
           </button>
+        </li>
+        {SUPPORTED_LANGUAGES.map((code) => (
+          <li key={code}>
+            <button
+              type="button"
+              className={choice === code ? "active" : ""}
+              onClick={() => choose(code)}
+            >
+              <span className="inline-block w-6 text-center text-xs font-semibold uppercase text-base-content/70">
+                {code}
+              </span>
+              {t(LANGUAGE_LABEL_KEY[code])}
+            </button>
+          </li>
         ))}
+      </ul>
     </div>
   );
 }

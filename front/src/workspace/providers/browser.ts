@@ -1,0 +1,176 @@
+import type { WorkspaceCapabilities, WorkspaceFileEntry } from "../../db/dbTypes";
+import {
+  ensureSourceDir,
+  getSourceBlob,
+  getSourceNode,
+  listSourceNodes,
+  removeSourcePath,
+  sourceUsage,
+  writeSourceFile,
+} from "../../db/workspaceVfs";
+import { defaultCapabilities } from "../capabilities";
+import { baseName, joinPath, normalizePath } from "../paths";
+import { readAll } from "../bytes";
+import type { DirectoryPage, FileProvider, QuotaInfo } from "./types";
+import { WorkspaceError } from "./types";
+
+export class BrowserProvider implements FileProvider {
+  readonly kind = "browser" as const;
+  readonly capabilities: WorkspaceCapabilities = defaultCapabilities("browser");
+  status: "connected" | "needs-permission" | "offline" | "error" = "offline";
+
+  constructor(
+    readonly sourceId: string,
+    readonly storageId: string = sourceId,
+  ) {}
+
+  async connect() {
+    await ensureSourceDir(this.storageId, "/");
+    this.status = "connected";
+  }
+
+  private async entry(node: {
+    path: string;
+    name: string;
+    kind: "file" | "dir";
+    size?: number;
+    mtime?: string;
+    mime?: string;
+  }): Promise<WorkspaceFileEntry> {
+    let childCount: number | undefined;
+    if (node.kind === "dir") {
+      const children = await listSourceNodes(this.storageId, node.path);
+      childCount = children.length;
+    }
+    return {
+      sourceId: this.sourceId,
+      path: node.path,
+      name: node.name,
+      kind: node.kind,
+      size: node.size,
+      mtime: node.mtime,
+      mime: node.mime,
+      childCount,
+    };
+  }
+
+  async list(path: string, cursor?: string): Promise<DirectoryPage> {
+    const normalized = normalizePath(path);
+    const nodes = await listSourceNodes(this.storageId, normalized);
+    const start = cursor ? Number(cursor) : 0;
+    const page = nodes.slice(start, start + 200);
+    return {
+      entries: await Promise.all(page.map((node) => this.entry(node))),
+      next:
+        start + page.length < nodes.length ? String(start + page.length) : undefined,
+    };
+  }
+
+  async stat(path: string): Promise<WorkspaceFileEntry> {
+    const normalized = normalizePath(path);
+    if (normalized === "/") {
+      return { sourceId: this.sourceId, path: "/", name: "/", kind: "dir" };
+    }
+    const node = await getSourceNode(this.storageId, normalized);
+    if (!node) throw new WorkspaceError("NOT_FOUND", normalized);
+    return this.entry(node);
+  }
+
+  async read(path: string, range?: { start: number; end: number }) {
+    const normalized = normalizePath(path);
+    const node = await getSourceNode(this.storageId, normalized);
+    if (!node || node.kind !== "file") {
+      throw new WorkspaceError("NOT_FOUND", normalized);
+    }
+    const blob = await getSourceBlob(this.storageId, node.id);
+    if (!blob) throw new WorkspaceError("NOT_FOUND", normalized);
+    const bytes = range ? blob.slice(range.start, range.end) : blob;
+    return new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(bytes);
+        controller.close();
+      },
+    });
+  }
+
+  async write(
+    path: string,
+    data: ReadableStream<Uint8Array>,
+    opts: { size?: number; overwrite: boolean },
+  ): Promise<WorkspaceFileEntry> {
+    const normalized = normalizePath(path);
+    const existing = await getSourceNode(this.storageId, normalized);
+    if (existing && !opts.overwrite) {
+      throw new WorkspaceError("CONFLICT", normalized);
+    }
+    const bytes = await readAll(data);
+    const node = await writeSourceFile(this.storageId, normalized, bytes);
+    return this.entry(node);
+  }
+
+  async mkdir(path: string) {
+    await ensureSourceDir(this.storageId, path);
+  }
+
+  /** IndexedDB has no append: read the blob, join the new bytes and write the file back. */
+  async append(path: string, data: Uint8Array | string) {
+    const normalized = normalizePath(path);
+    const addition =
+      typeof data === "string" ? new TextEncoder().encode(data) : data;
+    const existing = await getSourceNode(this.storageId, normalized);
+    if (existing && existing.kind !== "file") {
+      throw new WorkspaceError("CONFLICT", normalized);
+    }
+    if (!existing) {
+      await writeSourceFile(this.storageId, normalized, addition);
+      return;
+    }
+    const blob = await getSourceBlob(this.storageId, existing.id);
+    const current = blob ?? new Uint8Array();
+    const combined = new Uint8Array(current.length + addition.length);
+    combined.set(current, 0);
+    combined.set(addition, current.length);
+    await writeSourceFile(this.storageId, normalized, combined);
+  }
+
+  async remove(path: string, opts: { recursive: boolean }) {
+    await removeSourcePath(this.storageId, path, opts.recursive);
+  }
+
+  async copy(from: string, to: string) {
+    const entry = await this.stat(from);
+    if (entry.kind === "dir") {
+      await this.mkdir(to);
+      const { entries } = await this.list(from);
+      for (const child of entries) {
+        await this.copy(child.path, joinPath(to, child.name));
+      }
+      return;
+    }
+    await this.write(to, await this.read(from), {
+      size: entry.size,
+      overwrite: false,
+    });
+  }
+
+  async move(from: string, to: string) {
+    await this.copy(from, to);
+    await this.remove(from, { recursive: true });
+  }
+
+  async quota(): Promise<QuotaInfo | null> {
+    const usage = await sourceUsage(this.storageId);
+    try {
+      const estimate = await navigator.storage.estimate();
+      const quota = estimate.quota ?? 0;
+      return {
+        usage,
+        quota,
+        free: quota ? Math.max(0, quota - usage) : undefined,
+        scope: "origin",
+      };
+    } catch {
+      return { usage, quota: 0, free: undefined, scope: "origin" };
+    }
+  }
+}

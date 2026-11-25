@@ -1,12 +1,18 @@
 // hooks/useTabTitle.js
 import { useEffect } from "react";
 import { useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
 import { useConversationList } from "../db";
 import { selectLastConversation } from "../Redux/reducers/lastConversationSlice";
+import { useBrand } from "../config/BrandProvider";
+import { localizeBrandValue } from "../config/brands";
 
 export const useTabTitle = () => {
   const currentConversationId = useSelector(selectLastConversation);
   const conversations = useConversationList();
+  const { brand } = useBrand();
+  const { i18n } = useTranslation();
+  const appName = localizeBrandValue(brand?.name, i18n.language) || "Chat AI";
 
   useEffect(() => {
       const currentConversation = conversations?.find(
@@ -19,11 +25,11 @@ export const useTabTitle = () => {
         // chats created before it changed.
         const untitled =
           title === "Untitled Chat" || title === "Untitled Conversation";
-        document.title = untitled ? "Chat AI" : title + " - Chat AI";
+        document.title = untitled ? appName : title + " - " + appName;
       } else {
-        document.title = "Chat AI";
+        document.title = appName;
       }
-    }, [currentConversationId, conversations]
+    }, [currentConversationId, conversations, appName]
   );
 };
 

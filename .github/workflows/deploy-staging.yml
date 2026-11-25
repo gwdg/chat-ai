@@ -1,0 +1,17 @@
+name: Deploy staging
+
+on:
+  push:
+    branches: [staging]
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, deploy]
+    steps:
+      - name: Deploy
+        run: ~/chat-ai/deploy.sh
+

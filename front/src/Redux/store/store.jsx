@@ -8,6 +8,8 @@ import {
   initMessageListener,
 } from "redux-state-sync";
 import { migrations } from "./migrations";
+import { stateSyncConfig } from "./stateSync";
+import { getDefaultUserSettings } from "../reducers/userSettingsReducer";
 
 const persistConfig = {
   key: "root",
@@ -18,7 +20,7 @@ const persistConfig = {
     "user_settings",
     "migration_data",
   ],
-  version: 7,
+  version: 11,
   migrate: createMigrate(migrations, { debug: true })
 };
 
@@ -36,33 +38,26 @@ const getDefaultState = () => {
       warn_clear_settings: true,
       warn_regenerate: true,
       warn_fork: true,
+      warn_workspace_delete: true,
+      warn_workspace_file_delete: true,
+      warn_restore_agent_sessions: true,
       count_hallucination: 0,
       count_announcement: 0,
       show_usage_in_sidebar: true,
       collapsed_topics: [],
+      expanded_agents: [],
       conversation_sort: "created_desc",
       conversation_grouping: "topic",
       completed_tutorials: [],
       completed_use_cases: [],
       suppressed_tutorials: [],
+      sync_onboarding_dismissed: false,
+      theme: "default",
+      consent_acceptance: {},
     },
-    // Conditionally preserve memories
-    user_settings: {
-      memories: [],
-      timeout: 300000,
-      memory_mode: 0,
-      suggest_user_prompts: false,
-      html_render_mode: "off",
-      html_load_external: false,
-      html_sanitization: "strict",
-      set_title_once: true,
-      render_typst: false,
-      render_latex: false,
-      collapse_reasoning_while_streaming: true,
-      document_conversion_mode: "choice",
-      conversation_summaries: true,
-      send_with_enter: null,
-    },
+    // Conditionally preserve memories. Defaults come from the reducer, so front.json
+    // can seed a deployment's `userSettings` and a reset picks them up too.
+    user_settings: getDefaultUserSettings(),
   };
 };
 
@@ -83,38 +78,8 @@ const persistedRootReducer = persistReducer(
   rootReducerWithReset
 );
 
-// Configuration for redux-state-sync - REMOVED setCurrentConversation from whitelist
-const stateSyncConfig = {
-  // Whitelist the actions that should sync across tabs
-  whitelist: [
-    // "conversations/addConversation",
-    // "conversations/updateConversation",
-    // "conversations/deleteConversation",
-    // "conversations/resetStore",
-    // "conversations/setIsResponding",
-    // "defaultModel/setDefaultModel",
-    // "defaultModel/resetDefaultModel",
-    // "theme/toggleTheme",
-    // "theme/setDarkMode",
-    // "theme/setLightMode",
-    // "userMemory/addMemory",
-    // "userMemory/editMemory",
-    // "userMemory/deleteMemory",
-    // "userMemory/deleteAllMemories",
-    // "timeout/setTimeoutTime",
-    // "timeout/resetTimeoutTime",
-    // "timeout/setTimeoutInSeconds",
-    "SET_ADV",
-    "RESET_ALL",
-    "MIGRATE",
-    "SET_COUNT",
-    "user_settings/importUserSettings",
-  ],
-  // Use localStorage for better compatibility
-  broadcastChannelOption: {
-    type: "localstorage",
-  },
-};
+// Configuration for redux-state-sync lives in ./stateSync.js: every `user_settings` action syncs,
+// because redux-persist rewrites the whole persisted state from each tab (see that file).
 
 // Create the Redux store with the persisted reducer and middleware
 export const store = configureStore({

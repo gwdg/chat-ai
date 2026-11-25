@@ -10,9 +10,11 @@ import WarningExternalModel from "../Header/WarningExternalModel";
 import ModelButton from "./ModelButton";
 import ToolsButton from "./ToolsButton";
 import AttachButton from "./AttachButton";
-import MountFolderButton from "./MountFolderButton";
+import WorkspaceAttachButton from "./WorkspaceAttachButton";
+import { isFeatureEnabled } from "../../config/deployment";
 import AttachMediaButton from "./AttachMediaButton";
 import PromptTextArea from "./PromptTextArea";
+import ModelNoToolsWarning from "./ModelNoToolsWarning";
 import SpeechModeButton from "./SpeechModeButton";
 import SpeechModePanel from "./SpeechModePanel";
 
@@ -20,6 +22,7 @@ import { useSendMessage } from "../../hooks/useSendMessage";
 import { useSpeechSession } from "../../hooks/useSpeechSession";
 import { loadFileMeta } from "../../db";
 import { getFileType } from "../../utils/attachments";
+import { modelSupportsFileType } from "../../utils/modelCapabilities";
 import { getSpeechModule } from "../../utils/speechAudio";
 import { useModal } from "../../modals/ModalContext";
 import { useDebounce } from "../../hooks/useDebounce";
@@ -109,7 +112,12 @@ export default function Prompt({
       const meta = await loadFileMeta(attachment.fileId);
       if (!meta) continue;
       const fileType = getFileType(meta);
-      if (fileType === "pdf" || fileType === "docx") return true;
+      if (
+        (fileType === "pdf" || fileType === "docx") &&
+        !modelSupportsFileType(localState.settings.model, fileType)
+      ) {
+        return true;
+      }
     }
     return false;
   };
@@ -161,6 +169,7 @@ export default function Prompt({
           localState={localState}
           setLocalState={setLocalState}
         />
+        <ModelNoToolsWarning localState={localState} />
         <div className={`flex flex-col gap-4 w-full relative select-none rounded-2xl shadow-lg text-base-content bg-base-100`} >
         {/* Prompt Text Area */}
         <PromptTextArea
@@ -195,11 +204,12 @@ export default function Prompt({
           <div className="flex gap-4 items-center justify-center">
             {!metaChatSend && (
               <>
-                {/* Local folder and write access for the agent */}
-                <MountFolderButton
-                  localState={localState}
-                  setLocalState={setLocalState}
-                />
+                {isFeatureEnabled("workspaces") && (
+                  <WorkspaceAttachButton
+                    localState={localState}
+                    setLocalState={setLocalState}
+                  />
+                )}
                 {/* Tools Button */}
                 <ToolsButton
                   localState={localState}

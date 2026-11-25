@@ -1,15 +1,20 @@
 import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
-import { Code2, Eye } from "lucide-react";
 import DOMPurify from "dompurify";
 import compilerWasmUrl from "@myriaddreamin/typst-ts-web-compiler/pkg/typst_ts_web_compiler_bg.wasm?url";
 import rendererWasmUrl from "@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm?url";
 import { selectRenderTypst } from "../../../Redux/reducers/userSettingsReducer";
+import { grantWasmConsent, useWasmConsent } from "../../../hooks/useWasmConsent";
+import { downloadSvg, renderedFilename } from "../../../utils/download";
 import Code from "./Code";
+import RenderToolbar from "./RenderToolbar";
+import WasmDownloadPrompt from "./WasmDownloadPrompt";
 
 const CACHE_LIMIT = 50;
 const CROP_PADDING = 6;
+// Compiler (28.3 MB), renderer (0.9 MB) and the vendored text fonts (8.3 MB).
+const TYPST_DOWNLOAD_MB = 38;
 const TYPST_SVG_STYLES =
   "<style>:host{display:block}svg{display:block;max-width:100%;height:auto}</style>";
 const svgCache = new Map();
@@ -123,6 +128,7 @@ const TypstBlock = memo(
   ({ content, language = "typst", defaultRender = true }) => {
     const { t } = useTranslation();
     const renderTypst = useSelector(selectRenderTypst);
+    const typstConsent = useWasmConsent("typst");
     const [showCode, setShowCode] = useState(!(defaultRender && renderTypst));
     const [svg, setSvg] = useState(null);
     const [error, setError] = useState(false);
@@ -165,6 +171,13 @@ const TypstBlock = memo(
         return;
       }
 
+      if (!typstConsent) {
+        setSvg(null);
+        setError(false);
+        setLoading(false);
+        return;
+      }
+
       let cancelled = false;
       setLoading(true);
       setError(false);
@@ -198,35 +211,36 @@ const TypstBlock = memo(
         cancelled = true;
         clearTimeout(timer);
       };
-    }, [content, showCode]);
+    }, [content, showCode, typstConsent]);
 
     const codeContent = String(content || "").replace(/\n$/, "");
 
     return (
       <div className="relative my-2">
-        <button
-          type="button"
-          onClick={() => setShowCode((prev) => !prev)}
-          aria-pressed={showCode}
-          className="absolute -top-3 right-2 z-10 inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-base-300 bg-base-100 px-2 py-1 text-[11px] font-medium text-base-content/70 shadow-sm transition-colors hover:bg-base-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
-        >
-          {showCode ? (
-            <>
-              <Eye className="h-3.5 w-3.5" aria-hidden="true" />
-              {t("conversation.typst_block.render")}
-            </>
-          ) : (
-            <>
-              <Code2 className="h-3.5 w-3.5" aria-hidden="true" />
-              {t("conversation.typst_block.show_code")}
-            </>
-          )}
-        </button>
+        <RenderToolbar
+          showCode={showCode}
+          onToggle={() => setShowCode((prev) => !prev)}
+          renderLabel={t("conversation.typst_block.render")}
+          showCodeLabel={t("conversation.typst_block.show_code")}
+          onDownload={
+            !showCode && svg
+              ? () => downloadSvg(svg, renderedFilename("typst", "svg"))
+              : undefined
+          }
+          downloadLabel={t("conversation.download_rendered")}
+        />
 
         {showCode ? (
           <div className="pt-3">
             <Code language={language}>{codeContent}</Code>
           </div>
+        ) : !typstConsent && codeContent.trim() ? (
+          <WasmDownloadPrompt
+            feature={t("wasm_download.feature_typst")}
+            sizeMb={TYPST_DOWNLOAD_MB}
+            onConfirm={() => grantWasmConsent("typst")}
+            onCancel={() => setShowCode(true)}
+          />
         ) : error ? (
           <div className="pt-3 p-2 text-error">
             {t("typst.render_error")}

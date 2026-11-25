@@ -3,8 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router";
 import BaseModal from "../BaseModal";
+import ModelProgress from "../../components/Others/ModelProgress";
 import { createConversation } from "../../db";
 import { buildConversationForAPI } from "../../utils/sendMessage";
+import { createProgressReporter } from "../../utils/streamProgress";
 import { chatCompletions } from "../../apis/chatCompletions";
 import { selectTimeout } from "../../Redux/reducers/userSettingsReducer";
 
@@ -23,6 +25,7 @@ export default function SummarizeChatModal({
   const navigate = useNavigate();
   const [status, setStatus] = useState("loading")
   const [errorMessage, setErrorMessage] = useState("")
+  const [receivedWords, setReceivedWords] = useState(0)
   const startedRef = useRef(false);
   const isLoading = status === "loading";
 
@@ -86,14 +89,19 @@ export default function SummarizeChatModal({
 
       // Call API directly and collect full response
       const timeoutAPI = (timeout >= 5000 && timeout <= 900000) ? timeout : 300000;
-      let summaryText = "";
+      const progress = createProgressReporter({
+        onProgress: ({ words }) => setReceivedWords(words),
+      });
 
       for await (const chunk of chatCompletions(apiPayload, timeoutAPI)) {
         const delta = chunk?.choices?.[0]?.delta;
         if (delta?.content && typeof delta.content === "string") {
-          summaryText += delta.content;
+          progress.appendAnswer(delta.content);
         }
       }
+      progress.flush();
+
+      const summaryText = progress.answer;
 
       // Validate we got a real summary back
       if (!summaryText.trim()) {
@@ -153,14 +161,13 @@ export default function SummarizeChatModal({
     >
       {/* Loading state */}
       {status === "loading" && (
-        <div className="flex flex-col items-center gap-4 py-6">
-          <div className="animate-spin rounded-full h-10 w-10 border-[3px] border-base-300 border-t-accent" />
-          <p className="text-base-content text-sm font-medium">
-            <Trans i18nKey="common.summarizing" />
-          </p>
-          <p className="text-base-content/70 text-xs text-center">
-            <Trans i18nKey="alert.summarize_in_progress" />
-          </p>
+        <div className="py-2">
+          <ModelProgress
+            title={t("common.summarizing")}
+            description={t("alert.summarize_in_progress")}
+            words={receivedWords}
+            dataGuide="summarize-progress"
+          />
         </div>
       )}
 

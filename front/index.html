@@ -3,6 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/chat-ai.ico" />
+    <link rel="apple-touch-icon" href="/chat-ai-180.png" />
+    <!-- A brand replaces this manifest and theme colour at runtime
+         (config/pwaManifest.js). The files below are the plain Chat AI fallback. -->
+    <!-- Browsers fetch a manifest without credentials by default, which a login
+         gateway in front of the app answers with 401; use-credentials includes
+         the session cookie even for this same-origin file. -->
+    <link
+      rel="manifest"
+      href="/site.webmanifest"
+      crossorigin="use-credentials"
+    />
+    <meta name="theme-color" content="#B4388D" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Chat AI</title>
   </head>

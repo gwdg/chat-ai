@@ -26,7 +26,8 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.js"],
     include: ["src/**/*.{test,spec}.{js,jsx,ts,tsx}"],
-    exclude: ["node_modules", "dist"],
+    // Live tests start real processes; they belong in `npm run test:live`.
+    exclude: ["node_modules", "dist", "**/*.live.test.*"],
     restoreMocks: true,
     clearMocks: true,
     css: false,

@@ -11,8 +11,12 @@ import { createPortal } from "react-dom";
 import { useLocation } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 
-import { featureGuides, getFeatureGuide } from "../config/featureGuides";
+import {
+  getFeatureGuide,
+  isFeatureGuideAvailable,
+} from "../config/featureGuides";
 import { buildUseCaseGuide } from "../config/useCases";
+import { isTargetCovered, selectGuideTarget } from "./featureGuideHighlight";
 import {
   markTutorialCompleted,
   markUseCaseCompleted,
@@ -106,7 +110,10 @@ export function FeatureGuideProvider({ children }) {
 
   const startGuide = useCallback(
     (featureId) => {
-      if (!enabled || !featureGuides[featureId]) return;
+      // The catalog and the Meta chat already hide an unavailable guide, but a
+      // `/tutorial/<id>` link or a marker from an imported chat can still name
+      // one. Starting it would highlight elements this deployment never renders.
+      if (!enabled || !isFeatureGuideAvailable(featureId)) return;
       setCompletion(null);
       setTargetRect(null);
       setCursor({
@@ -342,12 +349,20 @@ export function FeatureGuideProvider({ children }) {
     let cancelled = false;
     let currentTarget = null;
 
-    const findTarget = () =>
-      selectors
+    const findTarget = () => {
+      const candidates = selectors
         .flatMap((selector) =>
           Array.from(document.querySelectorAll(selector)),
         )
-        .find(isVisible);
+        .filter(isVisible);
+      // A selector can match several copies of the same control (the sidebar
+      // rail and its expanded panel both carry `data-guide="user-settings"`).
+      // Point at the copy the user can reach, or the step's click completion
+      // would listen on a button that is hidden behind another one.
+      return selectGuideTarget(candidates, (candidate) =>
+        isTargetCovered(candidate, candidate.getBoundingClientRect()),
+      );
+    };
 
     const measure = () => {
       if (cancelled) return;
@@ -380,15 +395,23 @@ export function FeatureGuideProvider({ children }) {
         width: rect.width,
         height: rect.height,
       };
-      setTargetRect((prev) =>
-        prev &&
-        prev.left === nextRect.left &&
-        prev.top === nextRect.top &&
-        prev.width === nextRect.width &&
-        prev.height === nextRect.height
-          ? prev
-          : nextRect,
-      );
+      // On phones the open sidebar drawer covers the conversation. Hiding the
+      // ring while the target is behind it avoids pointing at the drawer item
+      // that happens to sit at the same position.
+      const covered = isTargetCovered(target, nextRect);
+      setTargetRect((prev) => {
+        if (covered) return null;
+        if (
+          prev &&
+          prev.left === nextRect.left &&
+          prev.top === nextRect.top &&
+          prev.width === nextRect.width &&
+          prev.height === nextRect.height
+        ) {
+          return prev;
+        }
+        return nextRect;
+      });
       const nextCursor = {
         x: rect.left + rect.width / 2,
         y: rect.top + rect.height / 2,
@@ -474,20 +497,21 @@ export function FeatureGuideProvider({ children }) {
         createPortal(
           <>
             {targetRect && (
-              <div
-                aria-hidden="true"
-                className="pointer-events-none fixed z-[2147483644] rounded-xl outline outline-2 outline-accent transition-all duration-300 motion-reduce:transition-none"
-                style={{
-                  left: targetRect.left - 6,
-                  top: targetRect.top - 6,
-                  width: targetRect.width + 12,
-                  height: targetRect.height + 12,
-                  boxShadow: "0 0 0 6px rgba(0, 158, 224, 0.18)",
-                }}
-              />
+              <>
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none fixed z-[2147483644] rounded-xl outline outline-2 outline-accent transition-all duration-300 motion-reduce:transition-none"
+                  style={{
+                    left: targetRect.left - 6,
+                    top: targetRect.top - 6,
+                    width: targetRect.width + 12,
+                    height: targetRect.height + 12,
+                    boxShadow: "0 0 0 6px rgba(0, 158, 224, 0.18)",
+                  }}
+                />
+                <Cursor x={cursor.x} y={cursor.y} />
+              </>
             )}
-
-            <Cursor x={cursor.x} y={cursor.y} />
           </>,
           document.body,
         )}

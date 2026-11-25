@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "modules": {
+    "tools": false,
+    "feedback": false,
+    "choices": false,
+    "agent": false,
+    "agents": false,
+    "arcanas": false,
+    "speech": false,
+    "sync": false
+  },
+  "features": {
+    "meta_chat": true,
+    "workspaces": false,
+    "mcp_servers": false,
+    "e2ee": false,
+    "tutorials": false,
+    "import_git": false
+  },
+  "brands": {
+    "default": "chat-ai"
+  }
+}

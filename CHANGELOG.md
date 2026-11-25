@@ -1,5 +1,28 @@
 # Changelog 
 
+## Version: v2.0.0-beta (25.11.2026)
+Highlights:
+- The data-safety notice now opens on hover or click instead of covering the chat when a conversation loads and again on every model change; an external-model warning still opens by itself
+- The Thinking icon in the model selector now follows the per-model configuration as well as the models endpoint, so it agrees with the reasoning setting in the settings panel
+- Code in tilde fences (`~~~`) is left untouched by the LaTeX preprocessor, as backtick fences and inline code already were
+- Added encrypted server synchronization of conversations, topics, settings, interface preferences, workspaces and agents via the SAIA filesystem
+- Added an optional passkey that unlocks the sync vault without typing the passphrase, asked automatically after a reload and in any new tab while automatic sync is on; with automatic sync paused, the sidebar's "Sync now" unlocks on demand, plus a one-time offer to set it up
+- A new browser now offers to set up the encrypted synchronization that already exists for the account, once per device
+- Server synchronization now runs its automatic pass only from the active tab, so background tabs no longer duplicate it
+- Added encrypted backups of the whole browser history as a single downloadable file
+- Split Data settings into Manage data, Encrypted backup and Server synchronization sections
+- Added bulk removal of all chats in Unsorted Chats
+- Fixed replacing a locked sync vault and added a sidebar shortcut for the sync status, including a switch that pauses automatic synchronization
+- Server synchronization now repeats an upload that was interrupted before its index fragment was published, instead of pulling older remote data over the newer local edit
+- The sidebar sync button only turns green while automatic synchronization is on and the vault is unlocked; blue means paused or still locked, gray means not set up
+- Added multi-session OpenCode agents with session creation, switching, renaming, removal, and nested subagent sessions
+- Added agent workspace bridge access, local agent filesystems as workspace storage, and workspace file previews as full-height sidebars
+- Expanded the Meta chat with agent/session access, workspace links, MCP management, cross-app search, and stateful what's-new checks across all sessions
+- Added persistent agent forms, shell history, drafts, permission policies, and transcript exports
+- Added collapsible code blocks and improved rendering for Typst, LaTeX, and TikZ content
+- Improved workspace file operations, Git log previews, and agent filesystem metadata
+- Added new tutorials and expanded English and German localizations
+
 ## Version: v1.0.2 (08.10.2026)
 Highlights:
 - Code refactor and cleanup

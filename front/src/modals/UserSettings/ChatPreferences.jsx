@@ -10,9 +10,15 @@ import {
   setSetTitleOnce,
   selectRenderLatex,
   selectRenderTypst,
+  selectRenderGraphviz,
+  selectRenderVega,
+  selectRenderChartjs,
   selectCollapseReasoningWhileStreaming,
   setRenderLatex,
   setRenderTypst,
+  setRenderGraphviz,
+  setRenderVega,
+  setRenderChartjs,
   setCollapseReasoningWhileStreaming,
   setSuggestUserPrompts,
   selectHtmlRenderMode,
@@ -25,8 +31,16 @@ import {
   setDocumentConversionMode,
   selectConversationSummaries,
   setConversationSummaries,
+  selectShowTimestamps,
+  setShowTimestamps,
   setSendWithEnter,
+  selectAdvancedMode,
+  setAdvancedMode,
+  selectMcpToolPolicy,
+  setMcpToolPolicy,
 } from "../../Redux/reducers/userSettingsReducer";
+import { isToolsEnabled } from "../../utils/modules";
+import { isBrandExternalAllowed } from "../../config/brandPolicy";
 import { useModal } from "../ModalContext";
 import { useSendWithEnter } from "../../hooks/useSendWithEnter";
 import ProfilePreferenceSwitch from "./ProfilePreferenceSwitch";
@@ -53,6 +67,33 @@ const DOCUMENT_CONVERSION_OPTIONS = [
   { value: "browser", key: "browser" },
   { value: "choice", key: "choice" },
 ];
+
+const MCP_TOOL_POLICY_OPTIONS = [
+  { value: "ask", key: "ask" },
+  { value: "always", key: "always" },
+  { value: "never", key: "never" },
+];
+
+export function AdvancedModePreference() {
+  const dispatch = useDispatch();
+  const { t } = useTranslation();
+  const advancedMode = useSelector(selectAdvancedMode);
+
+  return (
+    <section className="flex flex-col gap-2">
+      <div data-guide="profile-advanced-mode-preference">
+        <ProfilePreferenceSwitch
+          label={t("user_settings.chat_preferences.sidebar.advanced.label")}
+          description={t(
+            "user_settings.chat_preferences.sidebar.advanced.description",
+          )}
+          checked={advancedMode}
+          onChange={(checked) => dispatch(setAdvancedMode(checked))}
+        />
+      </div>
+    </section>
+  );
+}
 
 export function MemoryPreference() {
   const dispatch = useDispatch();
@@ -130,46 +171,27 @@ export function MemoryPreference() {
 export function SuggestionPreference() {
   const dispatch = useDispatch();
   const { t } = useTranslation();
-  const { openModal } = useModal();
   const suggestUserPrompts = useSelector(selectSuggestUserPrompts);
   const setTitleOnce = useSelector(selectSetTitleOnce);
 
   return (
-    <section>
-      <div className="flex items-center gap-1.5 px-2">
-        <h3 className="text-sm font-medium text-base-content">
-          {t("user_settings.chat_preferences.suggestions.section_label")}
-        </h3>
-        <button
-          type="button"
-          onClick={() => openModal("helpChoiceProposer")}
-          aria-label={t(
-            "user_settings.chat_preferences.suggestions.help_label",
-          )}
-          title={t("user_settings.chat_preferences.suggestions.help_label")}
-          className="btn btn-ghost btn-xs btn-square text-accent"
-        >
-          <HelpCircle className="h-4 w-4" aria-hidden="true" />
-        </button>
-      </div>
-      <div className="flex flex-col gap-3 px-2">
-        <ProfilePreferenceSwitch
-          label={t("user_settings.chat_preferences.suggestions.label")}
-          description={t(
-            "user_settings.chat_preferences.suggestions.description",
-          )}
-          checked={suggestUserPrompts}
-          onChange={(checked) => dispatch(setSuggestUserPrompts(checked))}
-        />
-        <ProfilePreferenceSwitch
-          label={t("user_settings.chat_preferences.suggestions.title_once.label")}
-          description={t(
-            "user_settings.chat_preferences.suggestions.title_once.description",
-          )}
-          checked={setTitleOnce}
-          onChange={(checked) => dispatch(setSetTitleOnce(checked))}
-        />
-      </div>
+    <section className="flex flex-col gap-2">
+      <ProfilePreferenceSwitch
+        label={t("user_settings.chat_preferences.suggestions.label")}
+        description={t(
+          "user_settings.chat_preferences.suggestions.description",
+        )}
+        checked={suggestUserPrompts}
+        onChange={(checked) => dispatch(setSuggestUserPrompts(checked))}
+      />
+      <ProfilePreferenceSwitch
+        label={t("user_settings.chat_preferences.suggestions.title_once.label")}
+        description={t(
+          "user_settings.chat_preferences.suggestions.title_once.description",
+        )}
+        checked={setTitleOnce}
+        onChange={(checked) => dispatch(setSetTitleOnce(checked))}
+      />
     </section>
   );
 }
@@ -220,9 +242,6 @@ export function ConversationSummaryPreference() {
 
   return (
     <section className="flex flex-col gap-2">
-      <h3 className="px-2 text-sm font-medium text-base-content">
-        {t("user_settings.chat_preferences.summaries.section_label")}
-      </h3>
       <ProfilePreferenceSwitch
         label={t("user_settings.chat_preferences.summaries.label")}
         description={t(
@@ -231,6 +250,27 @@ export function ConversationSummaryPreference() {
         checked={conversationSummaries}
         onChange={(checked) => dispatch(setConversationSummaries(checked))}
       />
+    </section>
+  );
+}
+
+export function MessageDisplayPreference() {
+  const dispatch = useDispatch();
+  const { t } = useTranslation();
+  const showTimestamps = useSelector(selectShowTimestamps);
+
+  return (
+    <section className="flex flex-col gap-2">
+      <div data-guide="message-timestamps-preference">
+        <ProfilePreferenceSwitch
+          label={t("user_settings.chat_preferences.messages.timestamps.label")}
+          description={t(
+            "user_settings.chat_preferences.messages.timestamps.description",
+          )}
+          checked={showTimestamps}
+          onChange={(checked) => dispatch(setShowTimestamps(checked))}
+        />
+      </div>
     </section>
   );
 }
@@ -267,16 +307,18 @@ export function HtmlRenderPreference() {
       />
 
       <div className="ml-4 flex flex-col gap-2">
-        <ProfilePreferenceSwitch
-          label={t(
-            "user_settings.chat_preferences.html_render.external_references.label",
-          )}
-          description={t(
-            "user_settings.chat_preferences.html_render.external_references.description",
-          )}
-          checked={htmlLoadExternal}
-          onChange={(checked) => dispatch(setHtmlLoadExternal(checked))}
-        />
+        {isBrandExternalAllowed("external_references") && (
+          <ProfilePreferenceSwitch
+            label={t(
+              "user_settings.chat_preferences.html_render.external_references.label",
+            )}
+            description={t(
+              "user_settings.chat_preferences.html_render.external_references.description",
+            )}
+            checked={htmlLoadExternal}
+            onChange={(checked) => dispatch(setHtmlLoadExternal(checked))}
+          />
+        )}
 
         <SegmentedPreference
           label={t(
@@ -365,11 +407,50 @@ export function DocumentConversionPreference() {
   );
 }
 
+export function McpToolPolicyPreference() {
+  const dispatch = useDispatch();
+  const { t } = useTranslation();
+  const policy = useSelector(selectMcpToolPolicy);
+
+  // The policy only concerns the MCP servers the user added; without the tools module
+  // there is no MCP UI at all.
+  if (!isToolsEnabled()) return null;
+
+  const selectedOption =
+    MCP_TOOL_POLICY_OPTIONS.find((option) => option.value === policy) ??
+    MCP_TOOL_POLICY_OPTIONS[0];
+
+  return (
+    <section className="flex flex-col gap-2" data-guide="mcp-tool-policy">
+      <SegmentedPreference
+        label={t("user_settings.chat_preferences.mcp_tools.label")}
+        description={t(
+          `user_settings.chat_preferences.mcp_tools.options.${selectedOption.key}.description`,
+        )}
+        options={MCP_TOOL_POLICY_OPTIONS.map((option) => ({
+          value: option.value,
+          label: t(
+            `user_settings.chat_preferences.mcp_tools.options.${option.key}.label`,
+          ),
+        }))}
+        value={policy}
+        onChange={(value) => dispatch(setMcpToolPolicy(value))}
+      />
+      <p className="px-2 text-xs text-base-content/70">
+        {t("user_settings.chat_preferences.mcp_tools.note")}
+      </p>
+    </section>
+  );
+}
+
 export function RenderingPreferences() {
   const dispatch = useDispatch();
   const { t } = useTranslation();
   const renderTypst = useSelector(selectRenderTypst);
   const renderLatex = useSelector(selectRenderLatex);
+  const renderGraphviz = useSelector(selectRenderGraphviz);
+  const renderVega = useSelector(selectRenderVega);
+  const renderChartjs = useSelector(selectRenderChartjs);
   const collapseReasoningWhileStreaming = useSelector(
     selectCollapseReasoningWhileStreaming,
   );
@@ -404,6 +485,24 @@ export function RenderingPreferences() {
         description={t("user_settings.chat_preferences.latex.description")}
         checked={renderLatex}
         onChange={(checked) => dispatch(setRenderLatex(checked))}
+      />
+      <ProfilePreferenceSwitch
+        label={t("user_settings.chat_preferences.graphviz.label")}
+        description={t("user_settings.chat_preferences.graphviz.description")}
+        checked={renderGraphviz}
+        onChange={(checked) => dispatch(setRenderGraphviz(checked))}
+      />
+      <ProfilePreferenceSwitch
+        label={t("user_settings.chat_preferences.vega.label")}
+        description={t("user_settings.chat_preferences.vega.description")}
+        checked={renderVega}
+        onChange={(checked) => dispatch(setRenderVega(checked))}
+      />
+      <ProfilePreferenceSwitch
+        label={t("user_settings.chat_preferences.chartjs.label")}
+        description={t("user_settings.chat_preferences.chartjs.description")}
+        checked={renderChartjs}
+        onChange={(checked) => dispatch(setRenderChartjs(checked))}
       />
       <HtmlRenderPreference />
     </section>

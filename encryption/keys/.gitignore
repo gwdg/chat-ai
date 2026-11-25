@@ -1,0 +1,5 @@
+# Private keys stay on the node. Never commit one.
+*.key
+
+# The public keys are safe to commit and to publish; keep this file.
+!.gitignore

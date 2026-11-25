@@ -1,7 +1,39 @@
 export default {
+  errors: {
+    app_title: "Etwas ist schiefgelaufen",
+    app_message:
+      "Die Oberfläche konnte nicht gerendert werden. Ihre gespeicherten Chats bleiben in diesem Browser, solange Sie keine Websitedaten löschen. Laden Sie die Seite neu.",
+    database_title: "Lokale Datenbank nicht verfügbar",
+    database_version:
+      "Dieser Browser enthält eine neuere lokale Datenbankversion, als diese App unterstützt. Öffnen Sie die passende App-Version oder einen neueren Build. Löschen Sie keine Websitedaten.",
+    database_blocked:
+      "Ein anderer Chat-AI-Tab blockiert die lokale Datenbank. Schließen Sie die anderen Tabs und laden Sie neu.",
+    database_quota:
+      "Der Browserspeicher ist voll oder nicht verfügbar. Exportieren Sie eine Sicherung, schaffen Sie Speicherplatz und laden Sie neu.",
+    database_generic:
+      "Die lokale Datenbank konnte nicht geöffnet werden. Ihre Daten sind möglicherweise noch vorhanden. Laden Sie neu oder schließen Sie andere Chat-AI-Tabs.",
+    database_stalled:
+      "Die lokale Datenbank braucht ungewöhnlich lange zum Öffnen. Wahrscheinlich verwendet ein anderer Chat-AI-Tab oder ein anderes Fenster sie noch — schließen Sie alle anderen Chat-AI-Tabs und -Fenster und versuchen Sie es erneut. Wenn das nicht hilft, laden Sie die Seite neu.",
+    data_safe_title: "Ihre Daten sind sicher",
+    data_safe:
+      "Es wurde nichts gelöscht. Ihre Chats, Dateien und Einstellungen liegen weiterhin in diesem Browser — nur diese Seite konnte sie nicht öffnen.",
+    save_data: "Alle meine Daten speichern",
+    save_data_hint:
+      "Sie können eine Kopie von allem als Datei aufbewahren: Sie wird auf Ihren Rechner heruntergeladen und lässt sich später wieder importieren.",
+    save_data_saving: "Datei wird vorbereitet…",
+    save_data_done: "Ihre Datei wurde heruntergeladen.",
+    save_data_failed:
+      "Die lokale Datenbank konnte nicht gelesen werden, daher wurde keine Datei erstellt. Schließen Sie die anderen Chat-AI-Tabs und -Fenster und versuchen Sie es erneut.",
+    retry: "Erneut versuchen",
+    details: "Details",
+    support_before: "Wenn das Problem nicht von selbst verschwindet, wenden Sie sich bitte an",
+    support_after: ".",
+    reload: "Neu laden",
+  },
   // Common phrases
   common: {
     loading: "Lädt...",
+    back: "Zurück",
     undo: "Rückgängig",
     scroll: "Nach unten scrollen",
     scroll_to_top: "Nach oben scrollen",
@@ -9,12 +41,20 @@ export default {
     next_message: "Zur nächsten Nachricht scrollen",
     previous_message: "Zur vorherigen Nachricht scrollen",
     rename: "Umbenennen",
+    edit: "Bearbeiten",
     create: "Erstellen",
     save: "Speichern",
     import: "Chat importieren",
     export: "Chat exportieren",
     summarize: "Zusammenfassen",
     summarizing: "Zusammenfassen...",
+    received_words_one: "{{count}} Wort empfangen…",
+    received_words_other: "{{count}} Wörter empfangen…",
+    reasoning_words_one: "Das Modell überlegt — {{count}} Wort empfangen…",
+    reasoning_words_other: "Das Modell überlegt — {{count}} Wörter empfangen…",
+    elapsed_seconds: "{{count}} s",
+    created: "Erstellt {{date}}",
+    modified: "Geändert {{date}}",
     summarize_success: "Zusammenfassung in einer neuen Unterhaltung erstellt.",
     summary_title: "Zusammenfassung von {{title}}",
     summarize_error: "Zusammenfassung fehlgeschlagen. Ihre Unterhaltung ist unverändert.",
@@ -23,7 +63,6 @@ export default {
     send: "Senden",
     send_shortcut: "Senden (Enter)",
     send_shortcut_shift_enter: "Senden (Umschalt+Enter)",
-    stop: "Anhalten",
     share: "Teilen",
     delete: "Löschen",
     cancel: "Abbrechen",
@@ -60,18 +99,28 @@ export default {
     rename_tooltip: "Umbenennen: {{title}}",
     shortcut_new_conversation: "Strg + Shift + O",
     user_section: "Benutzer",
+    sync_now: "Jetzt synchronisieren",
+    sync_running: "Synchronisierung…",
+    sync_settings: "Synchronisierungs-Einstellungen öffnen",
+    sync_done: "Synchronisierung abgeschlossen: {{pulled}} übernommen, {{pushed}} hochgeladen.",
+    sync_failed: "Synchronisierung fehlgeschlagen: {{error}}",
+    sync_auto_on: "Automatische Synchronisierung an — pausieren",
+    sync_auto_off: "Automatische Synchronisierung aus — fortsetzen",
   },
   folders: {
     title: "Chats",
     all: "Alle Chats",
     uncategorized: "Nicht zugeordnete Chats",
-    by_date: "Alle Chats nach Datum",
-    by_created: "Alle Chats nach Erstellungsdatum",
+    by_date: "Nach Datum",
+    by_created: "Nach Erstellungsdatum",
+    by_size: "Nach Speichergröße",
     sort_label: "Chats sortieren",
     sort_by_topic: "Nach Thema",
     sort_by_date: "Nach Datum",
     sort_by_created: "Nach Erstellungsdatum",
+    sort_by_size: "Nach Speichergröße",
     modified: "Geändert {{date}}",
+    storage_size: "Browserspeicher {{size}}",
     dateBuckets: {
       today: "Heute",
       yesterday: "Gestern",
@@ -79,9 +128,14 @@ export default {
       lastMonth: "Letzter Monat",
       older: "Älter",
     },
+    topics_label: "Themen",
     create_button: "Neues Thema",
     expand_topic: "Thema ausklappen",
     collapse_topic: "Thema einklappen",
+    expand_all_topics: "Alle Themen ausklappen",
+    collapse_all_topics: "Alle Themen einklappen",
+    expand_all_chats: "Alle Chats ausklappen",
+    collapse_all_chats: "Alle Chats einklappen",
     empty_topic: "Ziehen Sie einen Chat hierher.",
     search_label: "Suche",
     search_action: "Chats durchsuchen",
@@ -92,6 +146,14 @@ export default {
     edit_title: "Thema bearbeiten",
     delete_title: "Thema löschen",
     topic_options: "Thema-Optionen",
+    unsorted_options: "Optionen für nicht zugeordnete Chats",
+    remove_all_unsorted: "Alle Chats entfernen",
+    delete_unsorted_title: "Alle nicht zugeordneten Chats entfernen",
+    delete_unsorted_description:
+      "Alle {{count}} Chats löschen, die keinem Thema zugeordnet sind? Dies kann nicht rückgängig gemacht werden.",
+    removed_unsorted_chats: "{{count}} nicht zugeordnete Chats entfernt.",
+    remove_unsorted_error:
+      "Nicht zugeordnete Chats konnten nicht entfernt werden: {{error}}",
     pinned: "Angeheftet",
     pin_action: "Chat anheften",
     unpin_action: "Nicht mehr anheften",
@@ -120,6 +182,7 @@ export default {
     create_inline: "Erstellen",
   },
   topic_view: {
+    kind: "Thema",
     chat_count_one: "{{count}} Chat",
     chat_count_other: "{{count}} Chats",
     empty_title: "Noch keine Chats in diesem Thema",
@@ -135,8 +198,8 @@ export default {
     loading: "Thema wird geladen…",
   },
   sorter: {
-    button: "Sortieren & organisieren",
-    title: "Chats sortieren & organisieren",
+    button: "Smart Sort",
+    title: "Smart Sort",
     intro:
       "Prüfen Sie die Vorschläge unten. Änderungen werden erst beim Anwenden übernommen.",
     ai_model_note:
@@ -191,9 +254,24 @@ export default {
     },
   },
   meta_chat: {
+    name: "Chatty",
     title: "Meta-Chat",
     prompt_placeholder: "Frag den Meta-Chat!",
     open: "Metachat: Chats durchsuchen",
+    help_label: "Hilfe/Meta-Assistent Chatty",
+    help_tooltip:
+      "Öffnet den Metachat: Fragen Sie nach Ihren Chats, Themen, Einstellungen und Erinnerungen oder lassen Sie sich Funktionen von Chat AI Schritt für Schritt erklären. Vorgeschlagene Änderungen werden erst nach Ihrer Bestätigung übernommen.",
+    last_checked: "Zuletzt geprüft: {{date}}",
+    changes_title: "Was ist neu",
+    files_tab: "Arbeitsbereich",
+    sessions_tab: "Sitzungen",
+    agents_tab: "Agenten",
+    sessions_empty: "Noch keine Chats in diesem Arbeitsbereich.",
+    collapse_changes: "Was ist neu einklappen",
+    expand_changes: "Was ist neu ausklappen",
+    resize_changes: "Breite von Was ist neu ändern",
+    check_now: "Jetzt prüfen",
+    changes_empty: "Noch keine Prüfung. Klicken Sie auf „Jetzt prüfen“, um Chats, Agenten, MCP-Server und neue Agentendateien zu prüfen.",
     banner_description: "Metachat kann Ihnen auf zwei Arten helfen:",
     purposes: {
       tutor: "Die Funktionen von Chat AI kennenlernen",
@@ -207,6 +285,7 @@ export default {
       "Diese Änderungen bearbeiten Ihre Chats, Einstellungen oder Erinnerungen. Prüfen Sie sie vor dem Übernehmen.",
     accept_changes: "Änderungen übernehmen",
     applying_changes: "Wird übernommen…",
+    applied_not_reversible: "Angewendet – diese Aktion kann nicht rückgängig gemacht werden.",
     changes_applied: "Änderungen übernommen",
     revert_changes: "Änderungen zurücksetzen",
     reverting: "Wird zurückgesetzt…",
@@ -220,6 +299,10 @@ export default {
     unpin_summary: "„{{title}}“ nicht mehr anheften",
     pin_topic_summary: "Thema „{{topic}}“ anheften",
     unpin_topic_summary: "Thema „{{topic}}“ nicht mehr anheften",
+    pin_workspace_summary: "Arbeitsbereich „{{workspace}}“ anheften",
+    unpin_workspace_summary: "Arbeitsbereich „{{workspace}}“ nicht mehr anheften",
+    pin_agent_summary: "Agenten „{{agent}}“ anheften",
+    unpin_agent_summary: "Agenten „{{agent}}“ nicht mehr anheften",
     setting_summary: "{{setting}} von „{{from}}“ auf „{{to}}“ ändern",
     setting_temperature: "Temperatur",
     setting_top_p: "Top-p",
@@ -227,23 +310,35 @@ export default {
       "{{setting}} für alle Chats auf „{{value}}“ setzen",
     conversation_setting_summary:
       "{{setting}} in „{{title}}“ auf „{{value}}“ setzen",
+    create_chat_summary: "Chat „{{title}}“ mit {{count}} Anfangsnachrichten erstellen",
     mcp_target_all: "alle Chats",
-    mcp_add_local_summary:
-      "Lokalen MCP-Server {{name}} zu {{target}} hinzufügen",
-    mcp_add_remote_summary:
-      "Entfernten MCP-Server {{name}} zu {{target}} hinzufügen",
-    mcp_remove_local_summary:
-      "Lokalen MCP-Server {{name}} aus {{target}} entfernen",
-    mcp_remove_remote_summary:
-      "Entfernten MCP-Server {{name}} aus {{target}} entfernen",
-    mcp_update_local_summary:
-      "Lokalen MCP-Server {{name}} in {{target}} aktualisieren",
-    mcp_update_remote_summary:
-      "Entfernten MCP-Server {{name}} in {{target}} aktualisieren",
+    mcp_target_global: "die MCP-Serverliste",
+    agent_prompt_summary:
+      "{{chars}} Zeichen an Agenten {{agent}} senden: „{{preview}}“",
+    agent_prompt_text_label: "Prompt-Text",
+    agent_prompt_meta: "Agent {{agent}} · {{chars}} Zeichen",
+    agent_prompt_notice:
+      "Dieser Text wird unverändert an den Agenten gesendet, der Befehle auf seinem Rechner ausführen kann.",
+    agent_interrupt_summary: "Agenten {{agent}} unterbrechen",
+    agent_session_create_summary: "Neue Sitzung für Agenten {{agent}} erstellen",
+    agent_session_switch_summary: "Zu Sitzung {{session}} von Agent {{agent}} wechseln",
+    agent_session_delete_summary: "Sitzung {{session}} vom Agenten {{agent}} entfernen",
+    workspace_attach_summary: "Arbeitsbereich {{workspace}} mit {{target}} verknüpfen",
+    workspace_detach_summary: "Arbeitsbereich {{workspace}} von {{target}} trennen",
+    mcp_add_summary:
+      "MCP-Server {{name}} zu {{target}} hinzufügen",
+    mcp_remove_summary:
+      "MCP-Server {{name}} aus {{target}} entfernen",
+    mcp_update_summary:
+      "MCP-Server {{name}} in {{target}} aktualisieren",
     add_memory_summary: "Erinnerung „{{text}}“ hinzufügen",
+    add_memory_group_summary: "Erinnerung „{{text}}“ zur Gruppe „{{group}}“ hinzufügen",
     update_memory_summary: "Erinnerung „{{from}}“ in „{{to}}“ ändern",
+    update_memory_group_summary: "Erinnerung „{{from}}“ in „{{to}}“ in Gruppe „{{group}}“ ändern",
     delete_memory_summary: "Erinnerung „{{text}}“ löschen",
     clear_memories_summary: "Alle gespeicherten Erinnerungen löschen",
+    e2ee_assign_summary: "Modell {{model}} mit Schlüssel „{{key}}“ verschlüsseln",
+    e2ee_clear_summary: "Verschlüsselung für Modell {{model}} beenden",
     memory_item: "Erinnerung {{index}}",
     setting_on: "an",
     setting_off: "aus",
@@ -251,6 +346,125 @@ export default {
     unsorted_topic: "Nicht zugeordnet",
     error: "Antwort fehlgeschlagen. Bitte versuchen Sie es erneut.",
     no_model: "Kein Standardmodell konfiguriert.",
+  },
+  e2ee: {
+    badge: "Ende-zu-Ende verschlüsselt",
+    description:
+      "Ein gebundener Schlüssel ergänzt eine zweite Verschlüsselungsebene über der Transportverschlüsselung, die jede Anfrage ohnehin schützt: Ihre Nachricht wird in diesem Browser versiegelt und bleibt Geheimtext bis zu der Maschine, die das Modell ausführt, in der Regel eine GPU. Schlüssel werden außerhalb des Kanals verteilt, importieren Sie sie deshalb nur aus einer vertrauenswürdigen Quelle.",
+    keys_title: "Verschlüsselungsschlüssel",
+    no_keys: "Noch keine Schlüssel. Fügen Sie oben einen hinzu.",
+    invalid_key: "Kein gültiger 32-Byte-X25519-Public-Key",
+    download: "Public Key herunterladen",
+    remove: "Entfernen",
+    remove_confirm: "Diesen Schlüssel und seine Modellzuordnungen entfernen?",
+    removed: "Schlüssel entfernt",
+    clear_all: "Alle Schlüssel entfernen",
+    clear_all_confirm: "Jeden Schlüssel und jede Modellzuordnung entfernen?",
+    clear_all_done: "Alle Verschlüsselungsschlüssel entfernt",
+    test: "Testen",
+    test_all: "Alle testen",
+    test_ok: "Schlüssel funktioniert: {{count}} Modell(e) haben die versiegelte Testanfrage beantwortet.",
+    test_failed: "Keine versiegelte Antwort von {{models}} ({{reason}}).",
+    test_no_models: "Ordnen Sie den Schlüssel zuerst einem Modell zu",
+    test_no_bindings:
+      "Kein Schlüssel ist einem Modell zugeordnet, es gibt nichts zu testen.",
+    test_all_done: "{{working}} von {{tested}} getesteten Schlüsseln funktionieren.",
+    test_failed_keys: "Fehlerhaft: {{keys}}",
+    status_working: "Funktioniert",
+    status_working_hint:
+      "Die letzte versiegelte Testanfrage war für {{count}} Modell(e) erfolgreich",
+    status_failed: "Test fehlgeschlagen",
+    status_failed_hint:
+      "Die letzte versiegelte Testanfrage war für kein gebundenes Modell erfolgreich",
+    status_untested: "Nicht getestet",
+    status_untested_hint:
+      "Der Schlüssel ist wohlgeformt, wurde aber noch nicht gegen ein Modell getestet",
+    verifying: "Schlüssel wird getestet…",
+    verified_added: "Schlüssel getestet und {{count}} Modell(en) zugeordnet",
+    added_unverified:
+      "Schlüssel ohne Test hinzugefügt. Geben Sie mindestens ein bekanntes Modell an, damit er geprüft werden kann.",
+    add_keys_title: "Verschlüsselungsschlüssel hinzufügen",
+    add_keys_description:
+      "Jeder Schlüssel wird vor dem Speichern mit einer versiegelten Anfrage je Modell getestet. Modelle, deren Test scheitert, bleiben unverschlüsselt.",
+    verify_failed_all:
+      "Der Schlüssel wurde nicht hinzugefügt: Die Testanfrage für {{model}} ist fehlgeschlagen ({{reason}}).",
+    verify_failed_models:
+      "Nicht verschlüsselt, weil der Test für {{models}} fehlgeschlagen ist ({{reason}}).",
+    no_models_matched:
+      "Keines davon ist ein bekanntes Modell: {{models}}. Der Schlüssel wurde nicht hinzugefügt.",
+    import_method: "Schlüssel hinzufügen",
+    modes: {
+      published: "Veröffentlichte Schlüssel",
+      paste: "Einfügen oder Datei",
+      url: "Aus URL",
+      directory: "Schlüsselverzeichnis",
+    },
+    published_url: "Basis-URL der Schlüssel",
+    published_hint:
+      "Verwenden Sie nur eine Schlüssel-URL, der Sie vertrauen. Jeder heruntergeladene Schlüssel wird vor dem Speichern gegen sein Modell getestet.",
+    published_load: "Schlüssel für alle Modelle laden",
+    published_loading: "Schlüssel werden geladen …",
+    published_url_required: "Geben Sie die URL des Schlüsselverzeichnisses an.",
+    published_progress_fetch: "Schlüssel werden geladen … {{done}}/{{total}}",
+    published_progress_verify: "Schlüssel werden geprüft … {{done}}/{{total}}",
+    published_imported: "{{count}} geprüfte Schlüssel importiert",
+    published_none:
+      "Kein Schlüssel hat die Prüfung bestanden. Prüfen Sie die Basis-URL und ob die Modelle einen E2EE-Knoten haben.",
+    published_none_needed:
+      "Jedes Modell hat bereits einen nutzbaren Schlüssel.",
+    published_summary:
+      "{{imported}} importiert · {{missing}} ohne veröffentlichten Schlüssel · {{failed}} fehlgeschlagen",
+    published_failed_title: "Nicht importiert:",
+    published_more: "und {{count}} weitere",
+    models_field: "Gilt für Modelle",
+    models_field_placeholder: "qwen3-235b-a22b, Mistral Large",
+    models_field_hint:
+      "Kommagetrennte Modell-IDs oder -Namen; eine Brücken-Variante mit „(External)“ ist ein eigenes Modell. Unbekannte Einträge werden übersprungen.",
+    unknown_models:
+      "Schlüssel hinzugefügt, aber diese Modelle sind unbekannt: {{models}}",
+    fallback_name: "Schlüssel {{fingerprint}}",
+    public_key: "Public Key",
+    public_key_placeholder: "Base64url-X25519-Public-Key",
+    add_key: "Schlüssel hinzufügen",
+    choose_file: ".pub-Datei wählen…",
+    key_url: "Schlüssel-URL",
+    fetch_key: "Schlüssel laden",
+    directory_url: "Verzeichnis-URL",
+    import_directory: "Verzeichnis importieren",
+    directory_imported: "{{count}} Schlüssel importiert",
+    directory_hint:
+      "Ein Dokument mit allen Schlüsseln und ihren Modellzuordnungen. Jeder Schlüssel wird weiterhin vor dem Speichern getestet.",
+    choose_folder: "Schlüsselordner wählen…",
+    folder_hint:
+      "Liest alle .pub-Dateien in einem lokalen Ordner. Dateien, die keine gültigen Public Keys sind, werden gemeldet und übersprungen.",
+    folder_imported: "{{count}} Schlüssel importiert, {{bound}} Modelle gebunden",
+    folder_partial:
+      "{{count}} Schlüssel importiert ({{bound}} Modelle). {{skipped}} Datei(en) übersprungen: {{files}}",
+    folder_empty: "Keine .pub-Dateien in diesem Ordner.",
+    folder_no_valid: "Kein gültiger Public Key in diesem Ordner ({{count}} Datei(en) abgelehnt).",
+    folder_unsupported:
+      "Dieser Browser kann hier keinen Ordner öffnen. Nutze stattdessen die Verzeichnis-URL oder öffne die App über HTTPS bzw. localhost.",
+    folder_error: "Der Ordner konnte nicht gelesen werden: {{reason}}",
+    import_error: "Der Schlüssel konnte nicht importiert werden.",
+    models_title: "Unverschlüsselte Modelle",
+    models_keyed: "{{count}} verschlüsselt",
+    models_description:
+      "Diese Modelle werden von einer internen Funktion verwendet und haben keinen funktionierenden Schlüssel, ihre Anfragen erhalten also nur die Transportverschlüsselung.",
+    models_empty:
+      "Kein von einer internen Funktion verwendetes Modell ist ohne Schlüssel.",
+    used_for: "Verwendet für",
+    features: {
+      titles: "Titel",
+      memory: "Gedächtnis",
+      proposals: "Vorschläge",
+      summaries: "Zusammenfassungen",
+      image_analysis: "Bildanalyse",
+    },
+    models_blocked: "Schlüssel fehlt oder ist ungültig",
+    not_encrypted: "Nicht verschlüsselt",
+    model_not_offered: "Nicht in der Modellliste",
+    model_not_offered_hint:
+      "Ein internes Feature ist für dieses Modell konfiguriert, aber die Modellliste des Deployments enthält es nicht; hier kann ihm kein Schlüssel zugeordnet werden.",
   },
   mcp_confirmation: {
     title: "MCP-Werkzeug ausführen?",
@@ -263,6 +477,89 @@ export default {
     denied: "Der Benutzer hat die Ausführung des MCP-Werkzeugs „{{tool}}“ auf {{server}} abgelehnt.",
   },
   feature_guide: {
+    workspace_overview: {
+      title: "Arbeitsbereiche",
+      step1: "Das rechte Fenster gehört zum Arbeitsbereich: Zuerst öffnet sich Neuigkeiten, Dateien zeigt den gespeicherten Inhalt, Agenten die Ausführung.",
+      step2: "Quellen können jederzeit hinzukommen: „Arbeitsbereich verwalten“ im Optionsmenü öffnet denselben Dialog wie „Arbeitsbereich erstellen“.",
+      step3: "Durchsuchen Sie den Baum im Reiter Dateien. Die Markierung jeder Zeile zeigt, wo der Eintrag liegt: Browser, Gerät, Arcana, MCP oder Agent.",
+      step4: "Wählen Sie, wie der Agent in diesem Arbeitsbereich läuft: im Browser, über einen OpenCode-Server oder mit dem Remote-Agenten.",
+    },
+    manage_chat_data: {
+      title: "Dateien eines Chats verwalten",
+      step1: "Auf Speicher zugreifen ist standardmäßig an und steht oben im Arbeitsbereich-Menü, das nur erscheint, solange der Chat zu einem Arbeitsbereich gehört. Schalten Sie es aus, erhält das Modell keine Dateiwerkzeuge; Anhänge werden weiterhin in die Nachricht aufgenommen, sofern möglich. Ein Chat ohne Arbeitsbereich hat dieses Menü nicht — verknüpfen Sie ihn zuerst im Arbeitsbereich.",
+      step2: "Wählen Sie „Arbeitsbereich verwalten“, um die Dateien hinter diesem Schalter zu verwalten. Bei einem verknüpften Arbeitsbereich öffnet sich dessen Editor — derselbe Dialog wie „Arbeitsbereich erstellen“, mit Speicherorten, Name, Symbol und Farbe sowie „Änderungen übernehmen“. Bei mehreren wird das Menü zur Liste der verknüpften Arbeitsbereiche: ein Klick öffnet den Editor des gewählten Arbeitsbereichs, der Pfeil zurück führt wieder zu diesen Einstellungen.",
+    },
+    workspace_saia_fs: {
+      title: "Ihre SAIA-Dateien in einem Arbeitsbereich",
+      step1: "Erstellen Sie mit „Arbeitsbereich erstellen“ einen neuen Arbeitsbereich. In der Quellen-Leiste erhält er seine Dateien.",
+      step2: "SAIA-Dateien ist Ihr Kontoordner. Er erscheint nur, solange der Dienst saia-fs dieser Installation seinen Health-Check beantwortet; öffnen Sie ihn, wählen Sie einen Ordner und fügen Sie ihn dem Arbeitsbereich hinzu.",
+    },
+    workspace_edit_storage: {
+      title: "Einen Arbeitsbereich verwalten",
+      step1: "Öffnen Sie das Optionsmenü eines Arbeitsbereichs in der Seitenleiste und wählen Sie „Arbeitsbereich verwalten“.",
+      step2:
+        "„Arbeitsbereich verwalten“ ist „Arbeitsbereich erstellen“ für einen bestehenden Arbeitsbereich: Name, Symbol und Farbe ändern und den Speicher im selben Dialog bearbeiten. Wählen Sie einen Ordner, hängen Sie eine Quelle ein oder fügen Sie einen lokalen Ordner, ein Repository oder einen MCP-Server hinzu; Speicheränderungen werden sofort gespeichert, Name, Symbol und Farbe mit „Änderungen übernehmen“.",
+    },
+    workspace_clone: {
+      title: "Git-Repository importieren",
+      step1: "Öffnen Sie „Arbeitsbereich erstellen“, wählen Sie links „Git-Repository“, den lokalen Agenten für den Klon und drücken Sie dann „Erstellen“.",
+    },
+    workspace_upload: {
+      title: "Dateien in einen Arbeitsbereich hochladen",
+      step1: "Öffnen Sie einen Arbeitsbereich, wählen Sie rechts den Reiter Dateien und dort Datei hinzufügen; der Browser fragt nach einer Datei von diesem Computer.",
+      step2: "Die hochgeladene Datei erscheint in dem Ordner, den Sie gerade ansehen.",
+    },
+    workspace_multiselect: {
+      title: "Eine Datei aus einem Arbeitsbereich entfernen",
+      step1: "Der Reiter Dateien rechts listet alles, was der Arbeitsbereich speichert — jede Zeile mit ihrer Herkunft.",
+      step2: "Jede Zeile endet mit einem Papierkorb; er entfernt diese Datei oder diesen Ordner nach einer Bestätigung.",
+    },
+    arcana_filesystem: {
+      title: "Ein Arcana-Dateisystem verwenden",
+      step1: "Jeder Arbeitsbereich enthält bereits eine Arcana-Dateisystem-Quelle, aufgeführt im Reiter Dateien.",
+      step2: "Jede Arcana erscheint als Ordner; öffnen Sie einen, um seine Dateien zu durchsuchen.",
+    },
+    attach_from_workspace: {
+      title: "Dateien aus einem Arbeitsbereich anhängen",
+      step1: "Verknüpfen Sie diesen Chat über die Arbeitsbereich-Schaltfläche im Eingabefeld mit einem Arbeitsbereich.",
+      step2:
+        "Klicken Sie auf „Anhängen“ und wählen Sie „Aus dem Arbeitsbereich“, dann eine Datei aus dem Arbeitsbereichsbaum.",
+      step3: "Senden Sie die Nachricht mit der angehängten Datei.",
+    },
+    agent_recovery: {
+      title: "Eine Agent-Sitzung wiederherstellen",
+      step1: "Öffnen Sie die Werkzeuge des Agenten im Eingabefeld. Ist der Agent-Server nicht erreichbar, verwenden Exporte den lokalen Cache.",
+      step2: "Öffnen Sie den Tab Wiederherstellung, um zu sehen, wie viel Verlauf für diese Sitzung gespeichert ist.",
+      step3: "In neuer Sitzung wiederherstellen schreibt den zwischengespeicherten Verlauf in die Anweisungen einer neuen Sitzung. Prüfen und bestätigen Sie zuerst die Größe.",
+    },
+    remote_agents: {
+      title: "Einen Remote-Agenten starten",
+      step1: "Verwenden Sie die +-Schaltfläche im Bereich Agenten, um einen Agenten hinzuzufügen. Wählen Sie den GWDG HPC-Agenten-Dienst und sein HPC-Projekt oder verbinden Sie einen OpenCode-Server.",
+      step2: "Agenten erscheinen in der Liste; klicken Sie auf einen, um seinen Chat rechts zu öffnen.",
+      step3:
+        "Klappen Sie einen Agenten über das Chevron auf, um jeden Arbeitsbereich mit den zugeordneten Sitzungen sowie „Nicht zugeordnete Sitzungen“ zu sehen. Klicken Sie eine Sitzung zum Wechseln an, erstellen Sie mit + eine neue oder öffnen Sie das ...-Menü zum Umbenennen, Zuordnen zu einem Arbeitsbereich oder Schließen.",
+    },
+    close_group_sessions: {
+      title: "Alle Sitzungen einer Gruppe schließen",
+      step1:
+        "Klappen Sie einen Agenten auf, um seine Sitzungen nach Arbeitsbereich gruppiert und unter „Nicht zugeordnete Sitzungen“ zu sehen.",
+      step2: "Das Papierkorb-Symbol in der Gruppenüberschrift schließt alle Sitzungen dieser Gruppe. Laufende Antworten werden zuerst unterbrochen, und Sie müssen die Aktion in einem Dialog bestätigen, bevor eine Sitzung entfernt wird.",
+    },
+    session_workspaces: {
+      title: "Eine Sitzung zwischen Arbeitsbereichen verschieben",
+      step1:
+        "Klappen Sie einen Agenten auf, um seine Sitzungen nach den Arbeitsbereichen gruppiert zu sehen, denen er zugeordnet ist.",
+      step2:
+        "Ziehen Sie eine Sitzungszeile auf eine andere Arbeitsbereichsgruppe, um sie dorthin zu verschieben. Die Sitzung wird aus dem alten Arbeitsbereich entfernt und dem neuen hinzugefügt; beide Gruppen aktualisieren sich sofort.",
+      step3:
+        "Ein Arbeitsbereich kann eine Sitzung auch selbst zuordnen: Öffnen Sie sein „…“-Menü und wählen Sie „Agentensitzung zuordnen“, dann eine Sitzung. Die Liste gruppiert die nicht zugeordneten Sitzungen nach Agent.",
+    },
+    agent_workspace_access: {
+      title: "Einem Agenten Zugriff auf Arbeitsbereichsdateien geben",
+      step1: "Öffnen Sie einen Agenten. Das Fenster links ist sein Dateibrowser.",
+      step2: "Öffnen Sie die Arbeitsbereich-Schaltfläche neben dem Eingabefeld und schalten Sie den Arbeitsbereich-Zugriff ein, um den Reverse-Proxy für diesen Agenten bereitzustellen. Verbinden Sie einen Arbeitsbereich, wählen Sie, welchen die Brücke nutzt, erlauben Sie Schreibzugriff, wenn der Agent Dateien ändern darf, und lassen Sie diesen Tab geöffnet, während der Agent arbeitet.",
+      step3: "Dasselbe Fenster enthält die MCP-Optionen. „MCP-Werkzeuge“ erlaubt dem Agenten, Ihre konfigurierten MCP-Server über diesen Tab aufzurufen; „Externe MCP-Werkzeuge einbinden“ registriert zusätzlich die Server, die OpenCode selbst erreicht, sodass diese ohne den Tab weiterlaufen, während die übrigen an der Brücke bleiben. Beide Wege gelten nur für die gerade geöffnete Sitzung: Eine andere Sitzung desselben Agenten und jede Sitzung eines anderen Agenten kann sie nicht nutzen.",
+    },
     catalog: {
       open: "Tutorials durchsuchen",
       close: "Tutorials ausblenden",
@@ -286,6 +583,7 @@ export default {
       tools: "Tools und RAG",
       chats: "Chats und Organisation",
       personas: "Personas",
+      workspace: "Arbeitsbereiche",
       settings: "Einstellungen",
       other: "Mehr",
     },
@@ -378,9 +676,15 @@ export default {
       step3:
         "Wählen Sie Bildbearbeitung und hängen Sie das Bild an oder beschreiben Sie es.",
     },
+    browser_storage: {
+      title: "Browserspeicher aktivieren",
+      step1: "Öffnen Sie Browser & lokale Werkzeuge im Eingabefeld.",
+      step2:
+        "Wählen Sie Browserspeicher, damit der Assistent Dateien im Browser-Arbeitsbereich dieses Chats lesen und schreiben kann.",
+    },
     image_analysis: {
       title: "Bilder analysieren",
-      step1: "Öffnen Sie Browser & lokale Werkzeuge im Eingabefeld.",
+      step1: "Öffnen Sie die GWDG-Tools im Eingabefeld.",
       step2:
         "Wählen Sie Bilder analysieren, damit der Assistent Bilddateien mit dem Gemma-Visionsmodell von SAIA analysieren kann.",
     },
@@ -391,12 +695,28 @@ export default {
       step3:
         "Wählen Sie Audioerzeugung und beschreiben Sie das gewünschte Audio.",
     },
-    mcp_server: {
-      title: "Einen MCP-Server verbinden",
+    arcana_tools: {
+      title: "Arcana Tools verwenden",
       step1: "Öffnen Sie GWDG Tools im Eingabefeld.",
       step2: "Aktivieren Sie die Tools.",
-      step3: "Wählen Sie MCP-Server.",
-      step4: "Geben Sie die MCP-Server-Konfiguration in das Feld unten ein.",
+      step3:
+        "Wählen Sie Arcana Tools, damit der Assistent Arcana-Sammlungen, ihre Dateien und Indizes sowie Freigaben verwalten kann.",
+    },
+    diagram_renderers: {
+      title: "Diagramme aus Codeblöcken rendern",
+      step1: "Fragen Sie nach einem Codeblock: ```dot für Graphviz, ```vega-lite für Vega-Lite oder ```chart für eine Chart.js-JSON-Konfiguration.",
+      step2: "Senden Sie die Nachricht. Der Block wird lokal als SVG oder Canvas-Diagramm gerendert.",
+    },
+    mcp_server: {
+      title: "Einen MCP-Server verbinden",
+      step1: "Fügen Sie einen MCP-Server im Bereich MCP-Server der Seitenleiste hinzu.",
+      scan: "Oder lassen Sie die App nach lokalen Servern suchen: „Suchen“ prüft auf diesem Rechner alle Ports über 5000 auf einen /mcp-Endpunkt und fügt die Funde hinzu.",
+      step2: "Geben Sie die Server-URL ein und testen Sie die Verbindung.",
+      details:
+        "Doppelklicken Sie auf einen konfigurierten Server oder wählen Sie in seinem Optionsmenü „Details“, um Name, Version, Protokollversion, Fähigkeiten und Werkzeuge zu sehen, die er meldet.",
+      step3: "Öffnen Sie die GWDG-Tools, aktivieren Sie MCP-Server und wählen Sie den konfigurierten Server aus.",
+      policy:
+        "Wählen Sie unter Einstellungen → Erweitert, ob Chat-Turns Werkzeuge Ihrer MCP-Server aufrufen dürfen: Fragen (Standard, jeder Aufruf wird bestätigt), Immer oder Nie. Dies betrifft nur Ihre MCP-Server; die eigenen Datei-, Arbeitsbereichs- und Agentenwerkzeuge von Chat AI bleiben verfügbar.",
     },
     tools_overview: {
       title: "GWDG Tools verwenden",
@@ -416,10 +736,21 @@ export default {
       step2: "Benennen Sie das Thema und wählen Sie Symbol und Farbe.",
       step3:
         "Ziehen Sie Chats in Themen oder verschieben Sie sie über das Chat-Menü.",
+      step4:
+        "Nutzen Sie die Schaltfläche neben „Thema erstellen“, um alle Themen auf einmal ein- oder auszuklappen.",
+    },
+    attach_chat_to_workspace: {
+      title: "Chat mit einem Arbeitsbereich verknüpfen",
+      step1:
+        "Ziehen Sie einen Chat aus der Seitenleiste auf eine Zeile eines Arbeitsbereichs, um ihn zu verknüpfen.",
+      step2:
+        "Der verknüpfte Chat erscheint unter dem Arbeitsbereich. Seine Dateien sind dort ebenfalls verfügbar.",
+      step3:
+        "Ziehen Sie den Chat aus dem Arbeitsbereich auf ein Thema, um die Verknüpfung wieder zu lösen.",
     },
     sort_organize: {
-      title: "Chats sortieren & organisieren",
-      step1: "Klicken Sie in der Kopfzeile der Seitenleiste auf „Sortieren & organisieren“.",
+      title: "Smart Sort",
+      step1: "Klicken Sie in der Kopfzeile der Seitenleiste auf „Smart Sort“.",
       step2:
         "Prüfen Sie die vorgeschlagenen Themen, Titel und Löschungen. Änderungen werden erst beim Anwenden übernommen.",
       step3:
@@ -428,7 +759,8 @@ export default {
     sort_group_chats: {
       title: "Chats sortieren und gruppieren",
       step1: "Öffnen Sie das Sortiermenü in der Seitenleiste.",
-      step2: "Wählen Sie die Gruppierung nach Thema, Datum oder Erstellungsdatum.",
+      step2:
+        "Wählen Sie die Gruppierung nach Thema, Datum, Erstellungsdatum oder Browserspeichergröße.",
     },
     pin_chat: {
       title: "Einen Chat anheften",
@@ -441,6 +773,20 @@ export default {
       step1: "Öffnen Sie das Optionenmenü eines Themas in der Seitenleiste.",
       step2:
         "Wählen Sie „Thema anheften“. Angeheftete Themen bleiben unabhängig von der Gruppierung im Bereich „Angeheftet“ oben.",
+    },
+    pin_workspace: {
+      title: "Einen Arbeitsbereich anheften",
+      step1: "Öffnen Sie das Optionenmenü eines Arbeitsbereichs in der Seitenleiste.",
+      step2:
+        "Wählen Sie „Arbeitsbereich anheften“. Er wird zusätzlich im angehefteten Bereich oben über den Chats angezeigt und bleibt in der Arbeitsbereichsliste.",
+      step3:
+        "Klicken Sie im angehefteten Bereich erneut auf die Nadel, um den Arbeitsbereich nicht mehr anzuheften.",
+    },
+    pin_agent: {
+      title: "Einen Agenten anheften",
+      step1: "Öffnen Sie das Optionenmenü eines Agenten in der Seitenleiste.",
+      step2:
+        "Wählen Sie „Agenten anheften“. Er wird zusätzlich im angehefteten Bereich oben über den Chats angezeigt und bleibt in der Agentenliste.",
     },
     close_chat: {
       title: "Einen Chat schließen",
@@ -484,8 +830,17 @@ export default {
     settings_overview: {
       title: "Einstellungen ändern",
       step1: "Öffnen Sie Ihre Benutzereinstellungen über das Profil oder die Seitenleiste.",
-      step2: "Wählen Sie den Tab Chat. Erinnerungen und Daten enthalten die weiteren Einstellungen.",
-      step3: "Ändern Sie eine Einstellung wie Darstellung oder Dokumentkonvertierung. Änderungen werden automatisch gespeichert.",
+      step2: "Wählen Sie den Tab Chat. Nutzung, Erweitert, Erinnerungen und Daten enthalten die weiteren Einstellungen.",
+      step3: "Ändern Sie eine Einstellung wie Dokumentkonvertierung. Änderungen werden automatisch gespeichert.",
+      step4: "Darstellungsmodule und die Denkprozess-Anzeige finden Sie im Tab Erweitert.",
+    },
+    institution: {
+      title: "Sehen, was Ihre Einrichtung einschränkt",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen über das Profil oder die Seitenleiste.",
+      step2: "Wählen Sie den Tab Profil.",
+      step3: "Öffnen Sie den Tab Einrichtung neben Benutzer.",
+      step4:
+        "Der Abschnitt Einrichtung nennt den Anbieter dieser Installation und jede hier geltende Einschränkung, etwa ein festes Modell, deaktivierte Funktionen und blockierte externe Kommunikation, mit Kontakt und Links.",
     },
     memories: {
       title: "Erinnerungen verwalten",
@@ -497,19 +852,46 @@ export default {
       title: "Chat-Einstellungen öffnen",
       step1: "Öffnen Sie Ihre Benutzereinstellungen.",
       step2:
-        "Wählen Sie den Tab Chat, um Standardmodell, Sendetaste, Zusammenfassungen, Darstellung und Dokumentkonvertierung zu ändern.",
+        "Wählen Sie den Tab Chat, um Standardmodell, Sendetaste, Zusammenfassungen, Zeitstempel und Dokumentkonvertierung zu ändern; die Darstellung liegt im Tab Erweitert.",
+    },
+    advanced_mode: {
+      title: "Agenten und MCP-Server in der Seitenleiste zeigen",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Tab Erweitert.",
+      step3:
+        "Schalten Sie den erweiterten Modus ein, um die Bereiche Agenten und MCP-Server in der Seitenleiste zu zeigen. Ausgeblendet enthält die Seitenleiste nur Chats, Themen und Workspaces.",
+    },
+    e2ee: {
+      title: "Ein Modell Ende-zu-Ende verschlüsseln",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Tab Verschlüsselung.",
+      step3:
+        "Importieren Sie den Public Key des Modells: einfügen, .pub-Datei wählen, aus einer URL laden, ein Schlüsselverzeichnis importieren oder einen lokalen Ordner wählen und alle .pub-Dateien darin einlesen.",
+      step_published:
+        "Oder laden Sie die vom Deployment veröffentlichten Schlüssel: Die Basis-URL ist aus der Konfiguration vorbelegt, und „Schlüssel für alle Modelle laden“ importiert und prüft jede veröffentlichte .pub-Datei.",
+      step4:
+        "Geben Sie beim Hinzufügen die Modelle an, für die der Schlüssel gilt. Sie zeigen dann ein grünes Schloss, und jede Anfrage darüber wird in diesem Browser verschlüsselt.",
+      step_test:
+        "Testen Sie einen Schlüssel erneut gegen die Modelle, denen er zugeordnet ist. Ein Schlüssel, der die versiegelte Testanfrage beantwortet, wird grün markiert; ein ungetesteter oder fehlgeschlagener nicht.",
+    },
+    message_timestamps: {
+      title: "Zeitstempel für Nachrichten anzeigen",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Tab Chat.",
+      step3:
+        "Aktivieren Sie im Abschnitt Nachrichten die Option Zeitstempel für Nachrichten anzeigen, um zu sehen, wann jede Nachricht gesendet wurde.",
     },
     rendering: {
       title: "Darstellung konfigurieren",
       step1: "Öffnen Sie Ihre Benutzereinstellungen.",
-      step2: "Wählen Sie den Tab Chat.",
+      step2: "Wählen Sie den Tab Erweitert.",
       step3:
         "Aktivieren Sie die Typst- oder LaTeX-Darstellung. Auch HTML-Darstellung und externe Verweise werden hier konfiguriert.",
     },
     reasoning_streaming: {
       title: "Denkprozess verfolgen",
       step1: "Öffnen Sie Ihre Benutzereinstellungen.",
-      step2: "Wählen Sie den Tab Chat.",
+      step2: "Wählen Sie den Tab Erweitert.",
       step3:
         "Die Option ist standardmäßig aktiviert. Lassen Sie sie an, um während des Denkens einen bewegten Punkt zu sehen. Klicken Sie auf die Kopfzeile, um den Denkprozess während des Streamings zu öffnen, oder schalten Sie die Option aus, wenn sich die Box automatisch öffnen soll.",
     },
@@ -526,10 +908,60 @@ export default {
       step3:
         "Exportieren Sie lokale Daten oder löschen Sie Chats, Erinnerungen, Einstellungen und Anhänge.",
     },
+    sync_setup: {
+      title: "Verschlüsselte Serversynchronisierung",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Tab Daten.",
+      subtab: "Öffnen Sie den Bereich Serversynchronisierung.",
+      step3:
+        "Die verschlüsselte Serversynchronisierung hält Einstellungen, Unterhaltungen, Workspaces und Agenten auf Ihren Geräten aktuell. Alles wird in diesem Browser verschlüsselt, bevor es hochgeladen wird, und die Passphrase wird nie gespeichert.",
+      step4:
+        "Schalten Sie die Serversynchronisierung ein und erstellen Sie sie mit einer Passphrase, die Sie sich merken können, oder entsperren Sie die Kopie, die ein anderes Gerät bereits für dieses Konto erstellt hat. Sobald sie offen ist, können Sie auf diesem Gerät einen Passkey hinzufügen, damit nach einem Neuladen nicht erneut nach der Passphrase gefragt wird.",
+    },
+    backup_create: {
+      title: "Verschlüsselte Sicherung erstellen",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Tab Daten.",
+      subtab: "Öffnen Sie den Bereich Verschlüsselte Sicherung.",
+      step3:
+        "Unter Verschlüsselte Sicherung enthält eine Datei alle Chats, Themen, Einstellungen, Workspaces und Agenten. Sie wird in diesem Browser verschlüsselt und mit Datum und Uhrzeit versehen.",
+      step4:
+        "Erstellen Sie sie mit einer Passphrase, die Sie sich merken können. Dieselbe Passphrase stellt die Datei später wieder her; passende Einträge werden überschrieben, nichts wird gelöscht.",
+    },
+    backup_restore: {
+      title: "Verschlüsselte Sicherung wiederherstellen",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Tab Daten.",
+      subtab: "Öffnen Sie den Bereich Verschlüsselte Sicherung.",
+      step3:
+        "Wählen Sie die Sicherungsdatei und geben Sie die Passphrase ein, mit der sie erstellt wurde. Bestätigen Sie das Überschreiben, und stellen Sie dann wieder her: Einträge mit derselben ID werden ersetzt, neue hinzugefügt, nichts wird gelöscht.",
+    },
+    language_picker: {
+      title: "Sprache wechseln",
+      step1:
+        "Öffnen Sie das Sprachmenü in der Fußzeile. Englisch und Deutsch stellen die Oberfläche sofort um; Automatisch folgt wieder der Browsersprache.",
+    },
+    pwa_install: {
+      title: "App installieren",
+      step1:
+        "Öffnen Sie mit der Installieren-Schaltfläche in der Fußzeile den Installationsdialog Ihres Browsers. Die App startet danach in einem eigenen Fenster ohne Adressleiste.",
+    },
+    bug_report: {
+      title: "Problem melden",
+      step1:
+        "Öffnen Sie die Fehlermeldung in der Fußzeile: Typ wählen, das Problem beschreiben und bei Bedarf einen Screenshot anhängen.",
+    },
     dark_mode: {
       title: "Design wechseln",
       step1:
         "Verwenden Sie den Design-Schalter in der Fußzeile, um zwischen hellem und dunklem Modus zu wechseln.",
+    },
+    brand_consent: {
+      title: "Einwilligungen prüfen",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Reiter Erweitert.",
+      step3:
+        "Ändern Sie hier die freiwilligen Einwilligungen; die Links zu Nutzungsbedingungen und Datenschutz stehen unter den Schaltern.",
     },
     feedback: {
       title: "Feedback senden",
@@ -565,10 +997,10 @@ export default {
         "Klicken Sie auf eine zitierte Nachricht, um zur genauen Nachricht zu springen und sie hervorzuheben.",
     },
     meta_chat_pins: {
-      title: "Chats und Themen mit dem Metachat anheften",
+      title: "Chats, Themen, Arbeitsbereiche und Agenten mit dem Metachat anheften",
       step1: "Öffnen Sie den Metachat über das KI-Symbol in der Seitenleiste.",
       step2:
-        "Bitten Sie ihn, einen Chat oder ein Thema anzuheften oder nicht mehr anzuheften, zum Beispiel: „Hefte den Chat Preisdiskussion an“ oder „Hefte das Thema Forschung nicht mehr an“.",
+        "Bitten Sie ihn, einen Chat, ein Thema, einen Arbeitsbereich oder einen Agenten anzuheften oder nicht mehr anzuheften, zum Beispiel: „Hefte den Chat Preisdiskussion an“ oder „Hefte das Thema Forschung nicht mehr an“.",
       step3:
         "Prüfen Sie die vorgeschlagene Änderung und klicken Sie auf „Änderungen übernehmen“. Erst dann wird sie angewendet.",
     },
@@ -579,6 +1011,30 @@ export default {
         "Bitten Sie ihn, Sie irgendwohin zu führen, zum Beispiel: „Bring mich zu den Chat-Einstellungen“ oder „Öffne den Chat über die Preise“.",
       step3:
         "Bitten Sie ihn, Ihre Chats zu durchsuchen, zum Beispiel: „Finde, wo wir das Preismodell entschieden haben“ oder „Welche Aufgaben gibt es?“. Klicken Sie auf eine zitierte Nachricht, um dorthin zu springen.",
+    },
+    meta_chat_agents: {
+      title: "Agenten über den Metachat bedienen",
+      step1: "Öffnen Sie den Metachat über das KI-Symbol in der Seitenleiste.",
+      step2: "Fragen Sie nach Agentenstatus oder Verlauf, zum Beispiel: „Prüfe alle Agenten und zeige neue Dateien.“",
+      step3: "Lassen Sie eine Datei abrufen, zum Beispiel: „Zeige random.png vom Research-Agenten“, oder prüfen Sie einen Prompt-/Unterbrechungsvorschlag vor dem Annehmen.",
+    },
+    meta_chat_workspaces: {
+      title: "Arbeitsbereiche über den Metachat verknüpfen",
+      step1: "Öffnen Sie den Metachat über das KI-Symbol in der Seitenleiste.",
+      step2: "Fragen Sie nach Arbeitsbereichen und lassen Sie einen verknüpfen, zum Beispiel: „Verknüpfe den Arbeitsbereich Research mit Agent 1.“",
+      step3: "Prüfen Sie den Vorschlag und klicken Sie auf Änderungen übernehmen.",
+    },
+    meta_chat_digest: {
+      title: "Eine Was-ist-neu-Übersicht erhalten",
+      step1: "Öffnen Sie den Metachat über das KI-Symbol in der Seitenleiste.",
+      step2: "Das Banner zeigt, wann zuletzt geprüft wurde. Es wird nach jeder Was-ist-neu-Antwort aktualisiert.",
+      step3: "Fragen Sie „Was gibt es Neues?“, um geänderte Chats, neue Themen und Erinnerungen, den Agentenstatus über alle Sitzungen und Subagenten, neue oder geänderte Sitzungen und neue Agentendateien zu sehen.",
+    },
+    meta_chat_mcp: {
+      title: "MCP-Server über den Metachat verwalten",
+      step1: "Öffnen Sie den Bereich MCP-Server in der Seitenleiste oder fügen Sie dort einen Server hinzu.",
+      step2: "Kehren Sie über das KI-Symbol zum Metachat zurück.",
+      step3: "Lassen Sie Server testen, Werkzeuge auflisten oder Server hinzufügen/aktualisieren/entfernen. Änderungen an der Seitenleiste erfordern eine Bestätigung.",
     },
     meta_chat_usage: {
       title: "Den Metachat verwenden",
@@ -692,6 +1148,16 @@ export default {
       step1: "Klicken Sie auf das Lautsprecher-Symbol unter einer Assistenten-Nachricht.",
       step2: "Beenden Sie die Wiedergabe jederzeit mit der Stopp-Schaltfläche.",
     },
+    backup_migration: {
+      title: "Chats auf ein neues Gerät übertragen",
+      description:
+        "Nehmen Sie Chats, Themen, Einstellungen, Workspaces und Agenten mit einer verschlüsselten Sicherungsdatei in einen anderen Browser mit.",
+      step1:
+        "Erstellen Sie die Sicherung unter Verschlüsselte Sicherung mit einer Passphrase, die Sie sich merken können.",
+      step2: "Kopieren Sie die heruntergeladene Datei auf das andere Gerät oder in den anderen Browser.",
+      step3:
+        "Stellen Sie sie dort mit derselben Passphrase wieder her. Passende Einträge werden überschrieben, neue hinzugefügt, nichts wird gelöscht.",
+    },
   },
   // Settings panel
   settings: {
@@ -700,6 +1166,9 @@ export default {
       description:
         "Legen Sie fest, wie diese Unterhaltung Ihre gespeicherten Erinnerungen verwendet.",
       help_label: "Mehr über Erinnerungen erfahren",
+      default_group_name: "Standard",
+      group_label: "Erinnerungsgruppe",
+      group_default: "Standard ({{group}})",
       options: {
         default: {
           label: "Standard",
@@ -796,23 +1265,30 @@ export default {
     tools_title: "GWDG-Werkzeuge",
     tools_enable_all: "Alle aktivieren",
     tools_disable_all: "Alle deaktivieren",
+    tools_enable_to_configure:
+      "Schalte dieses Werkzeug ein, um es zu konfigurieren.",
+    tool_details: "Einstellungen für {{name}}",
     chat_settings: "Chat-Einstellungen",
     label_web_search: "Websuche",
     label_image_generation: "Bildgenerierung",
     label_image_modification: "Bildbearbeitung",
     label_image_analysis: "Bilder analysieren",
     label_audio_generation: "Audiogenerierung",
+    label_arcana_tools: "Arcana Tools",
     label_arcana: "Arcana",
     label_mcp_server: "MCP-Server",
     label_write_access: "Schreiben erlauben",
-    label_codemode: "Codemode",
+    label_browser_storage: "Browserspeicher",
     label_create_docx: "Word-Dokument",
+    tools_requires_browser_storage: "Zuerst den Browserspeicher aktivieren oder einen lokalen Ordner freigeben",
+    tools_requires_workspace: "Zuerst einen Arbeitsbereich verknüpfen",
     tools_agent_unavailable: "Im Agentenmodus nicht verfügbar",
     label_tool_limit: "Werkzeugaufrufe pro Antwort begrenzen",
     tool_limit_hint: "Maximale Werkzeugaufrufe pro Antwort; gemeinsam ausgeführte Aufrufe zählen einmal",
     tools_agent_external: "Dieses Modell läuft ohne Werkzeuge",
+    model_no_tools_warning:
+      "Dieses Modell unterstützt keine Werkzeuge. Der Chat läuft ohne Dateizugriff, Websuche oder MCP-Werkzeuge.",
     placeholder_arcana_id: "Arcana-ID",
-    placeholder_mcp_id: "Server-ID",
     placeholder_mcp_url: "http://localhost:3000/mcp",
     placeholder_mcp_auth: "Authorization-Header (optional)",
     mcp_add: "MCP-Server hinzufügen",
@@ -822,11 +1298,12 @@ export default {
     mcp_test_failed: "MCP-Test fehlgeschlagen: {{error}}",
     mcp_test_invalid_url: "Bitte geben Sie zuerst eine gültige MCP-Server-URL ein.",
     mcp_toggle: "Diesen Server verwenden",
-    mcp_gateway_first: "Ohne Agentenmodus wird nur der erste Server verwendet, als Gateway-Server-ID.",
   },
 
   // Conversation
   conversation: {
+    meta_tokens: "Token",
+    meta_cost: "Kosten",
     local_tools: "Browser & lokale Werkzeuge",
     mount_folder: "Lokalen Ordner teilen",
     folder_mounted: "Ordner für den Assistenten unter {{path}} verfügbar",
@@ -861,6 +1338,8 @@ export default {
     prompt: {
       placeholder: "Frag mich",
       attach: "Datei anhängen",
+      attach_device: "Vom Gerät",
+      attach_workspace: "Aus dem Arbeitsbereich",
       attach_media: "Medien anhängen",
       attachments: "Anhänge",
       clear_attachments: "Alle löschen",
@@ -876,20 +1355,38 @@ export default {
       process_browser: "Im Browser verarbeiten",
       process_server: "Auf dem Server verarbeiten",
       must_process: "Datei muss verarbeitet werden",
+      optional_process: "Optional: in Text umwandeln",
     },
     reasoning: "Denkprozess",
+    code: "Code",
+    code_lines: "{{count}} Zeilen",
+    show_code: "Code anzeigen",
+    hide_code: "Code ausblenden",
     copy_reasoning: "Denkprozess kopieren",
     reasoning_streaming: "Denkprozess läuft",
     reasoning_streaming_label: "Denke noch",
     reasoning_received_words_one: "{{count}} Wort empfangen",
     reasoning_received_words_other: "{{count}} Wörter empfangen",
     action: "Aktion",
+    download_rendered: "Gerendertes Dokument herunterladen",
     html_block: {
       render: "HTML rendern",
       show_code: "Code anzeigen",
     },
     typst_block: {
       render: "Als Typst rendern",
+      show_code: "Code anzeigen",
+    },
+    graphviz_block: {
+      render: "Als Graphviz rendern",
+      show_code: "Code anzeigen",
+    },
+    vega_block: {
+      render: "Als Vega-Lite rendern",
+      show_code: "Code anzeigen",
+    },
+    chartjs_block: {
+      render: "Als Chart.js rendern",
       show_code: "Code anzeigen",
     },
     latex_block: {
@@ -907,10 +1404,12 @@ export default {
   },
   // Footer
   footer: {
+    sitemap: "Sitemap",
+    help: "Hilfe",
     imprint: "Impressum",
     terms: "Nutzungsbedingungen",
     docs: "Doku",
-    privacy: "Datenschutz",
+    privacy: "Datenschutz (ChatAI)",
     faq: "FAQ",
     contact: "Kontakt",
     about: "Über uns",
@@ -924,8 +1423,17 @@ export default {
       navigation_label: "Bereiche der Profileinstellungen",
       profile: {
         label: "Profil",
-        title: "Profil und Nutzung",
-        description: "Überblick über Ihre Kontodaten und Nutzung.",
+        title: "Profil",
+        description: "Überblick über Ihre Kontodaten.",
+      },
+      usage: {
+        label: "Nutzung",
+      },
+      advanced: {
+        label: "Erweitert",
+        title: "Erweiterte Einstellungen",
+        description:
+          "Darstellungsmodule, die Denkprozess-Anzeige und die erweiterten Bereiche der Seitenleiste.",
       },
       chat: {
         label: "Chat",
@@ -939,23 +1447,76 @@ export default {
         description:
           "Prüfen und verwalten Sie die von Chat AI gespeicherten Details.",
       },
+      encryption: {
+        label: "Verschlüsselung",
+        title: "Ende-zu-Ende-Verschlüsselung",
+        description:
+          "Verwalten Sie die Public Keys verschlüsselungsfähiger Modelle und wählen Sie, welche Modelle sie nutzen.",
+      },
       data: {
         label: "Daten",
         title: "Daten und Datenschutz",
         description:
-          "Exportieren oder entfernen Sie die in diesem Browser gespeicherten Daten.",
+          "Verwalten Sie lokale Daten, laden Sie eine verschlüsselte Sicherung herunter und halten Sie Ihre Geräte mit verschlüsselter Serversynchronisierung aktuell.",
+      },
+    },
+    profile: {
+      sections: {
+        label: "Profilbereiche",
+        user: "Benutzer",
+        institution: "Einrichtung",
       },
     },
     account: {
       username: "Benutzername",
       email: "E-Mail-Adresse",
+      institute: {
+        title: "Einrichtung",
+        description:
+          "Diese Chat-AI-Installation wird von Ihrer Einrichtung bereitgestellt, die die hier verfügbaren Optionen einschränken kann.",
+        limitations: "Einschränkungen für diese Einrichtung",
+        links: "Links",
+        contact: "Kontakt",
+        model: "Modellauswahl",
+        model_fixed: "Festgelegt auf {{model}}",
+        model_allowed: "Beschränkt auf {{models}}",
+        modules_label: "Deaktivierte Module",
+        features_label: "Deaktivierte Funktionen",
+        external_label: "Blockierte externe Kommunikation",
+        modules: {
+          tools: "Werkzeuge",
+          feedback: "Feedback",
+          choices: "Antwortvorschläge",
+          agent: "Browser-Agent",
+          agents: "Agenten",
+          arcanas: "Arcana-Werkzeuge",
+          speech: "Sprachausgabe",
+          sync: "Server-Synchronisierung",
+        },
+        features: {
+          meta_chat: "Meta-Chat",
+          workspaces: "Arbeitsbereiche",
+          mcp_servers: "MCP-Server",
+          e2ee: "Ende-zu-Ende-Verschlüsselung",
+          tutorials: "Tutorials",
+          import_git: "Klonen von Git-Repositories",
+        },
+        external: {
+          web_search: "Websuche",
+          external_models: "Externe Modelle",
+          mcp: "MCP-Server",
+          external_references: "Externe Verweise in gerenderten Inhalten",
+        },
+      },
     },
     usage: {
       title: "Nutzung",
       description:
         "Überblick über Ihre monatliche Nutzung und das Organisationsbudget.",
+      empty: "Für dieses Konto sind keine Nutzungsgrenzen hinterlegt.",
       monthly: "Monatlich",
       total: "Gesamt",
+      expand: "Details anzeigen",
       personal: "Persönlich",
       organization: "Organisation",
       personal_monthly: "Persönlich monatlich",
@@ -1013,11 +1574,9 @@ export default {
         },
       },
       suggestions: {
-        section_label: "Vorschläge",
         label: "Folgevorschläge anzeigen",
         description:
           "Zeigt nach jeder Antwort passende Vorschläge zum Fortsetzen des Chats.",
-        help_label: "Mehr über Folgevorschläge erfahren",
         title_once: {
           label: "Titel nur bei der ersten Anfrage festlegen",
           description:
@@ -1025,10 +1584,46 @@ export default {
         },
       },
       summaries: {
-        section_label: "Unterhaltungszusammenfassungen",
         label: "Zusammenfassungen beim Darüberfahren anzeigen",
         description:
           "Beim Verlassen eines Chats wird eine kurze Zusammenfassung erstellt und beim Darüberfahren mit der Maus in der Seitenleiste angezeigt.",
+      },
+      sidebar: {
+        advanced: {
+          label: "Erweiterter Modus",
+          description:
+            "Zeigt Agenten und MCP-Server in der Seitenleiste. Ausgeschaltet zeigt die Seitenleiste nur Chats und Arbeitsbereiche.",
+        },
+      },
+      mcp_tools: {
+        label: "MCP-Werkzeugaufrufe in Chats",
+        description:
+          "Legt fest, ob der Assistent Werkzeuge der von Ihnen hinzugefügten MCP-Server aufrufen darf. Die eigenen Datei-, Arbeitsbereichs- und Agentenwerkzeuge der App sind nicht betroffen.",
+        note: "Diese Einstellung betrifft nur Ihre MCP-Server; die Lese-, Schreib- und Arbeitsbereichswerkzeuge von Chat AI bleiben immer verfügbar.",
+        options: {
+          ask: {
+            label: "Fragen",
+            description:
+              "Vor jedem MCP-Werkzeugaufruf nachfragen. Ein Werkzeug kann für den aktuellen Chat erlaubt werden.",
+          },
+          always: {
+            label: "Immer",
+            description:
+              "MCP-Werkzeuge ohne Nachfrage ausführen. Nur bei Servern verwenden, denen Sie vertrauen.",
+          },
+          never: {
+            label: "Nie",
+            description:
+              "Werkzeuge Ihrer MCP-Server in Chats nicht anbieten. Die eigenen Werkzeuge der App bleiben verfügbar.",
+          },
+        },
+      },
+      messages: {
+        timestamps: {
+          label: "Zeitstempel für Nachrichten anzeigen",
+          description:
+            "Zeigt Datum und Uhrzeit unter jeder Nachricht an, zu der sie gesendet wurde.",
+        },
       },
       submission: {
         label: "Nachricht senden mit",
@@ -1102,6 +1697,21 @@ export default {
         description:
           "Legt fest, ob LaTeX-Codeblöcke standardmäßig gerendert werden. Pro Block kann weiterhin zwischen Darstellung und Code gewechselt werden.",
       },
+      graphviz: {
+        label: "Graphviz-Diagramme rendern",
+        description:
+          "Rendert ```dot- und ```graphviz-Blöcke lokal. Beim ersten Rendern wird die Graphviz-Engine (etwa 1,4 MB) nach Ihrer Bestätigung heruntergeladen.",
+      },
+      vega: {
+        label: "Vega-Lite-Diagramme rendern",
+        description:
+          "Rendert ```vega-lite- und ```vega-Blöcke lokal. Externe Daten-URLs bleiben blockiert, solange externe Referenzen nicht aktiviert sind.",
+      },
+      chartjs: {
+        label: "Chart.js-Diagramme rendern",
+        description:
+          "Rendert ```chart- und ```chartjs-Blöcke lokal aus einer Chart.js-JSON-Konfiguration.",
+      },
       reasoning_streaming: {
         label: "Denkprozess beim Streamen geschlossen halten",
         description:
@@ -1145,10 +1755,181 @@ export default {
       title: "Daten verwalten",
       description:
         "Exportieren Sie eine Kopie Ihrer lokalen Daten oder entfernen Sie Unterhaltungen, Erinnerungen, Einstellungen und Anhänge dauerhaft aus diesem Browser.",
+      sections: {
+        label: "Datenbereiche",
+        manage: "Daten verwalten",
+        backup: "Verschlüsselte Sicherung",
+        sync: "Serversynchronisierung",
+      },
       export_success: "Lokale Daten wurden erfolgreich exportiert.",
       export_error: "Lokale Daten konnten nicht exportiert werden.",
+      storage_title: "Browserspeicher",
+      storage_unavailable: "Speicherinformationen sind in diesem Browser nicht verfügbar.",
+      storage_persisted:
+        "Dauerhafter Speicher ist aktiviert. Der Browser sollte Ihre Chats bei knappem Speicher behalten.",
+      storage_not_persisted:
+        "Dauerhafter Speicher ist nicht aktiviert. Der Browser kann lokale Chats bei knappem Speicher oder längerer Inaktivität entfernen. Exportieren Sie regelmäßig eine Sicherung.",
+      storage_usage: "{{used}} von {{quota}} belegt.",
+      storage_request: "Dauerhaften Speicher anfordern",
+      storage_requesting: "Wird angefordert…",
+      storage_request_granted:
+        "Dauerhafter Speicher wurde gewährt. Der Browser sollte Ihre Chats bei knappem Speicher behalten.",
+      storage_request_denied:
+        "Der Browser hat dauerhaften Speicher nicht aktiviert. Chrome gewährt dies nur installierten Apps oder regelmäßig genutzten Seiten; Firefox fragt möglicherweise nach einer Berechtigung. Details stehen in der Browserkonsole.",
+      storage_request_unsupported:
+        "Dieser Browser unterstützt das Anfordern dauerhaften Speichers nicht.",
+      storage_request_failed: "Anfordern von dauerhaftem Speicher fehlgeschlagen: {{error}}",
+      backup: {
+        title: "Verschlüsselte Sicherung",
+        description:
+          "Laden Sie eine verschlüsselte Datei mit allen Chats, Themen, Einstellungen, Workspaces und Agenten herunter und stellen Sie sie später mit derselben Passphrase wieder her.",
+        notice:
+          "Die Sicherung wird in diesem Browser verschlüsselt, bevor sie heruntergeladen wird. Die Passphrase wird nie gespeichert und kann nicht wiederhergestellt werden; ohne sie lässt sich die Datei nicht öffnen. Bewahren Sie Datei und Passphrase sicher auf.",
+        create_title: "Sicherung erstellen",
+        create_description:
+          "Die Datei wird mit dem aktuellen Datum und der Uhrzeit versehen. Dateien über 8 MB werden ausgelassen und gemeldet.",
+        passphrase: "Passphrase",
+        passphrase_confirm: "Passphrase wiederholen",
+        passphrase_hint: "Mindestens {{count}} Zeichen.",
+        create_button: "Sicherung erstellen und herunterladen",
+        creating: "Sicherung wird erstellt…",
+        created: "Sicherung {{file}} heruntergeladen ({{records}} Einträge).",
+        missing_passphrase: "Geben Sie eine Passphrase ein.",
+        mismatch: "Die Passphrasen stimmen nicht überein.",
+        create_error: "Die Sicherung konnte nicht erstellt werden: {{error}}",
+        restore_title: "Sicherung wiederherstellen",
+        restore_description:
+          "Wählen Sie eine Sicherungsdatei und geben Sie ihre Passphrase ein. Die Sicherung wird in diesen Browser eingefügt: Einträge mit derselben ID werden überschrieben, nichts wird gelöscht.",
+        choose_file: "Sicherungsdatei",
+        choose_file_first: "Wählen Sie zuerst eine Sicherungsdatei.",
+        file_summary: "Sicherung vom {{date}} · {{records}} Einträge",
+        inspect_error: "Dies ist keine lesbare Chat-AI-Sicherung: {{error}}",
+        restore_passphrase: "Passphrase der Sicherung",
+        restore_confirm:
+          "Mir ist klar, dass passende Chats, Themen, Workspaces, Agenten und Einstellungen überschrieben werden.",
+        confirm_required: "Bestätigen Sie, dass passende Einträge überschrieben werden dürfen.",
+        restore_button: "Sicherung wiederherstellen",
+        restoring: "Sicherung wird wiederhergestellt…",
+        restored: "Sicherung wiederhergestellt: {{records}} Einträge.",
+        restore_error: "Die Sicherung konnte nicht wiederhergestellt werden: {{error}}",
+        unknown_namespaces: "Daten aus einer neueren Version wurden übersprungen: {{namespaces}}.",
+      },
+      sync: {
+        title: "Verschlüsselte Serversynchronisierung",
+        description:
+          "Halten Sie Unterhaltungen, Einstellungen, Workspaces und Agenten auf Ihren Geräten aktuell, indem Sie eine verschlüsselte Kopie in Ihrem SAIA-Dateisystem speichern.",
+        notice:
+          "Alles wird in diesem Browser verschlüsselt, bevor es hochgeladen wird. Die Passphrase verlässt Ihr Gerät nie, der Server kann die Kopie nicht lesen, und ohne die Passphrase sind die Daten nicht wiederherstellbar. Verwenden Sie eine Passphrase, die Sie sich merken können, und bewahren Sie sie sicher auf.",
+        enable_label: "Verschlüsselte Kopie in meinem SAIA-Dateisystem speichern",
+        enable_description:
+          "Standardmäßig aus. Es wird nichts hochgeladen, bis Sie unten die Kopie erstellen oder entsperren.",
+        create_title: "Verschlüsselte Kopie erstellen",
+        create_description:
+          "Die Passphrase schützt den Schlüssel, der das Archiv verschlüsselt. Ohne sie ist die Kopie nicht mehr zugänglich.",
+        unlock_title: "Vorhandene Kopie entsperren",
+        unlock_description:
+          "Ein anderes Gerät hat für dieses Konto bereits eine Kopie erstellt. Geben Sie deren Passphrase ein, um sie hier zu verwenden.",
+        passphrase: "Passphrase",
+        passphrase_confirm: "Passphrase wiederholen",
+        passphrase_hint: "Mindestens {{count}} Zeichen.",
+        create_button: "Verschlüsselte Kopie erstellen",
+        unlock_button: "Entsperren",
+        checking: "Server wird geprüft…",
+        check_again: "Erneut prüfen",
+        exists_hint:
+          "Es existiert bereits eine Kopie. Entsperren Sie sie oder ersetzen Sie sie durch einen neuen Tresor und laden Sie alles erneut hoch.",
+        replace_warning:
+          "Beim Ersetzen des Tresors wird jede hochgeladene Datei unlesbar. Dieses Gerät lädt seine Daten erneut hoch.",
+        replace_button: "Tresor ersetzen",
+        unlocked_title: "Verbunden",
+        vault: "Tresor",
+        device: "Dieses Gerät",
+        last_sync: "Letzte Synchronisierung",
+        never: "Noch nicht synchronisiert",
+        conflicts: "Konflikte",
+        skipped: "Übersprungene Dateien",
+        skipped_hint:
+          "Dateien über 8 MB werden nicht hochgeladen. Der Chat oder Workspace behält einen Platzhalter.",
+        conflict_hint:
+          "Bei Konflikten bleiben beide Versionen erhalten. Eine Unterhaltung wird als „ (conflict copy)“ im Titel kopiert.",
+        sync_now: "Jetzt synchronisieren",
+        syncing: "Synchronisierung…",
+        lock: "Tresor sperren",
+        auto_label: "Automatisch synchronisieren",
+        auto_description:
+          "Läuft alle fünf Minuten, solange dieser Tab offen und der Tresor entsperrt ist.",
+        change_title: "Passphrase ändern",
+        change_button: "Passphrase ändern",
+        changed: "Die Passphrase wurde geändert. Das Archiv wurde nicht neu verschlüsselt.",
+        rotate_title: "Tresor ersetzen",
+        rotate_description:
+          "Erzeugt einen neuen Tresorschlüssel und ein neues Salz für die Schlüsselableitung. Jede hochgeladene Datei wird unlesbar; anschließend lädt dieses Gerät seine Daten erneut hoch. Damit können Sie ein Gerät aussperren.",
+        rotate_button: "Tresor ersetzen und erneut hochladen",
+        rotated: "Der Tresor wurde ersetzt. Führen Sie eine Synchronisierung aus, um dieses Gerät erneut hochzuladen.",
+        cleanup: "Remote-Dateien aufräumen",
+        cleanup_description:
+          "Löscht Revisionen und Anhänge, auf die kein Geräteindex mehr verweist.",
+        cleanup_done: "{{records}} Revisionen und {{assets}} Anhänge entfernt.",
+        disable_hint:
+          "Wenn Sie die Serversynchronisierung ausschalten, stoppt die Synchronisierung und der Tresor wird gesperrt. Die verschlüsselten Dateien bleiben in Ihrem Dateisystem, bis Sie sie aufräumen oder dort löschen.",
+        passkey_title: "Passkey auf diesem Gerät",
+        passkey_description:
+          "Hält den Tresor über ein Neuladen hinweg entsperrt, ohne die Passphrase zu speichern. Der Passkey speichert nur eine verschlüsselte Kopie des Tresorschlüssels; der Schlüssel selbst bleibt nur im Arbeitsspeicher des Browsers.",
+        passkey_add: "Passkey hinzufügen",
+        passkey_default_label: "Sync-Tresor",
+        passkey_label: "Name des Passkeys",
+        passkey_label_placeholder: "z. B. Arbeitslaptop",
+        passkey_enrolled: "Hinterlegt: {{label}}",
+        passkey_forget: "Diesen Passkey entfernen",
+        passkey_unlock: "Mit Passkey entsperren",
+        passkey_unlock_hint:
+          "Der Browser fragt nach dem Passkey (Fingerabdruck, Gesicht oder Geräte-PIN); der Tresor öffnet sich ohne Passphrase.",
+        passkey_session_hint:
+          "Diese Sitzung wurde mit einem Passkey entsperrt. Nach dem Neuladen wird er automatisch angefragt; der Browser braucht dafür eventuell zuerst einen Klick.",
+        passkey_click_hint:
+          "Browser zeigen die Passkey-Abfrage möglicherweise erst nach einem Klick.",
+        passkey_added:
+          "Der Passkey wurde hinzugefügt. Dieses Gerät kann den Tresor nach dem Neuladen entsperren.",
+        passkey_unlocked: "Mit dem Passkey entsperrt.",
+        passkey_forgotten:
+          "Der Passkey wurde entfernt. Die Passphrase öffnet den Tresor weiterhin.",
+        passkey_unsupported:
+          "Dieser Browser kann keine Passkeys verwenden. Die Passphrase bleibt hier der einzige Weg zum Entsperren.",
+        onboarding_title: "Chats auf allen Geräten aktuell halten",
+        onboarding_intro:
+          "Chat AI kann eine verschlüsselte Kopie Ihrer Unterhaltungen, Themen, Einstellungen, Workspaces und Agenten in Ihrem SAIA-Dateisystem speichern. Ihre anderen Geräte lesen diese Kopie, sodass ein hier begonnener Chat dort weitergeht.",
+        onboarding_point_encrypted:
+          "Vor dem Hochladen verschlüsselt: Alles wird in diesem Browser verschlüsselt, die Passphrase verlässt Ihr Gerät nie, und der Server kann die Kopie nicht lesen.",
+        onboarding_point_passphrase:
+          "Eine Passphrase schützt den Schlüssel. Ohne sie lässt sich die Kopie nicht wiederherstellen; verwenden Sie daher eine Passphrase, die Sie sich merken können und sicher aufbewahren (mindestens {{min}} Zeichen).",
+        onboarding_point_passkey:
+          "Optionaler Passkey: Sobald die Kopie offen ist, öffnet ein Passkey auf diesem Gerät (Fingerabdruck, Gesicht oder Geräte-PIN) sie nach einem Neuladen erneut, ohne nach der Passphrase zu fragen. In diesem Browser wird nur eine verschlüsselte Kopie des Tresorschlüssels gespeichert.",
+        onboarding_point_nothing:
+          "Nichts wird hochgeladen, bevor Sie die Kopie erstellen, und Sie können die Synchronisierung jederzeit wieder ausschalten.",
+        onboarding_where:
+          "Die Kopie liegt im Kontoordner Ihres SAIA-Dateisystems. Hat ein anderes Gerät für dieses Konto bereits eine Kopie erstellt, entsperren Sie diese, statt eine zweite anzulegen.",
+        onboarding_privacy:
+          "Die Passphrase und der Tresorschlüssel werden nie gespeichert. Der Meta-Chat kann sie weder lesen noch die Kopie erstellen oder entsperren; das bleibt in den Daten-Einstellungen.",
+        onboarding_setup: "Synchronisierung einrichten",
+        onboarding_existing_title:
+          "Für dieses Konto existiert bereits eine verschlüsselte Synchronisierung",
+        onboarding_existing_intro:
+          "Ein anderes Gerät speichert bereits eine verschlüsselte Kopie Ihrer Unterhaltungen, Themen, Einstellungen, Workspaces und Agenten in Ihrem SAIA-Dateisystem. Richten Sie diese Kopie auf diesem Gerät ein, um sie zu lesen — Sie benötigen die Passphrase, mit der sie erstellt wurde.",
+        onboarding_existing_point_passphrase:
+          "Geben Sie die Passphrase ein, mit der die Kopie auf dem anderen Gerät erstellt wurde. Ohne sie lässt sich die Kopie hier nicht lesen, und es gibt keine Wiederherstellung.",
+        onboarding_existing_point_nothing:
+          "Von diesem Gerät wird nichts hochgeladen, bis Sie diese Kopie entsperrt haben, und Sie können die Synchronisierung jederzeit ausschalten.",
+        onboarding_existing_setup: "Auf diesem Gerät einrichten",
+        onboarding_later: "Jetzt nicht",
+        onboarding_footer:
+          "Sie finden dies später unter Benutzereinstellungen → Daten → Serversynchronisierung.",
+        missing_passphrase: "Geben Sie die Passphrase ein.",
+        mismatch: "Die Passphrasen stimmen nicht überein.",
+        session_expired: "Der Tresor wurde gesperrt. Geben Sie die Passphrase erneut ein.",
+        error: "Synchronisierung fehlgeschlagen: {{error}}",
+      },
     },
-    clear_data_button: "Daten löschen",
+    clear_data_button: "Alle lokalen Daten löschen",
     import_data_button: "Daten importieren",
     export_data_button: "Daten exportieren",
     memory: {
@@ -1156,6 +1937,18 @@ export default {
       description:
         "Verwalten Sie Ihre persönlichen Erinnerungen, die der KI helfen, wichtige Details über Sie zu behalten. Sie haben derzeit {{count}} Erinnerungen gespeichert.",
       manage: "Erinnerungen verwalten",
+      groups: {
+        title: "Erinnerungsgruppen",
+        description:
+          "Gruppieren Sie Erinnerungen wie Ordner. Die Standardgruppe wird verwendet, sofern in einem Chat keine andere Gruppe ausgewählt ist.",
+        default_name: "Standard",
+        default_label: "Standardgruppe",
+        default_badge: "Standard",
+        name_placeholder: "Name der neuen Gruppe",
+        add: "Hinzufügen",
+        rename: "Gruppe umbenennen",
+        delete: "Gruppe löschen",
+      },
     },
     logout: "Abmelden",
   },
@@ -1194,6 +1987,7 @@ export default {
   // Memory Modal
   memory: {
     userMemory: "Erinnerungen",
+    userMemoryGroup: "Erinnerungen (Gruppe: {{group}})",
     memoryCount_one: "{{count}} Erinnerung gespeichert",
     memoryCount_other: "{{count}} Erinnerungen gespeichert",
     addNew: "Neue Erinnerung hinzufügen",
@@ -1268,7 +2062,7 @@ export default {
     temperature:
       "Eine niedrige Temperatur (z. B. 0-1) erzeugt vorhersehbarere und logischere Antworten, während höhere Temperaturen (z. B. über 1) die Möglichkeit kreativerer und unkonventionellerer Antworten erhöhen. Sie können die Temperatureinstellung anpassen, um verschiedene Stufen der Vorhersagbarkeit und Kreativität zu erreichen.",
     tools:
-      "Tools sind eine neue und experimentelle Funktion, die darauf ausgelegt ist, die Fähigkeiten von Chat-AI zu erweitern. Sie ermöglichen dem Modell, zusätzliche Aktionen auszuführen oder auf weitere Ressourcen zuzugreifen, um nützlichere, genauere oder spezialisierte Antworten zu liefern. Zu den aktuellen Tools gehören Arcana (für alle Modelle) und Websuche (optional); weitere Tools sind für die Zukunft geplant. Da sich diese Funktion noch in Entwicklung befindet, können sich Funktionsumfang und verfügbare Tools im Laufe der Zeit ändern.",
+      "Tools sind eine neue und experimentelle Funktion, die darauf ausgelegt ist, die Fähigkeiten von Chat-AI zu erweitern. Sie ermöglichen dem Modell, zusätzliche Aktionen auszuführen oder auf weitere Ressourcen zuzugreifen, um nützlichere, genauere oder spezialisierte Antworten zu liefern. Zu den aktuellen Tools gehören Arcana, Arcana Tools, Websuche, Bild- und Audioerzeugung und MCP-Server. Mit Arcana Tools kann der Assistent Arcana-Sammlungen, ihre Dateien, Indizes und Freigaben verwalten. Da sich diese Funktion noch in Entwicklung befindet, können sich Funktionsumfang und verfügbare Tools im Laufe der Zeit ändern.",
     web_search:
       "Das Websuche-Werkzeug ermöglicht es der KI, aktuelle Informationen aus dem Internet abzurufen, um ihre Antworten zu verbessern. Wenn es aktiviert ist, kann die KI auf Grundlage Ihrer Frage und des gesamten Gesprächsverlaufs Suchanfragen erstellen, diese an eine Suchmaschine (wie z. B. Google) senden und die erhaltenen Ergebnisse nutzen, um genauere und aktuellere Antworten zu geben. Dies ist besonders nützlich bei Themen, bei denen aktuelle oder sich schnell ändernde Informationen wichtig sind.",
     top_p:
@@ -1285,7 +2079,7 @@ export default {
   },
   // Tour
   tour: {
-    welcome_message: "Willkommen bei Chat AI",
+    welcome_message: "Willkommen bei {{app}}",
     start_tour: "Tour starten",
     skip_tour: "Tour überspringen",
     description:
@@ -1328,12 +2122,24 @@ export default {
     title: "Warning",
     bad_request:
       "Fehlerhafte Anfrage wurde gesendet: Bitte löschen Sie die Konversation, versuchen Sie es innerhalb des Limits erneut, und speichern Sie Ihren Chatverlauf für spätere Zwecke.",
-    clear_data: "Achtung! Die Löschung löscht Ihren Verlauf. Fortfahren?",
+    clear_data:
+      "Achtung! Dadurch werden alle Unterhaltungen, Anhänge und lokalen Einstellungen dauerhaft aus diesem Browser gelöscht. Exportieren Sie vorher eine Sicherung, wenn Sie sie noch benötigen. Fortfahren?",
     clear_messages:
       "Sind Sie sicher, dass alle Nachrichten gelöscht werden sollen?",
+    clear_agent_history:
+      "Verlauf dieses Agenten löschen? Dadurch wird die OpenCode-Sitzung gelöscht und eine neue ohne den bisherigen Kontext gestartet.",
+    clear_agent_history_yes: "Verlauf löschen",
     close_chat:
       "Diesen Chat schließen? Er wird aus Ihren Unterhaltungen entfernt.",
     close_chat_yes: "Chat schließen",
+    close_agent_session: "Diese Sitzung schließen? Sie wird aus OpenCode entfernt.",
+    close_agent_session_yes: "Sitzung schließen",
+    close_agent_group_sessions:
+      "Alle {{count}} Sitzungen in „{{group}}“ schließen? Laufende Antworten werden unterbrochen und die Sitzungen aus OpenCode entfernt.",
+    close_agent_group_sessions_yes: "Alle Sitzungen schließen",
+    restore_agent_sessions:
+      "Neue Sitzungen auf dem Agent-Server erstellen und den jeweiligen zwischengespeicherten Verlauf in ihre Anweisungen schreiben? Die alten Sitzungen werden nicht wiederhergestellt und der zwischengespeicherte Verlauf wird an den Server dieses Agenten gesendet.",
+    restore_agent_sessions_yes: "Sitzungen wiederherstellen",
     regenerate_confirm:
       "Beim Regenerieren werden diese Antwort und alle nachfolgenden Nachrichten gelöscht und die aktuellen Einstellungen angewendet. Dies kann nicht rückgängig gemacht werden. Um diese Unterhaltung zu behalten, verwenden Sie stattdessen „In neuem Chat fortfahren“.",
     regenerate_yes: "Regenerieren",
@@ -1355,6 +2161,8 @@ export default {
     data_security_warning_mpg:
       "Sie verwenden ein externes Modell oder externe Tools. Ihre Nachrichten können außerhalb der GWDG verarbeitet werden. Benutzerdefinierte Einstellungen und GWDG-Tools sind möglicherweise nicht verfügbar. Bitte unterlassen Sie die Eingabe vertraulicher oder personenbezogener Daten. Externe Modelle sind nur nutzbar für wissenschaftliche Beschäftigte für wissenschaftliche Arbeiten, sofern keine personenbezogenen Daten eingegeben werden.",
     data_security_notice: "Ihre Daten werden sicher innerhalb unserer Server verarbeitet. Es werden keine Informationen außerhalb der GWDG übertragen.",
+    data_security_notice_e2ee:
+      "Ihre Daten werden sicher innerhalb unserer Server verarbeitet. Es werden keine Informationen außerhalb der GWDG übertragen. Dieses Modell ist zusätzlich Ende-zu-Ende verschlüsselt: Ihre Nachrichten werden in diesem Browser versiegelt.",
     arcana_usage:
       "Halten Sie Temperatur auf 0 und top_p auf 0.05 für optimale Arcana-Ergebnisse",
     arcana_create_collection_prefix:
@@ -1396,6 +2204,739 @@ export default {
       `MCP-Server können außerhalb der GWDG betrieben werden. Wenn aktiviert, kann die KI Daten an konfigurierte MCP-Server senden, um Tool-Anfragen auszuführen.\n\nErlauben Sie dies nur, wenn Sie den konfigurierten MCP-Servern vertrauen und keine vertraulichen, persönlichen oder sensiblen Informationen mit ihnen teilen.`,
     web_search_disclaimer: `Wenn die Websuche aktiviert ist, kann die KI auf Grundlage Ihrer Nachricht und des gesamten Gesprächsverlaufs Suchanfragen erstellen und diese an eine Suchmaschine (z. B. Google) senden, um aktuelle Informationen abzurufen. Dies hilft, genauere und aktuellere Antworten bereitzustellen.\n\nDurch Klicken auf „Ich verstehe“ stimmen Sie zu, dass Ihre Eingaben auf diese Weise verarbeitet werden, und bestätigen, dass Sie während der aktiven Websuche keine vertraulichen, persönlichen oder sensiblen Informationen teilen.`,
   },
+  document_panel: {
+    resize: "Vorschau skalieren",
+    back_to_chat: "Zurück",
+  },
+  mcp: {
+    section_title: "MCP-Server",
+    add: "MCP-Server hinzufügen",
+    add_empty: "MCP-Server hinzufügen",
+    edit_title: "MCP-Server bearbeiten",
+    empty: "Noch keine MCP-Server konfiguriert.",
+    name_label: "Name",
+    name_placeholder: "Mein Dateiserver",
+    url_label: "Server-URL",
+    auth_label: "Autorisierung (optional)",
+    test: "Verbindung testen",
+    remove: "Entfernen",
+    options: "MCP-Server-Optionen",
+    tooltip: "MCP-Server stellen dem Assistenten über das Model Context Protocol zusätzliche Werkzeuge und Dateien bereit. Diese App verbindet sich direkt von diesem Gerät aus mit ihnen.",
+    configured: "Konfigurierte MCP-Server",
+    policy_never_notice:
+      "MCP-Werkzeugaufrufe in Chats stehen in Einstellungen → Erweitert auf „Nie“, daher werden diese Server in Chats nicht verwendet. Ihre Auswahl bleibt gespeichert und gilt wieder, sobald Sie die Einstellung ändern. Die eigenen Datei- und Arbeitsbereichswerkzeuge von Chat AI bleiben verfügbar.",
+    invalid_url: "Ungültige MCP-Server-URL. Bearbeiten Sie den Server, um sie zu korrigieren.",
+    status_unchecked: "Nicht getestet – zum Testen klicken",
+    status_checking: "Verbindung wird getestet",
+    status_ready: "Verbunden",
+    status_error: "Nicht erreichbar – zum Wiederholen klicken",
+    details: "Details",
+    details_title: "Details zum MCP-Server",
+    details_name: "Konfiguriert als",
+    details_server_name: "Servername",
+    details_address: "Adresse",
+    details_version: "Version",
+    details_protocol: "Protokollversion",
+    details_website: "Website",
+    details_description: "Beschreibung",
+    details_capabilities: "Fähigkeiten",
+    details_tools: "Werkzeuge ({{count}})",
+    details_no_tools: "Dieser Server stellt keine Werkzeuge bereit.",
+    details_instructions: "Anweisungen",
+    details_loading: "Die Angaben des Servers werden gelesen…",
+    details_failed: "Die Serverdetails konnten nicht gelesen werden.",
+    details_retry: "Erneut versuchen",
+    details_none: "Nicht angegeben",
+    none_configured: "Fügen Sie zuerst einen Server im Bereich MCP-Server hinzu.",
+    scan_title: "Nach lokalen MCP-Servern suchen",
+    scan_hint:
+      "Prüft auf diesem Gerät alle Ports über 5000 auf einen /mcp-Endpunkt und fügt jeden gefundenen Server hinzu. Funktioniert nur, wenn diese App im Browser auf demselben Rechner geöffnet ist.",
+    scan_action: "Suchen",
+    scan_cancel: "Stopp",
+    scan_progress:
+      "{{scanned}} von {{total}} Ports geprüft · {{found}} gefunden",
+    scan_server_name: "Lokaler MCP-Server (Port {{port}})",
+    scan_done: "{{servers}} lokale MCP-Server hinzugefügt.",
+    scan_empty: "Kein lokaler MCP-Server auf Ports über 5000 gefunden.",
+    scan_failed: "Suche fehlgeschlagen: {{error}}",
+  },
+  agents: {
+    section_title: "Agenten",
+    sessions: "Sitzungen",
+    new_session: "Neue Sitzung",
+    no_sessions: "Noch keine Sitzungen.",
+    no_workspace_sessions: "Diesem Arbeitsbereich sind noch keine Sitzungen zugeordnet.",
+    unassigned_sessions: "Nicht zugeordnete Sitzungen",
+    no_unassigned_sessions: "Jede Sitzung ist einem Arbeitsbereich zugeordnet.",
+    sessions_in_workspace: "Sitzungen in {{workspace}}",
+    detach_session: "Aus dem Arbeitsbereich entfernen",
+    attach_to_workspace: "Einem Arbeitsbereich zuordnen",
+    offline_cached:
+      "Der Agent ist nicht erreichbar. Angezeigt wird der um {{time}} gespeicherte Verlauf.",
+    offline_no_cache:
+      "Der Agent ist nicht erreichbar und für diese Sitzung wurde noch kein Verlauf gespeichert.",
+    sessions_cached:
+      "Der Agent ist nicht erreichbar. Diese Sitzungen stammen aus dem lokalen Cache.",
+    sessions_cached_short: "gespeichert",
+    restore_sessions_banner_one:
+      "Der Agent ist erreichbar, aber 1 zwischengespeicherte Sitzung existiert auf seinem Server nicht mehr. Aus dem lokalen Cache wiederherstellen?",
+    restore_sessions_banner_other:
+      "Der Agent ist erreichbar, aber {{count}} zwischengespeicherte Sitzungen existieren auf seinem Server nicht mehr. Aus dem lokalen Cache wiederherstellen?",
+    restore_sessions_action: "Aus Cache wiederherstellen",
+    restore_sessions_busy: "Wird wiederhergestellt…",
+    restore_sessions_done_one:
+      "{{count}} Sitzung aus dem lokalen Cache wiederhergestellt.",
+    restore_sessions_done_other:
+      "{{count}} Sitzungen aus dem lokalen Cache wiederhergestellt.",
+    restore_sessions_none:
+      "Es war kein zwischengespeicherter Verlauf zum Wiederherstellen vorhanden.",
+    restored_history:
+      "Dieser Verlauf wurde aus dem lokalen Cache in die Anweisungen der Sitzung wiederhergestellt. Der Agent-Server hat dafür noch keine Nachrichten.",
+    restore_session_title: "{{name}} (wiederhergestellt)",
+    session_missing:
+      "Diese Sitzung existiert auf dem Agent-Server nicht mehr und es ist kein zwischengespeicherter Verlauf vorhanden. Löschen Sie den Verlauf, um eine neue Sitzung zu starten.",
+    subagent_short: "Sub",
+    rename_session: "Sitzung umbenennen",
+    close_session: "Sitzung schließen",
+    session_options: "Sitzungsoptionen",
+    session_renamed: "Sitzung umbenannt",
+    session_closed: "Sitzung geschlossen",
+    close_group_sessions: "Alle Sitzungen dieser Gruppe schließen",
+    group_sessions_closed_one: "1 Sitzung geschlossen.",
+    group_sessions_closed_other: "{{count}} Sitzungen geschlossen.",
+    group_sessions_failed_one:
+      "1 Sitzung konnte nicht geschlossen werden: {{message}}",
+    group_sessions_failed_other:
+      "{{count}} Sitzungen konnten nicht geschlossen werden: {{message}}",
+    session_name_placeholder: "Sitzungsname",
+    tooltip: "Remote-Agenten, die auf der GWDG-Infrastruktur laufen.",
+    status_ready: "Verbunden und bereit",
+    status_working: "Arbeitet",
+    status_error: "Verbindungsproblem",
+    status_checking: "Verbindung wird geprüft",
+    bridge: {
+      title: "Arbeitsbereich-Zugriff",
+      none: "Keine Arbeitsbereich-Brücke",
+      disabled_hint:
+        "Aus. Der Agent sieht keine Dateien aus Arbeitsbereichen. Schalten Sie den Zugriff ein, um den Reverse-Proxy für diesen Agenten bereitzustellen.",
+      use_workspace: "Für die Brücke verwenden",
+      working: "Agenten-Brücke aktiv",
+      connecting: "Agenten-Brücke verbindet …",
+      not_working: "Agenten-Brücke funktioniert nicht",
+      off: "Agenten-Brücke aus",
+      unavailable: "Agenten-Brücke nicht verfügbar",
+      unavailable_detail: "Kein Brücken-Endpunkt unter {{url}} (HTTP {{status}}).",
+      disabled_by_server:
+        "Ein älterer Backend-Dienst lehnt Brücken-Sitzungen ab, wenn kein gemeinsames Geheimnis konfiguriert ist (HTTP 503). Aktualisieren Sie ihn, oder setzen Sie bridgeSharedSecret in back.json (oder BRIDGE_SHARED_SECRET) und denselben Wert als bridgeKey in front.json und starten Sie beide Dienste neu.",
+      key_rejected:
+        "Der Backend-Dienst hat den Brücken-Schlüssel abgelehnt (HTTP 401). bridgeKey in front.json muss zu bridgeSharedSecret in back.json (oder BRIDGE_SHARED_SECRET) passen.",
+      unreachable:
+        "Der Browser konnte die Brücke unter {{url}} nicht erreichen. Prüfen Sie, ob der Dienst läuft und ob die App-Herkunft erlaubt ist: Ein Frontend auf einem anderen Port ist eine andere Herkunft; nennen Sie sie deshalb in corsOrigins in back.json (oder CORS_ORIGINS).",
+      unavailable_hint:
+        "Diese Installation bietet keine Agenten-Brücke. Sie wird vom Chat-AI-Dienst back (/bridge/*) oder vom SAIA-Agenten-Dienst (/agents/<id>/bridge) bereitgestellt.",
+      offline_hint:
+        "Der Browser hat die Verbindung zur Brücke verloren. Sie verbindet sich automatisch neu.",
+      disabled_after_failure:
+        "Der Zugriff wurde ausgeschaltet, weil die Brücke nicht starten konnte. Schalten Sie ihn wieder ein, um es erneut zu versuchen.",
+      needs_workspace:
+        "Verknüpfen Sie zuerst einen Arbeitsbereich. Die Brücke stellt nur verknüpfte Arbeitsbereiche bereit.",
+      options: "Optionen",
+      writable: "Schreiben erlauben",
+      writable_hint:
+        "Erlaubt dem Agenten, Dateien im verknüpften Arbeitsbereich zu erstellen, zu ändern und zu löschen. Ohne diese Option bleibt der Arbeitsbereich schreibgeschützt.",
+      mcp: "MCP-Werkzeuge",
+      mcp_hint:
+        "Erlaubt dem Agenten, die konfigurierten MCP-Server über diese Browsersitzung aufzurufen; dafür muss der Arbeitsbereich-Zugriff eingeschaltet sein. Deren Ergebnisse und Daten verlassen die App über diese Server.",
+      mcp_servers: "MCP-Server",
+      inject: "Externe MCP-Werkzeuge einbinden",
+      inject_hint:
+        "OpenCode verbindet sich selbst mit den erreichbaren MCP-Servern, die kein Passwort benötigen; deren Werkzeuge funktionieren dann ohne diesen Tab und ohne Arbeitsbereich-Zugriff. Die übrigen bleiben an der lokalen MCP-Weiterleitung.",
+      inject_running: "MCP-Server werden zu OpenCode hinzugefügt …",
+      inject_summary: "Direkt in OpenCode: {{direct}} · über die Brücke: {{bridge}}",
+      inject_fallback:
+        "OpenCode konnte {{servers}} nicht verbinden, sie bleiben auf dem Relay",
+      inject_relay_off_one:
+        "Der Schalter „MCP-Werkzeuge“ oben ist aus, daher wird {{count}} Server in dieser Sitzung nicht durchgereicht.",
+      inject_relay_off_other:
+        "Der Schalter „MCP-Werkzeuge“ oben ist aus, daher werden {{count}} Server in dieser Sitzung nicht durchgereicht.",
+      inject_none: "Es ist kein MCP-Server ohne Passwort konfiguriert.",
+      inject_error:
+        "Die MCP-Server konnten nicht zu OpenCode hinzugefügt werden: {{message}}",
+      wrapped_summary:
+        "MCP-Server mit gespeichertem Token als natives stdio: {{count}}",
+      wrapped_failed:
+        "Der stdio-Proxy für {{servers}} konnte nicht starten, daher bleiben sie an der Brücke",
+      session_scope:
+        "Beide Wege gelten nur für die gerade geöffnete Sitzung: Die Einträge tragen ihre Kennung, und jeder anderen Sitzung dieses Agenten wird der Zugriff verweigert.",
+      rescope_failed:
+        "Die Brücke konnte nicht auf diese Sitzung umgestellt werden: {{message}}",
+      keep_open: "Lassen Sie diesen Tab geöffnet. Arbeitsbereichsdateien und die an der Brücke verbliebenen MCP-Server sind nur verfügbar, solange der Browser verbunden ist.",
+      tab_warning: "Die Agenten-Brücke benötigt diesen Tab. Arbeitsbereichsdateien und die an der Brücke verbliebenen MCP-Server sind möglicherweise nicht verfügbar, bis Sie zurückkehren.",
+      start_failed: "Die Arbeitsbereich-Brücke konnte nicht gestartet werden: {{message}}",
+    },
+    spawn: "Agent starten",
+    add_empty: "Agent hinzufügen",
+    add_title: "Agent hinzufügen",
+    name_label: "Agentenname",
+    name_placeholder: "z. B. Recherche-Assistent",
+    edit_title: "Agent bearbeiten",
+    options: "Agent-Optionen",
+    pin_action: "Agenten anheften",
+    unpin_action: "Agenten nicht mehr anheften",
+    connection_label: "Verbindung",
+    mode_service: "GWDG HPC-Agenten-Dienst",
+    mode_external: "OpenCode-Server",
+    hpc_project_hint: "Wählen Sie eines der HPC-Projekte aus, die Ihnen zur Verfügung stehen.",
+    default_name: "OpenCode-Agent",
+    service_hint:
+      "Der Agenten-Dienst startet für diesen Agenten einen OpenCode-Container und beendet ihn, wenn Sie den Agenten entfernen. Eine Server-URL oder ein Passwort ist nicht nötig.",
+    service_unavailable:
+      "Der GWDG HPC-Agenten-Dienst ist für Ihr Konto nicht freigeschaltet.",
+    service_request_access:
+      "Wenn Sie für ein HPC-Konto berechtigt sind, können Sie den Zugang zu diesem Service per Anfrage an support@gwdg.de beantragen.",
+    service_checking:
+      "Es wird geprüft, ob der GWDG HPC-Agenten-Dienst für Ihr Konto verfügbar ist…",
+    service_forced_hint:
+      "Im Deployment laufen Agenten über den Agenten-Dienst (SAIA). Direkte OpenCode-Verbindungen sind nur möglich, wenn Chat AI lokal läuft.",
+    hpc_project_label: "HPC-Projekt",
+    server_url_label: "opencode-Server",
+    server_password_label: "Server-Passwort",
+    connect_hint:
+      "Der Agent verbindet sich mit diesen Zugangsdaten direkt mit Ihrer opencode-serve-Instanz.",
+    connect_failed: "Verbindung zum opencode-Server fehlgeschlagen: {{error}}",
+    connecting: "Verbinden…",
+    add: "Agent hinzufügen",
+    empty: "Noch keine Agenten.",
+    not_found: "Agent nicht gefunden.",
+    remove: "Agent entfernen",
+    clear_history: "Agent-Verlauf löschen",
+    removed_locally: "Agent lokal entfernt; sein Server war nicht erreichbar oder die Anmeldung ist fehlgeschlagen.",
+    service_conflict_removed:
+      "Der Agent {{name}} wurde entfernt: Der Agent-Dienst kann ihn nicht mehr ausführen ({{status}}). Fügen Sie einen neuen Agenten hinzu, um fortzufahren.",
+    service_conflict_unknown: "unbrauchbarer Zustand",
+    workspaces: "Arbeitsbereich",
+    workspaces_hint:
+      "Verknüpfen Sie diesen Agenten mit Arbeitsbereichen. Der erste verknüpfte Arbeitsbereich wird aktiv, sofern kein anderer ausgewählt ist.",
+    workspaces_empty: "Keine Arbeitsbereiche verfügbar.",
+    workspace_active: "Aktiv",
+    plan: "Plan",
+    shell: "Shell",
+    shell_tooltip: "Sendet diese Eingabe direkt an das Terminal. Die Ausgabe erscheint im Chat.",
+    shell_placeholder: "Shell-Befehl eingeben…",
+    shell_running: "Befehl wird ausgeführt…",
+    shell_status_running: "Läuft",
+    shell_status_done: "Fertig",
+    shell_status_failed: "Fehlgeschlagen",
+    shell_status_aborted: "Abgebrochen",
+    shell_exit: "Exit-Code {{code}}",
+    shell_timeout: "Der Shell-Befehl wurde nicht rechtzeitig beendet.",
+    shell_copy: "Ausgabe kopieren",
+    shell_copied: "Shell-Ausgabe kopiert.",
+    shell_abort: "Shell-Befehl abbrechen",
+    plan_tooltip: "Wechselt den OpenCode-Agenten zwischen dem Plan-Modus und dem normalen Build-Modus.",
+    commands_tooltip: "Führt einen OpenCode-Befehl in dieser Sitzung aus.",
+    tools: {
+      title: "OpenCode-Werkzeuge",
+      tabs: {
+        changes: "Änderungen",
+        permissions: "Berechtigungen",
+        policies: "Richtlinien",
+        stats: "Nutzung",
+        mcp: "MCP",
+        connection: "Verbindung",
+        recovery: "Wiederherstellung",
+      },
+      workspace: "Arbeitsbereich / Git",
+      tracked_files: "Verfolgte Dateien",
+      export_md: "MD exportieren",
+      export_json: "JSON exportieren",
+      exported: "Agent-Verlauf exportiert.",
+      exported_cached:
+        "Agent-Server nicht erreichbar – zwischengespeicherter Verlauf exportiert.",
+      export_no_cache:
+        "Der Agent-Server ist nicht erreichbar und es ist kein zwischengespeicherter Verlauf vorhanden.",
+      recovery_hint:
+        "Exporte greifen auf den lokalen Cache zurück, wenn der Agent-Server nicht erreichbar ist. Ein zwischengespeicherter Verlauf kann auch in einer neuen Sitzung wiederhergestellt werden.",
+      cache_messages: "Zwischengespeicherte Nachrichten: {{count}}",
+      cache_synced: "Zuletzt gespeichert: {{date}}",
+      cache_never: "Für diese Sitzung ist noch kein Verlauf gespeichert.",
+      restore_action: "In neuer Sitzung wiederherstellen",
+      restore_hint:
+        "Schreibt den zwischengespeicherten Verlauf in die Anweisungen einer neuen Sitzung.",
+      restore_confirm_title: "Neue Sitzung aus dem Cache erstellen?",
+      restore_warning:
+        "Dies erstellt eine neue Sitzung und schreibt {{size}} des zwischengespeicherten Verlaufs in ihre Anweisungen. Die aktuelle Sitzung bleibt unverändert. Chatdaten werden an den Server dieses Agenten gesendet.",
+      restore_cancel: "Abbrechen",
+      restore_confirm: "Sitzung erstellen",
+      restore_created:
+        "Der zwischengespeicherte Verlauf wurde in einer neuen Sitzung wiederhergestellt.",
+      restore_empty:
+        "Es ist kein zwischengespeicherter Verlauf zum Wiederherstellen vorhanden.",
+      restore_session_title: "{{name}} (wiederhergestellter Verlauf)",
+      restore_failed: "Die neue Sitzung konnte nicht erstellt werden.",
+      policies_hint:
+        "Richtlinien beantworten künftige Berechtigungsanfragen dieses Agenten automatisch. Verwenden Sie Platzhalter wie bash* oder * mit Bedacht.",
+      policy_action: "Aktionsmuster",
+      policy_decision: "Entscheidung",
+      policy_once: "Einmal erlauben",
+      policy_always: "Immer erlauben",
+      policy_reject: "Ablehnen",
+      policy_add: "Richtlinie hinzufügen",
+      no_policies: "Keine Berechtigungsrichtlinien.",
+      test_connection: "Verbindung testen",
+      copy_diagnostics: "Diagnose kopieren",
+      copied: "Kopiert.",
+      no_diagnostics: "Keine Diagnose geladen.",
+      mcp_reconnected: "MCP-Server neu verbunden.",
+      reconnect: "Neu verbinden",
+      unsupported_field: "Nicht unterstütztes Feld: {{field}}",
+      working: "Arbeitet…",
+      submit: "Senden",
+      mcp_synced: "MCP-Server zu OpenCode hinzugefügt.",
+      mcp_removed: "MCP-Server aus OpenCode entfernt.",
+      reverted: "Sitzung zurückgesetzt.",
+      revert: "Bis Nachricht zurücksetzen",
+      revert_cleared: "Gestaffelte Rücksetzung verworfen.",
+      clear_revert: "Rücksetzung verwerfen",
+      no_changes: "Keine Dateiänderungen.",
+      no_messages: "Keine Nachrichten verfügbar",
+      no_saved_permissions: "Keine gespeicherten Berechtigungen.",
+      permission_removed: "Berechtigung entfernt.",
+      remove: "Entfernen",
+      no_stats: "Keine Statistiken verfügbar.",
+      opencode_mcp: "OpenCode-MCP-Server",
+      no_mcp: "In OpenCode sind keine MCP-Server konfiguriert.",
+      chatai_mcp: "Chat-AI-MCP-Server",
+      no_chatai_mcp: "In Chat AI ist kein MCP-Server mit Adresse konfiguriert.",
+      add_to_opencode: "Zu OpenCode hinzufügen",
+      added: "Zu OpenCode hinzugefügt",
+      mcp_transfer_hint:
+        "Beim Hinzufügen werden Name, URL und konfigurierte Header (einschließlich Autorisierung) an den lokalen OpenCode-Server übertragen. Chatdaten werden nicht kopiert.",
+    },
+    hpc_project: "HPC-Projekt {{n}}",
+    remote_hint: "Läuft auf der GWDG-Infrastruktur",
+    chat_empty: "Noch keine Nachrichten. Fragen Sie den Agenten etwas.",
+    form_result_title: "Formularergebnisse",
+    form_submitted: "Gesendet",
+    form_yes: "Ja",
+    form_no: "Nein",
+    form_not_answered: "Nicht beantwortet",
+    form_custom_answer: "Eigene Antwort eingeben",
+    tool_call: "Werkzeugaufruf",
+    tool_input: "Eingabe",
+    tool_output: "Ausgabe",
+    open_preview: "Vorschau",
+    open_preview_of: "Vorschau von {{name}}",
+    reasoning: "Denkprozess",
+    files: "Dateien",
+    search_files: "Dateien durchsuchen",
+    search: "Suchen",
+    no_search_results: "Keine passenden Dateien.",
+    send: "Senden",
+    working: "Der Agent arbeitet…",
+    package_message: "Nachricht vom Paketbesitzer",
+    session_busy: "Dieser Agent arbeitet noch. Warten Sie, bis er fertig ist, oder stoppen Sie ihn, bevor Sie eine weitere Nachricht senden.",
+    chat_timeout: "Der Agent hat nicht rechtzeitig geantwortet.",
+    aborted_by_user: "Vom Benutzer abgebrochen",
+    permission_title: "Berechtigung erforderlich",
+    permission_once: "Einmal erlauben",
+    permission_always: "Immer erlauben",
+    permission_reject: "Ablehnen",
+    commands: "Befehle",
+    compact_command: "Unterhaltung komprimieren",
+  },
+  workspace: {
+    new_folder: "Neuer Ordner",
+    new_file: "Neue Datei",
+    upload_file: "Datei hochladen",
+    add_file: "Datei hinzufügen",
+    upload_success: "{{count}} Datei(en) hochgeladen",
+    upload_not_supported: "Diese Quelle unterstützt keine Uploads.",
+    create_in: "In {{path}} erstellen",
+    folder_name_placeholder: "Ordnername",
+    file_name_placeholder: "Dateiname",
+    entry_name_invalid: "Namen dürfen keine Schrägstriche enthalten.",
+    rename_entry: "Eintrag umbenennen",
+    rename_in: "In {{path}} umbenennen",
+    rename_success: "Umbenannt in {{name}}.",
+    git_log: "Git-Log",
+    git_log_empty: "Keine Git-Log-Einträge gefunden.",
+    root_empty_hint: "Erstellen Sie einen Ordner oder eine Datei oder hängen Sie einen Quellordner ein.",
+    edit_title: "Arbeitsbereich verwalten",
+    edit_storage: "Speicher bearbeiten",
+    manage_workspace: "Arbeitsbereich verwalten",
+    file_manager: "Dateimanager",
+    resize_files_split: "Dateibaum und Vorschau skalieren",
+    back_to_workspace: "Zurück zum Arbeitsbereich",
+    edit_storage_hint:
+      "Speicherorte von {{name}}. Jede Änderung wird sofort übernommen.",
+    edit_storage_hint_no_name: "Jede Änderung wird sofort übernommen.",
+    workspace_options: "Arbeitsbereich-Optionen",
+    pin_action: "Arbeitsbereich anheften",
+    unpin_action: "Arbeitsbereich nicht mehr anheften",
+    workspace_root: "Arbeitsbereich-Stamm",
+    tab_preview: "Vorschau",
+    tab_agents: "Agenten",
+    root_hint: "Dateien und Ordner in diesem Arbeitsbereich.",
+    kind: "Arbeitsbereich",
+    chat_count_one: "{{count}} Chat",
+    chat_count_other: "{{count}} Chats",
+    empty_title: "Noch keine Chats in diesem Arbeitsbereich",
+    empty_body: "Schreiben Sie unten eine Eingabe, um den ersten Chat zu starten.",
+    composer_placeholder: "Fragen Sie alles — startet einen neuen Chat in {{name}}",
+    files_tab: "Dateien",
+    preview_tab: "Vorschau",
+    storage: "Speicher",
+    available_storage: "Verfügbarer Speicher",
+    add_folder: "Ordner hinzufügen",
+    clone_repo_url: "URL des öffentlichen Repositories",
+    clone_branch: "Branch oder Tag (optional)",
+    clone_default_branch: "Standard-Branch",
+    clone_folder: "Zielunterordner",
+    clone_agent: "Agent für git clone",
+    clone_agent_required: "Wählen Sie einen lokalen Agenten zum Klonen aus.",
+    clone_configure_agent_soon: "Anderen Agenten konfigurieren (demnächst)",
+    clone_remote_agent_soon: "Remote-Agent (demnächst)",
+    clone_target: "In Speicher klonen",
+    clone_target_browser: "Browser-Speicher",
+    clone_target_local: "Lokalen Ordner wählen…",
+    clone_target_agent: "Agentenspeicher ({{name}})",
+    clone_target_agent_selected: "Agentenspeicher: {{name}}",
+    clone_target_local_selected: "Lokaler Ordner: {{name}}",
+    clone_target_required: "Wählen Sie einen beschreibbaren Speicher aus.",
+    clone_target_missing: "Der gewählte Speicher ist nicht mehr verfügbar.",
+    clone_target_exists: "Der Zielunterordner existiert bereits.",
+    clone_no_agent: "Es ist kein lokaler OpenCode-Agent konfiguriert. Fügen Sie vor dem Klonen einen lokalen Agenten hinzu.",
+    mount_local_hint: "Der gewählte Ordner wird beschreibbar unter seinem Ordnernamen eingebunden.",
+    mount_local_action: "Ordner einbinden",
+    choose_local_folder: "Lokalen Ordner wählen…",
+    clone_prepare: "Klonen und prüfen",
+    clone_preparing: "Klon wird vorbereitet…",
+    clone_progress_clone: "Repository wird mit dem Agenten geklont…",
+    clone_progress_manifest: "Manifest wird gelesen…",
+    clone_progress_measure: "Repository wird vermessen…",
+    clone_progress_copy: "Repository wird in den Speicher kopiert…",
+    clone_progress_files: "{{files}} Dateien werden kopiert · {{size}}",
+    clone_progress_agent_storage: "Klon wird im Agentenspeicher behalten…",
+    clone_progress_agent: "Agent wird erstellt…",
+    clone_progress_chats: "Chats werden erstellt…",
+    clone_progress_mount: "Ordner wird eingebunden…",
+    clone_applying: "Arbeitsbereich wird eingerichtet…",
+    clone_confirm_title: "Repository-Import bestätigen",
+    clone_confirm_intro: "Prüfen Sie, was erstellt wird. In Ihren Arbeitsbereich wurde noch nichts kopiert.",
+    clone_summary_repo: "Repository",
+    clone_summary_workspace: "Arbeitsbereich",
+    clone_summary_agent: "Agent",
+    clone_summary_chats: "Chats",
+    clone_summary_files: "{{files}} Dateien{{size}}",
+    clone_manifest_warning: "Das Manifest ist nicht vertrauenswürdiger Repository-Inhalt. Es kann Chats und einen Agenten konfigurieren, aber keine Befehle, Skripte, Zugangsdaten oder Server-URLs vorgeben.",
+    clone_manifest_present: "Es wurde ein Arbeitsbereichs-Manifest gefunden. Dieser Klon kopiert nur Repository-Dateien; er erstellt keine Chats oder Agenten.",
+    clone_manifest_none: "Es wurde kein Arbeitsbereichs-Manifest gefunden. Es werden nur Repository-Dateien kopiert.",
+    clone_browser_hint: "Das Repository wird in den Browserspeicher dieses Arbeitsbereichs kopiert.",
+    clone_review_action: "In den Arbeitsbereich kopieren",
+    clone_confirm_action: "Arbeitsbereich erstellen",
+    clone_new_session: "Neue Sitzung",
+    clone_agent_connection: "Agent mit dieser lokalen Verbindung erstellen",
+    clone_continue: "Weiter",
+    clone_discard: "Verwerfen",
+    clone_discarded: "Klonen verworfen.",
+    kind_git: "Git-Repository",
+    sources_included: "Enthalten",
+    source_included_hint:
+      "Wird automatisch mit dem Arbeitsbereich erstellt und kann hier nicht entfernt werden.",
+    row_pending: "Ausstehend",
+    row_working: "Wird ausgeführt…",
+    row_done: "Fertig",
+    row_failed: "Fehlgeschlagen · {{message}}",
+    clone_row_remove: "Quelle entfernen",
+    advanced: "Erweitert",
+    create_applying: "Arbeitsbereich wird erstellt…",
+
+    mounts: "Ordner",
+    no_mounts: "Fügen Sie einen Ordner aus einer Quelle zu diesem Arbeitsbereich hinzu.",
+    remove_mount: "Ordner entfernen",
+    mount_source: "Quelle",
+    mount_source_path: "Ordner in der Quelle",
+    mount_parent: "Ordner im Arbeitsbereich",
+    make_read_only: "Schreibgeschützt machen",
+    make_writable: "Beschreibbar machen",
+    make_source_read_only: "Quelle schreibgeschützt machen",
+    make_source_writable: "Quelle beschreibbar machen",
+    source_read_only_error: "Diese Quelle ist schreibgeschützt.",
+    source_read_only: "Schreibgeschützte Quelle",
+    source_unavailable: "Diese Quelle ist nicht verfügbar.",
+    source_read_only_hint: "Schreib- und Löschvorgänge in dieser Quelle blockieren.",
+    mount_read_only_error: "Dieser Einhängepunkt ist schreibgeschützt.",
+    cannot_move_mount: "Eingehängte Ordner können nicht verschoben werden.",
+    mount_read_only: "Nur lesen",
+    mount_read_only_hint: "Keine Änderungen über diesen Einhängepunkt erlauben.",
+    folder_picker_up: "Eine Ebene höher",
+    folder_picker_loading: "Ordner werden geladen…",
+    folder_picker_empty: "Keine Unterordner vorhanden.",
+    folder_picker_result: "Wird unter {{path}} eingebunden",
+    folder_picker_error: "Ordner konnten nicht geladen werden.",
+    mount_source_required: "Wählen Sie eine Quelle.",
+    mount_target_folder: "Im Arbeitsbereich gibt es bereits einen Ordner unter {{path}}.",
+    mount_target_nonempty: "Der Ordner {{path}} enthält bereits Dateien.",
+    mount_target_file: "Unter {{path}} gibt es bereits eine Datei.",
+    mount_target_covers: "Der Ordner {{path}} enthält bereits einen eingebundenen Ordner.",
+    mount_target_nested: "{{path}} liegt in dem eingebundenen Ordner {{mount}}.",
+    mount_target_reserved: "Der Ordner {{path}} ist für Chat-Uploads reserviert.",
+    attached_chats: "Chats",
+    attached_items: "Verknüpfte Chats, Agenten und Sitzungen",
+    no_attached_chats: "Noch keine Chats verknüpft.",
+    attach_chat: "Chat verknüpfen",
+    attach_chat_error:
+      "Der Chat konnte nicht mit dem Arbeitsbereich verknüpft werden",
+    attach_session_error:
+      "Die Sitzung konnte nicht mit dem Arbeitsbereich verknüpft werden",
+    new_chat: "Neuer Chat in diesem Arbeitsbereich",
+    detach_chat: "Chat trennen",
+    attach_chat_hint: "Verknüpfen Sie einen Chat mit diesem Arbeitsbereich.",
+    attach_agent: "Agent verknüpfen",
+    attach_agent_hint:
+      "Verknüpfen Sie einen Agenten mit diesem Arbeitsbereich. Der Agent kann ihn anschließend als Brücken-Arbeitsbereich verwenden.",
+    attach_agent_session: "Agentensitzung zuordnen",
+    attach_agent_session_hint:
+      "Wählen Sie die Sitzungen dieses Agenten, die zu diesem Arbeitsbereich gehören. Andere Arbeitsbereiche behalten ihre eigene Liste.",
+    attach_agent_session_picker_hint:
+      "Wählen Sie eine Sitzung für diesen Arbeitsbereich. Ihr Agent wird ebenfalls zugeordnet, falls er noch nicht im Arbeitsbereich ist.",
+    no_unattached_sessions:
+      "Jede Sitzung ist diesem Arbeitsbereich bereits zugeordnet.",
+    session_attached: "{{name}} wurde diesem Arbeitsbereich zugeordnet.",
+    no_available_agents: "Keine nicht verknüpften Agenten verfügbar.",
+    agents: "Agenten",
+    agent: {
+      title: "Agent",
+      browser_title: "Pi-Agent im Browser",
+      browser_description:
+        "Läuft im Browser. Keine Shell, kann aber Dateien im Arbeitsbereich lesen und schreiben.",
+      opencode_title: "OpenCode-Server",
+      opencode_description:
+        "Verbinden Sie einen OpenCode-Server über seine Adresse und nutzen Sie ihn mit Chat AI.",
+      remote_title: "Remote-Agent",
+      remote_description:
+        "Der Agent des GWDG-HPC-Agentendienstes, der auch in der Seitenleiste erscheint.",
+      choose_existing: "Vorhandenen Agenten wählen",
+      add_new: "Neuen Agenten hinzufügen",
+      no_agents: "Noch keine Agenten dieser Art.",
+      in_use: "In Verwendung",
+      available: "Verfügbar",
+      back: "Zurück",
+    },
+    no_attached_agents: "Noch keine Agenten verknüpft.",
+    detach_agent: "Agent trennen",
+    chat_workspaces: "Arbeitsbereich",
+    chat_workspaces_attached_hint:
+      "Dieser Chat ist mit {{names}} verknüpft und kann alle Dateien dort nutzen.",
+    access_storage: "Auf Speicher zugreifen",
+    access_storage_hint:
+      "Das Modell darf die Dateien dieses Chats und seiner verknüpften Arbeitsbereiche lesen. In diesem Chat darf es immer schreiben; für einen verknüpften Arbeitsbereich gibt es den Schalter darunter.",
+    access_storage_off_hint:
+      "Das Modell erhält keine Dateiwerkzeuge. Anhänge werden weiterhin in die Nachricht aufgenommen, sofern ihr Text lesbar ist.",
+    workspace_write_access_hint:
+      "Das Modell darf Dateien in den verknüpften Arbeitsbereichen ändern.",
+    settings_title: "Lokaler Agent",
+    attach_from_workspace: "Aus Arbeitsbereich anhängen",
+    attach_from_workspace_hint:
+      "Wählen Sie eine Datei aus einem verknüpften Arbeitsbereich und fügen Sie sie dieser Nachricht hinzu.",
+    attach_from_workspace_loading: "Dateien werden geladen…",
+    sidebar_title: "Arbeitsbereiche",
+    new_workspace: "Neuer Arbeitsbereich",
+    empty_sidebar_title: "Arbeitsbereich erstellen",
+    create_title: "Arbeitsbereich erstellen",
+    name_label: "Name des Arbeitsbereichs",
+    name_placeholder: "z. B. Recherche",
+    create_workspace: "Arbeitsbereich erstellen",
+    apply_changes: "Änderungen übernehmen",
+    apply_applying: "Wird gespeichert…",
+    create_tree_title: "Arbeitsbereich",
+    create_add: "Zum Arbeitsbereich hinzufügen",
+    create_empty_hint:
+      "Noch nichts hinzugefügt – wähle links einen Ordner oder ein Repository.",
+    create_sources_hint:
+      "Wähle einen Ordner oder klone ein Repository – er erscheint im Arbeitsbereich.",
+    name_required: "Geben Sie einen Namen ein",
+    name_prompt: "Wählen Sie einen Namen für Ihren Arbeitsbereich",
+    name_taken: "Ein Arbeitsbereich mit diesem Namen existiert bereits",
+    create_error: "Der Arbeitsbereich konnte nicht erstellt werden",
+    update_error: "Der Arbeitsbereich konnte nicht gespeichert werden",
+    not_found: "Arbeitsbereich nicht gefunden",
+    files_title: "Arbeitsbereich-Dateien",
+    detach: "Abtrennen",
+    detach_hint: "Diesen Ordner vom Arbeitsbereich trennen",
+    detach_mount_only:
+      "Nur ein in den Arbeitsbereich eingebundener Ordner kann abgetrennt werden",
+    storage_browser_private: "Privat für diesen Arbeitsbereich",
+    repositories: "Repositories",
+    repositories_count_one: "{{count}} Repository",
+    repositories_count_other: "{{count}} Repositories",
+    storage_mcp_servers: "MCP-Server",
+    connect_mcp: "MCP-Server verbinden",
+    clone_repository: "Repository klonen",
+    mcp_transport_streamable_http: "Streamable HTTP",
+    mcp_transport_sse: "SSE",
+    delete_workspace: "Arbeitsbereich löschen",
+    delete_confirm:
+      "Diesen Arbeitsbereich löschen? Quellenliste und Übertragungsverlauf werden entfernt. Gerätedateien bleiben auf diesem Gerät; Arcana-Dateien bleiben in ihrer Sammlung.",
+    delete_error: "Der Arbeitsbereich konnte nicht gelöscht werden",
+    sources: "Quellen",
+    source_browser: {
+      title: "Speicherorte",
+      source_broken: "„{{name}}“ funktioniert gerade nicht.",
+      source_needs_permission:
+        "„{{name}}“ hat die Zugriffsberechtigung verloren — öffne sie und erlaube den Zugriff erneut.",
+      source_unreachable:
+        "„{{name}}“ ist nicht erreichbar — der Dienst antwortet gerade nicht.",
+      source_error_detail: "„{{name}}“ konnte nicht geöffnet werden: {{detail}}",
+      device: "Dieses Gerät",
+      chats: "Browser",
+      arcanas: "Arcanas",
+      mcp: "MCP",
+      saia_fs: "SAIA-Dateien",
+      saia_hint: "Dein SAIA-Kontoordner",
+      add_to_workspace: "Zum Arbeitsbereich hinzufügen",
+      add_to_workspace_count: "Zum Arbeitsbereich hinzufügen ({{count}})",
+      unmount: "Aushängen",
+      unmount_count: "Aushängen ({{count}})",
+      unmount_hint:
+        "Diesen Ordner vollständig aus Chat AI entfernen — alle Arbeitsbereiche nutzen ihn nicht mehr und er verschwindet aus dieser Liste. Du kannst ihn jederzeit wieder hinzufügen.",
+      selected_one: "{{count}} ausgewählt",
+      selected_many: "{{count}} ausgewählt",
+      empty: "Hier ist noch nichts",
+      add_current_folder: "Diesen Ordner zum Arbeitsbereich hinzufügen",
+      add_current_dir: "Aktuellen Ordner zum Arbeitsbereich hinzufügen",
+      empty_folder_hint:
+        "Der Ordner ist gerade leer, bleibt aber verknüpft: Dateien, die du später hier anlegst oder hochlädst, erscheinen darin.",
+      loading: "Wird geladen...",
+      unavailable: "Diese Quelle ist nicht verfügbar.",
+      back: "Zurück",
+      select_all: "Alle auswählen",
+      clear: "Auswahl aufheben",
+      add_device_folder: "Ordner von diesem Gerät hinzufügen",
+      device_empty_title: "Hier ist noch nichts.",
+      device_empty_body:
+        "Ziehe einen Ordner hierher oder klicke, um einen von diesem Gerät einzubinden.",
+      device_drop_rejected:
+        "Der abgelegte Eintrag war kein Ordner. Klicke, um einen Ordner von diesem Gerät einzubinden.",
+      in_workspace: "Im Arbeitsbereich",
+      untitled_chat: "Unbenannter Chat",
+      pick_source: "Wählen Sie links eine Quelle, um ihre Dateien zu durchsuchen.",
+      added: "{{count}} Elemente hinzugefügt",
+      added_one: "{{count}} Element hinzugefügt",
+      added_other: "{{count}} Elemente hinzugefügt",
+      add_failed: "{{count}} Elemente konnten nicht hinzugefügt werden",
+      add_failed_one: "{{count}} Element konnte nicht hinzugefügt werden",
+      add_failed_other: "{{count}} Elemente konnten nicht hinzugefügt werden",
+      adding_progress: "{{done}} von {{total}} werden hinzugefügt…",
+      folders_one: "{{count}} Ordner",
+      folders_other: "{{count}} Ordner",
+      chats_count_one: "{{count}} Chat",
+      chats_count_other: "{{count}} Chats",
+      collections_one: "{{count}} Sammlung",
+      collections_other: "{{count}} Sammlungen",
+      servers_one: "{{count}} Server",
+      servers_other: "{{count}} Server",
+      usage: "{{used}} von {{quota}} belegt",
+      chat_usage: "{{used}} von {{quota}} belegt — mit dieser App geteilt",
+    },
+    storage_badge_browser: "Browser",
+    storage_badge_device: "Gerät",
+    storage_badge_arcana: "Arcana",
+    storage_badge_mcp: "MCP",
+    storage_badge_agent: "Agent",
+    storage_badge_saia: "SAIA",
+    add_source: "Quelle hinzufügen",
+    source_kind: "Quellentyp",
+    choose_folder: "Ordner auswählen…",
+    no_sources: "Fügen Sie einen lokalen Ordner, ein Git-Repository oder einen MCP-Server hinzu.",
+    select_source: "Wählen Sie eine Quelle, um ihre Dateien zu durchsuchen.",
+    source_label: "Bezeichnung",
+    source_folder: "Ordner",
+    choose_folder_required: "Wählen Sie zuerst einen Ordner.",
+    no_folder_chosen: "Noch kein Ordner ausgewählt.",
+    source_browser_label: "Browserspeicher",
+    kind_browser: "Browser",
+    kind_local: "Lokaler Ordner",
+    kind_agent: "Agent-Dateisystem",
+    kind_chat: "Chat-Ordner",
+    kind_arcana: "Arcana",
+    "kind_arcana-filesystem": "Arcana-Dateisystem",
+    kind_mcp: "MCP",
+    "kind_saia-fs": "SAIA-Dateisystem",
+    local_hint:
+      "Der Browser fragt nach Zugriff auf den Ordner. Der Ordner bleibt auf diesem Gerät und wird nie hochgeladen.",
+    local_unsupported: "Dieser Browser kann keine lokalen Ordner öffnen.",
+    local_insecure:
+      "Lokale Ordner brauchen eine sichere Seite: https:// oder http://localhost.",
+    local_aborted:
+      "Kein Ordner übernommen. Falls kein Dialog erschien, hat Chrome den Ordner-Dialog blockiert oder der Datei-Dialog des Systems ließ sich nicht öffnen. Prüfe die Website-Berechtigung zum Bearbeiten von Dateien und wähle einen normalen Projektordner, nicht das gesamte Benutzer- oder Download-Verzeichnis.",
+    mcp_endpoint: "MCP-Endpunkt",
+    mcp_transport: "Transport",
+    mcp_allowlist: "Tool-Allowlist (kommagetrennt, optional)",
+    mcp_hint:
+      "Verwenden Sie einen MCP-Server mit streamable-HTTP oder SSE und CORS-Headern. Es werden nur die angebotenen Datei-Tools genutzt.",
+    mcp_required: "Geben Sie einen MCP-Endpunkt ein",
+    device_only_hint: "Diese Quelle ist nur auf diesem Gerät verfügbar.",
+    device_only: "Nur dieses Gerät",
+    unavailable_on_device: "Auf diesem Gerät nicht verfügbar",
+    reconnect: "Ordner neu verbinden",
+    status_error: "Fehler",
+    root: "Stamm",
+    retry: "Erneut versuchen",
+    refresh: "Aktualisieren",
+    empty_folder: "Dieser Ordner ist leer.",
+    folder_open_failed: "„{{name}}“ konnte nicht geöffnet werden",
+    drop_hint: "Dateien hier ablegen, um sie in diese Quelle zu kopieren.",
+    load_more: "Mehr laden",
+    select_all: "Alle auswählen",
+    clear_selection: "Auswahl aufheben",
+    selected_count_one: "{{count}} Element ausgewählt",
+    selected_count_other: "{{count}} Elemente ausgewählt",
+    download: "Herunterladen",
+    downloading: "Dateien werden gespeichert…",
+    preview_too_large: "Diese Datei ist zu groß für die Vorschau.",
+    preview_unavailable: "Für diesen Dateityp gibt es keine Vorschau.",
+    remove_source: "Quelle entfernen",
+    remove_source_confirm:
+      "Diese Quelle aus dem Arbeitsbereich entfernen? Die Dateien selbst werden nicht gelöscht.",
+    transfer_title: "Dateien übertragen",
+    transfer_summary:
+      "{{strategy}} {{count}} Element(e) ({{size}}) von {{from}} nach {{to}}?",
+    transfer_move_note:
+      "Das Original wird erst gelöscht, nachdem die Kopie geprüft wurde.",
+    transfer_copy_note: "Das Original bleibt in der Quelle.",
+    transfer_move: "Verschieben",
+    transfer_copy: "Kopieren",
+    move_to: "Verschieben nach…",
+    move_selection_hint_one:
+      "Das ausgewählte Element in eine andere Quelle verschieben? Das Original wird erst nach der Prüfung der Kopie gelöscht.",
+    move_selection_hint_other:
+      "Die {{count}} ausgewählten Elemente in eine andere Quelle verschieben? Das Original wird erst nach der Prüfung der Kopie gelöscht.",
+    delete_file_confirm:
+      "Diese Datei löschen? Dies kann nicht rückgängig gemacht werden.",
+    delete_folder_confirm:
+      "Diesen Ordner mit dem gesamten Inhalt löschen? Dies kann nicht rückgängig gemacht werden.",
+    delete_selection_confirm_one:
+      "Das ausgewählte Element löschen? Dies kann nicht rückgängig gemacht werden.",
+    delete_selection_confirm_other:
+      "Die {{count}} ausgewählten Elemente löschen? Dies kann nicht rückgängig gemacht werden.",
+    delete_success: "„{{name}}“ gelöscht.",
+    delete_selection_success_one: "{{count}} Element gelöscht.",
+    delete_selection_success_other: "{{count}} Elemente gelöscht.",
+    move_to_hint: "„{{name}}“ in eine andere Quelle verschieben? Das Original wird erst nach der Prüfung der Kopie gelöscht.",
+    move_to_target: "Zielquelle",
+    move_to_no_targets: "Fügen Sie zuerst eine weitere Quelle hinzu.",
+    transferring: "Übertrage…",
+    transfer_success_one: "{{count}} Element übertragen.",
+    transfer_success_other: "{{count}} Elemente übertragen.",
+    transfer_blocked: "Diese Übertragung kann nicht gestartet werden.",
+    transfer_conflict: "„{{name}}“ existiert am Ziel bereits.",
+    transfer_conflict_many:
+      "{{count}} Elemente existieren am Ziel bereits.",
+    transfer_multiple_sources: "mehreren Quellen",
+  },
+
   // Landing page
   landing: {
     title: "Sie sind nicht angemeldet",
@@ -1437,6 +2978,13 @@ export default {
     image_failed: "Bild konnte nicht geladen werden",
     video_failed: "Video konnte nicht geladen werden",
     video_unsupported: "Ihr Browser unterstützt das Video-Element nicht.",
+    html_mode: "HTML-Darstellung",
+    html_strict: "Streng",
+    html_relaxed: "Gelockert",
+    html_relaxed_hint:
+      "Streng zeigt die Seite nur an; gelockert führt auch ihre Skripte aus. Der Netzwerkzugriff folgt der Einstellung \"Externe Referenzen laden\", wie bei gerenderten HTML-Blöcken.",
+    html_relaxed_warning:
+      "Diese Seite kann Skripte ausführen und externe Ressourcen laden.",
     pdf_failed: "PDF konnte nicht angezeigt werden",
     pdf_mobile_title: "Die PDF-Vorschau ist auf Mobilgeräten nicht verfügbar",
     pdf_mobile_hint: "Bitte nutzen Sie einen Desktop-Browser für die PDF-Vorschau",
@@ -1445,6 +2993,14 @@ export default {
     pdf_missing_title: "PDF-Inhalt nicht verfügbar",
     pdf_missing_hint: "Die Daten des Original-PDFs sind für die Vorschau nicht verfügbar",
     docx_failed: "Word-Dokument konnte nicht angezeigt werden",
+    describe_image: "Bild beschreiben",
+    describe_unavailable:
+      "Für diese Installation ist kein Bildverständnis-Modell verfügbar",
+    describe_byline: "Automatisch beschrieben mit {{model}}",
+    describe_opened: "{{name}} geöffnet",
+    describe_saved: "{{name}} gespeichert",
+    describe_downloaded: "{{name}} heruntergeladen",
+    describe_failed: "Das Bild konnte nicht beschrieben werden: {{message}}",
     save: "Auf Gerät speichern",
     save_failed: "Datei konnte nicht heruntergeladen werden",
     download_aria: "Datei herunterladen",
@@ -1456,9 +3012,34 @@ export default {
       "Typst-Dokument konnte nicht gerendert werden. Quelle wird stattdessen angezeigt:",
   },
   latex: {
+    download_failed: "Das LaTeX-Dokument konnte nicht heruntergeladen werden.",
     rendering: "LaTeX-Dokument wird gerendert...",
     render_error:
       "LaTeX-Dokument konnte nicht gerendert werden. Quelle wird stattdessen angezeigt:",
+  },
+  wasm_download: {
+    title: "{{feature}}-Renderer herunterladen?",
+    body: "Das Rendern dieses Blocks lädt beim ersten Mal WebAssembly und Schriftarten herunter. Danach bleiben sie im Browser-Cache.",
+    size: "Etwa {{size}} MB",
+    confirm: "Herunterladen und rendern",
+    keep_code: "Als Code anzeigen",
+    feature_typst: "Typst",
+    feature_latex: "LaTeX",
+    feature_tikz: "TikZ",
+    feature_graphviz: "Graphviz",
+  },
+  graphviz: {
+    rendering: "Graphviz-Diagramm wird gerendert...",
+    render_error: "Graphviz-Diagramm konnte nicht gerendert werden.",
+  },
+  vega: {
+    rendering: "Diagramm wird gerendert...",
+    render_error: "Vega-Lite-Diagramm konnte nicht gerendert werden.",
+    external_blocked: "Dieses Diagramm lädt externe Daten von {{url}}. Aktivieren Sie externe Referenzen, um es zu rendern.",
+  },
+  chartjs: {
+    rendering: "Diagramm wird gerendert...",
+    render_error: "Chart.js-Diagramm konnte nicht gerendert werden.",
   },
   // Announcement
   announcement: "",
@@ -1470,5 +3051,95 @@ export default {
     edit: "Bearbeiten",
     tool_call: "Tool-Aufruf",
     select_placeholder: "Auswählen…",
+  },
+  // Theme-Auswahl (Fußzeile): hell/dunkel plus zusätzliche Marken-Themes
+  theme: {
+    label: "Theme wechseln",
+    light: "Hell",
+    dark: "Dunkel",
+    brand_themes: "Marken-Themes",
+  },
+  // Einwilligungsdialog der Marke und sein späterer Einstellungsbereich
+  consent: {
+    terms_checkbox: "Ich habe die Nutzungsbedingungen gelesen.",
+    terms_required:
+      "Bitte akzeptiere die Nutzungsbedingungen, um fortzufahren.",
+    continue: "Weiter",
+    back: "Zurück",
+    save: "Speichern und fortfahren",
+    settings_title: "Deine Einwilligungen",
+    settings_intro:
+      "Die Teilnahme ist freiwillig. Du kannst diese Auswahl jederzeit ändern.",
+    accepted_on: "Akzeptiert am {{date}}.",
+    not_accepted_yet: "Auf diesem Gerät noch nicht akzeptiert.",
+  },
+  // Nur für die Entwicklung: /dev/tool-form
+  tool_form_demo: {
+    title: "Tool-Formular testen",
+    description:
+      "Nur für die Entwicklung: Vorschau des Formulars, das Tool-Ergebnisse im Chat anzeigen. Beim Absenden werden die Werte hier angezeigt, statt eine Nachricht zu senden.",
+    submitted: "Übermittelte Werte",
+  },
+
+  // Fußzeile: Sprachwahl, PWA-Installation, Fehlermeldung
+  language: {
+    label: "Sprache",
+    automatic: "Automatisch (Browsersprache)",
+    auto_short: "Auto",
+    english: "Englisch",
+    german: "Deutsch",
+  },
+  pwa: {
+    install: "Diese App installieren",
+  },
+  // Informationen der Marke (/about, /accessibility) und die Sitemap
+  info: {
+    back_to_chat: "Zurück zum Chat",
+    page_external: "Diese Seite wird von der Institution hinter dieser App bereitgestellt.",
+    open_page: "Seite öffnen",
+  },
+  about: {
+    title: "Über diese App",
+  },
+  accessibility: {
+    title: "Barrierefreiheit",
+  },
+  sitemap: {
+    title: "Sitemap",
+    general: "Allgemein",
+    pages: "Informationen",
+  },
+  bug_report: {
+    title: "Problem melden",
+    intro:
+      "Beschreibe, was passiert ist. Die Meldung geht zusammen mit der Seitenadresse und deiner Browser-Version an den Betrieb dieser Anwendung.",
+    type_label: "Typ",
+    type_bug: "Fehler",
+    type_feedback: "Rückmeldung",
+    type_accessibility: "Barrierefreiheit",
+    type_other: "Sonstiges",
+    message_label: "Beschreibung",
+    message_placeholder:
+      "Was hast du getan, was hast du erwartet und was ist stattdessen passiert?",
+    screenshot_label: "Screenshots (optional)",
+    screenshot_hint: "Bis zu {{count}} Dateien mit je {{size}} (PNG, JPEG oder WebP).",
+    email_label: "Kontaktadresse (optional)",
+    email_placeholder: "du@example.org",
+    diagnostics_label: "Diese Diagnosedaten werden mitgesendet",
+    unavailable:
+      "In dieser Installation gibt es keinen Empfänger für Rückmeldungen, daher kann die Meldung nicht gesendet werden. Du kannst sie kopieren und an den Betrieb weitergeben.",
+    copy: "Meldung kopieren",
+    copied: "Kopiert",
+    sent: "Danke — die Meldung wurde gesendet.",
+    success: "Meldung gesendet.",
+    sending: "Wird gesendet…",
+    submit: "Meldung senden",
+    error_type: "Anhängen lassen sich nur PNG-, JPEG- und WebP-Bilder.",
+    error_size: "Ein Screenshot darf höchstens {{size}} groß sein.",
+    error_count: "Du kannst höchstens {{count}} Screenshots anhängen.",
+    error_description: "Bitte beschreibe das Problem.",
+    error_rejected:
+      "Die Meldung wurde abgelehnt. Bitte kürze sie oder entferne einen Anhang.",
+    error_failed: "Die Meldung konnte nicht gesendet werden. Bitte später erneut versuchen.",
   },
 };

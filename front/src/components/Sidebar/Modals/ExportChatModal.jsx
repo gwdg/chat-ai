@@ -6,10 +6,10 @@ import icon_file_pdf from "../../../assets/icons/file_pdf.svg";
 import icon_file_text from "../../../assets/icons/file_text.svg";
 import { getConversation } from "../../../db";
 import { useToast } from "../../../hooks/useToast";
-import { jsPDF } from "jspdf";
-import Logo from "../../../assets/logos/chat_ai.png"
+import { useBrand } from "../../../config/BrandProvider";
 import { processContentItems } from "../../../utils/sendMessage";
 import { hasMcpServerValue, withoutHeaders } from "../../../agent/mcp";
+import { isArcanasEnabled } from "../../../utils/modules";
 
 export default function ExportChatModal({
   isOpen,
@@ -26,6 +26,7 @@ export default function ExportChatModal({
   const [conversation, setConversation] = useState(null);
 
   const { notifyError, notifySuccess } = useToast();
+  const { brand } = useBrand();
 
   // Async function to load conversation from DB
   const refreshConversation = async () => {
@@ -52,7 +53,10 @@ export default function ExportChatModal({
   }, [conversationId, isOpen, onClose]); // Re-run when conversationId changes
 
   if (!conversation) return null; // Or a loading indicator
-  const isArcanaSupported = conversation.settings?.model?.input?.includes("arcana") || conversation.settings?.enable_tools;
+  const isArcanaSupported =
+    isArcanasEnabled() &&
+    (conversation.settings?.model?.input?.includes("arcana") ||
+      conversation.settings?.enable_tools);
   const messages = conversation?.messages
   const arcana = conversation?.settings?.arcana
   const mcpServers = conversation?.settings?.mcp_servers;
@@ -247,6 +251,8 @@ export default function ExportChatModal({
   // Export conversation as PDF
   const exportPDF = async () => {
     try {
+      // jsPDF (and the html2canvas it pulls in) only loads when exporting.
+      const { jsPDF } = await import("jspdf");
       // Initialize PDF document
       const doc = new jsPDF();
       doc.setProperties({
@@ -277,9 +283,8 @@ export default function ExportChatModal({
       // Add header to each page
       const addHeader = (isFirstPage) => {
         y = margin;
-        // TODO fix logo
-        if (isFirstPage) {
-          doc.addImage(Logo, "PNG", margin, margin, 20, 8);
+        if (isFirstPage && brand?.assets?.export) {
+          doc.addImage(brand.assets.export, "PNG", margin, margin, 20, 8);
         }
         const date = new Date().toLocaleDateString();
         doc.setFontSize(10);

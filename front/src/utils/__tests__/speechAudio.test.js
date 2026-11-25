@@ -52,6 +52,16 @@ describe("speech helpers", () => {
     expect(getSpeechModule()).toBeNull();
   });
 
+  it("enables browser speech when the module is true or browser", () => {
+    for (const raw of ['"browser"', "true"]) {
+      import.meta.env.VITE_MODULE_SPEECH = raw;
+      expect(getSpeechModule()).toEqual({ model: null, voice: null });
+      expect(
+        resolveTtsConfig({ audio: { voice: "auto", language: "auto" } }, "en-US"),
+      ).toEqual({ module: { model: null, voice: null }, model: null, voice: null, language: "en" });
+    }
+  });
+
   it("removes markdown and thinking from speech text", () => {
     const text = toSpeechText(
       "**Hello** [world](https://example.com) `code`  thinkingsecret</think>\n```js\nx\n```",

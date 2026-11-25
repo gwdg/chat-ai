@@ -2,7 +2,20 @@ import { useEffect } from "react";
 
 import { useModal } from "../modals/ModalContext";
 
-const SETTINGS_TABS = new Set(["profile", "chat", "memories", "data"]);
+const SETTINGS_TABS = new Set([
+  "profile",
+  "profile/user",
+  "profile/institution",
+  "usage",
+  "chat",
+  "advanced",
+  "memories",
+  "encryption",
+  "data",
+  "data/manage",
+  "data/backup",
+  "data/sync",
+]);
 
 export function useSettingsDeepLink({ localState, userData, modelsData }) {
   const { openModal } = useModal();

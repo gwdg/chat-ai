@@ -1,8 +1,15 @@
-// One filesystem per conversation, stored in OPFS under "conversations/<id>".
+// One filesystem per conversation, stored in OPFS under "chats/<id>" (workspace/chatStorage.ts).
 // Local folders picked by the user are mounted into it at "/local/<folder name>"; their handles
 // are kept in IndexedDB, and permission is asked for again the first time the agent uses one.
-import { HandleFs, MountFs, PermissionFs, walk } from "./vfs";
+import { HandleFs, MountFs, PermissionFs } from "./vfs";
 import { deleteAllMounts, deleteMounts, getMounts, saveMount } from "../db/mounts";
+import {
+  chatStorageDir,
+  chatStorageSize,
+  copyChatStorage,
+  deleteAllChatStorage,
+  deleteChatStorage,
+} from "../workspace/chatStorage";
 
 const workspaces = new Map<string, MountFs>();
 
@@ -27,15 +34,15 @@ function requestPersistence() {
   navigator.storage.persist?.().catch(() => {});
 }
 
-async function conversationsDir() {
-  const opfs = await navigator.storage.getDirectory();
-  return opfs.getDirectoryHandle("conversations", { create: true });
+/** Bytes stored in this conversation's browser (OPFS) workspace. */
+export async function getWorkspaceSize(conversationId: string): Promise<number> {
+  return chatStorageSize(conversationId);
 }
 
 export async function getWorkspace(conversationId: string): Promise<MountFs> {
   let fs = workspaces.get(conversationId);
   if (!fs) {
-    const dir = await (await conversationsDir()).getDirectoryHandle(conversationId, { create: true });
+    const dir = await chatStorageDir(conversationId);
     fs = new MountFs(new HandleFs(dir));
     for (const { path, handle } of await getMounts(conversationId)) fs.mount(path, new PermissionFs(handle, askAccess));
     workspaces.set(conversationId, fs);
@@ -70,36 +77,18 @@ export function listMounts(conversationId: string): string[] {
 
 /** Copies a conversation's files and mounted folders to another one, for a fork. */
 export async function copyWorkspace(fromId: string, toId: string) {
-  const dirs = await conversationsDir();
-  let from: HandleFs;
-  try {
-    from = new HandleFs(await dirs.getDirectoryHandle(fromId));
-  } catch {
-    // never created
-    return;
-  }
-  const to = new HandleFs(await dirs.getDirectoryHandle(toId, { create: true }));
-  for (const path of await walk(from)) await to.writeFile(path, await from.readFile(path));
+  await copyChatStorage(fromId, toId);
   for (const { path, handle } of await getMounts(fromId)) await saveMount({ conversationId: toId, path, handle });
 }
 
 export async function deleteWorkspace(conversationId: string) {
   workspaces.delete(conversationId);
   await deleteMounts(conversationId);
-  try {
-    await (await conversationsDir()).removeEntry(conversationId, { recursive: true });
-  } catch {
-    // never created
-  }
+  await deleteChatStorage(conversationId);
 }
 
 export async function deleteAllWorkspaces() {
   workspaces.clear();
   await deleteAllMounts();
-  try {
-    const opfs = await navigator.storage.getDirectory();
-    await opfs.removeEntry("conversations", { recursive: true });
-  } catch {
-    // never created
-  }
+  await deleteAllChatStorage();
 }

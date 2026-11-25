@@ -13,6 +13,7 @@ import { validate as validateUUID, version as versionUUID } from "uuid";
 import { useModal } from "../modals/ModalContext";
 import { selectUserSettings } from "../Redux/reducers/userSettingsReducer";
 import { getDefaultConversation } from "../utils/conversationUtils";
+import { CONVERSATION_MOVED_EVENT } from "../utils/conversationEvents";
 import { useImportConversation } from "./useImportConversation";
 import { decodeBase64UrlUtf8 } from "../utils/base64url";
 function validateConversationId(conversationId: string): boolean {
@@ -220,6 +221,7 @@ export function useSyncConversation({
   const latestStateRef = useRef<Record<string, any>>({});
   const saveInFlight = useRef(false);
   const needsRetry = useRef(false);
+  const performSaveRef = useRef<(() => Promise<void>) | null>(null);
   const importDisclaimerDecisions = useRef(new Map<string, any>());
 
   // Effect 1: Try to load conversation on mount
@@ -421,14 +423,21 @@ export function useSyncConversation({
         setLocalState( updatedConversation );
         return;
       }
-      // Sanity check
+      // Sanity check: keep every stored message and only fill in the system
+      // message / trailing prompt placeholder that the UI expects.
       if (!(conversation?.messages?.length >= 2)) {
-        console.log("Sanitizing conversation...");
-        const updatedConversation = {
-          ...conversation,
-          messages: getDefaultConversation().messages
+        console.log("Completing conversation...");
+        const defaults = getDefaultConversation();
+        const messages = Array.isArray(conversation?.messages)
+          ? [...conversation.messages]
+          : [];
+        if (!messages.some((message) => message?.role === "system")) {
+          messages.unshift(defaults.messages[0]);
         }
-        setLocalState( updatedConversation );
+        if (!messages.some((message) => message?.role !== "system")) {
+          messages.push(defaults.messages[1]);
+        }
+        setLocalState({ ...conversation, messages });
         return;
       }
       setLocalState(conversation);
@@ -474,6 +483,10 @@ export function useSyncConversation({
         return;
       }
       const snapshot = { ...stateForConversation };
+      // The topic belongs to the sidebar's move actions (assignConversationToFolder),
+      // which bump lastModified on their own. A content save must not repeat the
+      // folderId it loaded: after a move that would put the chat back.
+      delete snapshot.folderId;
       let ignoreConflict = false;
       if (snapshot?.ignoreConflict) {
         ignoreConflict = true;
@@ -483,43 +496,51 @@ export function useSyncConversation({
         delete snapshot.flush;
       }
 
-      let lastModifiedForSave = lastModified.current[currentConversation];
-      if (lastModifiedForSave == null) {
-        const meta = await getConversationMeta(currentConversation);
-        lastModifiedForSave = meta?.lastModified ?? 0;
-        lastModified.current[currentConversation] = lastModifiedForSave;
-      }
-
-      const newLastModified = await updateConversation(
-        currentConversation,
-        { ...snapshot, lastModified: lastModifiedForSave }
-      );
-
-      const pendingSaveRequested = needsRetry.current;
-
-      saveInFlight.current = false;
-      delete timeoutIds.current[currentConversation];
-
-      if (newLastModified === -1) { // Conflict detected
-        needsRetry.current = false;
-        if (!ignoreConflict) {
-          console.log("Conflict for conversation ", currentConversation);
-          openModal("conversationConflict", { localState: snapshot, setLocalState, setUnsavedChanges });
+      try {
+        let lastModifiedForSave = lastModified.current[currentConversation];
+        if (lastModifiedForSave == null) {
+          const meta = await getConversationMeta(currentConversation);
+          lastModifiedForSave = meta?.lastModified ?? 0;
+          lastModified.current[currentConversation] = lastModifiedForSave;
         }
-        return;
-      }
 
-      // Save successful
-      lastModified.current[currentConversation] = newLastModified;
+        const newLastModified = await updateConversation(
+          currentConversation,
+          { ...snapshot, lastModified: lastModifiedForSave }
+        );
 
-      if (pendingSaveRequested) {
-        needsRetry.current = false;
-        setTimeout(performSave, 0);
-      } else {
-        console.log("Conversation auto-saved");
-        setUnsavedChanges(false);
+        const pendingSaveRequested = needsRetry.current;
+
+        saveInFlight.current = false;
+        delete timeoutIds.current[currentConversation];
+
+        if (newLastModified === -1) { // Conflict or missing conversation
+          needsRetry.current = false;
+          if (!ignoreConflict) {
+            console.log("Conflict for conversation ", currentConversation);
+            openModal("conversationConflict", { localState: snapshot, setLocalState, setUnsavedChanges });
+          }
+          return;
+        }
+
+        // Save successful
+        lastModified.current[currentConversation] = newLastModified;
+
+        if (pendingSaveRequested) {
+          needsRetry.current = false;
+          setTimeout(performSave, 0);
+        } else {
+          console.log("Conversation auto-saved");
+          setUnsavedChanges(false);
+        }
+      } catch (error) {
+        console.error("Failed to autosave conversation", error);
+        saveInFlight.current = false;
+        delete timeoutIds.current[currentConversation];
+        setUnsavedChanges(true);
       }
     };
+    performSaveRef.current = performSave;
 
     // Schedule a save after `delay` ms
     timeoutIds.current[currentConversation] = setTimeout(
@@ -543,6 +564,23 @@ export function useSyncConversation({
     };
   }, []);
 
+  // Flush the debounced autosave when the page is hidden or closed.
+  useEffect(() => {
+    const flush = () => {
+      const save = performSaveRef.current;
+      if (save) void save();
+    };
+    const handleVisibility = () => {
+      if (document.hidden) flush();
+    };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, []);
+
   // Effect 4: Update conversation when tab is activated
   useEffect(() => {
     if (!isActive) return;
@@ -552,7 +590,9 @@ export function useSyncConversation({
       if (unsavedChanges) return; // Wait for user decision
       // Check if any changes were made while inactive
       const currentConversation = localState?.id;
-      const lastModifiedDB = (await getConversationMeta(currentConversation)).lastModified;
+      const meta = await getConversationMeta(currentConversation);
+      if (!meta) return;
+      const lastModifiedDB = meta.lastModified;
       if (lastModified.current[currentConversation] === lastModifiedDB) return; // No changes
       // Changes detected, load from DB
       setInitialized(false);
@@ -563,4 +603,28 @@ export function useSyncConversation({
       console.log("Loaded updated conversation from browser");
     })();
   }, [isActive]);
+
+  // Effect 5: adopt a topic move made elsewhere (sidebar drag and drop, "Move to
+  // topic", the organizer, a Meta-chat proposal). The move bumps lastModified, so
+  // without adopting it the next autosave here looks stale and reports a conflict.
+  useEffect(() => {
+    const handleMoved = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (!detail?.conversationId) return;
+      const movedId = detail.conversationId;
+      const movedLastModified = detail.lastModified ?? Date.now();
+      lastModified.current[movedId] = movedLastModified;
+      setLocalState((prev: any) =>
+        prev && prev.id === movedId
+          ? {
+              ...prev,
+              folderId: detail.folderId ?? null,
+              lastModified: movedLastModified,
+            }
+          : prev,
+      );
+    };
+    window.addEventListener(CONVERSATION_MOVED_EVENT, handleMoved);
+    return () => window.removeEventListener(CONVERSATION_MOVED_EVENT, handleMoved);
+  }, [setLocalState]);
 }

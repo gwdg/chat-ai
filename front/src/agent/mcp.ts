@@ -3,6 +3,7 @@
 // The SDK is loaded only when a server is enabled.
 import type { AgentTool, AgentToolResult } from "@earendil-works/pi-agent-core";
 import i18n from "../i18n";
+import { isBrandExternalAllowed } from "../config/brandPolicy";
 import { requestMcpConfirmation } from "./mcpConfirmation";
 
 export interface McpServer {
@@ -14,17 +15,86 @@ export interface McpServer {
   headers?: Record<string, string>;
 }
 
-/** A gateway server entry: a server id. Older conversations store it as a bare string. */
-export function isRemoteMcpServer(server: unknown): server is { id: string; enabled?: boolean } {
-  return (
-    !!server &&
-    typeof server === "object" &&
-    typeof (server as { id?: unknown }).id === "string" &&
-    typeof (server as { url?: unknown }).url !== "string"
-  );
+export interface GlobalMcpServer {
+  id: string;
+  name?: string;
+  url: string;
+  headers?: Record<string, string>;
 }
 
+/** How the advanced setting lets chat turns call tools of user-added MCP servers. */
+export type McpToolPolicy = "ask" | "always" | "never";
+
+const selectedIds = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? value
+        .map((item) =>
+          typeof item === "string"
+            ? item
+            : item && typeof item === "object" && typeof (item as any).id === "string"
+              ? (item as any).id
+              : "",
+        )
+        .filter(Boolean)
+    : [];
+
+/** Per-chat settings with legacy server entries plus the globally configured selections. */
+export function resolveMcpServers(settings: any, globals: GlobalMcpServer[] = []) {
+  // A brand may forbid user-configured MCP servers entirely (config/brandPolicy.js).
+  // Returning none here covers the agent turn, the idle prefetch and the plain
+  // chat request, because every caller resolves the list through this function.
+  if (!isBrandExternalAllowed("mcp")) return [];
+  const legacy = mcpServers(settings);
+  const configuredIds = selectedIds(settings?.mcp_local_server_ids);
+  // Turning MCP support on without ever choosing a server means "all configured servers"; an
+  // explicit selection (including an empty one) or legacy per-chat entries wins over that.
+  // The key is absent until the picker is used, so `[]` means the user cleared the selection.
+  const hasSelection = Array.isArray(settings?.mcp_local_server_ids);
+  const localIds = new Set(
+    !hasSelection && legacy.length === 0 && settings?.tools?.mcp === true
+      ? (globals ?? []).map((server) => server.id).filter(Boolean)
+      : configuredIds,
+  );
+  // Once a chat selects globally configured servers, those definitions win over legacy per-chat
+  // entries; this keeps the connection on the address stored in the global settings.
+  const legacyLocal = localIds.size ? [] : legacy;
+  const byId = new Map((globals ?? []).map((server) => [server.id, server]));
+  const selected = [...localIds]
+    .map((id) => byId.get(id))
+    .filter((server): server is GlobalMcpServer => !!server?.url)
+    .map((server) => ({
+      url: server.url,
+      name: server.name,
+      headers: server.headers,
+      enabled: true,
+      globalId: server.id,
+    }));
+  const merged: any[] = [...legacyLocal, ...selected];
+  const seen = new Set<string>();
+  return merged.filter((server) => {
+    const key = normalizeMcpUrl(server?.url ?? "");
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+export const hasSelectedLocalMcpServers = (settings: any) =>
+  selectedIds(settings?.mcp_local_server_ids).length > 0;
+
 const LOCAL_HOST = /^(localhost|127(?:\.\d{1,3}){3}|\[?::1\]?|0\.0\.0\.0)(?::\d+)?(?:[/?#]|$)/i;
+const HOST_LABEL = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i;
+
+/**
+ * URL accepts host names that DNS does not, such as `julian_kunkel`; a bare word like that is
+ * usually a user name or a label, not a server address. Reject those instead of contacting them.
+ */
+function isValidMcpHost(hostname: string): boolean {
+  if (!hostname) return false;
+  if (hostname.startsWith("[")) return true; // IPv6 literal, already validated by URL
+  const labels = hostname.replace(/\.$/, "").split(".");
+  return labels.every((label) => HOST_LABEL.test(label));
+}
 
 /** A server URL with a scheme; bare hosts like `localhost:9000` default to http on this machine. */
 export function normalizeMcpUrl(value: unknown): string {
@@ -35,15 +105,16 @@ export function normalizeMcpUrl(value: unknown): string {
     : `${LOCAL_HOST.test(raw) ? "http" : "https"}://${raw}`;
   try {
     const url = new URL(candidate);
-    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : "";
+    if (url.protocol !== "http:" && url.protocol !== "https:") return "";
+    return isValidMcpHost(url.hostname) ? url.toString() : "";
   } catch {
     return "";
   }
 }
 
 /**
- * The servers in `settings.mcp_servers`. Older conversations hold a gateway server id
- * (a string) there; those are not URLs and are ignored.
+ * The servers in `settings.mcp_servers`. Older conversations held a gateway server id (a
+ * string, or an entry without a URL); those are not addresses and are ignored.
  */
 export function mcpServers(settings: any): McpServer[] {
   const value = settings?.mcp_servers;
@@ -60,14 +131,7 @@ export const activeMcpServers = (settings: any) =>
         .filter((server) => server.url)
     : [];
 
-/** Whether `settings.mcp_servers` holds a gateway server id. */
-export const hasRemoteMcpServerValue = (value: unknown) =>
-  typeof value === "string"
-    ? value.trim().length > 0
-    : Array.isArray(value) &&
-      value.some((server) => isRemoteMcpServer(server) && server.id.trim().length > 0);
-
-/** Whether `settings.mcp_servers` holds a server the agent connects to by URL. */
+/** Whether `settings.mcp_servers` holds a server with a URL. */
 export const hasLocalMcpServerValue = (value: unknown) =>
   Array.isArray(value) &&
   value.some(
@@ -78,24 +142,37 @@ export const hasLocalMcpServerValue = (value: unknown) =>
       (server as { url: string }).url.trim().length > 0,
   );
 
-/** Whether `settings.mcp_servers` holds anything: a gateway id or a server with a URL. */
-export const hasMcpServerValue = (value: unknown) =>
-  hasLocalMcpServerValue(value) || hasRemoteMcpServerValue(value);
-
-/**
- * The MCP tool has two backends: local URLs in the agent (`tools.mcp`) and gateway server ids
- * in the GWDG tools (`tools.mcp_remote`). Old conversations only have `tools.mcp`; treat that
- * as the remote switch too when remote entries are stored.
- */
-export const remoteMcpEnabled = (settings: any) => {
-  const flag = settings?.tools?.mcp_remote;
-  if (typeof flag === "boolean") return flag;
-  return settings?.tools?.mcp === true && hasRemoteMcpServerValue(settings?.mcp_servers);
-};
+/** Whether `settings.mcp_servers` holds any server. */
+export const hasMcpServerValue = (value: unknown) => hasLocalMcpServerValue(value);
 
 /** The servers without their headers, for sharing and exporting. */
 export const withoutHeaders = (servers: unknown) =>
   Array.isArray(servers) ? servers.map(({ headers, ...rest }) => rest) : servers;
+
+export type McpStatusValue = "ready" | "error";
+
+/** Last status per normalized server URL, from a test or a real connection in this tab. */
+const serverStatuses = new Map<string, McpStatusValue>();
+
+/** The last known status of a server, so a light can start green instead of untested. */
+export function getMcpServerStatus(url: string): McpStatusValue | undefined {
+  return serverStatuses.get(normalizeMcpUrl(url));
+}
+
+/**
+ * Records a server status and announces it, so the sidebar light follows every test (settings,
+ * dialog, sidebar, Meta chat) and every connection the agent opens.
+ */
+export function reportMcpServerStatus(url: string, status: McpStatusValue) {
+  const key = normalizeMcpUrl(url);
+  if (!key) return;
+  const previous = serverStatuses.get(key);
+  serverStatuses.set(key, status);
+  if (previous === status || typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent("chatai:mcp-status", { detail: { url: key, status } }),
+  );
+}
 
 export class McpUnavailableError extends Error {
   constructor(readonly url: string, cause: unknown) {
@@ -129,7 +206,10 @@ type Connection = { client: any; tools: any[]; prefix: string; name: string };
 // (prefetchMcpServers) and kept across turns; one that fails is dropped and opened again
 // on the next use, so only then does a turn wait for the connection.
 const connections = new Map<string, Promise<Connection>>();
-const keyOf = (server: McpServer) => JSON.stringify([server.url, server.headers ?? {}]);
+// The normalized URL is the identity: the settings keep what the user typed, so the same
+// server could otherwise be opened twice and one entry would never be dropped.
+const keyOf = (server: McpServer) =>
+  JSON.stringify([normalizeMcpUrl(server.url), server.headers ?? {}]);
 
 function drop(key: string, connection?: Promise<Connection>) {
   const current = connections.get(key);
@@ -138,13 +218,36 @@ function drop(key: string, connection?: Promise<Connection>) {
   current.then(({ client }) => client.close()).catch(() => {});
 }
 
+/**
+ * The browser reports a refused connection, a rejected CORS preflight and a mixed-content
+ * block all as a bare `TypeError: Failed to fetch` (Firefox: `NetworkError`; Safari: `Load
+ * failed`), and an SDK may re-wrap it. Naming the address and the three causes is the only
+ * way the user (or a model reading a tool result) can tell them apart.
+ */
+const FETCH_FAILURE = /Failed to fetch|NetworkError|Load failed|Network request failed/i;
+
+function asReachableError(url: string, error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  if (!(error instanceof TypeError) && !FETCH_FAILURE.test(message)) return error;
+  return new Error(
+    `Could not reach the MCP server at ${url}: the browser must be able to call it. ` +
+      "Check that it is running, that it answers this page's origin with CORS headers, " +
+      "and that an https page is not calling a plain http host other than localhost.",
+  );
+}
+
 async function open(server: McpServer): Promise<Connection> {
+  // Normalize before parsing: `new URL("localhost:9000/mcp")` reads `localhost:` as the
+  // scheme and every request then fails with `Failed to fetch`, while the settings test —
+  // which does normalize — reports the same server as working.
+  const url = normalizeMcpUrl(server.url);
+  if (!url) throw new Error(i18n.t("settings.mcp_test_invalid_url"));
   const [{ Client }, { StreamableHTTPClientTransport }] = await Promise.all([
     import("@modelcontextprotocol/sdk/client/index.js"),
     import("@modelcontextprotocol/sdk/client/streamableHttp.js"),
   ]);
   const client = new Client({ name: "chat-ai", version: "1.0.0" });
-  const transport = new StreamableHTTPClientTransport(new URL(server.url), {
+  const transport = new StreamableHTTPClientTransport(new URL(url), {
     requestInit: server.headers ? { headers: server.headers } : undefined,
   });
   try {
@@ -156,11 +259,13 @@ async function open(server: McpServer): Promise<Connection> {
       tools.push(...page.tools);
       cursor = page.nextCursor;
     } while (cursor);
-    const name = client.getServerVersion()?.name || new URL(server.url).host;
+    const name = client.getServerVersion()?.name || new URL(url).host;
+    reportMcpServerStatus(url, "ready");
     return { client, tools, prefix: toName(name), name };
   } catch (error) {
+    reportMcpServerStatus(url, "error");
     client.close().catch(() => {});
-    throw error;
+    throw asReachableError(url, error);
   }
 }
 
@@ -179,6 +284,68 @@ export async function testMcpServer(server: McpServer): Promise<McpTestResult> {
   } finally {
     client.close().catch(() => {});
   }
+}
+
+export interface McpServerDetails {
+  name: string;
+  title?: string;
+  version?: string;
+  description?: string;
+  websiteUrl?: string;
+  protocolVersion?: string;
+  instructions?: string;
+  capabilities: Array<{ name: string; detail?: string }>;
+  tools: Array<{ name: string; title?: string; description?: string }>;
+}
+
+const TRUE_FLAGS = (value: unknown) =>
+  value && typeof value === "object"
+    ? Object.entries(value as Record<string, unknown>)
+        .filter(([, enabled]) => enabled === true)
+        .map(([flag]) => flag)
+    : [];
+
+/**
+ * What a server reports about itself after the MCP initialize handshake: its implementation
+ * name/title/version, the negotiated protocol version, capabilities, instructions and tools.
+ * Uses the shared connection, so a server the chat already uses is not contacted twice.
+ */
+export async function describeMcpServer(server: McpServer): Promise<McpServerDetails> {
+  const { client, tools, name } = await connect(server);
+  const version = client.getServerVersion?.() as
+    | {
+        name?: string;
+        title?: string;
+        version?: string;
+        description?: string;
+        websiteUrl?: string;
+      }
+    | undefined;
+  const capabilities = (client.getServerCapabilities?.() ?? {}) as Record<
+    string,
+    unknown
+  >;
+  const protocolVersion = (
+    client.transport as { protocolVersion?: string } | undefined
+  )?.protocolVersion;
+  return {
+    name: version?.name || name,
+    title: version?.title,
+    version: version?.version,
+    description: version?.description,
+    websiteUrl: version?.websiteUrl,
+    protocolVersion,
+    instructions: client.getInstructions?.(),
+    capabilities: Object.entries(capabilities).map(([capability, value]) => {
+      const flags = TRUE_FLAGS(value);
+      return { name: capability, detail: flags.length ? flags.join(", ") : undefined };
+    }),
+    tools: tools.map((tool: any) => ({
+      name: tool.name,
+      title: tool.title,
+      description: tool.description,
+    })),
+  };
 }
 
 function connect(server: McpServer): Promise<Connection> {
@@ -201,6 +368,62 @@ export function prefetchMcpServers(servers: McpServer[]) {
   for (const server of servers) connect(server).catch(() => {});
 }
 
+const mcpResultText = (result: any) => {
+  const lines: string[] = [];
+  for (const block of result?.content ?? []) {
+    if (block.type === "text") lines.push(block.text);
+    else if (block.type === "image") lines.push(`[image ${block.mimeType ?? "image"}]`);
+    else if (block.type === "resource") lines.push(block.resource?.text ?? `[resource ${block.resource?.uri}]`);
+    else if (block.type === "resource_link") lines.push(`[resource ${block.uri}]`);
+    else lines.push(`[${block.type ?? "unsupported"} content]`);
+  }
+  return lines.filter(Boolean).join("\n") || "(no output)";
+};
+
+export async function listMcpServerTools(server: McpServer) {
+  const { tools } = await connect(server);
+  return tools.map((tool) => ({
+    name: tool.name,
+    title: tool.title,
+    description: tool.description,
+    inputSchema: tool.inputSchema,
+  }));
+}
+
+export async function callMcpServerTool(
+  server: McpServer,
+  toolName: string,
+  args: unknown,
+) {
+  const { client } = await connect(server);
+  const result = await client.callTool({
+    name: toolName,
+    arguments: (args as Record<string, unknown>) ?? {},
+  });
+  const text = mcpResultText(result);
+  return result?.isError ? `MCP error: ${text}` : text;
+}
+
+/**
+ * The upstream's own MCP answer (`content`, `isError`), for a caller that has to forward it
+ * unchanged.
+ *
+ * The bridge's single-server proxy uses this: OpenCode spawned a stdio server for one
+ * configured MCP server, so what the model sees should be that server's result — an image or a
+ * structured block included — instead of the flattened text the chat path needs.
+ */
+export async function callMcpServerToolResult(
+  server: McpServer,
+  toolName: string,
+  args: unknown,
+) {
+  const { client } = await connect(server);
+  return client.callTool({
+    name: toolName,
+    arguments: (args as Record<string, unknown>) ?? {},
+  });
+}
+
 export interface McpTools {
   tools: AgentTool<any>[];
 }
@@ -211,6 +434,11 @@ export interface McpConnectOptions {
    * Return true to connect and accept the new name; false to skip the server for this turn.
    */
   onNameMismatch?: (server: McpServer, actualName: string) => Promise<boolean>;
+  /**
+   * False skips the per-call confirmation and runs the tool directly. Used when the
+   * advanced MCP tool policy is "always"; the default asks the user for every call.
+   */
+  confirm?: boolean;
 }
 
 /**
@@ -258,20 +486,22 @@ export async function connectMcpServers(
         description: `${tool.description ?? ""} (MCP server ${server.url})`.trim(),
         parameters: (tool.inputSchema ?? { type: "object", properties: {} }) as any,
         execute: async (toolCallId, args, signal) => {
-          const allowed = await requestMcpConfirmation(
-            {
-              id: String(toolCallId),
-              server: server.url,
-              tool: tool.name,
-              callName: name,
-              args: args ?? {},
-            },
-            signal,
-          );
-          if (!allowed) {
-            throw new Error(
-              i18n.t("mcp_confirmation.denied", { tool: tool.name, server: server.url }),
+          if (options.confirm !== false) {
+            const allowed = await requestMcpConfirmation(
+              {
+                id: String(toolCallId),
+                server: server.url,
+                tool: tool.name,
+                callName: name,
+                args: args ?? {},
+              },
+              signal,
             );
+            if (!allowed) {
+              throw new Error(
+                i18n.t("mcp_confirmation.denied", { tool: tool.name, server: server.url }),
+              );
+            }
           }
           let result;
           try {

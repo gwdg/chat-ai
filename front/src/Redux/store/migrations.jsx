@@ -70,11 +70,13 @@ export const migrations = {
   2: (state) => {
     state.interface_settings = {};
     state.interface_settings.show_tour = true;
+    return state;
   },
   3: (state) => {
     state.interface_settings.show_tour = true;
     state.interface_settings.collapsed_topics = [];
-    console.log("Migrating redux to v3")
+    console.log("Migrating redux to v3");
+    return state;
   },
   4: (state) => {
     state.user_settings = {
@@ -83,6 +85,7 @@ export const migrations = {
         state.user_settings?.browser_document_conversion ?? true,
     };
     console.log("Migrating redux to v4");
+    return state;
   },
   5: (state) => {
     const settings = state.user_settings ?? {};
@@ -92,18 +95,98 @@ export const migrations = {
     delete settings.browser_document_conversion;
     state.user_settings = settings;
     console.log("Migrating redux to v5");
+    return state;
   },
   6: (state) => {
     state.interface_settings = state.interface_settings ?? {};
     state.interface_settings.conversation_sort =
       state.interface_settings.conversation_sort ?? "created_desc";
     console.log("Migrating redux to v6");
+    return state;
   },
   7: (state) => {
     state.user_settings = state.user_settings ?? {};
     state.user_settings.conversation_summaries =
       state.user_settings.conversation_summaries ?? true;
     console.log("Migrating redux to v7");
+    return state;
   },
-  // Future migrations here (e.g., 8: (state) => {...})
+  8: (state) => {
+    state.user_settings = state.user_settings ?? {};
+    state.user_settings.memory_groups = Array.isArray(
+      state.user_settings.memory_groups,
+    )
+      ? state.user_settings.memory_groups
+      : [];
+    state.user_settings.default_memory_group =
+      typeof state.user_settings.default_memory_group === "string"
+        ? state.user_settings.default_memory_group
+        : "default";
+    state.user_settings.memories = (
+      state.user_settings.memories ?? []
+    ).map((memory) => ({
+      ...memory,
+      groupId: memory?.groupId ?? "default",
+    }));
+    console.log("Migrating redux to v8");
+    return state;
+  },
+  9: (state) => {
+    // The `arcana_v2` feature guide was renamed to `arcana_tools`.
+    const rename = (list) =>
+      Array.isArray(list)
+        ? list.map((id) => (id === "arcana_v2" ? "arcana_tools" : id))
+        : list;
+    state.interface_settings = state.interface_settings ?? {};
+    state.interface_settings.completed_tutorials = rename(
+      state.interface_settings.completed_tutorials,
+    );
+    state.interface_settings.suppressed_tutorials = rename(
+      state.interface_settings.suppressed_tutorials,
+    );
+    state.interface_settings.completed_use_cases = rename(
+      state.interface_settings.completed_use_cases,
+    );
+    console.log("Migrating redux to v9");
+    return state;
+  },
+  10: (state) => {
+    // End-to-end encryption keys and model bindings; existing installs have none.
+    state.user_settings = state.user_settings ?? {};
+    state.user_settings.e2ee_keys = Array.isArray(state.user_settings.e2ee_keys)
+      ? state.user_settings.e2ee_keys
+      : [];
+    state.user_settings.e2ee_models =
+      state.user_settings.e2ee_models &&
+      typeof state.user_settings.e2ee_models === "object" &&
+      !Array.isArray(state.user_settings.e2ee_models)
+        ? state.user_settings.e2ee_models
+        : {};
+    console.log("Migrating redux to v10");
+    return state;
+  },
+  11: (state) => {
+    // MCP servers are browser-connected URLs only. Drop the old GWDG gateway entries and
+    // strip the removed `kind`/`serverId` fields from the ones that stay.
+    state.user_settings = state.user_settings ?? {};
+    state.user_settings.mcp_servers = (
+      Array.isArray(state.user_settings.mcp_servers)
+        ? state.user_settings.mcp_servers
+        : []
+    )
+      .filter(
+        (server) =>
+          server &&
+          typeof server.id === "string" &&
+          typeof server.url === "string" &&
+          server.url.trim(),
+      )
+      .map(({ kind, serverId, ...server }) => ({
+        ...server,
+        url: server.url.trim(),
+      }));
+    console.log("Migrating redux to v11");
+    return state;
+  },
+  // Future migrations here (e.g., 12: (state) => {...})
 };

@@ -4,7 +4,6 @@ import {
 } from "react";
 
 import { useTranslation } from "react-i18next";
-import ChatAiLogoMini from "../../assets/logos/chat_ai_small.ico";
 
 import { ChevronRight, HorizontalLineSolid } from "@carbon/icons-react";
 import { useWindowSize } from "../../hooks/useWindowSize";
@@ -18,6 +17,8 @@ import SummarizeChatButton from "./Buttons/SummarizeChatButton";
 import ExportChatButton from "./Buttons/ExportChatButton";
 import RenameChatButton from "./Buttons/RenameChatButton";
 import TutorialStatus from "../Others/TutorialStatus";
+import BrandLogo from "../Others/BrandLogo";
+import { isFeatureEnabled } from "../../config/deployment";
 
 export default function SidebarRail({ 
   localState,
@@ -47,7 +48,7 @@ export default function SidebarRail({
 
   const { isTouch } = useWindowSize();
   return (
-    <div className="bg-base-100 rounded-xl shadow-md
+    <div className="brand-sidebar bg-base-100 rounded-xl shadow-md
           overflow-hidden h-full flex flex-col items-center justify-between gap-2"
     >
         {/* Top - Logo and new chat */}
@@ -55,10 +56,9 @@ export default function SidebarRail({
           {/* Logo with chevron on hover */}
           <div className="relative h-10 w-10 group">
             {/* Logo */}
-            <img
+            <BrandLogo
+              variant="mark"
               className="absolute inset-0 object-contain transition-opacity duration-200 group-hover:opacity-0"
-              src={ChatAiLogoMini}
-              alt="Chat AI Logo"
             />
 
             {/* Chevron Button */}
@@ -76,7 +76,9 @@ export default function SidebarRail({
           {/* New chat button */}
           <NewChatButton variant="rail" topicId={localState?.folderId} onNewConversation={handleNewConversation} />
 
-          <TutorialStatus compact onExpand={onOpen} />
+          {isFeatureEnabled("tutorials") && (
+            <TutorialStatus compact onExpand={onOpen} />
+          )}
 
           {/* Import persona from Github button */}
           <ImportPersonaButton variant="rail" topicId={localState?.folderId} />

@@ -22,7 +22,16 @@ function getInitialValues(fields, saved) {
   return values;
 }
 
-export default function ToolForm({ form, localState, setLocalState, onUpdate }) {
+// `onSubmit` is optional. When given (e.g. by the dev-only form page) it
+// replaces the chat round trip, so the form can be exercised without sending
+// a message. Live chat always goes through `sendMessage` below.
+export default function ToolForm({
+  form,
+  localState,
+  setLocalState,
+  onUpdate,
+  onSubmit,
+}) {
   const { t } = useTranslation();
   const sendMessage = useSendMessage();
   const fields = Array.isArray(form?.fields) ? form.fields : [];
@@ -46,6 +55,15 @@ export default function ToolForm({ form, localState, setLocalState, onUpdate }) 
     e.preventDefault();
     setSending(true);
     onUpdate?.({ submitted: true, values });
+    if (typeof onSubmit === "function") {
+      try {
+        await onSubmit({ tool_id: form?.tool_id, values });
+      } finally {
+        setSending(false);
+      }
+      setEditing(false);
+      return;
+    }
     await sendMessage({
       localState,
       setLocalState,

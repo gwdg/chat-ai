@@ -1,5 +1,28 @@
 import { createSlice } from "@reduxjs/toolkit";
 
+// Interface settings follow the account through the encrypted server
+// synchronization, so a new device starts with the same theme, sort order and
+// warning choices. These keys describe this window or this device instead: the
+// sync namespace leaves them out of the archive and the import below never
+// overwrites them.
+export const DEVICE_ONLY_INTERFACE_SETTINGS = Object.freeze([
+  "show_sidebar",
+  "show_settings",
+  "collapsed_topics",
+  "expanded_agents",
+  "count_hallucination",
+  "count_announcement",
+  "agree_web_search",
+  "sync_onboarding_dismissed",
+  // A brand theme and a consent record describe this device and this person's
+  // decision here; another device starts with the default colours and is asked
+  // for its own consent.
+  "theme",
+  "consent_acceptance",
+]);
+
+const CONVERSATION_GROUPINGS = new Set(["topic", "date", "created", "size"]);
+
 const interfaceSettingsSlice = createSlice({
   name: "interface_settings",
   initialState: {
@@ -11,17 +34,29 @@ const interfaceSettingsSlice = createSlice({
     warn_share_settings: true,
     warn_regenerate: true,
     warn_fork: true,
+    warn_workspace_delete: true,
+    warn_workspace_file_delete: true,
+    warn_restore_agent_sessions: true,
     show_tour: true,
     count_hallucination: 0,
     count_announcement: 0,
     agree_web_search: false,
     show_usage_in_sidebar: true,
     collapsed_topics: [],
+    expanded_agents: [],
     conversation_sort: "created_desc",
     conversation_grouping: "topic",
     completed_tutorials: [],
     completed_use_cases: [],
     suppressed_tutorials: [],
+    sync_onboarding_dismissed: false,
+    // The active brand theme id, `"default"` for the brand's ordinary light/dark
+    // pair. Device-local: another device starts with the default colours.
+    theme: "default",
+    // Acceptance of a brand's consent gate, keyed by brand id:
+    // `{ [brandId]: { version, answers, acceptedAt } }`. Empty means "not yet
+    // accepted", which is what every browser starts with.
+    consent_acceptance: {},
   },
   reducers: {
     toggleTheme: (state) => {
@@ -88,11 +123,34 @@ const interfaceSettingsSlice = createSlice({
         }
       }
     },
+    // Counterpart to collapseTopics, used by the sidebar's expand-all control.
+    expandTopics: (state, action) => {
+      const ids = Array.isArray(action.payload)
+        ? action.payload
+        : [action.payload];
+      state.collapsed_topics = state.collapsed_topics.filter(
+        (id) => !ids.includes(id),
+      );
+    },
+    // Agent rows in the sidebar start collapsed, so their session lists are
+    // stored as the explicitly expanded ones instead of as collapsed ids.
+    toggleExpandedAgent: (state, action) => {
+      const id = action.payload;
+      if (!id) return;
+      if (!Array.isArray(state.expanded_agents)) state.expanded_agents = [];
+      if (state.expanded_agents.includes(id)) {
+        state.expanded_agents = state.expanded_agents.filter(
+          (entry) => entry !== id,
+        );
+      } else {
+        state.expanded_agents.push(id);
+      }
+    },
     setConversationSort: (state, action) => {
       state.conversation_sort = action.payload;
     },
     setConversationGrouping: (state, action) => {
-      if (["topic", "date", "created"].includes(action.payload)) {
+      if (["topic", "date", "created", "size"].includes(action.payload)) {
         state.conversation_grouping = action.payload;
       }
     },
@@ -123,6 +181,81 @@ const interfaceSettingsSlice = createSlice({
         state.suppressed_tutorials.push(action.payload);
       }
     },
+    // The first-run offer of server synchronization is shown once per browser.
+    // It is device-local on purpose: another device should get its own offer,
+    // and a synced flag would take it away before the user saw anything there.
+    dismissSyncOnboarding: (state) => {
+      state.sync_onboarding_dismissed = true;
+    },
+    // The brand theme is a plain id; `"default"` returns to the brand's light
+    // and dark palettes. Any non-string clears to the default.
+    setBrandTheme: (state, action) => {
+      const id = action.payload;
+      state.theme = typeof id === "string" && id.trim() ? id.trim() : "default";
+    },
+    // Records that this person accepted a brand's terms and answered its
+    // consents. The version is stored so a brand can re-prompt after it changes
+    // the texts, and `answers` keeps one boolean per purpose id.
+    acceptBrandConsent: (state, action) => {
+      const { brandId, version, answers, acceptedAt } = action.payload ?? {};
+      if (!brandId || typeof brandId !== "string") return;
+      const cleanAnswers = {};
+      if (answers && typeof answers === "object" && !Array.isArray(answers)) {
+        for (const [purpose, value] of Object.entries(answers)) {
+          if (typeof purpose === "string" && purpose) {
+            cleanAnswers[purpose] = Boolean(value);
+          }
+        }
+      }
+      if (!state.consent_acceptance || typeof state.consent_acceptance !== "object") {
+        state.consent_acceptance = {};
+      }
+      state.consent_acceptance[brandId] = {
+        version: typeof version === "string" ? version : String(version ?? ""),
+        answers: cleanAnswers,
+        acceptedAt:
+          typeof acceptedAt === "string" ? acceptedAt : new Date().toISOString(),
+      };
+    },
+    // Applied by the server-synchronization pull and the backup restore. Only
+    // known keys keep their exact type, and the device-local keys above are
+    // ignored even when a payload carries them, so a synced profile can never
+    // rewrite this window's view state or its consents.
+    importInterfaceSettings: (state, action) => {
+      const incoming = action.payload;
+      if (!incoming || typeof incoming !== "object" || Array.isArray(incoming)) {
+        return;
+      }
+      for (const [key, value] of Object.entries(incoming)) {
+        if (DEVICE_ONLY_INTERFACE_SETTINGS.includes(key)) continue;
+        if (!Object.prototype.hasOwnProperty.call(state, key)) continue;
+        const current = state[key];
+        if (Array.isArray(current)) {
+          if (!Array.isArray(value)) continue;
+          state[key] = value.filter((item) => typeof item === "string" && item);
+          continue;
+        }
+        if (typeof current === "boolean") {
+          if (typeof value === "boolean") state[key] = value;
+          continue;
+        }
+        if (typeof current === "number") {
+          if (typeof value === "number" && Number.isFinite(value)) {
+            state[key] = value;
+          }
+          continue;
+        }
+        if (typeof current === "string") {
+          if (typeof value !== "string" || !value) continue;
+          // The grouping drives which list the sidebar renders; an unknown
+          // value would leave it with no list at all.
+          if (key === "conversation_grouping" && !CONVERSATION_GROUPINGS.has(value)) {
+            continue;
+          }
+          state[key] = value;
+        }
+      }
+    },
   },
 });
 
@@ -143,20 +276,37 @@ export const selectConversationSort = (state) =>
   state.interface_settings.conversation_sort ?? "created_desc";
 export const selectConversationGrouping = (state) => {
   const grouping = state.interface_settings.conversation_grouping;
-  return ["date", "created"].includes(grouping) ? grouping : "topic";
+  return ["date", "created", "size"].includes(grouping) ? grouping : "topic";
 };
+// Stable empty arrays keep useSelector from reporting a new snapshot for old,
+// persisted state that predates these lists.
+const EMPTY_LIST = [];
+export const selectExpandedAgents = (state) =>
+  state.interface_settings.expanded_agents ?? EMPTY_LIST;
 export const selectCompletedTutorials = (state) =>
-  state.interface_settings.completed_tutorials ?? [];
+  state.interface_settings.completed_tutorials ?? EMPTY_LIST;
 export const selectCompletedUseCases = (state) =>
-  state.interface_settings.completed_use_cases ?? [];
+  state.interface_settings.completed_use_cases ?? EMPTY_LIST;
 export const selectSuppressedTutorials = (state) =>
-  state.interface_settings.suppressed_tutorials ?? [];
+  state.interface_settings.suppressed_tutorials ?? EMPTY_LIST;
+export const selectSyncOnboardingDismissed = (state) =>
+  state.interface_settings.sync_onboarding_dismissed === true;
+export const selectBrandTheme = (state) =>
+  state.interface_settings.theme ?? "default";
+// The consent record for one brand, or null when it has not been accepted yet.
+// A brand whose stored version no longer matches counts as not accepted.
+export const selectBrandConsent = (brandId) => (state) => {
+  const record = state.interface_settings.consent_acceptance?.[brandId];
+  return record && typeof record === "object" ? record : null;
+};
 export const {
   toggleTheme, setDarkMode, setLightMode,
   closeSettings, toggleSettings, toggleSidebar, closeSidebar, openSidebar,
   closeAnnouncement, closeHallucination, agreeWebSearch, closeTour,
-  setShowUsageInSidebar, setWarning, toggleTopic, collapseTopics,
+  setShowUsageInSidebar, setWarning, toggleTopic, collapseTopics, expandTopics,
+  toggleExpandedAgent,
   setConversationSort, setConversationGrouping, markTutorialCompleted, markUseCaseCompleted,
-  suppressTutorial,
+  suppressTutorial, dismissSyncOnboarding, importInterfaceSettings,
+  setBrandTheme, acceptBrandConsent,
 } = interfaceSettingsSlice.actions;
 export default interfaceSettingsSlice.reducer;

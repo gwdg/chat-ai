@@ -1,0 +1,84 @@
+{
+  "id": "restricted",
+  "aliases": ["example-restricted", "locked-down"],
+  "name": "Restricted Chat AI",
+  "shortName": "Restricted Chat AI",
+  "homeUrl": "https://example.org/",
+  "theme": {
+    "light": {
+      "primary": "#7a1f2b",
+      "primaryContent": "#ffffff",
+      "accent": "#7a1f2b",
+      "accentContent": "#ffffff"
+    },
+    "dark": {
+      "primary": "#e59aa5",
+      "primaryContent": "#2a0b10",
+      "accent": "#e59aa5",
+      "accentContent": "#2a0b10"
+    }
+  },
+  "services": false,
+  "institute": {
+    "name": {
+      "en": "Example Institute for Restricted IT",
+      "de": "Beispiel-Einrichtung für eingeschränkte IT"
+    },
+    "unit": {
+      "en": "Central IT Services, Chat AI working group",
+      "de": "Zentrale IT-Dienste, Arbeitsgruppe Chat AI"
+    },
+    "description": {
+      "en": "A generic example of an institution that narrows Chat AI to one approved model and a minimal feature set. Copy this folder to start a brand with its own restrictions.",
+      "de": "Ein allgemeines Beispiel für eine Einrichtung, die Chat AI auf ein freigegebenes Modell und einen minimalen Funktionsumfang beschränkt. Kopieren Sie diesen Ordner, um eine eigene Marke mit eigenen Einschränkungen anzulegen."
+    },
+    "contact": "mailto:it-support@example.org",
+    "links": [
+      {
+        "label": {
+          "en": "Chat AI at the Example Institute",
+          "de": "Chat AI an der Beispiel-Einrichtung"
+        },
+        "url": "https://example.org/it/chat-ai",
+        "description": {
+          "en": "Usage rules and the contact form of the IT service desk.",
+          "de": "Nutzungsregeln und Kontaktformular des IT-Service-Desk."
+        }
+      },
+      {
+        "label": {
+          "en": "Data privacy",
+          "de": "Datenschutz"
+        },
+        "url": "https://example.org/it/chat-ai/privacy"
+      }
+    ]
+  },
+  "restrictions": {
+    "notice": {
+      "en": "This is a locked-down example: one approved model, no agents, workspaces or MCP servers, and no option that sends data to a third party.",
+      "de": "Dies ist ein stark eingeschränktes Beispiel: ein freigegebenes Modell, keine Agenten, Arbeitsbereiche oder MCP-Server und keine Option, die Daten an Dritte sendet."
+    },
+    "models": {
+      "fixed": "qwen3-30b-a3b-instruct-2507"
+    },
+    "modules": {
+      "agent": false,
+      "agents": false,
+      "arcanas": false,
+      "speech": false,
+      "sync": false
+    },
+    "features": {
+      "workspaces": false,
+      "mcp_servers": false,
+      "import_git": false
+    },
+    "external": {
+      "web_search": false,
+      "external_models": false,
+      "mcp": false,
+      "external_references": false
+    }
+  }
+}

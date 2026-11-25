@@ -7,15 +7,20 @@
 // assistant tool-call message and tool results) into pi messages for the transcript, so the
 // model sees them again on later requests. See docs/tool-passthrough.md in the gateway repo.
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
+import { isArcanasEnabled } from "../utils/modules";
 
 /** Request fields that switch on gateway tools for this turn. */
 export function gatewayRequestFields(settings: any) {
   const tools = settings?.tools ?? {};
   const fields: Record<string, unknown> = {};
+  const selectors: { type: string }[] = [];
   // Opt-in: arcana sends conversation data to a further service. Web search is an agent
   // tool (agent/tools.ts), not a gateway selector.
   const arcana = settings?.arcana;
-  if (tools.arcana === true && arcana?.id) fields.arcana = arcana;
+  if (isArcanasEnabled() && tools.arcana === true && arcana?.id) {
+    fields.arcana = arcana;
+  }
+  if (selectors.length) fields.selectors = selectors;
   return fields;
 }
 
@@ -33,9 +38,12 @@ type Exchange = { event: "call" | "result"; message: any };
  * A fetch that removes the gateway's status events from SSE responses and reports its
  * `gwdg_tool.event`s to `onExchange`.
  */
-export function gatewayFetch(onExchange: (exchange: Exchange) => void): typeof fetch {
+export function gatewayFetch(
+  onExchange: (exchange: Exchange) => void,
+  baseFetch: typeof fetch = (...args) => globalThis.fetch(...args),
+): typeof fetch {
   return async (input, init) => {
-    const response = await fetch(input, init);
+    const response = await baseFetch(input, init);
     const type = response.headers.get("content-type") ?? "";
     // Streams only; a JSON answer has no events in it
     if (!response.body || type.includes("json")) return response;

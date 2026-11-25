@@ -4,7 +4,7 @@ import { useSelector } from "react-redux";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ChevronDown, ChevronRight, Brain } from "lucide-react";
-import { rendererComponents } from "./MarkdownRenderer";
+import { thinkingRendererComponents } from "./MarkdownRenderer";
 import CopyButton from "./CopyButton";
 import { selectCollapseReasoningWhileStreaming } from "../../../Redux/reducers/userSettingsReducer";
 
@@ -145,7 +145,7 @@ const ThinkingBlock = memo(
             ) : (
               <ReactMarkdown
                 remarkPlugins={[remarkGfm, remarkHtmlAsText]}
-                components={rendererComponents}
+                components={thinkingRendererComponents}
               >
                 {children || ""}
               </ReactMarkdown>
