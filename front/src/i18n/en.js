@@ -957,7 +957,7 @@ export default {
       step1:
         "Use the feedback buttons under an assistant message to rate an answer. A changed conversation is also sent to the feedback service for analysis while the feature is on.",
       step2:
-        "Under Profile → Feedback you can switch answer feedback and conversation analysis on or off.",
+        "Under Profile → Feedback you can switch answer feedback and conversation analysis on or off. Turn whole transcripts off to send only the new turns, which the feedback service appends to the chat it already holds.",
       step3:
         "The same section lists everything this account sent, and deletes it again.",
     },
@@ -1659,6 +1659,11 @@ export default {
         label: "Send feedback to the operator",
         description:
           "Show thumbs up/down under each answer and send the conversation to the server for analysis whenever it changes. Turning this off removes the rating buttons and stops the conversation from being sent.",
+        transcript: {
+          label: "Send whole transcripts",
+          description:
+            "Send the complete chat for analysis each time it changes. Turned off, only the new turns are sent and the feedback service appends them to the conversation it already holds.",
+        },
       },
       submission: {
         label: "Send message with",

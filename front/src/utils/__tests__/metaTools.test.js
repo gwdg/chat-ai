@@ -328,6 +328,24 @@ describe("Meta chat local tools", () => {
     await expect(run("list_personas")).resolves.toContain("writing/editor.json");
   });
 
+  it("reports whether whole transcripts are sent for feedback", async () => {
+    const run = createMetaToolRunner(context);
+    await expect(run("get_user_settings")).resolves.toContain(
+      "as the whole transcript each time",
+    );
+
+    const delta = createMetaToolRunner({
+      ...context,
+      userSettings: {
+        ...context.userSettings,
+        feedback_full_transcript: false,
+      },
+    });
+    await expect(delta("get_user_settings")).resolves.toContain(
+      "only the new turns, which the service appends to the stored chat",
+    );
+  });
+
   it("lists courses and opens one by id", async () => {
     const run = createMetaToolRunner(context);
     const events = [];

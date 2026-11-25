@@ -195,7 +195,7 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
     `- Conversation summaries: ${yesNo(userSettings.conversation_summaries)}`,
     `- Show message timestamps: ${yesNo(userSettings.show_timestamps)}`,
     `- Send message with: ${sendWithEnter}`,
-    `- Answer feedback and conversation analysis: ${feedbackEnabled ? "enabled" : "disabled"} (${feedbackSource}); ratings appear under answers and a changed conversation is sent to the feedback service for analysis while enabled`,
+    `- Answer feedback and conversation analysis: ${feedbackEnabled ? "enabled" : "disabled"} (${feedbackSource}); ratings appear under answers and a changed conversation is sent to the feedback service for analysis while enabled, as ${userSettings.feedback_full_transcript !== false ? "the whole transcript each time" : "only the new turns, which the service appends to the stored chat"}`,
     `- HTML rendering: ${userSettings.html_render_mode ?? "off"}`,
     `- Load external references: ${yesNo(userSettings.html_load_external)}`,
     `- HTML sanitization: ${userSettings.html_sanitization ?? "strict"}`,

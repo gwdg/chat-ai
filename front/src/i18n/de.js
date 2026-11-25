@@ -974,7 +974,7 @@ export default {
       step1:
         "Bewerten Sie eine Antwort mit den Feedback-Schaltflächen unter einer Assistenten-Nachricht. Ein geänderter Chat wird bei aktivierter Funktion zusätzlich zur Auswertung an den Feedback-Dienst gesendet.",
       step2:
-        "Unter Profil → Feedback können Sie Antwort-Feedback und Chat-Auswertung ein- oder ausschalten.",
+        "Unter Profil → Feedback können Sie Antwort-Feedback und Chat-Auswertung ein- oder ausschalten. Schalten Sie vollständige Verläufe aus, werden nur die neuen Nachrichten gesendet und der Feedback-Dienst ergänzt den bereits gespeicherten Chat.",
       step3:
         "Derselbe Bereich listet alles, was dieses Konto gesendet hat, und löscht es wieder.",
     },
@@ -1681,6 +1681,11 @@ export default {
         label: "Feedback an den Betrieb senden",
         description:
           "Zeigt unter jeder Antwort Daumen hoch/runter und sendet den Chat bei jeder Änderung zur Auswertung an den Server. Wenn Sie dies ausschalten, verschwinden die Bewertungsschaltflächen und der Chat wird nicht mehr gesendet.",
+        transcript: {
+          label: "Vollständige Verläufe senden",
+          description:
+            "Sendet bei jeder Änderung den gesamten Chat zur Auswertung. Ausgeschaltet werden nur die neuen Nachrichten gesendet und der Feedback-Dienst ergänzt den bereits gespeicherten Chat.",
+        },
       },
       submission: {
         label: "Nachricht senden mit",

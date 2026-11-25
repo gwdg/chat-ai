@@ -14,7 +14,9 @@ import { brandConsentGate } from "../../config/consent";
 import { isChatFeedbackEnabled } from "../../apis/feedback";
 import {
   selectFeedbackEnabled,
+  selectFeedbackFullTranscript,
   setFeedbackEnabled,
+  setFeedbackFullTranscript,
 } from "../../Redux/reducers/userSettingsReducer";
 import { useModal } from "../ModalContext";
 import BrandConsentSettings from "./BrandConsentSettings";
@@ -72,6 +74,7 @@ function FeedbackPreference() {
   const dispatch = useDispatch();
   const { t } = useTranslation();
   const feedbackEnabled = useSelector(selectFeedbackEnabled);
+  const fullTranscript = useSelector(selectFeedbackFullTranscript);
 
   if (!isChatFeedbackEnabled()) return null;
 
@@ -83,6 +86,18 @@ function FeedbackPreference() {
         checked={feedbackEnabled}
         onChange={(checked) => dispatch(setFeedbackEnabled(checked))}
       />
+      {feedbackEnabled && (
+        <div data-guide="feedback-transcript-preference">
+          <ProfilePreferenceSwitch
+            label={t("user_settings.chat_preferences.feedback.transcript.label")}
+            description={t(
+              "user_settings.chat_preferences.feedback.transcript.description",
+            )}
+            checked={fullTranscript}
+            onChange={(checked) => dispatch(setFeedbackFullTranscript(checked))}
+          />
+        </div>
+      )}
     </section>
   );
 }

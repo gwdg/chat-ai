@@ -205,6 +205,18 @@ describe("Meta chat action markers", () => {
     });
   });
 
+  it("parses the whole-transcript feedback preference", () => {
+    const proposals = getMetaActionProposals(
+      [
+        '[[SET_SETTING:{"key":"feedback_full_transcript","value":false}]]',
+        '[[SET_SETTING:{"key":"feedback_full_transcript","value":"yes"}]]',
+      ].join("\n"),
+    );
+    expect(proposals).toEqual([
+      { type: "setting", key: "feedback_full_transcript", value: false },
+    ]);
+  });
+
   it("accepts the reasoning streaming preference", () => {
     const proposals = getMetaActionProposals(
       '[[SET_SETTING:{"key":"collapse_reasoning_while_streaming","value":true}]]',

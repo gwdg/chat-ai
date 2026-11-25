@@ -1719,7 +1719,7 @@ export const featureGuides = {
   feedback: {
     titleKey: "feature_guide.feedback.title",
     prompt:
-      "Rate an assistant message with the thumbs-up/down buttons; under Profile → Feedback, switch answer feedback and conversation analysis on or off, and review or delete everything this account sent to the feedback service.",
+      "Rate an assistant message with the thumbs-up/down buttons; under Profile → Feedback, switch answer feedback and conversation analysis on or off, choose whether whole transcripts or only new turns are sent for analysis, and review or delete everything this account sent to the feedback service.",
     keywords: [
       "feedback",
       "rate answer",
@@ -1727,6 +1727,8 @@ export const featureGuides = {
       "thumbs down",
       "delete feedback",
       "conversation analysis",
+      "whole transcript",
+      "delta",
     ],
     steps: [
       {

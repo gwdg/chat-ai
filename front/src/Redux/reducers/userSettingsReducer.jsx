@@ -43,6 +43,9 @@ function baseInitialState() {
     // rated and a changed conversation is sent for analysis. An explicit boolean
     // lets the user switch it off (or back on) without changing the deployment.
     feedback_enabled: null,
+    // true sends the whole analysed transcript every time; false sends only the
+    // turns added since the last submission and lets the receiver merge them.
+    feedback_full_transcript: true,
     // Encrypted copy on the user's SAIA filesystem. `enabled` is opt-in and the
     // Data tab explains the encryption before it is switched on; `auto` runs a
     // pass every five minutes while the vault is unlocked in this tab.
@@ -220,6 +223,9 @@ function importUserSettingsState(state, incoming) {
   // null is meaningful here ("follow the deployment"), so it is accepted too.
   if (typeof incoming.feedback_enabled === "boolean" || incoming.feedback_enabled === null) {
     state.feedback_enabled = incoming.feedback_enabled;
+  }
+  if (typeof incoming.feedback_full_transcript === "boolean") {
+    state.feedback_full_transcript = incoming.feedback_full_transcript;
   }
   if (MCP_TOOL_POLICIES.includes(incoming.mcp_tool_policy)) {
     state.mcp_tool_policy = incoming.mcp_tool_policy;
@@ -492,6 +498,10 @@ const userSettingsSlice = createSlice({
       state.feedback_enabled = Boolean(action.payload);
     },
 
+    setFeedbackFullTranscript: (state, action) => {
+      state.feedback_full_transcript = Boolean(action.payload);
+    },
+
     setMcpToolPolicy: (state, action) => {
       const policy = action.payload;
       if (MCP_TOOL_POLICIES.includes(policy)) state.mcp_tool_policy = policy;
@@ -646,6 +656,7 @@ export const {
   setAdvancedMode,
   setSendWithEnter, setMcpToolPolicy, importUserSettings,
   setFeedbackEnabled,
+  setFeedbackFullTranscript,
   setSyncEnabled, setSyncAuto
 } = userSettingsSlice.actions;
 
@@ -727,6 +738,10 @@ export const selectFeedbackEnabled = (state) => {
   const value = state.user_settings.feedback_enabled;
   return typeof value === "boolean" ? value : isFeedbackEnabled();
 };
+// Send every analysed conversation as a whole transcript (default) or only the
+// turns added since the last submission, which the receiver merges.
+export const selectFeedbackFullTranscript = (state) =>
+  state.user_settings.feedback_full_transcript !== false;
 // Whether chat turns may call tools of the user's MCP servers: "ask" (default), "always", "never".
 export const selectMcpToolPolicy = (state) => {
   const policy = state.user_settings.mcp_tool_policy;

@@ -96,11 +96,49 @@ describe("feedback delivery", () => {
     expect(body.kind).toBe("report");
     expect(body.type).toBe("feedback");
     expect(body.message).toContain("Rust basics");
+    expect(body.mode).toBe("full");
+    expect(body.offset).toBeUndefined();
+    expect(body.conversation_id).toBe("conv-2");
     expect(body.messages).toEqual([
       { role: "user", content: "What is ownership?" },
       { role: "assistant", content: "It is a set of rules." },
     ]);
     expect(body.context.route).toBe("/chat/conv-2");
+  });
+
+  it("sends only the given turns with their offset in delta mode", async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ id: "x" }));
+
+    await submitConversationAnalysis({
+      conversation: { id: "conv-9", title: "Rust basics" },
+      messages: [{ role: "user", content: "And lifetimes?" }],
+      mode: "delta",
+      offset: 4,
+      fetchImpl,
+    });
+
+    const body = JSON.parse(callArgs(fetchImpl)[1].body);
+    expect(body.mode).toBe("delta");
+    expect(body.offset).toBe(4);
+    expect(body.conversation_id).toBe("conv-9");
+    expect(body.context.conversation_id).toBe("conv-9");
+    expect(body.messages).toEqual([{ role: "user", content: "And lifetimes?" }]);
+  });
+
+  it("reports a delta the receiver cannot merge as a conflict", async () => {
+    const fetchImpl = vi.fn(async () =>
+      jsonResponse({ detail: "resend with offset 0" }, { status: 409 }),
+    );
+
+    await expect(
+      submitConversationAnalysis({
+        conversation: { id: "conv-9", title: "Rust basics" },
+        messages: [{ role: "user", content: "And lifetimes?" }],
+        mode: "delta",
+        offset: 4,
+        fetchImpl,
+      }),
+    ).rejects.toMatchObject({ status: 409, code: "conflict" });
   });
 
   it("sends nothing when the conversation has no turns", async () => {

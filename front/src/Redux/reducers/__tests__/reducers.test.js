@@ -37,6 +37,8 @@ import userSettingsReducer, {
   setMcpToolPolicy,
   setFeedbackEnabled,
   selectFeedbackEnabled,
+  setFeedbackFullTranscript,
+  selectFeedbackFullTranscript,
   addE2eeKey,
   updateE2eeKey,
   removeE2eeKey,
@@ -349,8 +351,31 @@ describe("user settings reducer", () => {
     vi.unstubAllEnvs();
   });
 
-  it("toggles diagram rendering preferences and imports them", () => {
+  it("sends whole transcripts by default and can send only new turns", () => {
     let state = init(userSettingsReducer);
+    expect(state.feedback_full_transcript).toBe(true);
+    expect(selectFeedbackFullTranscript({ user_settings: state })).toBe(true);
+
+    state = userSettingsReducer(state, setFeedbackFullTranscript(false));
+    expect(selectFeedbackFullTranscript({ user_settings: state })).toBe(false);
+
+    // An import keeps a boolean and ignores anything else.
+    state = userSettingsReducer(
+      state,
+      importUserSettings({ feedback_full_transcript: "no" }),
+    );
+    expect(selectFeedbackFullTranscript({ user_settings: state })).toBe(false);
+    state = userSettingsReducer(
+      state,
+      importUserSettings({ feedback_full_transcript: true }),
+    );
+    expect(selectFeedbackFullTranscript({ user_settings: state })).toBe(true);
+
+    // A profile stored before the setting existed follows the default.
+    expect(selectFeedbackFullTranscript({ user_settings: {} })).toBe(true);
+  });
+
+  it("toggles diagram rendering preferences and imports them", () => {    let state = init(userSettingsReducer);
     expect(selectRenderGraphviz({ user_settings: state })).toBe(false);
     expect(selectRenderVega({ user_settings: state })).toBe(false);
     expect(selectRenderChartjs({ user_settings: state })).toBe(false);

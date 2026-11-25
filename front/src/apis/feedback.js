@@ -112,6 +112,14 @@ function throwFeedbackResponse(response) {
       code: "forbidden",
     });
   }
+  if (status === 409) {
+    // A delta no longer matches what the receiver stored (another tab sent a
+    // newer transcript, or the chat was edited); the caller resends in full.
+    throw new FeedbackError("The stored conversation is out of date.", {
+      status,
+      code: "conflict",
+    });
+  }
   throw new FeedbackError("The feedback could not be sent.", {
     status,
     code: "failed",
@@ -251,17 +259,27 @@ export const submitFeedbackRating = async ({
 /**
  * Sends the conversation for analysis after it changed. Returns `null` when
  * there is nothing to send (an empty or system-only chat).
+ *
+ * `mode` is `"full"` (the whole transcript, a new submission every time) or
+ * `"delta"`: `messages` then holds only the turns after the first `offset`
+ * messages of the same conversation and the receiver appends them to the row
+ * it already stores. `messages` may be passed in so the caller hashes exactly
+ * what it sends; otherwise the whole transcript is used.
  */
 export const submitConversationAnalysis = async ({
   conversation,
   model,
   route,
   appVersion,
+  mode = "full",
+  offset = 0,
+  messages: outgoing,
   fetchImpl = globalThis.fetch,
 }) => {
-  const messages = feedbackMessagesFromConversation(conversation?.messages);
+  const messages = outgoing ?? feedbackMessagesFromConversation(conversation?.messages);
   if (!messages.length) return null;
   const title = clip(String(conversation?.title ?? "").trim(), 200) || "Untitled chat";
+  const delta = mode === "delta";
   return postFeedbackJson(
     {
       kind: "report",
@@ -269,6 +287,11 @@ export const submitConversationAnalysis = async ({
       message: `Conversation for analysis: ${title}`,
       messages,
       model: clip(modelLabel(model), 200) || undefined,
+      // The receiver needs the chat id to find the row a delta continues; it
+      // is also inside `context`, which is where older clients sent it.
+      conversation_id: conversation?.id ? String(conversation.id) : undefined,
+      mode: delta ? "delta" : "full",
+      offset: delta ? Math.max(0, Math.trunc(Number(offset) || 0)) : undefined,
       context: feedbackContext({
         conversationId: conversation?.id,
         title,

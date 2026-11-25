@@ -26,6 +26,7 @@ const SUPPORTED_SETTING_KEYS = new Set([
   "show_timestamps",
   "send_with_enter",
   "feedback_enabled",
+  "feedback_full_transcript",
   "mcp_tool_policy",
   "timeout",
   "sync_enabled",
@@ -269,6 +270,7 @@ export function getMetaActionProposals(text) {
       const key = String(payload.key || "").trim();
       if (!SUPPORTED_SETTING_KEYS.has(key)) continue;
       if (key === "memory_mode" && !memoriesEnabled) continue;
+      if (key === "feedback_full_transcript" && !isFeatureEnabled("feedback")) continue;
       if (
         key === "mcp_tool_policy" &&
         !["ask", "always", "never"].includes(payload.value)
@@ -278,7 +280,8 @@ export function getMetaActionProposals(text) {
       if (
         (key === "sync_enabled" ||
           key === "sync_auto" ||
-          key === "feedback_enabled") &&
+          key === "feedback_enabled" ||
+          key === "feedback_full_transcript") &&
         typeof payload.value !== "boolean"
       ) {
         continue;

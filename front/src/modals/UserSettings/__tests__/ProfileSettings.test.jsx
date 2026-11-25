@@ -2,7 +2,10 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import ProfileSettings from "../ProfileSettings";
-import { setFeedbackEnabled } from "../../../Redux/reducers/userSettingsReducer";
+import {
+  setFeedbackEnabled,
+  setFeedbackFullTranscript,
+} from "../../../Redux/reducers/userSettingsReducer";
 
 const api = vi.hoisted(() => ({
   brand: { value: null },
@@ -173,8 +176,23 @@ describe("ProfileSettings", () => {
     expect(api.dispatch).toHaveBeenCalledWith(setFeedbackEnabled(false));
   });
 
-  it("hides the feedback section without a configured receiver", () => {
+  it("offers the whole-transcript switch beside the feedback one", () => {
+    api.feedback.enabled = true;
+
     render(<ProfileSettings userData={userData} />);
+    fireEvent.click(screen.getByRole("tab", { name: "Feedback" }));
+
+    const transcript = screen.getByRole("switch", {
+      name: /Send whole transcripts/,
+    });
+    expect(transcript).toHaveAttribute("aria-checked", "true");
+
+    fireEvent.click(transcript);
+
+    expect(api.dispatch).toHaveBeenCalledWith(setFeedbackFullTranscript(false));
+  });
+
+  it("hides the feedback section without a configured receiver", () => {    render(<ProfileSettings userData={userData} />);
 
     expect(
       screen.queryByRole("tab", { name: "Feedback" }),
