@@ -506,8 +506,19 @@ export default {
     },
     workspace_git: {
       title: "Dateien mit Git versionieren",
-      step1: "Öffnen Sie im Arbeitsbereich den Reiter Dateien und klicken Sie den Ordner an, in dem das Repository liegen soll. Die Git-Schaltfläche wirkt auf diesen Ordner, ohne Auswahl auf die Wurzel des Arbeitsbereichs.",
-      step2: "Öffnen Sie das Git-Menü: Repository initialisieren oder in einen leeren Ordner klonen, dann stagen, committen, Branches wechseln sowie Fetch, Pull und Push über das Remote. Schreibgeschützte Quellen werden abgelehnt, Zugangsdaten bleiben nur im Speicher.",
+      step1:
+        "Git lebt im Dateimanager: Öffnen Sie den Reiter Dateien eines Arbeitsbereichs (oder eines damit verknüpften Chats) und klicken Sie den Ordner an, in dem das Repository liegen soll. Ohne Auswahl wirkt die Git-Schaltfläche auf die Wurzel des Arbeitsbereichs. Der eigene Speicher des Arbeitsbereichs, ein Ordner von diesem Gerät und das SAIA-Dateisystem können ein Repository enthalten; schreibgeschützte Quellen und Einhängepunkte nicht.",
+      step2:
+        "Klicken Sie in der Dateileiste auf Git. Es öffnet einen Dialog statt eines Aufklappmenüs, damit die Dateiliste nichts abschneidet.",
+      step3:
+        "Das Menü nennt den Ordner und liest seinen Zustand: den aktuellen Branch und die Zahl geänderter Dateien. Ist der Ordner noch kein Repository, bietet es stattdessen an, eines zu initialisieren oder ein öffentliches Repository in den leeren Ordner zu klonen. Aktualisieren liest den Zustand neu.",
+      step4:
+        "Änderungen stagt, entstagt und verwirft Dateien und schreibt den Commit. Branches legt einen Branch an, wechselt auf einen lokalen oder entfernten Branch und löscht einen, der nicht ausgecheckt ist.",
+      step5:
+        "Remote hält URL und Zugangsdaten und führt Fetch, Pull und Push aus; ein Token bleibt für diese Browsersitzung im Speicher und wird über den öffentlichen CORS-Proxy abgelehnt. Verlauf listet die letzten 50 Commits, den neuesten zuerst.",
+      step6: "Öffnen Sie Änderungen, um den Commit zu schreiben.",
+      step7:
+        "Stagen Sie die Datei in der Liste, tippen Sie die Nachricht und prüfen Sie Name und E-Mail des Autors — beides merkt sich dieser Browser. Commit schreibt ihn, und der Dialog liest seinen Zustand nach jeder Aktion neu.",
     },
     workspace_upload: {
       title: "Dateien in einen Arbeitsbereich hochladen",
@@ -516,8 +527,29 @@ export default {
     },
     workspace_edit_file: {
       title: "Eine Datei in einem Arbeitsbereich bearbeiten",
-      step1: "Der Reiter Dateien neben einem Chat listet die Dateien eines Arbeitsbereichs. Klicken Sie eine an, um sie im Reiter Vorschau zu öffnen.",
-      step2: "Der Reiter Vorschau ist schreibgeschützt: Quellcode und reiner Text erscheinen mit Syntaxhervorhebung, während Markdown, HTML und CSV gerendert werden. Klicken Sie neben Vorschau auf Bearbeiten, ändern Sie den Text und drücken Sie Speichern oder Strg/Cmd+S. Eine schreibgeschützte Quelle hat keinen Bearbeiten-Schalter; eine Typst-Datei bietet zusätzlich Typst rendern an.",
+      step1:
+        "Der Reiter Dateien neben einem Chat listet alles, was ein Arbeitsbereich speichert. Dateien und Ordner im eigenen Speicher des Arbeitsbereichs, ein Ordner von diesem Gerät, eine Arcana und das SAIA-Dateisystem erscheinen im selben Baum.",
+      step2:
+        "Klicken Sie eine Text- oder Codedatei an. Sie öffnet sich im Reiter Vorschau, der schreibgeschützt bleibt: Quellcode und reiner Text erscheinen mit Syntaxhervorhebung, Markdown, HTML und CSV werden gerendert.",
+      step3:
+        "Drücken Sie neben Vorschau auf Bearbeiten, um das Tippen freizugeben. Vorschau und Bearbeiten teilen sich einen Editor, die Cursorposition bleibt beim Wechsel erhalten. Eine schreibgeschützte Quelle zeigt stattdessen die Marke „Schreibgeschützt“ und keinen Bearbeiten-Schalter.",
+      step4:
+        "Sobald sich der Text von der gespeicherten Datei unterscheidet, erscheinen der Punkt neben dem Namen und „Änderungen verwerfen“. Verwerfen wirft den Entwurf weg und lädt die gespeicherten Bytes neu; ein ungespeicherter Entwurf bleibt beim Wechsel zu einer anderen Datei erhalten, bis der Tab oder die Seite neu geladen wird.",
+      step5:
+        "Speichern schreibt über den Speicher des Ordners selbst, Strg/Cmd+S ebenso. Ein fehlgeschlagenes Schreiben bleibt über dem Editor sichtbar, statt die Änderung zu verlieren.",
+    },
+    workspace_typst_preview: {
+      title: "Eine Typst-Datei rendern",
+      step1:
+        "Öffnen Sie den Reiter Dateien eines Arbeitsbereichs, der eine Typst-Datei (.typ oder .typst) im eigenen Speicher, auf diesem Gerät oder im SAIA-Dateisystem enthält.",
+      step2:
+        "Klicken Sie die Typst-Datei an. Sie öffnet sich im Reiter Vorschau als Quelltext, und eine Typst-Datei bietet zusätzlich „Typst rendern“ neben dem Modusschalter an.",
+      step3:
+        "Drücken Sie „Typst rendern“. Das kompilierte Dokument öffnet sich in einem eigenen Bereich neben dem Quelltext — Baum, Quelltext und Dokument nebeneinander — und folgt dem Text, während er sich ändert, auch beim Bearbeiten. „Quelltext anzeigen“ wechselt zurück zum reinen Code.",
+      step4:
+        "Das Dokument wird im Browser kompiliert, nichts wird hochgeladen. Dateien, die es einbindet, importiert oder liest, werden relativ zur geöffneten Datei aufgelöst; eine fehlende wird unter dem Dokument gemeldet, statt stillschweigend zu scheitern.",
+      step5:
+        "Zoomen Sie das Dokument mit −, der Prozentangabe und +; die Prozentangabe setzt auf 100 % zurück, eine Stufe sind 25 %. Dieselben Schaltflächen zoomen eine PDF-Vorschau. Der Inhalt wächst, statt skaliert zu werden, damit der Bereich scrollt und nichts abschneidet.",
     },
     workspace_multiselect: {
       title: "Eine Datei aus einem Arbeitsbereich entfernen",

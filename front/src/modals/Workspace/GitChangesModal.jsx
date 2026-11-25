@@ -141,7 +141,10 @@ export default function GitChangesModal({
       titleKey="workspace.git.changes"
       maxWidth="max-w-2xl"
     >
-      <div className="flex flex-col gap-2 pb-2 text-sm">
+      <div
+        data-guide="git-changes"
+        className="flex flex-col gap-2 pb-2 text-sm"
+      >
         <GitFolderLine path={displayPath} />
 
         <div className="flex items-center gap-1.5 px-1 text-[11px] text-base-content/60">
@@ -169,7 +172,10 @@ export default function GitChangesModal({
           </p>
         ) : (
           <div className="flex max-h-[46vh] flex-col gap-2 overflow-y-auto pr-0.5">
-            <section className="rounded-lg border border-base-300">
+            <section
+              data-guide="git-changes-staged"
+              className="rounded-lg border border-base-300"
+            >
               <header className="flex items-center gap-1.5 border-b border-base-300 px-2 py-1.5">
                 <span className="text-[10px] font-semibold uppercase tracking-wide text-base-content/60">
                   {t("workspace.git.staged_section", { count: staged.length })}
@@ -219,7 +225,10 @@ export default function GitChangesModal({
               </div>
             </section>
 
-            <section className="rounded-lg border border-base-300">
+            <section
+              data-guide="git-changes-unstaged"
+              className="rounded-lg border border-base-300"
+            >
               <header className="flex items-center gap-1.5 border-b border-base-300 px-2 py-1.5">
                 <span className="text-[10px] font-semibold uppercase tracking-wide text-base-content/60">
                   {t("workspace.git.unstaged_section", {
@@ -306,7 +315,10 @@ export default function GitChangesModal({
           </div>
         )}
 
-        <div className="flex flex-col gap-2 rounded-lg border border-base-300 p-2">
+        <div
+          data-guide="git-commit-box"
+          className="flex flex-col gap-2 rounded-lg border border-base-300 p-2"
+        >
           <label className="flex flex-col gap-1">
             <span className="text-[10px] font-semibold uppercase tracking-wide text-base-content/55">
               {t("workspace.git.commit_message")}
@@ -360,6 +372,7 @@ export default function GitChangesModal({
           <button
             type="button"
             className="btn btn-accent"
+            data-guide="git-commit"
             disabled={!canCommit}
             onClick={() => void commit()}
           >

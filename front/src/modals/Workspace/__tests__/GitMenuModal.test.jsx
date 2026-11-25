@@ -14,6 +14,7 @@ vi.mock("react-i18next", () => ({
 }));
 
 import GitMenuModal from "../GitMenuModal";
+import { initGitRepository } from "../../../workspace/git/repo";
 import { createMemoryProvider } from "../../../workspace/git/__tests__/memoryProvider";
 
 describe("GitMenuModal", () => {
@@ -57,5 +58,35 @@ describe("GitMenuModal", () => {
       ).toBeTruthy(),
     );
     expect(screen.queryByText("workspace.git.init")).toBeNull();
+  });
+
+  it("carries the tour hooks of every repository action", async () => {
+    const provider = createMemoryProvider();
+    await provider.mkdir("/repo");
+    await initGitRepository(provider, "/repo");
+
+    render(
+      <GitMenuModal
+        isOpen
+        onClose={() => {}}
+        provider={provider}
+        path="/repo"
+        displayPath="/repo"
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText("workspace.git.changes")).toBeTruthy(),
+    );
+    for (const hook of [
+      "git-menu",
+      "git-menu-changes",
+      "git-menu-branches",
+      "git-menu-remote",
+      "git-menu-history",
+      "git-menu-refresh",
+    ]) {
+      expect(document.querySelector(`[data-guide="${hook}"]`)).toBeTruthy();
+    }
   });
 });

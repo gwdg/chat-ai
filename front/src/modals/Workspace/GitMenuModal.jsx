@@ -33,10 +33,12 @@ function MenuRow({
   onClick,
   disabled = false,
   busy = false,
+  ...rest
 }) {
   return (
     <button
       type="button"
+      {...rest}
       onClick={onClick}
       disabled={disabled || busy}
       className="flex w-full items-center gap-2 rounded-lg border border-base-300 px-2.5 py-2 text-left transition-colors hover:bg-base-200/70 disabled:opacity-50"
@@ -160,7 +162,10 @@ export default function GitMenuModal({
       titleKey="workspace.git.menu_title"
       maxWidth="max-w-md"
     >
-      <div className="flex flex-col gap-2 pb-2 text-sm">
+      <div
+        data-guide="git-menu"
+        className="flex flex-col gap-2 pb-2 text-sm"
+      >
         <GitFolderLine path={displayPath} />
 
         {!supported ? (
@@ -175,7 +180,10 @@ export default function GitMenuModal({
           </p>
         ) : (
           <>
-            <div className="flex items-center gap-1.5 px-1 text-[11px] text-base-content/60">
+            <div
+              data-guide="git-menu-status"
+              className="flex items-center gap-1.5 px-1 text-[11px] text-base-content/60"
+            >
               <Branch size={12} className="shrink-0 text-accent" />
               {repository ? (
                 <>
@@ -201,6 +209,7 @@ export default function GitMenuModal({
                   icon={<Commit size={15} />}
                   label={t("workspace.git.changes")}
                   hint={t("workspace.git.changes_hint")}
+                  data-guide="git-menu-changes"
                   badge={changes > 0 ? changes : undefined}
                   onClick={() =>
                     openModal("gitChanges", {
@@ -212,6 +221,7 @@ export default function GitMenuModal({
                   icon={<Branch size={15} />}
                   label={t("workspace.git.branches")}
                   hint={t("workspace.git.branches_hint")}
+                  data-guide="git-menu-branches"
                   onClick={() =>
                     openModal("gitBranches", {
                       ...childProps,
@@ -222,6 +232,7 @@ export default function GitMenuModal({
                   icon={<CloudDownload size={15} />}
                   label={t("workspace.git.remote")}
                   hint={t("workspace.git.remote_hint")}
+                  data-guide="git-menu-remote"
                   onClick={() =>
                     openModal("gitRemote", {
                       ...childProps,
@@ -232,6 +243,7 @@ export default function GitMenuModal({
                   icon={<History size={15} />}
                   label={t("workspace.git.history")}
                   hint={t("workspace.git.history_hint")}
+                  data-guide="git-menu-history"
                   onClick={() =>
                     openModal("gitHistory", {
                       ...childProps,
@@ -242,6 +254,7 @@ export default function GitMenuModal({
                   icon={<Renew size={15} />}
                   label={t("workspace.git.refresh")}
                   hint={t("workspace.git.refresh_hint")}
+                  data-guide="git-menu-refresh"
                   onClick={() => void load()}
                 />
               </>
@@ -251,6 +264,7 @@ export default function GitMenuModal({
                   icon={<Add size={15} />}
                   label={t("workspace.git.init")}
                   hint={t("workspace.git.init_hint")}
+                  data-guide="git-menu-init"
                   busy={busy === "init"}
                   onClick={() => void initialize()}
                 />
@@ -258,6 +272,7 @@ export default function GitMenuModal({
                   icon={<CloudDownload size={15} />}
                   label={t("workspace.git.clone")}
                   hint={t("workspace.git.clone_hint")}
+                  data-guide="git-menu-clone"
                   onClick={() =>
                     openModal("gitClone", {
                       ...childProps,

@@ -146,8 +146,9 @@ export const featureGuides = {
     keywords: ["git", "repository", "commit", "branch", "clone", "push", "pull", "version control"],
     steps: [
       {
-        target: '[data-guide="workspace-files"]',
+        target: '[data-guide="meta-tab-files"]',
         textKey: "feature_guide.workspace_git.step1",
+        completeOnTargetClick: true,
         prepare: openWorkspaceFiles,
       },
       {
@@ -155,6 +156,33 @@ export const featureGuides = {
         textKey: "feature_guide.workspace_git.step2",
         completeOnTargetClick: true,
         prepare: openWorkspaceFiles,
+      },
+      {
+        target: '[data-guide="git-menu"]',
+        textKey: "feature_guide.workspace_git.step3",
+      },
+      {
+        target: [
+          '[data-guide="git-menu-changes"]',
+          '[data-guide="git-menu-branches"]',
+        ],
+        textKey: "feature_guide.workspace_git.step4",
+      },
+      {
+        target: [
+          '[data-guide="git-menu-remote"]',
+          '[data-guide="git-menu-history"]',
+        ],
+        textKey: "feature_guide.workspace_git.step5",
+      },
+      {
+        target: '[data-guide="git-menu-changes"]',
+        textKey: "feature_guide.workspace_git.step6",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="git-commit-box"]',
+        textKey: "feature_guide.workspace_git.step7",
       },
     ],
   },
@@ -217,11 +245,66 @@ export const featureGuides = {
         target: '[data-guide="meta-tab-files"]',
         textKey: "feature_guide.workspace_edit_file.step1",
         completeOnTargetClick: true,
+        prepare: openWorkspaceFiles,
       },
       {
-        target: '[data-guide="workspace-files"]',
+        target: '[data-guide="workspace-row"]',
         textKey: "feature_guide.workspace_edit_file.step2",
+        completeOnTargetClick: true,
         prepare: openWorkspaceFiles,
+      },
+      {
+        target: '[data-guide="workspace-edit-toggle"]',
+        textKey: "feature_guide.workspace_edit_file.step3",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="workspace-dirty"]',
+        textKey: "feature_guide.workspace_edit_file.step4",
+      },
+      {
+        target: '[data-guide="workspace-save"]',
+        textKey: "feature_guide.workspace_edit_file.step5",
+      },
+    ],
+  },
+  workspace_typst_preview: {
+    titleKey: "feature_guide.workspace_typst_preview.title",
+    prompt:
+      "Render a Typst file from a workspace file browser. Open the Files tab, click a .typ or .typst file and press Render Typst in the Preview tab: the compiled document opens in a pane beside its source and follows the text as it is edited. Files the document includes or imports are read from the same folder in the browser, and the rendered document can be zoomed like a PDF preview.",
+    keywords: [
+      "render typst file",
+      "typst preview",
+      "typ file",
+      "compiled document",
+      "zoom pdf",
+      "workspace preview",
+    ],
+    steps: [
+      {
+        target: '[data-guide="meta-tab-files"]',
+        textKey: "feature_guide.workspace_typst_preview.step1",
+        completeOnTargetClick: true,
+        prepare: openWorkspaceFiles,
+      },
+      {
+        target: '[data-guide="workspace-row"]',
+        textKey: "feature_guide.workspace_typst_preview.step2",
+        completeOnTargetClick: true,
+        prepare: openWorkspaceFiles,
+      },
+      {
+        target: '[data-guide="workspace-render-typst"]',
+        textKey: "feature_guide.workspace_typst_preview.step3",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="workspace-typst-panel"]',
+        textKey: "feature_guide.workspace_typst_preview.step4",
+      },
+      {
+        target: '[data-guide="preview-zoom"]',
+        textKey: "feature_guide.workspace_typst_preview.step5",
       },
     ],
   },
@@ -2035,6 +2118,7 @@ export const FEATURE_GUIDE_AVAILABILITY = {
   workspace_upload: () => isFeatureEnabled("workspaces"),
   workspace_multiselect: () => isFeatureEnabled("workspaces"),
   workspace_edit_file: () => isFeatureEnabled("workspaces"),
+  workspace_typst_preview: () => isFeatureEnabled("workspaces"),
   arcana_filesystem: () => isFeatureEnabled("workspaces") && isArcanasEnabled(),
   workspace_saia_fs: () => isFeatureEnabled("workspaces"),
   attach_from_workspace: () => isFeatureEnabled("workspaces"),
@@ -2135,7 +2219,7 @@ export const FEATURE_CATEGORIES = {
     "summarize_conversation",
     "close_chat",
   ],
-  workspace: ["workspace_overview", "manage_chat_data", "pin_workspace", "pin_agent", "workspace_edit_storage", "workspace_clone", "workspace_git", "workspace_upload", "workspace_edit_file", "workspace_multiselect", "arcana_filesystem", "workspace_saia_fs", "attach_from_workspace", "remote_agents", "agent_recovery", "close_group_sessions", "session_workspaces", "agent_workspace_access"],
+  workspace: ["workspace_overview", "manage_chat_data", "pin_workspace", "pin_agent", "workspace_edit_storage", "workspace_clone", "workspace_git", "workspace_upload", "workspace_edit_file", "workspace_typst_preview", "workspace_multiselect", "arcana_filesystem", "workspace_saia_fs", "attach_from_workspace", "remote_agents", "agent_recovery", "close_group_sessions", "session_workspaces", "agent_workspace_access"],
   personas: ["chat_with_persona"],
   settings: [
     "settings_overview",

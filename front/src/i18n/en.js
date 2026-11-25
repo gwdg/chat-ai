@@ -496,8 +496,19 @@ export default {
     },
     workspace_git: {
       title: "Version files with Git",
-      step1: "Open a workspace's Files tab and click the folder the repository should live in. The Git button acts on that folder, or on the workspace root while nothing is selected.",
-      step2: "Open the Git menu: initialise a repository or clone one into an empty folder, then stage, commit, switch branches, and fetch, pull or push through the remote. Read-only sources are refused and credentials stay in memory.",
+      step1:
+        "Git lives in the file manager: open the Files tab of a workspace (or of a chat attached to one) and click the folder the repository should live in. Without a selection the Git button acts on the workspace root. The workspace's own storage, a folder from this device and the SAIA filesystem can hold a repository; read-only sources and mounts cannot.",
+      step2:
+        "Click Git in the file toolbar. It opens a dialog rather than a dropdown, so nothing is clipped by the file list.",
+      step3:
+        "The menu names the folder and reads its state: the current branch and the number of changed files. While the folder is not a repository yet it instead offers to initialise one or to clone a public repository into the empty folder. Refresh re-reads the state.",
+      step4:
+        "Changes stages, unstages and discards files and writes the commit. Branches creates a branch, switches to a local or remote branch, and deletes one that is not checked out.",
+      step5:
+        "Remote keeps the URL and the credentials and runs Fetch, Pull and Push; a token stays in memory for this browser session and is refused through the public CORS proxy. History lists the last 50 commits, newest first.",
+      step6: "Open Changes to write the commit.",
+      step7:
+        "Stage the file in the list, type the message and check the author name and email — they are remembered in this browser. Commit then writes it, and the dialog reloads its state after every action.",
     },
     workspace_upload: {
       title: "Upload files into a workspace",
@@ -506,8 +517,29 @@ export default {
     },
     workspace_edit_file: {
       title: "Edit a file in a workspace",
-      step1: "The Files tab beside a chat lists a workspace's files. Click one to open it in the Preview tab.",
-      step2: "The Preview tab is read-only: source code and plain text appear with syntax highlighting, while Markdown, HTML and CSV are rendered. Click Edit beside Preview to change the text, then press Save or Ctrl/Cmd+S. A read-only source has no Edit toggle, and a Typst file additionally offers Render Typst.",
+      step1:
+        "The Files tab beside a chat lists everything a workspace stores. Files and folders in the workspace's own storage, a folder from this device, an Arcana and the SAIA filesystem all appear in the same tree.",
+      step2:
+        "Click a text or code file. It opens in the Preview tab, which stays read-only: source code and plain text appear with syntax highlighting, while Markdown, HTML and CSV are rendered.",
+      step3:
+        "Press Edit beside Preview to unlock typing. Preview and Edit share one editor, so the cursor position survives the switch. A read-only source shows a Read-only badge instead and offers no Edit toggle.",
+      step4:
+        "As soon as the text differs from the stored file, the dot beside the name and Revert appear. Revert throws the draft away and reloads the stored bytes; an unsaved draft survives switching to another file until the tab or the page is reloaded.",
+      step5:
+        "Save writes through the folder's own storage, and Ctrl/Cmd+S does the same. A failed write stays visible above the editor instead of losing the change.",
+    },
+    workspace_typst_preview: {
+      title: "Render a Typst file",
+      step1:
+        "Open the Files tab of a workspace that stores a Typst file (.typ or .typst) in its own storage, on this device or on the SAIA filesystem.",
+      step2:
+        "Click the Typst file. It opens in the Preview tab as source, and a Typst file additionally offers Render Typst beside the mode toggle.",
+      step3:
+        "Press Render Typst. The compiled document opens in a pane of its own beside the source — tree, source and document side by side — and follows the text as it changes, also while you edit. Show source swaps back to the code alone.",
+      step4:
+        "The document is compiled in the browser, so nothing is uploaded. Files it includes, imports or reads resolve relative to the open file, and a missing one is reported under the document instead of failing silently.",
+      step5:
+        "Zoom the document with −, the percentage and +; the percentage resets to 100 % and one step is 25 %. The same controls zoom a PDF preview. The content grows instead of being scaled, so the pane scrolls rather than clipping it.",
     },
     workspace_multiselect: {
       title: "Remove a file from a workspace",
