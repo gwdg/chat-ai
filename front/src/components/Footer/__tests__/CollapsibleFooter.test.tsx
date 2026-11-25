@@ -135,4 +135,20 @@ describe("CollapsibleFooter", () => {
       "mailto:support@example.org",
     );
   });
+
+  it("opens the footer dropdowns upward so their menus stay on screen", () => {
+    // The footer is the last grid row. daisyUI's default menu anchor is below
+    // the trigger, which put the theme and language menus past the viewport
+    // bottom and made both controls look broken (GAIA's extra themes turn the
+    // theme switch into a menu as well).
+    currentBrand.current = getBrandProfile("gaia");
+    const { container } = renderFooter();
+
+    expect(container.querySelector('[data-guide="theme-toggle"]')).toHaveClass(
+      "dropdown-top",
+    );
+    expect(
+      container.querySelector('[data-guide="language-picker"]'),
+    ).toHaveClass("dropdown-top");
+  });
 });
