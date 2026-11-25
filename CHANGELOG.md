@@ -1,5 +1,11 @@
 # Changelog 
 
+## Version: v2.0.0-beta (25.11.2026)
+Highlights:
+- The data-safety notice now opens on hover or click instead of covering the chat when a conversation loads and again on every model change; an external-model warning still opens by itself
+- The Thinking icon in the model selector now follows the per-model configuration as well as the models endpoint, so it agrees with the reasoning setting in the settings panel
+- Code in tilde fences (`~~~`) is left untouched by the LaTeX preprocessor, as backtick fences and inline code already were
+
 ## Version: v2.0.1 (21.11.2026)
 Highlights:
 - Added encrypted server synchronization of conversations, topics, settings, interface preferences, workspaces and agents via the SAIA filesystem
