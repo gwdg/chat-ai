@@ -206,6 +206,12 @@ try {
       // reads it, and the compression/static pipeline does not touch it.
       process.env["VITE_E2EE_KEY_URL"] = value;
       console.log("E2EE key URL:", value);
+    } else if (key == "gitCorsProxy") {
+      // The workspace's Git clone/fetch needs a CORS proxy for every remote that
+      // does not answer the preflight itself. Empty disables it and makes Git
+      // talk to the remote directly; absent uses isomorphic-git's public one.
+      process.env["VITE_GIT_CORS_PROXY"] = String(value ?? "");
+      console.log("Git CORS proxy:", value ? value : "none");
     } else if (key == "announcement") {
       process.env["VITE_ANNOUNCEMENT"] = value;
       console.log("Announcement:", value);

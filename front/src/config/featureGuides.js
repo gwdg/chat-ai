@@ -47,7 +47,7 @@ export const featureGuides = {
   workspace_overview: {
     titleKey: "feature_guide.workspace_overview.title",
     prompt:
-      "Open a workspace from the sidebar. A workspace is the home of the chats you run there: a prompt box starts a new chat, the list holds the ones already in it, and the right-hand panel shows what's new, the files the workspace stores, and the agent it runs.",
+      "Open a workspace from the sidebar. A workspace is the home of the chats you run there: the prompt box, and the sidebar's New chat, Import and Persona buttons, all create their chat in the workspace that is open instead of an unassigned chat. The list holds the chats already in it, and the right-hand panel shows what's new, the files the workspace stores, and the agent it runs.",
     keywords: ["workspace", "workspaces", "files", "browser storage", "local folder", "arcana files", "mcp files"],
     steps: [
       {
@@ -139,6 +139,25 @@ export const featureGuides = {
       },
     ],
   },
+  workspace_git: {
+    titleKey: "feature_guide.workspace_git.title",
+    prompt:
+      "Use Git inside a workspace folder. Select a folder in the Files tab and open the Git menu in its toolbar: initialise a repository or clone one into an empty folder, then stage, commit, switch branches, and fetch, pull or push through the remote. Git works in the workspace's own storage, in a folder from this device and on the SAIA filesystem; read-only sources are refused. Credentials stay in memory for the session.",
+    keywords: ["git", "repository", "commit", "branch", "clone", "push", "pull", "version control"],
+    steps: [
+      {
+        target: '[data-guide="workspace-files"]',
+        textKey: "feature_guide.workspace_git.step1",
+        prepare: openWorkspaceFiles,
+      },
+      {
+        target: '[data-guide="workspace-git"]',
+        textKey: "feature_guide.workspace_git.step2",
+        completeOnTargetClick: true,
+        prepare: openWorkspaceFiles,
+      },
+    ],
+  },
   workspace_upload: {
     titleKey: "feature_guide.workspace_upload.title",
     prompt:
@@ -177,6 +196,31 @@ export const featureGuides = {
       {
         target: '[data-guide="workspace-files"]',
         textKey: "feature_guide.workspace_multiselect.step2",
+        prepare: openWorkspaceFiles,
+      },
+    ],
+  },
+  workspace_edit_file: {
+    titleKey: "feature_guide.workspace_edit_file.title",
+    prompt:
+      "Read and edit a text or code file directly in a workspace file browser. Open a file row: the Preview tab is read-only and shows source code and plain text with syntax highlighting, while Markdown, HTML and CSV are rendered. Click Edit beside Preview to change the text and save with the Save button or Ctrl/Cmd+S; a read-only source offers no Edit toggle. A Typst file additionally offers Render Typst, which opens the compiled document in a pane beside the source and re-renders as the text changes. A rendered Typst document and a PDF preview can be zoomed.",
+    keywords: [
+      "edit workspace file",
+      "edit text file",
+      "code editor",
+      "syntax highlighting",
+      "save file",
+      "workspace editor",
+    ],
+    steps: [
+      {
+        target: '[data-guide="meta-tab-files"]',
+        textKey: "feature_guide.workspace_edit_file.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="workspace-files"]',
+        textKey: "feature_guide.workspace_edit_file.step2",
         prepare: openWorkspaceFiles,
       },
     ],
@@ -1987,8 +2031,10 @@ export const FEATURE_GUIDE_AVAILABILITY = {
   manage_chat_data: () => isFeatureEnabled("workspaces"),
   workspace_edit_storage: () => isFeatureEnabled("workspaces"),
   workspace_clone: () => isFeatureEnabled("workspaces"),
+  workspace_git: () => isFeatureEnabled("workspaces"),
   workspace_upload: () => isFeatureEnabled("workspaces"),
   workspace_multiselect: () => isFeatureEnabled("workspaces"),
+  workspace_edit_file: () => isFeatureEnabled("workspaces"),
   arcana_filesystem: () => isFeatureEnabled("workspaces") && isArcanasEnabled(),
   workspace_saia_fs: () => isFeatureEnabled("workspaces"),
   attach_from_workspace: () => isFeatureEnabled("workspaces"),
@@ -2089,7 +2135,7 @@ export const FEATURE_CATEGORIES = {
     "summarize_conversation",
     "close_chat",
   ],
-  workspace: ["workspace_overview", "manage_chat_data", "pin_workspace", "pin_agent", "workspace_edit_storage", "workspace_clone", "workspace_upload", "workspace_multiselect", "arcana_filesystem", "workspace_saia_fs", "attach_from_workspace", "remote_agents", "agent_recovery", "close_group_sessions", "session_workspaces", "agent_workspace_access"],
+  workspace: ["workspace_overview", "manage_chat_data", "pin_workspace", "pin_agent", "workspace_edit_storage", "workspace_clone", "workspace_git", "workspace_upload", "workspace_edit_file", "workspace_multiselect", "arcana_filesystem", "workspace_saia_fs", "attach_from_workspace", "remote_agents", "agent_recovery", "close_group_sessions", "session_workspaces", "agent_workspace_access"],
   personas: ["chat_with_persona"],
   settings: [
     "settings_overview",

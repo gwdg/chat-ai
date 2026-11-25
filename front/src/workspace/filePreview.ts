@@ -5,9 +5,21 @@ import type { FileProvider, ProviderEntry } from "./providers/types";
 /** Files larger than this are never read for a preview. */
 export const PREVIEW_LIMIT_BYTES = 25 * 1024 * 1024;
 
+/**
+ * The largest file the editor opens. A bigger text file keeps the plain `<pre>`
+ * preview: CodeMirror holds the whole document in memory, and past a few hundred
+ * kilobytes the syntax tree costs more than the file is worth editing by hand.
+ */
+export const MAX_EDIT_BYTES = 512 * 1024;
+
 /** What the Files tree asks a preview pane to show for one row. */
 export type FilePreviewRequest = {
   entry: { name: string; mime?: string; size?: number };
+  /**
+   * Identity of this open, so the pane can remount per request: two files may
+   * share a name, and a re-opened file must not inherit the previous view's state.
+   */
+  key?: string;
   /** Object URL for binary/media kinds; revoked through `release`. */
   url?: string;
   /** Decoded text for text-like kinds. */
@@ -18,6 +30,19 @@ export type FilePreviewRequest = {
   error?: string;
   /** Revokes `url`; the caller calls it when it replaces or closes the preview. */
   release?: () => void;
+  /**
+   * Present when the file may be shown in the editor. `readOnly` follows the
+   * source (a read-only mount, a chat attachment); `save` only exists when the
+   * provider reported write access, so a read-only file cannot be written even
+   * by calling it.
+   */
+  editor?: {
+    /** Identifies the draft across files; workspace + source + provider path. */
+    draftKey: string;
+    readOnly: boolean;
+    /** Writes the text through the provider and resolves with the new size. */
+    save?: (text: string) => Promise<number>;
+  };
 };
 
 export type ProviderPreview =

@@ -9,6 +9,7 @@ import ShortcutTooltip from "../ShortcutTooltip";
 export default function ImportChatButton({
   variant = "icon",
   topicId = null,
+  workspaceId = null,
 }) {
   const { t } = useTranslation();
   const { notifySuccess, notifyError } = useToast();
@@ -47,7 +48,7 @@ export default function ImportChatButton({
           data = data.replace(/,(\s*[}\]])/g, "$1"); // Remove trailing commas
           const parsedData = JSON.parse(data);
           // Import
-          await importConversation(parsedData, false, topicId);
+          await importConversation(parsedData, false, topicId, { workspaceId });
         } catch (jsonError) {
           console.error("JSON Parse Error:", jsonError);
           notifyError("Invalid JSON file format: " + jsonError.message);

@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { getDefaultSettings } from "../utils/conversationUtils";
 import { useToast } from "./useToast";
 import { createConversation, deleteConversation, ensureFolder, getFolder, newId, saveFileReady } from "../db";
+import { attachWorkspaceChat } from "../db/workspaceDb";
 import { dataURLtoFile } from "../utils/attachments";
 import { selectUserSettings, importUserSettings } from "../Redux/reducers/userSettingsReducer";
 
@@ -157,7 +158,10 @@ export function useImportConversation() {
       // Handle multiple conversations import
       if (Array.isArray(data?.conversations)) {
         for (const c of data.conversations) {
-          await importConversation(c);
+          // Each imported chat joins the workspace the import was started in.
+          await importConversation(c, false, topicId, {
+            workspaceId: options.workspaceId,
+          });
         }
         return;
       }
@@ -421,6 +425,11 @@ export function useImportConversation() {
 
       if (!newId) {
         throw new Error("Failed to create new conversation");
+      }
+      // An import started inside a workspace (or from a chat that belongs to
+      // one) joins that workspace, exactly like "New chat" does.
+      if (options.workspaceId && !options.metaChat) {
+        await attachWorkspaceChat(options.workspaceId, newId);
       }
       console.log("Navigating to new chat");
       if (!silent && !options.metaChat) navigate(`/chat/${newId}`, { replace: true });

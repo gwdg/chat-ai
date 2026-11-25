@@ -11,7 +11,12 @@ const dbMocks = vi.hoisted(() => ({
   saveFileReady: vi.fn(async () => "file-123"),
 }));
 
+const workspaceMocks = vi.hoisted(() => ({
+  attachWorkspaceChat: vi.fn(async () => {}),
+}));
+
 vi.mock("../../db", () => dbMocks);
+vi.mock("../../db/workspaceDb", () => workspaceMocks);
 
 vi.mock("react-router-dom", () => ({
   useNavigate: () => vi.fn(),
@@ -132,5 +137,44 @@ describe("useImportConversation", () => {
     expect(params.settings.tools.arcana_tools).toBe(true);
     expect(params.settings.tools.browser_storage).toBe(true);
     expect(params.settings.tools.arcana_v2).toBeUndefined();
+  });
+
+  it("links an imported chat to the workspace it was started in", async () => {
+    const { result } = renderHook(() => useImportConversation());
+
+    await act(async () => {
+      await result.current(importedConversation(), true, null, {
+        workspaceId: "ws-1",
+      });
+    });
+
+    expect(workspaceMocks.attachWorkspaceChat).toHaveBeenCalledTimes(1);
+    expect(workspaceMocks.attachWorkspaceChat).toHaveBeenCalledWith(
+      "ws-1",
+      "new-conversation",
+    );
+  });
+
+  it("leaves an import unassigned without a selected workspace", async () => {
+    const { result } = renderHook(() => useImportConversation());
+
+    await act(async () => {
+      await result.current(importedConversation(), true);
+    });
+
+    expect(workspaceMocks.attachWorkspaceChat).not.toHaveBeenCalled();
+  });
+
+  it("never links the meta chat to a workspace", async () => {
+    const { result } = renderHook(() => useImportConversation());
+
+    await act(async () => {
+      await result.current({ title: "Meta", messages: [] }, true, null, {
+        metaChat: true,
+        workspaceId: "ws-1",
+      });
+    });
+
+    expect(workspaceMocks.attachWorkspaceChat).not.toHaveBeenCalled();
   });
 });
