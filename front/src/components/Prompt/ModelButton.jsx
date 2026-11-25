@@ -5,6 +5,7 @@ import { ChevronDown } from "@carbon/icons-react";
 import DemandIndicator from "../Header/DemandIndicator";
 import E2eeLock from "../Others/E2eeLock";
 import ModelSelectorWrapper from "../Header/ModelSelectorWrapper";
+import { isBrandLocked, isBrandUiVisible } from "../../config/brandPolicy";
 
 /**
  * The model picker, as a compact chip in the prompt box.
@@ -16,6 +17,22 @@ import ModelSelectorWrapper from "../Header/ModelSelectorWrapper";
 export default function ModelButton({ localState, setLocalState, modelsData }) {
   const { t } = useTranslation();
   const selectedModel = localState?.settings?.model;
+
+  // A brand may leave the model control out entirely (the deployment sets the
+  // model) or pin it: the chip can name a pinned model, but a hidden control has
+  // no chip at all.
+  if (!isBrandUiVisible("model_selector")) return null;
+  if (isBrandLocked("model")) {
+    return (
+      <div className="model-selector relative flex min-w-0">
+        <ModelSelectorWrapper
+          localState={localState}
+          setLocalState={setLocalState}
+          modelsData={modelsData}
+        />
+      </div>
+    );
+  }
 
   return (
     <Popover className="model-selector relative flex min-w-0">

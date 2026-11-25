@@ -2132,13 +2132,22 @@ while editing:
   `config/brandPolicy.js` it may switch modules/features off (`restrictions.modules` /
   `.features`), fix or allowlist the models (`restrictions.models`) and forbid the four
   external capabilities (`restrictions.external`: `web_search`, `external_models`, `mcp`,
-  `external_references`). Only `false` / `"false"` / `null` is honoured, so a restriction
-  can only disable. `deployment.js` and `utils/modules.js` consult the brand, so
-  `isFeatureEnabled()` / `moduleValue()` return the effective value; enforcement lives in
+  `external_references`). It may also keep controls fixed (`restrictions.locks`:
+  `tools`, `chat_settings`, plus `model` implied by `models.fixed`) and hide the two
+  presentation-only controls (`restrictions.ui`: `model_selector`, `external_warning`);
+  only `true` locks, only `false` hides. A locked tools block is reset to the deployment
+  defaults in `getDefaultSettings`, a fixed model narrows the model list to one, and the
+  Meta chat drops `SET_CONVERSATION_SETTING` / `CREATE_CHAT` overrides for a locked key.
+  `config/branding/gaia/brand.json` is the worked example: it pins
+  `deepseek-v4.1-flash-1017`, locks GWDG Tools and the chat settings, and hides the model
+  control and the data-safety indicator. Only `false` / `"false"` / `null` is honoured, so
+  a restriction can only disable. `deployment.js` and `utils/modules.js` consult the brand,
+  so `isFeatureEnabled()` / `moduleValue()` return the effective value; enforcement lives in
   the request and UI paths (`useUpdateModelsData`, `getDefaultSettings`, `sendMessage`,
-  `agent/tools.ts`, `agent/mcp.ts`, `ToolsContainer`, `SidebarContent`, `ChatPreferences`,
-  `AgentPage`, `AddSourceModal`). `InstituteSection` in Profile shows the institute and
-  every narrowing, and `metaTools.js#buildSettingsLines` reports them to the Meta chat.
+  `agent/tools.ts`, `agent/mcp.ts`, `ToolsContainer`, `SettingsButton`, `SidebarContent`,
+  `ChatPreferences`, `AgentPage`, `AddSourceModal`, `WarningExternalModel`). `InstituteSection`
+  in Profile shows the institute and every narrowing, and `metaTools.js#buildSettingsLines`
+  reports them to the Meta chat.
   Brand objects are otherwise presentation only (`BrandLogo`, `BrandHeader`,
   `BrandDisclaimer`, `BrandChatWarning`, `AiServicesMenu`, `LogoContainer`, `useTabTitle`,
   `CollapsibleFooter`, the `brand-sidebar` surface). By exception a brand may own its own

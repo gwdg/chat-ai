@@ -41,6 +41,10 @@ export default function InstituteSection({ modelsData }) {
     t(`user_settings.account.institute.features.${id}`, { defaultValue: id });
   const externalLabel = (id) =>
     t(`user_settings.account.institute.external.${id}`, { defaultValue: id });
+  const lockLabel = (id) =>
+    t(`user_settings.account.institute.locks.${id}`, { defaultValue: id });
+  const uiLabel = (id) =>
+    t(`user_settings.account.institute.ui.${id}`, { defaultValue: id });
 
   const rows = [];
   if (restrictions.model.fixed) {
@@ -79,6 +83,25 @@ export default function InstituteSection({ modelsData }) {
       id: "external",
       label: t("user_settings.account.institute.external_label"),
       value: restrictions.external.map(externalLabel).join(", "),
+    });
+  }
+  // A fixed model already has its own row ("Fixed to …"), so it is not repeated
+  // in the list of fixed settings.
+  const lockedSettings = restrictions.locks.filter(
+    (id) => !(id === "model" && restrictions.model.fixed),
+  );
+  if (lockedSettings.length) {
+    rows.push({
+      id: "locks",
+      label: t("user_settings.account.institute.locks_label"),
+      value: lockedSettings.map(lockLabel).join(", "),
+    });
+  }
+  if (restrictions.ui.length) {
+    rows.push({
+      id: "ui",
+      label: t("user_settings.account.institute.ui_label"),
+      value: restrictions.ui.map(uiLabel).join(", "),
     });
   }
 

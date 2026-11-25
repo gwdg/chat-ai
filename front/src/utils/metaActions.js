@@ -1,3 +1,5 @@
+import { isBrandLocked } from "../config/brandPolicy.js";
+
 const ACTION_TYPES =
   "CREATE_CHAT|RENAME_CHAT|MOVE_CHAT|PIN_CHAT|PIN_TOPIC|PIN_WORKSPACE|PIN_AGENT|SET_SETTING|SET_CONVERSATION_SETTING|WORKSPACE_LINK|AGENT_ACTION|AGENT_SESSION|MCP_SERVER|ADD_MEMORY|UPDATE_MEMORY|DELETE_MEMORY|CLEAR_MEMORIES|E2EE_ASSIGN";
 const ACTION_SOURCE = `\\[\\[(${ACTION_TYPES}):\\s*(\\{[\\s\\S]*?\\})\\]\\]`;
@@ -40,6 +42,33 @@ const SUPPORTED_CONVERSATION_SETTING_KEYS = new Set([
   "workspace_write_access",
   "arcana_tools",
 ]);
+
+const LOCKED_CHAT_SETTING_KEYS = new Set([
+  "temperature",
+  "top_p",
+  "reasoning_effort",
+  "memory_mode_override",
+  "memory_group_override",
+]);
+const LOCKED_TOOL_SETTING_KEYS = new Set([
+  "enable_tools",
+  "enable_web_search",
+  "browser_storage",
+  "workspace_write_access",
+  "arcana_tools",
+]);
+
+/**
+ * A brand may fix the model, the chat settings or GWDG Tools. The Meta chat can
+ * propose per-conversation settings and create a chat with overrides, so it must
+ * not become the way around a control the brand removed from the interface.
+ */
+export const isConversationSettingLocked = (key) => {
+  if (key === "model") return isBrandLocked("model");
+  if (LOCKED_CHAT_SETTING_KEYS.has(key)) return isBrandLocked("chat_settings");
+  if (LOCKED_TOOL_SETTING_KEYS.has(key)) return isBrandLocked("tools");
+  return false;
+};
 
 function isValidConversationSetting(key, value) {
   if (key === "model") {
@@ -268,6 +297,9 @@ export function getMetaActionProposals(text) {
       if (!SUPPORTED_CONVERSATION_SETTING_KEYS.has(key)) continue;
       if (!Object.prototype.hasOwnProperty.call(payload, "value")) continue;
       if (!isValidConversationSetting(key, payload.value)) continue;
+      // A locked setting keeps the deployment's value; the proposal is dropped
+      // rather than offered and then silently ignored.
+      if (isConversationSettingLocked(key)) continue;
 
       const targetAll =
         payload.target === "all" || payload.scope === "all" || payload.all === true;

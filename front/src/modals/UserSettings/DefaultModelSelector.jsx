@@ -7,11 +7,15 @@ import {
   selectDefaultModel,
   setDefaultModel,
 } from "../../Redux/reducers/userSettingsReducer";
+import { isBrandLocked } from "../../config/brandPolicy";
 
 export default function DefaultModelSelector({ modelsData }) {
   const dispatch = useDispatch();
   const { t } = useTranslation();
   const currentDefaultModel = useSelector(selectDefaultModel);
+
+  // A brand that pins the model has no default to choose: every chat uses it.
+  if (isBrandLocked("model")) return null;
 
   const selectedModel =
     modelsData?.find((m) => m.id === currentDefaultModel?.id) || null;

@@ -4334,9 +4334,11 @@ x-saia-bridge-depth: 2
           <h3>Brand · restriction</h3>
           <p>
             <code>restrictions.modules</code>, <code>.features</code>, <code>.models</code>
-            (<code>fixed</code> / <code>allowed</code>) and <code>.external</code> (web search, external
-            models, MCP, external references). Only <code>false</code>, <code>"false"</code> or
-            <code>null</code> is honoured, so the direction cannot flip.
+            (<code>fixed</code> / <code>allowed</code>), <code>.external</code> (web search, external
+            models, MCP, external references), <code>.locks</code> (tools, chat settings, a fixed model)
+            and <code>.ui</code> (model control, data-safety indicator). Only <code>false</code>,
+            <code>"false"</code> or <code>null</code> is honoured for the disabling keys, and only
+            <code>true</code> locks / <code>false</code> hides, so the direction cannot flip.
           </p>
         </div>
       </div>
@@ -4423,13 +4425,14 @@ x-saia-bridge-depth: 2
         </li>
         <li>
           <b>A brand may narrow, never widen.</b> <code>config/brandPolicy.js</code> is the only path from
-          a brand into behaviour. It can switch modules and features off, fix or allowlist the models, and
-          forbid the four external capabilities - and that is all, because only a value that explicitly
-          disables something is read. A brand cannot enable a module the deployment turned off, add a model
-          the deployment does not list, or change a layout or a route. The guarantee survives because
-          <code>deployment.js</code> and <code>utils/modules.js</code> consult the brand, so
-          <code>isFeatureEnabled()</code> and <code>moduleValue()</code> already return the effective value;
-          enforcement then lives in the request and UI paths, not in a second checker.
+          a brand into behaviour. It can switch modules and features off, fix or allowlist the models,
+          forbid the four external capabilities, keep the model / GWDG Tools / chat settings fixed, and
+          hide the model control and the data-safety indicator - and that is all, because only a value
+          that explicitly disables something is read. A brand cannot enable a module the deployment turned
+          off, add a model the deployment does not list, or change a layout or a route. The guarantee
+          survives because <code>deployment.js</code> and <code>utils/modules.js</code> consult the brand,
+          so <code>isFeatureEnabled()</code> and <code>moduleValue()</code> already return the effective
+          value; enforcement then lives in the request and UI paths, not in a second checker.
         </li>
         <li>
           <b>The policy is read from module state.</b> <code>BrandProvider</code> calls
@@ -4522,8 +4525,8 @@ x-saia-bridge-depth: 2
           </tr>
           <tr>
             <td>Brand policy</td>
-            <td>Model policy, module/feature denials, the four external capabilities, the summary both the
-                Profile section and the Meta chat print.</td>
+            <td>Model policy, module/feature denials, the four external capabilities, fixed controls and
+                hidden UI controls, the summary both the Profile section and the Meta chat print.</td>
             <td><span class="mono">config/brandPolicy.js</span></td>
           </tr>
           <tr>
@@ -4604,6 +4607,10 @@ x-saia-bridge-depth: 2
             carries the statement instead of the list enforcing it.</li>
         <li>Restrictions reach the request paths one by one: a new feature that talks to the outside world
             is only as gated as the code that consults <code>isBrandExternalAllowed()</code>.</li>
+        <li>Hidden controls are presentation only and equally per-call-site: a new surface that renders the
+            model control or the data-safety indicator must consult <code>isBrandUiVisible()</code>, and a
+            new way to set a conversation setting (a tool, an import, an agent) must honour
+            <code>isBrandLocked()</code> like the Meta chat's proposals do.</li>
         <li>Brand CSS cannot invent a token; the variable must exist in <code>THEME_TOKENS</code> or
             <code>SURFACE_TOKENS</code> first.</li>
         <li>Brand-owned pages cannot be validated against the code. An operator who copies another

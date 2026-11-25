@@ -9,6 +9,7 @@ import {
   selectE2eeModels,
 } from "../../Redux/reducers/userSettingsReducer";
 import { isModelKeyed } from "../../e2ee/registry";
+import { isBrandUiVisible } from "../../config/brandPolicy";
 
 function isSafeSettings(localState) {
   const modelName = localState?.settings?.model?.name;
@@ -33,6 +34,8 @@ function isSafeSettings(localState) {
 }
 
 export function DataSafetyText({ localState, userData }) {
+  // A brand may drop the data-safety indicator entirely.
+  if (!isBrandUiVisible("external_warning")) return null;
   const isSafe = isSafeSettings(localState);
   if(isSafe) return null;
   return (
@@ -195,6 +198,10 @@ export default function WarningExternalModel({
       )}
     </div>
   );
+
+  // A brand may drop the data-safety indicator entirely (GAIA). Placed after the
+  // hooks so the hook order does not change when the brand resolves.
+  if (!isBrandUiVisible("external_warning")) return null;
 
   return (
     <div onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>

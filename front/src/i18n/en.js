@@ -1465,6 +1465,8 @@ export default {
         modules_label: "Disabled modules",
         features_label: "Disabled features",
         external_label: "Blocked external communication",
+        locks_label: "Fixed settings",
+        ui_label: "Hidden controls",
         modules: {
           tools: "Tools",
           feedback: "Feedback",
@@ -1488,6 +1490,15 @@ export default {
           external_models: "External models",
           mcp: "MCP servers",
           external_references: "External references in rendered content",
+        },
+        locks: {
+          model: "Model choice",
+          tools: "GWDG Tools",
+          chat_settings: "Chat settings",
+        },
+        ui: {
+          model_selector: "Model name",
+          external_warning: "Data-safety warning",
         },
       },
     },
@@ -2155,6 +2166,7 @@ export default {
   },
   model_selector: {
     change_model: "Change model",
+    locked: "The model is set by your institution",
     docs_hint_text: "Need help deciding which model fits best?",
     docs_hint_link: "Read the model overview.",
     scope_filter: "Filter models",

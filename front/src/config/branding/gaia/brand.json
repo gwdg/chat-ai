@@ -442,8 +442,19 @@
   },
   "restrictions": {
     "notice": {
-      "en": "Students have no access to agents, workspaces or MCP servers. Only the models operated by GWDG are offered.",
-      "de": "Studierende haben keinen Zugriff auf Agenten, Workspaces oder MCP-Server. Es werden nur die von der GWDG betriebenen Modelle angeboten."
+      "en": "Students have no access to agents, workspaces or MCP servers. Only the models operated by GWDG are offered. The model, GWDG Tools and the chat settings are set by GAIA and cannot be changed.",
+      "de": "Studierende haben keinen Zugriff auf Agenten, Workspaces oder MCP-Server. Es werden nur die von der GWDG betriebenen Modelle angeboten. Modell, GWDG-Werkzeuge und die Chat-Einstellungen sind durch GAIA vorgegeben und können nicht geändert werden."
+    },
+    "models": {
+      "fixed": "deepseek-v4.1-flash-1017"
+    },
+    "locks": {
+      "tools": true,
+      "chat_settings": true
+    },
+    "ui": {
+      "model_selector": false,
+      "external_warning": false
     },
     "modules": {
       "agent": false,

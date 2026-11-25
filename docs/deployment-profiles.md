@@ -40,7 +40,7 @@ Non-goals:
 | Tier | Resolved | Decides | May not change |
 | --- | --- | --- | --- |
 | **Deployment profile** | Build time | Backend, models, features, layout, default brand, brand claim rules, legal copy | — |
-| **Brand profile** | Runtime, per user | Name, logo, favicon, colours, links, footer, copy, and *narrowing* restrictions (fixed/allowed models, modules/features off, no external communication) | Enabling anything the deployment disabled; layout, routes, adding models |
+| **Brand profile** | Runtime, per user | Name, logo, favicon, colours, links, footer, copy, and *narrowing* restrictions (fixed/allowed models, modules/features off, no external communication, fixed chat settings, hidden controls) | Enabling anything the deployment disabled; layout, routes, adding models |
 
 ```
 secrets/front-chat-ai.json ─┐
@@ -433,11 +433,19 @@ Rules:
   `models.allowed` keeps an allowlist (neither can add a model the deployment does
   not list); `modules` and `features` disable the names used by `utils/modules.js`
   and `config/deployment.js`; `external` disables `web_search`,
-  `external_models`, `mcp` and `external_references`. The block `notice` is
-  localized and explains the narrowing in the user's words.
+  `external_models`, `mcp` and `external_references`. `locks` keeps a control
+  fixed (`tools`, `chat_settings`, and `model` implied by `models.fixed`; **only
+  `true`** locks, so a sub-brand inherits a lock and can only unlock it with
+  `false`) and `ui` hides a presentation-only control (`model_selector`,
+  `external_warning`; **only `false`** hides, so the default is visible). A locked
+  tools block is reset to the deployment defaults in `getDefaultSettings`, a fixed
+  model narrows the model list to one, and the Meta chat drops
+  `SET_CONVERSATION_SETTING` / `CREATE_CHAT` overrides for a locked key. The block
+  `notice` is localized and explains the narrowing in the user's words.
 - The restrictions are read through `config/brandPolicy.js`
   (`brandDisablesModule`, `brandDisablesFeature`, `isBrandExternalAllowed`,
-  `applyBrandModelPolicy`, `brandRestrictionSummary`) from the accessor and request
+  `applyBrandModelPolicy`, `brandRestrictionSummary`, `isBrandLocked`,
+  `isBrandUiVisible`) from the accessor and request
   paths, so enforcement does not depend on a component remembering to hide
   something: the model selector's list, the tool rows and their request payload,
   MCP server resolution, the agent bridge's MCP relay, the HTML preview's
@@ -801,6 +809,7 @@ secrets, so inlining all of them is harmless and keeps `useBrand()` synchronous.
   reaches through: `brandRestrictions`, `brandDisablesModule`,
   `brandDisablesFeature`, `BRAND_EXTERNAL_KEYS`, `isBrandExternalAllowed`,
   `brandModelPolicy`, `brandFixedModel`, `applyBrandModelPolicy`,
+  `BRAND_LOCK_KEYS`, `isBrandLocked`, `BRAND_UI_KEYS`, `isBrandUiVisible`,
   `brandRestrictionSummary`, `hasBrandRestrictions`, `brandInstituteLinks` and
   `brandRestrictionLines`. `deployment.js` and `utils/modules.js` consult it, so
   `isFeatureEnabled()` / `moduleValue()` are the effective, narrowed values.
@@ -818,7 +827,12 @@ secrets, so inlining all of them is harmless and keeps `useBrand()` synchronous.
   `ChatPreferences` hides the external-reference switch and the reducer's
   `selectHtmlLoadExternal` forces `false`; `AgentPage`/`AgentWorkspaceButton`
   disable the MCP relay and injection; `AddSourceModal` hides the MCP source
-  kind. `metaTools.js#buildSettingsLines` reports the brand, its restrictions,
+  kind. With `restrictions.locks`, `ToolsButton`, `SettingsButton` and the model
+  selector (`ModelButton` / `ModelSelectorWrapper`) render nothing, and
+  `utils/metaActions.js#isConversationSettingLocked` drops the matching Meta-chat
+  proposals. With `restrictions.ui`, `ModelSelectorWrapper` and
+  `WarningExternalModel` render nothing. `metaTools.js#buildSettingsLines`
+  reports the brand, its restrictions,
   the fixed model and the blocked external capabilities in `get_user_settings`.
 - `front/src/config/branding/restricted/brand.json` is the generic, copyable
   example (`?brand=restricted`, aliases `example-restricted`/`locked-down`): it
@@ -826,6 +840,13 @@ secrets, so inlining all of them is harmless and keeps `useBrand()` synchronous.
   `arcanas`, `speech` and `sync` modules and the `workspaces`, `mcp_servers` and
   `import_git` features, and blocks all four external capabilities. It carries no
   images, so it also demonstrates that a brand folder can be `brand.json` alone.
+- `front/src/config/branding/gaia/brand.json` demonstrates the newer
+  restrictions on a real institution: it pins
+  `deepseek-v4.1-flash-1017` (`models.fixed`), locks GWDG Tools and the chat
+  settings (`locks`), and hides the model control and the data-safety indicator
+  (`ui`). `gaia-tutor` inherits all of them through `extends` and can opt out of
+  one key (`false` for a lock, `true` for a hidden control) without repeating the
+  rest.
 - `modals/UserSettings/ProfileSettings.jsx` splits the Profile tab into **User**
   (`UserInfoContainer`) and **Institution** (`InstituteSection`), like the Data
   tab's own strip: the buttons carry `data-guide="profile-subtab-<section>"` and

@@ -18,10 +18,15 @@ import {
   isToolsEnabled,
 } from "../utils/modules.js";
 import { isFeatureEnabled } from "./deployment.js";
+import { isBrandLocked, isBrandUiVisible } from "./brandPolicy.js";
 
 // The Tools panel is where the tool steps of these walkthroughs point, and agent
 // mode renders the same panel with the agent's own toggles.
-const isToolPanelAvailable = () => isToolsEnabled() || isAgentEnabled();
+const isToolPanelAvailable = () =>
+  !isBrandLocked("tools") && (isToolsEnabled() || isAgentEnabled());
+const modelIsSelectable = () =>
+  !isBrandLocked("model") && isBrandUiVisible("model_selector");
+const chatSettingsEditable = () => !isBrandLocked("chat_settings");
 
 export const useCases = {
   analyze_paper: {
@@ -424,6 +429,9 @@ export const USE_CASE_AVAILABILITY = {
   find_chat: () => isFeatureEnabled("meta_chat"),
   generate_image: () => isToolPanelAvailable(),
   read_aloud: () => isSpeechEnabled(),
+  // Both step through a gated tutorial (`select_model`, `share_conversation`).
+  compare_models: modelIsSelectable,
+  share_setup: chatSettingsEditable,
 };
 
 export function isUseCaseAvailable(useCaseId) {

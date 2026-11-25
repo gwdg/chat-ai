@@ -55,6 +55,23 @@ describe("GAIA brand", () => {
     // a student deployment.
     expect(brand.restrictions.external.external_models).toBe(true);
   });
+
+  it("fixes the model, GWDG Tools and the chat settings, and hides the controls", () => {
+    const brand = gaia();
+    expect(brand.restrictions.models.fixed).toBe("deepseek-v4.1-flash-1017");
+    expect(brand.restrictions.locks.tools).toBe(true);
+    expect(brand.restrictions.locks.chat_settings).toBe(true);
+    // The model name and the data-safety indicator are not needed when GAIA
+    // decides the model.
+    expect(brand.restrictions.ui.model_selector).toBe(false);
+    expect(brand.restrictions.ui.external_warning).toBe(false);
+    // The teaching-staff sub-brand inherits the locks unless it unlocks one.
+    const tutor = getBrandProfile("gaia-tutor");
+    expect(tutor.restrictions.models.fixed).toBe("deepseek-v4.1-flash-1017");
+    expect(tutor.restrictions.locks.tools).toBe(true);
+    expect(tutor.restrictions.locks.chat_settings).toBe(true);
+    expect(tutor.restrictions.ui.model_selector).toBe(false);
+  });
 });
 
 describe("brand themes", () => {

@@ -98,6 +98,37 @@ export function applyBrandModelPolicy(models, brand = currentBrand()) {
 export const brandFixedModel = (brand = currentBrand()) =>
   brandModelPolicy(brand).fixed;
 
+/**
+ * Controls a brand keeps fixed for the user: the model, GWDG Tools and the
+ * per-conversation settings (temperature, top_p, reasoning effort, memory mode,
+ * the system prompt). `restrictions.locks[key] === true` removes the control,
+ * so the value comes from the deployment's defaults instead of whoever is signed
+ * in. Only `true` locks, which is what lets a sub-brand (`extends`) unlock one
+ * of its parent's settings with `false`; a lock narrows the user's options and
+ * never enables anything.
+ *
+ * A pinned model (`models.fixed`) is locked by definition: a list with one entry
+ * has nothing to choose.
+ */
+export const BRAND_LOCK_KEYS = ["model", "tools", "chat_settings"];
+
+export const isBrandLocked = (key, brand = currentBrand()) => {
+  if (brandRestrictions(brand).locks?.[key] === true) return true;
+  return key === "model" && Boolean(brandFixedModel(brand));
+};
+
+/**
+ * Controls a brand may leave out of the interface entirely. This is presentation
+ * only: `locks` and `models.fixed` decide the values, these keys decide whether
+ * the control that would show them is rendered. Named positively, so a brand (or
+ * a sub-brand) only has to say `false` for the one it hides; an absent key keeps
+ * the control, and `false` is the only value that hides anything.
+ */
+export const BRAND_UI_KEYS = ["model_selector", "external_warning"];
+
+export const isBrandUiVisible = (key, brand = currentBrand()) =>
+  brandRestrictions(brand).ui?.[key] !== false;
+
 const disabledKeys = (value) =>
   asObject(value)
     ? Object.entries(value)
@@ -107,8 +138,8 @@ const disabledKeys = (value) =>
 
 /**
  * A plain description of everything a brand narrows, for the institute section
- * and the Meta chat. Keys are module/feature/external ids; the UI translates
- * them, the Meta chat prints them.
+ * and the Meta chat. Keys are module/feature/external/lock/UI ids; the UI
+ * translates them, the Meta chat prints them.
  */
 export function brandRestrictionSummary(brand = currentBrand()) {
   const restrictions = brandRestrictions(brand);
@@ -120,6 +151,8 @@ export function brandRestrictionSummary(brand = currentBrand()) {
     external: BRAND_EXTERNAL_KEYS.filter(
       (key) => !isBrandExternalAllowed(key, brand),
     ),
+    locks: BRAND_LOCK_KEYS.filter((key) => isBrandLocked(key, brand)),
+    ui: BRAND_UI_KEYS.filter((key) => !isBrandUiVisible(key, brand)),
   };
 }
 
@@ -131,7 +164,9 @@ export const hasBrandRestrictions = (brand = currentBrand()) => {
     Boolean(summary.model.allowed) ||
     summary.modules.length > 0 ||
     summary.features.length > 0 ||
-    summary.external.length > 0
+    summary.external.length > 0 ||
+    summary.locks.length > 0 ||
+    summary.ui.length > 0
   );
 };
 
@@ -174,6 +209,12 @@ export function brandRestrictionLines(brand = currentBrand()) {
   }
   if (summary.external.length) {
     lines.push(`external communication off: ${summary.external.join(", ")}`);
+  }
+  if (summary.locks.length) {
+    lines.push(`settings locked: ${summary.locks.join(", ")}`);
+  }
+  if (summary.ui.length) {
+    lines.push(`controls hidden: ${summary.ui.join(", ")}`);
   }
   return lines;
 }

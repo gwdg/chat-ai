@@ -4,9 +4,14 @@ import { useTranslation } from "react-i18next";
 import { SettingsAdjust } from "@carbon/icons-react";
 import Tooltip from "../Others/Tooltip";
 import SettingsContent from "../SettingsPanel/SettingsContent";
+import { isBrandLocked } from "../../config/brandPolicy";
 
 export default function SettingsButton({ localState, setLocalState, userData, modelsData }) {
     const { t } = useTranslation();
+    // A brand may fix the chat settings (temperature, top_p, reasoning effort,
+    // memory mode, the system prompt). The panel would only show controls that
+    // the institution overrides, so the entry point is not rendered at all.
+    if (isBrandLocked("chat_settings")) return null;
     return (
         <Popover className="settings-toggle relative flex">
             <Tooltip text={t("settings.chat_settings")}>

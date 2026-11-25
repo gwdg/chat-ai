@@ -1483,6 +1483,8 @@ export default {
         modules_label: "Deaktivierte Module",
         features_label: "Deaktivierte Funktionen",
         external_label: "Blockierte externe Kommunikation",
+        locks_label: "Fest vorgegebene Einstellungen",
+        ui_label: "Ausgeblendete Bedienelemente",
         modules: {
           tools: "Werkzeuge",
           feedback: "Feedback",
@@ -1506,6 +1508,15 @@ export default {
           external_models: "Externe Modelle",
           mcp: "MCP-Server",
           external_references: "Externe Verweise in gerenderten Inhalten",
+        },
+        locks: {
+          model: "Modellauswahl",
+          tools: "GWDG-Werkzeuge",
+          chat_settings: "Chat-Einstellungen",
+        },
+        ui: {
+          model_selector: "Modellname",
+          external_warning: "Datenschutz-Hinweis",
         },
       },
     },
@@ -2176,6 +2187,7 @@ export default {
   },
   model_selector: {
     change_model: "Modell wechseln",
+    locked: "Das Modell wird von Ihrer Einrichtung vorgegeben",
     docs_hint_text: "Unsicher, welches Modell Sie wählen sollen?",
     docs_hint_link: "Lesen Sie die Modellübersicht.",
     scope_filter: "Modelle filtern",

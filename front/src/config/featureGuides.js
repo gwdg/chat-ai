@@ -37,7 +37,7 @@ import {
   isToolsEnabled,
 } from "../utils/modules.js";
 import { isFeatureEnabled } from "./deployment.js";
-import { hasBrandInstitute } from "./brandPolicy.js";
+import { hasBrandInstitute, isBrandLocked, isBrandUiVisible } from "./brandPolicy.js";
 import { canInstallApp } from "../utils/installPrompt.js";
 import { isFeedbackReportEnabled } from "../apis/feedback.js";
 import { currentBrand } from "./brands.js";
@@ -2033,7 +2033,16 @@ export const featureGuides = {
 
 // The Tools panel is where every tool guide points. It exists for the tools
 // module, and agent mode renders the same panel with the agent's own toggles.
-const isToolPanelAvailable = () => isToolsEnabled() || isAgentEnabled();
+// A brand that locks GWDG Tools removes the panel entirely
+// (components/Prompt/ToolsButton.jsx#isBrandLocked), so no tool guide can run.
+const isToolPanelAvailable = () =>
+  !isBrandLocked("tools") && (isToolsEnabled() || isAgentEnabled());
+const modelIsSelectable = () =>
+  !isBrandLocked("model") && isBrandUiVisible("model_selector");
+// The chat settings panel (temperature, top_p, reasoning effort, memory mode,
+// the system prompt) is a single button; a brand that fixes those settings hides
+// it (components/Header/SettingsButton.jsx#isBrandLocked).
+const chatSettingsEditable = () => !isBrandLocked("chat_settings");
 const metaChatAvailable = () => isFeatureEnabled("meta_chat");
 
 // A guided tour highlights real elements. When a deployment switches a module or
@@ -2062,6 +2071,9 @@ export const FEATURE_GUIDE_AVAILABILITY = {
   session_workspaces: () => isAgentsEnabled(),
   agent_workspace_access: () => isAgentsEnabled(),
   pin_agent: () => isAgentsEnabled(),
+  select_model: modelIsSelectable,
+  conversation_settings: chatSettingsEditable,
+  share_conversation: chatSettingsEditable,
   tools_overview: () => isToolPanelAvailable(),
   web_search: () => isToolPanelAvailable(),
   image_generation: () => isToolPanelAvailable(),

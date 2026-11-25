@@ -6,10 +6,14 @@ import Tooltip from "../Others/Tooltip";
 import ToolsContainer from "../SettingsPanel/ToolsContainer";
 import { isAgentEnabled } from "../../apis/agentEndpoints";
 import { isToolsEnabled } from "../../utils/modules";
+import { isBrandLocked } from "../../config/brandPolicy";
 
 export default function ToolsButton({ localState, setLocalState }) {
     const { t } = useTranslation();
     const toolsModule = isToolsEnabled();
+    // A brand may fix the tools: the panel would only show switches that do
+    // nothing, so the institution decides and the entry point is not rendered.
+    if (isBrandLocked("tools")) return null;
     // The agent always has tools to choose from
     if (!toolsModule && !isAgentEnabled()) return null;
 
