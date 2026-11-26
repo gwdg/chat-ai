@@ -3094,6 +3094,8 @@ export default {
     download: "Herunterladen",
     downloading: "Dateien werden gespeichert…",
     preview_too_large: "Diese Datei ist zu groß für die Vorschau.",
+    preview_too_large_hint:
+      "Die Vorschau ist auf {{limit}} begrenzt. Laden Sie die Datei herunter, um sie zu öffnen.",
     preview_unavailable: "Für diesen Dateityp gibt es keine Vorschau.",
     remove_source: "Quelle entfernen",
     remove_source_confirm:

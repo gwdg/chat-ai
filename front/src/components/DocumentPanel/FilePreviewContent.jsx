@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Papa from "papaparse";
+import { Download } from "@carbon/icons-react";
 
 import AudioPlayer from "./AudioPlayer";
 import MarkdownRenderer from "../Conversation/MessageAssistant/MarkdownRenderer";
@@ -154,6 +155,12 @@ export default function FilePreviewContent({
   resolveImage,
   showPdfHint = false,
   resetKey,
+  /** The caller's download action: offered where a file cannot be shown inline. */
+  onDownload,
+  downloadLabel,
+  /** `error` means "over the preview limit", so it gets the download notice. */
+  tooLarge = false,
+  limitLabel,
 }) {
   const { t } = useTranslation();
   const [loadError, setLoadError] = useState(null);
@@ -173,6 +180,31 @@ export default function FilePreviewContent({
   const hasUrl = Boolean(url);
 
   if (loading) return <LoadingBox />;
+  // Nothing is read, opened or downloaded for a file that is too large: the notice
+  // explains why, and the download is the user's own click.
+  if (error && tooLarge) {
+    return (
+      <div className="mx-auto flex h-[50vh] max-w-md flex-col items-center justify-center gap-3 rounded-lg bg-base-200 p-6 text-center">
+        <p className="text-sm font-medium text-base-content/80">{error}</p>
+        {limitLabel && (
+          <p className="text-xs text-base-content/60">
+            {t("workspace.preview_too_large_hint", { limit: limitLabel })}
+          </p>
+        )}
+        {onDownload && (
+          <button
+            type="button"
+            data-guide="preview-download"
+            className="btn btn-sm"
+            onClick={() => onDownload(entry)}
+          >
+            <Download size={16} aria-hidden />
+            {downloadLabel ?? t("workspace.download")}
+          </button>
+        )}
+      </div>
+    );
+  }
   if (error) return <p className="text-sm text-error">{error}</p>;
   if (loadError)
     return <p className="text-sm text-error">{t("file_preview.error", { message: loadError })}</p>;
@@ -237,6 +269,19 @@ export default function FilePreviewContent({
           <p className="text-sm text-base-content/70">
             {t("file_preview.pdf_mobile_hint")}
           </p>
+          {/* The frame is the only thing this browser cannot show; the file itself is
+              fine, so the user gets the download instead of a dead end. */}
+          {onDownload && (
+            <button
+              type="button"
+              data-guide="preview-download"
+              className="btn btn-sm mt-4"
+              onClick={() => onDownload(entry)}
+            >
+              <Download size={16} aria-hidden />
+              {downloadLabel ?? t("workspace.download")}
+            </button>
+          )}
         </div>
       );
     }

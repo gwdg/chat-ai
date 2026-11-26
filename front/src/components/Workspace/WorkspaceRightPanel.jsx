@@ -109,6 +109,17 @@ export function WorkspacePreviewPane({ request, onClose, onBack }) {
 
   const download = async (entry) => {
     if (!isChatFile) {
+      // A refused preview (too large) carries its own saver: the bytes are read on
+      // this click, not while the preview was built.
+      if (preview.download) {
+        try {
+          await preview.download();
+        } catch (reason) {
+          console.error("Download failed:", reason);
+          notifyError(t("file_preview.save_failed"));
+        }
+        return;
+      }
       if (preview.url) {
         const link = document.createElement("a");
         link.href = preview.url;

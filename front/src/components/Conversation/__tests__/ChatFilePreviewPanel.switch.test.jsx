@@ -11,7 +11,7 @@ vi.mock("react-redux", () => ({
 import { saveFileReady } from "../../../db";
 
 // Switching from one attachment to another must never reuse the previous file's bytes.
-// A markdown data URL inside an <img> is what produced "Error: Failed to load image".
+// A preview URL that outlives its file is what produced "Error: Failed to load image".
 const view = vi.hoisted(() => ({
   preview: null,
   closeFilePreview: vi.fn(),
@@ -60,8 +60,10 @@ describe("ChatFilePreviewPanel file switch", () => {
     expect(screen.queryByText(/Failed to load image/)).not.toBeInTheDocument();
 
     await waitFor(() => {
+      // An object URL of this file's bytes, never a data URL (and never the previous
+      // file's URL): Chrome refuses the data: form above ~1.5 MB.
       expect(document.querySelector("aside img")?.getAttribute("src")).toMatch(
-        /^data:image\/png/,
+        /^blob:/,
       );
     });
     expect(screen.queryByText(/Failed to load image/)).not.toBeInTheDocument();

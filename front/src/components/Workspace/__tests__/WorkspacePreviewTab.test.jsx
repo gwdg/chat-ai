@@ -112,4 +112,60 @@ describe("WorkspacePreviewTab", () => {
       errorSpy.mockRestore();
     }
   });
+
+  it("explains a file that is too large and downloads only on request", () => {
+    const onDownload = vi.fn();
+    const clicked = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    renderTab({
+      preview: {
+        entry: { name: "scan.pdf", mime: "application/pdf", size: 30 * 1024 * 1024 },
+        tooLarge: true,
+        limitBytes: 25 * 1024 * 1024,
+      },
+      onDownload,
+    });
+
+    expect(
+      screen.getByText("This file is too large to preview."),
+    ).toBeInTheDocument();
+    expect(clicked).not.toHaveBeenCalled();
+
+    fireEvent.click(document.querySelector('[data-guide="preview-download"]'));
+    expect(onDownload).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "scan.pdf" }),
+    );
+    clicked.mockRestore();
+  });
+
+  it("offers the download when a PDF cannot be framed on a mobile browser", () => {
+    const onDownload = vi.fn();
+    const original = navigator.userAgent;
+    Object.defineProperty(navigator, "userAgent", {
+      configurable: true,
+      value:
+        "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Mobile Safari/537.36",
+    });
+    try {
+      renderTab({
+        preview: {
+          entry: { name: "scan.pdf", mime: "application/pdf", size: 1024 },
+          url: "blob:scan",
+        },
+        onDownload,
+      });
+
+      expect(
+        screen.getByText("PDF preview is not available on mobile devices"),
+      ).toBeInTheDocument();
+      fireEvent.click(document.querySelector('[data-guide="preview-download"]'));
+      expect(onDownload).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "scan.pdf" }),
+      );
+    } finally {
+      Object.defineProperty(navigator, "userAgent", {
+        configurable: true,
+        value: original,
+      });
+    }
+  });
 });

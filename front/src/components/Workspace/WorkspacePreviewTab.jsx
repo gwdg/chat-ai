@@ -17,6 +17,13 @@ export default function WorkspacePreviewTab({
   const { t } = useTranslation();
   const entry = preview.entry;
   const isImage = getFileType({ type: entry.mime, name: entry.name }) === "image";
+  const errorText = preview.tooLarge
+    ? t("workspace.preview_too_large")
+    : preview.error;
+  const limitLabel =
+    preview.tooLarge && typeof preview.limitBytes === "number"
+      ? formatBytes(preview.limitBytes)
+      : undefined;
   // One identity for the content: `key` remounts it (and drops the previous
   // file's failed-media state), `resetKey` resets that state as well. The
   // request's own `key` is bookkeeping for the Preview tab, never a prop, so it
@@ -95,11 +102,15 @@ export default function WorkspacePreviewTab({
           text={preview.text}
           data={preview.data}
           loading={preview.loading}
-          error={preview.error}
+          error={errorText}
           onOpenPath={preview.onOpenPath}
           resolveImage={preview.resolveImage}
           showPdfHint={showPdfHint}
           resetKey={contentKey}
+          onDownload={onDownload}
+          downloadLabel={t("workspace.download")}
+          tooLarge={preview.tooLarge === true}
+          limitLabel={limitLabel}
         />
       </div>
     </section>

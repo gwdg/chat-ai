@@ -34,20 +34,41 @@ vi.mock("../../../hooks/useToast", () => ({
   useToast: () => ({ notifySuccess: vi.fn(), notifyError: vi.fn() }),
 }));
 
+const previewMocks = vi.hoisted(() => ({ download: vi.fn() }));
+
 // The tree is covered by its own test; here it only has to report a click.
 vi.mock("../WorkspaceStorageTree", () => ({
   default: ({ onPreview }) => (
-    <button
-      type="button"
-      onClick={() =>
-        onPreview({
-          entry: { name: "notes.txt", mime: "text/plain", size: 5 },
-          text: "hello from the files tree",
-        })
-      }
-    >
-      notes.txt
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={() =>
+          onPreview({
+            entry: { name: "notes.txt", mime: "text/plain", size: 5 },
+            text: "hello from the files tree",
+          })
+        }
+      >
+        notes.txt
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          onPreview({
+            entry: {
+              name: "big.pdf",
+              mime: "application/pdf",
+              size: 30 * 1024 * 1024,
+            },
+            tooLarge: true,
+            limitBytes: 25 * 1024 * 1024,
+            download: previewMocks.download,
+          })
+        }
+      >
+        big.pdf
+      </button>
+    </>
   ),
 }));
 
@@ -88,6 +109,7 @@ describe("WorkspaceRightPanel preview tab", () => {
     localStorage.clear();
     localStorage.setItem("chatai.meta.changes-collapsed", "false");
     workspaceMocks.rows = [{ id: "ws-1", name: "One" }];
+    previewMocks.download.mockClear();
   });
 
   it("draws one Files section per workspace only when there are several", () => {
@@ -178,6 +200,28 @@ describe("WorkspaceRightPanel preview tab", () => {
     expect(screen.getByRole("tab", { name: "Files" })).toHaveAttribute(
       "aria-selected",
       "true",
+    );
+  });
+
+  it("explains a too large file and reads it only when Download is clicked", async () => {
+    renderPanel();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Files" }));
+    fireEvent.click(screen.getByRole("button", { name: "big.pdf" }));
+
+    expect(
+      await screen.findByText("This file is too large to preview."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Preview is limited to 25 MB. Download the file to open it."),
+    ).toBeInTheDocument();
+    // Opening the preview never fetches the file on its own.
+    expect(previewMocks.download).not.toHaveBeenCalled();
+
+    fireEvent.click(document.querySelector('[data-guide="preview-download"]'));
+
+    await waitFor(() =>
+      expect(previewMocks.download).toHaveBeenCalledTimes(1),
     );
   });
 

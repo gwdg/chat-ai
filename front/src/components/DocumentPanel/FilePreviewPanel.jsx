@@ -36,12 +36,28 @@ export default function FilePreviewPanel({
   // even while its bytes are still pending.
   const canDownload =
     Boolean(onDownload) ||
+    Boolean(preview.download) ||
     Boolean(preview.url) ||
     preview.text !== undefined;
 
   const handleDownload = () => {
     if (onDownload) {
       onDownload(entry);
+      return;
+    }
+    // A provider that refused the preview hands over its own saver, so nothing was
+    // read until this click.
+    if (preview.download) {
+      void preview.download();
+      return;
+    }
+    // A provider preview may carry its own object URL (the workspace and agent
+    // panels pass their own `onDownload`, a chat attachment does not).
+    if (preview.url) {
+      const link = document.createElement("a");
+      link.href = preview.url;
+      link.download = entry.name;
+      link.click();
       return;
     }
     if (preview.text === undefined) return;
@@ -57,6 +73,15 @@ export default function FilePreviewPanel({
   };
 
   const label = downloadLabel ?? t("workspace.download");
+  // The data layer names the size limit; the notice and its action are shown here,
+  // never a download the user did not ask for.
+  const errorText = preview.tooLarge
+    ? t("workspace.preview_too_large")
+    : preview.error;
+  const limitLabel =
+    preview.tooLarge && typeof preview.limitBytes === "number"
+      ? formatBytes(preview.limitBytes)
+      : undefined;
   // Only an image can be described, and the button sits left of Download in the
   // same header actions, so both previews (workspace tab and docked panel) show it.
   const isImage = getFileType({ type: entry.mime, name: entry.name }) === "image";
@@ -94,11 +119,15 @@ export default function FilePreviewPanel({
           text={preview.text}
           data={preview.data}
           loading={preview.loading}
-          error={preview.error}
+          error={errorText}
           onOpenPath={preview.onOpenPath}
           resolveImage={preview.resolveImage}
           showPdfHint={showPdfHint}
           resetKey={resetKey ?? preview.url ?? entry.name}
+          onDownload={downloadDisabled ? undefined : handleDownload}
+          downloadLabel={label}
+          tooLarge={preview.tooLarge === true}
+          limitLabel={limitLabel}
         />
       </div>
     </PanelShell>

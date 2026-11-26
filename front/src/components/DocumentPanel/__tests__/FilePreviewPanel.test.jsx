@@ -106,4 +106,35 @@ describe("FilePreviewPanel", () => {
 
     expect(screen.getByText("Unsupported file type")).toBeInTheDocument();
   });
+
+  it("explains a file that is too large and waits for a download click", () => {
+    const onDownload = vi.fn();
+    const clicked = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    renderPanel(
+      {
+        entry: { name: "big.pdf", mime: "application/pdf", size: 30 * 1024 * 1024 },
+        tooLarge: true,
+        limitBytes: 25 * 1024 * 1024,
+      },
+      { onDownload },
+    );
+
+    expect(
+      screen.getByText("This file is too large to preview."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Preview is limited to 25 MB. Download the file to open it."),
+    ).toBeInTheDocument();
+    // Opening the preview never downloads anything by itself.
+    expect(clicked).not.toHaveBeenCalled();
+    expect(onDownload).not.toHaveBeenCalled();
+
+    const notice = document.querySelector('[data-guide="preview-download"]');
+    fireEvent.click(notice);
+
+    expect(onDownload).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "big.pdf" }),
+    );
+    clicked.mockRestore();
+  });
 });

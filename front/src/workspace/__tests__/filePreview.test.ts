@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { readProviderPreview } from "../filePreview";
+import { PREVIEW_LIMIT_BYTES, readProviderPreview } from "../filePreview";
 import type { FileProvider, ProviderEntry } from "../providers/types";
 
 // jsdom has no object-URL implementation; the resolver only needs to hand back
@@ -116,5 +116,57 @@ describe("readProviderPreview", () => {
     });
 
     expect(preview.resolveImage).toBeUndefined();
+  });
+
+  it("refuses a file over the preview limit without reading it", async () => {
+    const read = vi.fn(providerFor({}).read);
+    const preview = await readProviderPreview(
+      { ...providerFor({}), read },
+      {
+        ...markdownEntry,
+        path: "/reports/big.pdf",
+        name: "big.pdf",
+        mime: "application/pdf",
+        size: PREVIEW_LIMIT_BYTES + 1,
+      },
+    );
+
+    expect(preview).toMatchObject({
+      tooLarge: true,
+      limitBytes: PREVIEW_LIMIT_BYTES,
+    });
+    expect("error" in preview && preview.error).toBeTruthy();
+    // The saver exists for the user's own click; building the preview only offers it.
+    expect("download" in preview && preview.download).toBeTypeOf("function");
+    // Nothing is fetched, so nothing can be downloaded behind the user's back.
+    expect(read).not.toHaveBeenCalled();
+    expect(created).toEqual([]);
+  });
+
+  it("applies the same limit when the provider does not report a size", async () => {
+    const oversized = new Uint8Array(PREVIEW_LIMIT_BYTES + 1);
+    const provider: FileProvider = {
+      ...providerFor({}),
+      read: async () =>
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(oversized);
+            controller.close();
+          },
+        }),
+    };
+    const preview = await readProviderPreview(provider, {
+      sourceId: "rag-1",
+      path: "/big.bin",
+      name: "big.bin",
+      kind: "file",
+      mime: "application/octet-stream",
+    });
+
+    expect(preview).toMatchObject({
+      tooLarge: true,
+      entry: { size: PREVIEW_LIMIT_BYTES + 1 },
+    });
+    expect(created).toEqual([]);
   });
 });

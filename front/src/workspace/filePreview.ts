@@ -1,4 +1,5 @@
 import { getFileType } from "../utils/attachments";
+import { downloadProviderEntry } from "./download";
 import { readAll } from "./bytes";
 import { joinPath, parentPath } from "./paths";
 import type { FileProvider, ProviderEntry } from "./providers/types";
@@ -99,7 +100,33 @@ export type ProviderPreview =
       resolveImage?: (src: string) => Promise<string | null>;
       release?: () => void;
     }
-  | { entry: ProviderEntry; error: string };
+  | {
+      entry: ProviderEntry;
+      error: string;
+      /**
+       * The file was refused because it is over `PREVIEW_LIMIT_BYTES`, not because
+       * reading failed. The UI shows a translated notice plus a download action; a
+       * caller must never fetch or download the file on its own.
+       */
+      tooLarge?: boolean;
+      limitBytes?: number;
+      /**
+       * Saves the entry on request. The preview never calls it: for a refused file the
+       * download is the user's own click, and the bytes are not read before that.
+       */
+      download?: () => Promise<void>;
+    };
+
+const tooLarge = (
+  provider: FileProvider,
+  entry: ProviderEntry,
+): ProviderPreview => ({
+  entry,
+  error: "File is too large to preview",
+  tooLarge: true,
+  limitBytes: PREVIEW_LIMIT_BYTES,
+  download: () => downloadProviderEntry(provider, entry),
+});
 
 const BINARY_KINDS = new Set([
   "image",
@@ -126,7 +153,7 @@ export async function readProviderPreview(
     return { entry, error: "not a file" };
   }
   if (typeof entry.size === "number" && entry.size > PREVIEW_LIMIT_BYTES) {
-    return { entry, error: "File is too large to preview" };
+    return tooLarge(provider, entry);
   }
 
   let bytes: Uint8Array;
@@ -134,6 +161,11 @@ export async function readProviderPreview(
     bytes = await readAll(await provider.read(entry.path));
   } catch (error) {
     return { entry, error: plainError(error) };
+  }
+  // A provider that does not report a size can still hand back too much: the same
+  // limit applies before the bytes become an object URL the browser has to hold.
+  if (bytes.byteLength > PREVIEW_LIMIT_BYTES) {
+    return tooLarge(provider, { ...entry, size: bytes.byteLength });
   }
 
   const mime = entry.mime;

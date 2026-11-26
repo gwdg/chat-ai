@@ -3063,6 +3063,8 @@ export default {
     download: "Download",
     downloading: "Saving files…",
     preview_too_large: "This file is too large to preview.",
+    preview_too_large_hint:
+      "Preview is limited to {{limit}}. Download the file to open it.",
     preview_unavailable: "No preview is available for this file type.",
     remove_source: "Remove source",
     remove_source_confirm:
