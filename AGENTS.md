@@ -2698,13 +2698,22 @@ OIDC claim to those headers; a direct stack sends them through `fakeAuthHeaders`
 **Capabilities forbid what a flat collection cannot do.** `read`, `write` and `append` are offered;
 `delete`, `mkdir`, `rename`, `move`, `copy`, `range` and `quota` are not, so the tree hides New
 folder/New file and only offers Upload, and a drag needs a `move` the provider does not report.
-`append` is a provider-side read + concatenate + write, because the service has no append tool.
+`append` is a provider-side read + concatenate + write, because the service has no append tool, and
+the concatenation goes through the same 1 MiB chunk path.
 A collection is mounted live (`addSelectionToWorkspace`), and the collection list `/` is refused as a
 mount target.
 
-**Bytes and previews.** Files are read and written through `read_file_base64` /
-`upload_file_base64`, so images and PDFs keep their bytes; those uploads are stored but not indexed.
-A Markdown preview resolves `![](bild.png)` in the browser: `workspace/filePreview.ts` builds a
+**Bytes and previews.** Files are read with `read_file_base64` and written with
+`upload_file_chunk`, so images and PDFs keep their bytes; those uploads are stored but not indexed.
+The write path is chunked because the MCP server answers a request body above 4 MiB with `413
+Request body too large` (its own `RequestBodyLimitMiddleware`), which a PDF easily reaches once
+base64 and the JSON envelope are counted. `SaiaRagProvider.uploadChunked` sends 1 MiB slices with
+`offset`/`last`, and an exact multiple ends with an empty final chunk; `upload_file_base64` remains
+the fallback when a service does not list the chunk tool (it is not in `REQUIRED_TOOLS`, so an older
+deployment still connects). `saia-rag-cli/src/saia_rag/uploads.py` stages the slices under
+`<tmp>/saia-rag-uploads/<digest>.part`, keyed by caller + collection + file name, refuses an offset
+that does not match the staged size, and stores the file once the last chunk arrives. A Markdown
+preview resolves `![](bild.png)` in the browser: `workspace/filePreview.ts` builds a
 `resolveImage` callback from the same provider, and `MarkdownRenderer` consumes it through a context
 only when a preview passes one, so chat messages are unaffected.
 

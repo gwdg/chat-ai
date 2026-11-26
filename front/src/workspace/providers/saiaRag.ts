@@ -9,7 +9,15 @@ import {
   saiaRagMcpUrl,
 } from "../../apis/saiaRag";
 import { defaultCapabilities } from "../capabilities";
-import { fromBase64, readAll, streamOf, toBase64 } from "../bytes";
+import {
+  arrayParts,
+  concatBytes,
+  fromBase64,
+  readAll,
+  streamOf,
+  streamParts,
+  toBase64,
+} from "../bytes";
 import { normalizePath } from "../paths";
 import { isStaleMcpSessionError } from "./mcpSession";
 import type { DirectoryPage, FileProvider, ProviderEntry } from "./types";
@@ -28,9 +36,12 @@ import { WorkspaceError } from "./types";
  * write into. The service enforces the same rule server-side, so a UI bug
  * cannot grant a role the caller does not have.
  *
- * File bytes go through `read_file_base64` / `upload_file_base64`, which handle
- * images and PDFs; text files uploaded this way are stored but not indexed, so
- * search still uses the service's own text upload where it applies. Collections
+ * File bytes go through `read_file_base64` and a chunked upload: the MCP server
+ * rejects one request body above 4 MiB with `413 Request body too large`, so
+ * `write()` sends 1 MiB chunks to `upload_file_chunk` and only falls back to
+ * `upload_file_base64` when an older service does not offer it. Text files
+ * uploaded this way are stored but not indexed, so search still uses the
+ * service's own text upload where it applies. Collections
  * are created and deleted with the service's own tools, never as folders here:
  * `mkdir`/`rename`/`move`/`copy` are unsupported on purpose, because a flat
  * collection has no folder tree and the UI must not offer actions that would
@@ -40,11 +51,18 @@ const LIST_COLLECTIONS_TOOL = "list_collections";
 const LIST_FILES_TOOL = "list_files";
 const READ_BASE64_TOOL = "read_file_base64";
 const WRITE_BASE64_TOOL = "upload_file_base64";
+const WRITE_CHUNK_TOOL = "upload_file_chunk";
 const CREATE_COLLECTION_TOOL = "create_collection";
 const DELETE_COLLECTION_TOOL = "delete_collection";
 const LIST_MEMBERS_TOOL = "list_members";
 const ADD_MEMBER_TOOL = "add_member";
 const REMOVE_MEMBER_TOOL = "remove_member";
+
+/**
+ * Raw bytes per chunk. Base64 and the JSON envelope make this ~1.4 MiB on the
+ * wire, below the service's 4 MiB request-body limit even with headers.
+ */
+const CHUNK_BYTES = 1024 * 1024;
 
 const REQUIRED_TOOLS = [
   LIST_COLLECTIONS_TOOL,
@@ -569,23 +587,32 @@ export class SaiaRagProvider implements FileProvider {
     if (exists && !opts.overwrite) {
       throw new WorkspaceError("CONFLICT", normalizePath(path));
     }
-    const bytes = await readAll(data);
-    await this.call(WRITE_BASE64_TOOL, {
-      collection: collection.collection,
-      filename: name,
-      content_base64: toBase64(bytes),
-    });
+    let size: number;
+    if (this.has(WRITE_CHUNK_TOOL)) {
+      size = await this.uploadChunked(collection, name, streamParts(data));
+    } else {
+      const bytes = await readAll(data);
+      await this.call(WRITE_BASE64_TOOL, {
+        collection: collection.collection,
+        filename: name,
+        content_base64: toBase64(bytes),
+      });
+      size = bytes.byteLength;
+    }
     return {
       sourceId: this.sourceId,
       path: `/${display}/${name}`,
       name,
       kind: "file",
-      size: bytes.byteLength,
+      size,
       readOnly: !collection.can_write,
     };
   }
 
-  /** A whole-file store has no native append, so this reads and writes the concatenation. */
+  /**
+   * A whole-file store has no native append, so this reads the old bytes and
+   * writes the concatenation — in chunks when the service offers them.
+   */
   async append(path: string, data: Uint8Array | string): Promise<void> {
     const parts = this.parts(path);
     if (parts.length !== 2) {
@@ -612,14 +639,87 @@ export class SaiaRagProvider implements FileProvider {
     }
     const addition =
       typeof data === "string" ? new TextEncoder().encode(data) : data;
-    const combined = new Uint8Array(current.length + addition.length);
-    combined.set(current, 0);
-    combined.set(addition, current.length);
+    if (this.has(WRITE_CHUNK_TOOL)) {
+      await this.uploadChunked(collection, name, arrayParts([current, addition]));
+      return;
+    }
     await this.call(WRITE_BASE64_TOOL, {
       collection: collection.collection,
       filename: name,
-      content_base64: toBase64(combined),
+      content_base64: toBase64(concatBytes(current, addition)),
     });
+  }
+
+  /**
+   * Store one file through `upload_file_chunk`, 1 MiB at a time.
+   *
+   * The queue is drained in place rather than re-concatenated per chunk, so a
+   * stream that arrives as one huge buffer still costs linear work. An empty
+   * final chunk finishes a size that is an exact multiple of the chunk size
+   * (and creates a zero-byte file), which is why the tail is always sent.
+   * Returns the number of bytes stored.
+   */
+  private async uploadChunked(
+    collection: RagCollection,
+    name: string,
+    parts: AsyncIterable<Uint8Array>,
+  ): Promise<number> {
+    const queue: Uint8Array[] = [];
+    let queued = 0;
+    let offset = 0;
+    const iterator = parts[Symbol.asyncIterator]();
+
+    const fill = async (): Promise<boolean> => {
+      const { done, value } = await iterator.next();
+      if (value && value.length > 0) {
+        queue.push(value);
+        queued += value.length;
+      }
+      return done === true;
+    };
+    const take = (size: number): Uint8Array => {
+      const out = new Uint8Array(size);
+      let filled = 0;
+      while (filled < size && queue.length > 0) {
+        const head = queue[0];
+        const need = size - filled;
+        if (head.length <= need) {
+          out.set(head, filled);
+          filled += head.length;
+          queued -= head.length;
+          queue.shift();
+        } else {
+          out.set(head.subarray(0, need), filled);
+          queue[0] = head.subarray(need);
+          filled += need;
+          queued -= need;
+        }
+      }
+      return filled === size ? out : out.subarray(0, filled);
+    };
+    const send = async (chunk: Uint8Array, last: boolean): Promise<void> => {
+      await this.call(WRITE_CHUNK_TOOL, {
+        collection: collection.collection,
+        filename: name,
+        chunk_base64: toBase64(chunk),
+        offset,
+        last,
+      });
+      offset += chunk.length;
+    };
+
+    for (;;) {
+      let done = false;
+      while (queued < CHUNK_BYTES && !done) done = await fill();
+      if (queued >= CHUNK_BYTES) {
+        await send(take(CHUNK_BYTES), false);
+        continue;
+      }
+      // Nothing left: the tail is always sent, possibly empty, so a size that
+      // is an exact multiple of the chunk size (or zero) finishes too.
+      await send(take(queued), true);
+      return offset;
+    }
   }
 
   private async fileExists(

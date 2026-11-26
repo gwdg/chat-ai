@@ -3166,7 +3166,7 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           <div class="node kind-edge">
             <div class="node-kicker">3 · Service</div>
             <div class="node-title">saia-rag</div>
-            <div class="node-sub"><code>list_collections</code>, <code>list_files</code>, <code>read_file_base64</code>, <code>upload_file_base64</code>, members</div>
+            <div class="node-sub"><code>list_collections</code>, <code>list_files</code>, <code>read_file_base64</code>, <code>upload_file_chunk</code>, members</div>
             <span class="sees can">the ACL of every collection</span>
           </div>
           <div class="flow-arrow" aria-hidden="true"><span>backend</span></div>
@@ -3242,12 +3242,15 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           be left unmanageable.
         </li>
         <li>
-          <b>Bytes travel as base64.</b> Images and PDFs are written with
-          <code>upload_file_base64</code> and read with <code>read_file_base64</code>, so a preview
-          and a download see the exact bytes. Those uploads are stored but not indexed, so they remain
-          plain files rather than searchable documents. A Markdown preview that references
-          <code>![](bild.png)</code> resolves the picture in the browser through the same provider, not
-          on the service.
+          <b>Bytes travel as base64, in 1 MiB chunks.</b> Images and PDFs are written with
+          <code>upload_file_chunk</code> and read with <code>read_file_base64</code>, so a preview
+          and a download see the exact bytes. The chunk tool stages one slice at a time because the
+          MCP server answers a request body above 4 MiB with <code>413 Request body too large</code>,
+          which a PDF reaches once base64 and the JSON envelope are counted; <code>upload_file_base64</code>
+          remains for small writes and for a service that predates the chunk tool. Those uploads are
+          stored but not indexed, so they remain plain files rather than searchable documents. A
+          Markdown preview that references <code>![](bild.png)</code> resolves the picture in the
+          browser through the same provider, not on the service.
         </li>
         <li>
           <b>The UI offers only what a flat collection can do.</b> Capabilities report read, write and
@@ -3263,9 +3266,9 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           dialog already owns.
         </li>
         <li>
-          <b>Append is a read and a write.</b> There is no native append tool, so the provider reads the
-          existing bytes, concatenates the new ones and writes the result back. That is correct for the
-          text writes the app makes and needs no new tool on the service.
+          <b>Append is a read and a chunked write.</b> There is no native append tool, so the provider
+          reads the existing bytes, prepends them to the new ones and streams the result through the
+          same 1 MiB chunk path, which also keeps the request under the body limit.
         </li>
       </ol>
 
@@ -3283,8 +3286,8 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           </tr>
           <tr>
             <td>File provider</td>
-            <td>MCP client, collection addressing, role mapping, base64 reads and writes, append,
-                collection and member calls, error reduction.</td>
+            <td>MCP client, collection addressing, role mapping, base64 reads, 1 MiB chunked writes,
+                append, collection and member calls, error reduction.</td>
             <td><span class="mono">front/src/workspace/providers/saiaRag.ts</span></td>
           </tr>
           <tr>
@@ -3349,7 +3352,11 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
             to appear.</li>
         <li>An MCP exchange carries a whole file: there is no range read, so a preview reads the file
             and the UI refuses one above its preview limit.</li>
-        <li>Files uploaded as base64 are stored but not indexed, so a search over the collection may
+        <li>A single MCP request body is capped at 4 MiB by the service, so a client that sends a whole
+            large file in one <code>upload_file_base64</code> call still gets
+            <code>413 Request body too large</code>; the app's own writes are chunked at 1 MiB and
+            never reach the cap.</li>
+        <li>Files uploaded this way are stored but not indexed, so a search over the collection may
             not find them.</li>
         <li>The exact group model is the deployment's business: the service accepts several claim
             spellings and treats every value as one principal name.</li>
@@ -3363,14 +3370,15 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
       <ul class="paths">
         <li><span class="mono">front/src/apis/saiaRag.js</span> - base URL, probe, timeout</li>
         <li><span class="mono">front/src/workspace/providers/saiaRag.ts</span> - collections, roles,
-            base64 I/O, members</li>
+            base64 reads, chunked writes, members</li>
         <li><span class="mono">front/src/hooks/useSaiaRagAccess.ts</span> - availability per view</li>
         <li><span class="mono">front/src/components/Workspace/WorkspaceSourceBrowser.tsx</span> - the
             browsing and inline management UI</li>
         <li><span class="mono">front/src/workspace/addSelectionToWorkspace.ts</span> - live mount and
             the carried role</li>
         <li><span class="mono">saia/saia-rag-cli/src/saia_rag/</span> - the service, its ACL and its
-            tools</li>
+            tools, chunk staging (<span class="mono">uploads.py</span>) and the POST body drain
+            (<span class="mono">asgi.py</span>)</li>
       </ul>
 
       <div class="callout info">

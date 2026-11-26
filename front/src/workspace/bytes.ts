@@ -23,6 +23,43 @@ export const readAll = async (
 
 export const toBytes = readAll;
 
+/** Yield a stream's chunks as they arrive, without concatenating them. */
+export const streamParts = async function* (
+  stream: ReadableStream<Uint8Array>,
+): AsyncIterable<Uint8Array> {
+  const reader = stream.getReader();
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) return;
+      if (value && value.length > 0) yield value;
+    }
+  } finally {
+    reader.releaseLock();
+  }
+};
+
+/** Yield already-read buffers, so both upload paths share one sink. */
+export const arrayParts = async function* (
+  parts: Uint8Array[],
+): AsyncIterable<Uint8Array> {
+  for (const part of parts) {
+    if (part.length > 0) yield part;
+  }
+};
+
+export const concatBytes = (parts: Uint8Array[]): Uint8Array => {
+  let length = 0;
+  for (const part of parts) length += part.length;
+  const out = new Uint8Array(length);
+  let offset = 0;
+  for (const part of parts) {
+    out.set(part, offset);
+    offset += part.length;
+  }
+  return out;
+};
+
 export const streamOf = (
   data: Uint8Array | string,
 ): ReadableStream<Uint8Array> => {

@@ -12,6 +12,8 @@ const rag = vi.hoisted(() => ({
   collections: [] as any[],
   // collection storage name -> file name -> bytes
   files: new Map<string, Map<string, Uint8Array>>(),
+  // `${collection}\0${filename}` -> bytes staged so far by upload_file_chunk
+  staged: new Map<string, Uint8Array>(),
   members: new Map<string, any[]>(),
   calls: [] as { name: string; args: Record<string, any> }[],
   connectError: null as Error | null,
@@ -92,6 +94,38 @@ vi.mock("@modelcontextprotocol/sdk/client/index.js", () => ({
           );
           return text(`Stored ${filename}`);
         }
+        case "upload_file_chunk": {
+          // What the service does: the offset has to match the bytes staged so
+          // far, and only the last chunk stores the file.
+          const key = `${collection}\0${filename}`;
+          const offset = Number(request.arguments.offset);
+          const last = Boolean(request.arguments.last);
+          const chunk = Uint8Array.from(
+            atob(String(request.arguments.chunk_base64)),
+            (c) => c.charCodeAt(0),
+          );
+          const staged = rag.staged.get(key) ?? new Uint8Array(0);
+          if (offset !== staged.length) {
+            return failure(
+              `chunk offset ${offset} does not match ${staged.length} bytes already uploaded`,
+            );
+          }
+          const next = new Uint8Array(staged.length + chunk.length);
+          next.set(staged, 0);
+          next.set(chunk, staged.length);
+          if (!last) {
+            rag.staged.set(key, next);
+            return json({ status: "partial", received: next.length });
+          }
+          rag.staged.delete(key);
+          let files = rag.files.get(collection);
+          if (!files) {
+            files = new Map();
+            rag.files.set(collection, files);
+          }
+          files.set(filename, next);
+          return text(`Stored ${filename}`);
+        }
         case "create_collection": {
           const name = String(request.arguments.collection);
           rag.collections.push({
@@ -153,6 +187,7 @@ const ALL_TOOLS = [
   "list_files",
   "read_file_base64",
   "upload_file_base64",
+  "upload_file_chunk",
   "create_collection",
   "delete_collection",
   "list_members",
@@ -191,6 +226,7 @@ describe("SaiaRagProvider", () => {
     rag.members = new Map([
       ["alice__recipes", [{ user: "alice", role: "owner", kind: "user" }]],
     ]);
+    rag.staged = new Map();
     rag.calls = [];
     rag.connectError = null;
     rag.connectCalls = 0;
@@ -263,6 +299,89 @@ describe("SaiaRagProvider", () => {
     expect(rag.calls.some((call) => call.name === "upload_file_base64")).toBe(
       false,
     );
+  });
+
+  it("sends a file in 1 MiB chunks instead of one oversized request", async () => {
+    const ragProvider = provider();
+    const size = 2 * 1024 * 1024 + 512 * 1024;
+    const data = new Uint8Array(size);
+    for (let i = 0; i < size; i += 1) data[i] = i % 251;
+
+    const entry = await ragProvider.write("/recipes/big.pdf", streamOf(data), {
+      overwrite: true,
+    });
+
+    // The MCP server refuses request bodies above 4 MiB, so a big file must
+    // never go out as one upload_file_base64 call.
+    expect(rag.calls.some((call) => call.name === "upload_file_base64")).toBe(
+      false,
+    );
+    const chunks = rag.calls.filter(
+      (call) => call.name === "upload_file_chunk",
+    );
+    expect(chunks.map((call) => call.args.offset)).toEqual([
+      0,
+      1024 * 1024,
+      2 * 1024 * 1024,
+    ]);
+    expect(chunks.map((call) => call.args.last)).toEqual([false, false, true]);
+    expect(chunks.map((call) => call.args.filename)).toEqual([
+      "big.pdf",
+      "big.pdf",
+      "big.pdf",
+    ]);
+    expect(entry.size).toBe(size);
+    expect(rag.files.get("alice__recipes")!.get("big.pdf")).toEqual(data);
+  });
+
+  it("closes an exact multiple of the chunk size with an empty final chunk", async () => {
+    const ragProvider = provider();
+    const data = new Uint8Array(1024 * 1024).fill(7);
+
+    await ragProvider.write("/recipes/exact.bin", streamOf(data), {
+      overwrite: true,
+    });
+
+    const chunks = rag.calls.filter(
+      (call) => call.name === "upload_file_chunk",
+    );
+    expect(chunks.map((call) => call.args.offset)).toEqual([0, 1024 * 1024]);
+    expect(chunks.map((call) => call.args.last)).toEqual([false, true]);
+    expect(atob(String(chunks[1].args.chunk_base64))).toBe("");
+    expect(rag.files.get("alice__recipes")!.get("exact.bin")).toEqual(data);
+  });
+
+  it("creates a zero-byte file with one empty final chunk", async () => {
+    const ragProvider = provider();
+    await ragProvider.write("/recipes/empty.bin", streamOf(new Uint8Array()), {
+      overwrite: true,
+    });
+
+    const chunks = rag.calls.filter(
+      (call) => call.name === "upload_file_chunk",
+    );
+    expect(chunks).toHaveLength(1);
+    expect(chunks[0].args).toMatchObject({ offset: 0, last: true });
+    expect(rag.files.get("alice__recipes")!.get("empty.bin")).toHaveLength(0);
+  });
+
+  it("falls back to one whole-file request when the service has no chunk tool", async () => {
+    rag.tools = ALL_TOOLS.filter((tool) => tool !== "upload_file_chunk");
+    const ragProvider = provider();
+
+    await ragProvider.write("/recipes/notes.md", streamOf("small"), {
+      overwrite: true,
+    });
+
+    expect(rag.calls.some((call) => call.name === "upload_file_base64")).toBe(
+      true,
+    );
+    expect(rag.calls.some((call) => call.name === "upload_file_chunk")).toBe(
+      false,
+    );
+    expect(
+      decoder.decode(rag.files.get("alice__recipes")!.get("notes.md")),
+    ).toBe("small");
   });
 
   it("creates a file on a first append and concatenates afterwards", async () => {
