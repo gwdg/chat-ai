@@ -3513,19 +3513,27 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           the tag filter working.
         </li>
         <li>
-          <b>Indexing is text-only, so a PDF is stored but not searchable.</b>
+          <b>Indexing converts documents it cannot read as text.</b>
           <code>index_collection</code> runs the pipeline with <code>text_only=True</code>: a stored
-          file whose first 8192 bytes contain a <code>NUL</code> or which is not valid UTF-8 is
-          skipped. That is what makes "upload a PDF and search it" fail honestly instead of indexing
-          binary noise. The CLI's <code>convert</code> command is where a PDF becomes Markdown (Docling
-          or pandoc), and the converted <code>.md</code> is what should be uploaded. The HTTP route
-          keeps its old <code>index_stored_files(text_only=False)</code> behaviour.
+          file whose bytes are valid UTF-8 goes to the splitter as it arrived, while a PDF, Office
+          document or image is first converted to Markdown through the docling service, using the
+          caller's own credential (bound from the MCP headers and carried into the worker thread). A
+          format docling cannot read, or a conversion that fails, is written into that file's
+          <code>status</code> as <code>Failed: …</code> - so the row explains why it is not
+          searchable and does not stay "waiting" forever. The CLI's <code>convert</code> command
+          still exists for converting a document before upload; the HTTP route keeps
+          <code>index_stored_files(text_only=False)</code>.
         </li>
         <li>
           <b>Indexing polls the file list, not the job.</b> The manager starts the job, then re-reads
           <code>list_files</code> every 2.5 s until no file is still <code>stored</code>, bounded to
-          120 attempts. Closing the dialog cancels the loop; the service keeps working. The pending
-          banner counts the files still in <code>stored</code> and names the button that fixes them.
+          240 attempts (ten minutes, because a docling conversion is slow). Closing the dialog cancels
+          the loop; the service keeps working. Reaching the bound reports that indexing is still
+          running rather than claiming success, and a finished run with failed rows names the count.
+          A file counts as indexed when its status is neither <code>stored</code> nor a failure - the
+          service stores the splitter's wording (<code>Success</code>,
+          <code>Success,2 errors</code>), not the word <code>indexed</code>. The pending banner
+          counts the files still in <code>stored</code> and names the button that fixes them.
         </li>
         <li>
           <b>Removing a file is a file action, not a provider capability.</b>

@@ -699,7 +699,7 @@ export default {
     arcana_manager: {
       title: "Arcanas verwalten",
       step1:
-        "Der Bereich Arcanas listet die Dokumentensammlungen, die Ihnen gehören oder mit Ihnen geteilt wurden. Dateien werden auf dem Server gespeichert und indexiert. Nur UTF-8-Text wird indexiert; wandeln Sie ein PDF zuerst in Markdown um, wenn es durchsuchbar sein soll.",
+        "Der Bereich Arcanas listet die Dokumentensammlungen, die Ihnen gehören oder mit Ihnen geteilt wurden. Dateien werden auf dem Server gespeichert und dort indexiert; PDFs, Office-Dokumente und Bilder werden zuerst über den Docling-Dienst konvertiert und sind danach ebenfalls durchsuchbar.",
       step2:
         "Erstellen Sie mit der +-Schaltfläche eine Sammlung. Sie werden ihr Eigentümer und können sie später teilen.",
       step3:
@@ -2427,17 +2427,24 @@ export default {
     index_started:
       "Indexierung gestartet. Dieser Dialog aktualisiert sich, während die Dateien verarbeitet werden.",
     index_done: "Indexierung abgeschlossen.",
+    index_still_running:
+      "Die Indexierung läuft noch. Große Dokumente brauchen länger; die Dateiliste aktualisiert sich weiter, solange dieser Dialog geöffnet ist.",
+    index_done_failed:
+      "Die Indexierung ist abgeschlossen, aber {{count}} Datei(en) konnten nicht indexiert werden. Der Status der Datei nennt den Grund.",
     upload: "Hochladen",
     uploading: "Lädt hoch {{sent}}/{{total}}",
     upload_done: "{{count}} Datei(en) gespeichert.",
     read_only_hint:
       "Du hast nur Lesezugriff auf diese Arcana, daher können Dateien nicht geändert werden.",
     pending_hint:
-      "{{count}} gespeicherte Datei(en) sind noch nicht indexiert. Mit „Dateien indexieren“ werden sie durchsuchbar. Nur UTF-8-Text wird indexiert; PDFs und Bilder werden übersprungen.",
+      "{{count}} gespeicherte Datei(en) sind noch nicht indexiert. Mit „Dateien indexieren“ werden sie konvertiert und indexiert; PDFs, Office-Dokumente und Bilder laufen zuerst über den Docling-Dienst.",
     filter_by_tag: "Nach diesem Tag filtern",
+    remove_filter_tag: "Diesen Tag-Filter entfernen",
     clear_filter: "Zurücksetzen",
+    filter_active:
+      "{{shown}} von {{total}} Datei(en) entsprechen den gewählten Tags.",
     loading_files: "Dateien werden geladen…",
-    no_files: "Noch keine Dateien. Lade eine Textdatei hoch, um zu beginnen.",
+    no_files: "Noch keine Dateien. Lade eine Datei hoch, um zu beginnen.",
     no_tagged_files: "Keine Datei trägt die ausgewählten Tags.",
     chunks: "{{count}} Abschnitte",
     edit_tags: "Tags bearbeiten",

@@ -23,6 +23,17 @@ describe("classifyArcanaFiles", () => {
     );
   });
 
+  it("accepts the splitter's success wording, not just 'indexed'", () => {
+    // The service stores what `_index_chunks` produced ("Success"), and
+    // `list_files` reads an empty status as "indexed".
+    expect(
+      classifyArcanaFiles([file("Success"), file("indexed"), file("")]),
+    ).toBe("current");
+    expect(classifyArcanaFiles([file("Success"), file("stored")])).toBe(
+      "partial",
+    );
+  });
+
   it("is pending when no file is indexed", () => {
     expect(classifyArcanaFiles([file("stored"), file("stored")])).toBe(
       "pending",

@@ -18,6 +18,7 @@ import {
   arcanasProvider,
   arcanaDisplayName,
   classifyArcanaFiles,
+  isArcanaIndexed,
   updateArcanaStatus,
 } from "../../workspace/arcanas";
 import { isTextFileName } from "../../workspace/providers/saiaRag";
@@ -34,7 +35,7 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** How long the manager keeps re-reading a collection after starting a job. */
 const INDEX_POLL_MS = 2500;
-const INDEX_POLL_LIMIT = 120;
+const INDEX_POLL_LIMIT = 240;
 
 type Tab = "files" | "search";
 
@@ -93,6 +94,9 @@ export default function ArcanaManagerModal({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const aliveRef = useRef(true);
   const stopIndexRef = useRef(false);
+  const searchSeq = useRef(0);
+  /** Has a query run since the last edit? A stale result may sit on screen. */
+  const searchedRef = useRef(false);
 
   useEffect(() => {
     aliveRef.current = true;
@@ -207,19 +211,43 @@ export default function ArcanaManagerModal({
     try {
       await provider.indexCollection(display);
       notifySuccess(t("arcanas.index_started"));
+      // The service runs the job in the background and offers no job status,
+      // so the file rows are the only completion signal: a file is done once it
+      // is no longer `stored`, because indexing turns it into a status (or a
+      // failure). Conversion makes a large document take minutes, hence the
+      // generous cap; when it is reached the files really are still pending.
+      let latest: RagFile[] = [];
+      let finished = false;
       for (let attempt = 0; attempt < INDEX_POLL_LIMIT; attempt += 1) {
         await sleep(INDEX_POLL_MS);
         if (!aliveRef.current || stopIndexRef.current) return;
-        const next = await provider.listFiles(display, { includeTags: true });
+        latest = await provider.listFiles(display, { includeTags: true });
         if (!aliveRef.current) return;
-        setFiles(next);
+        setFiles(latest);
         updateArcanaStatus(
           collection.collection,
-          classifyArcanaFiles(next),
+          classifyArcanaFiles(latest),
         );
-        if (!next.some((file) => file.status === "stored")) break;
+        if (!latest.some((file) => file.status === "stored")) {
+          finished = true;
+          break;
+        }
       }
-      if (aliveRef.current) notifySuccess(t("arcanas.index_done"));
+      if (!aliveRef.current) return;
+      if (!finished) {
+        notifyError(t("arcanas.index_still_running"), { autoClose: 6000 });
+        return;
+      }
+      const failed = latest.filter(
+        (file) => !isArcanaIndexed(file.status),
+      ).length;
+      if (failed > 0) {
+        notifyError(t("arcanas.index_done_failed", { count: failed }), {
+          autoClose: 6000,
+        });
+      } else {
+        notifySuccess(t("arcanas.index_done"));
+      }
     } catch (reason) {
       notifyError(reason instanceof Error ? reason.message : String(reason));
     } finally {
@@ -280,31 +308,66 @@ export default function ArcanaManagerModal({
     }
   };
 
-  const search = async () => {
+  /**
+   * Run the query with an explicit tag filter.
+   *
+   * The filter is a parameter because a click that changes it re-runs the
+   * search inside the same event, before React has re-rendered with the new
+   * state. A sequence number makes the last search win, so a rapid tag toggle
+   * cannot let an older answer replace a newer one.
+   */
+  const runSearch = async (filter: string[]) => {
     const trimmed = query.trim();
-    if (!trimmed || searching) return;
+    if (!trimmed) return;
+    const seq = ++searchSeq.current;
+    searchedRef.current = true;
     setSearching(true);
     setError("");
     try {
-      const answer = await provider.search(display, trimmed, mode, count, tagFilter);
-      if (!aliveRef.current) return;
+      const answer = await provider.search(
+        display,
+        trimmed,
+        mode,
+        count,
+        filter,
+      );
+      if (!aliveRef.current || seq !== searchSeq.current) return;
       setResults(answer.results);
       setRawResults(answer.raw);
     } catch (reason) {
+      if (!aliveRef.current || seq !== searchSeq.current) return;
       setResults([]);
       setRawResults("");
       setError(reason instanceof Error ? reason.message : String(reason));
     } finally {
-      if (aliveRef.current) setSearching(false);
+      if (aliveRef.current && seq === searchSeq.current) setSearching(false);
+    }
+  };
+
+  /**
+   * Apply a new tag filter and keep the search tab in step.
+   *
+   * Removing a tag while a result list is on screen must re-run the query;
+   * otherwise the old, still-filtered hits stay visible and clearing the filter
+   * looks like it did nothing.
+   */
+  const applyTagFilter = (next: string[]) => {
+    setTagFilter(next);
+    if (tab === "search" && query.trim() && searchedRef.current) {
+      void runSearch(next);
     }
   };
 
   const toggleTag = (tag: string) =>
-    setTagFilter((current) =>
-      current.includes(tag)
-        ? current.filter((value) => value !== tag)
-        : [...current, tag],
+    applyTagFilter(
+      tagFilter.includes(tag)
+        ? tagFilter.filter((value) => value !== tag)
+        : [...tagFilter, tag],
     );
+
+  const clearTagFilter = () => {
+    if (tagFilter.length > 0) applyTagFilter([]);
+  };
 
   const statusBadge = (file: RagFile) => {
     if (file.status === "stored") {
@@ -314,7 +377,7 @@ export default function ArcanaManagerModal({
         </span>
       );
     }
-    if (/fail|error/i.test(file.status)) {
+    if (!isArcanaIndexed(file.status)) {
       return (
         <span
           className="badge badge-error badge-sm max-w-[10rem] truncate whitespace-nowrap"
@@ -458,6 +521,7 @@ export default function ArcanaManagerModal({
                     key={tag.name}
                     type="button"
                     onClick={() => toggleTag(tag.name)}
+                    aria-pressed={tagFilter.includes(tag.name)}
                     className={`badge badge-sm gap-1 ${
                       tagFilter.includes(tag.name)
                         ? "badge-primary"
@@ -472,13 +536,22 @@ export default function ArcanaManagerModal({
                 {tagFilter.length > 0 && (
                   <button
                     type="button"
-                    onClick={() => setTagFilter([])}
-                    className="ml-1 text-[11px] text-base-content/55 underline"
+                    data-guide="arcana-clear-filter"
+                    onClick={clearTagFilter}
+                    className="btn btn-ghost btn-xs ml-1 gap-1 text-base-content/60"
                   >
                     {t("arcanas.clear_filter")}
                   </button>
                 )}
               </div>
+            )}
+            {tagFilter.length > 0 && (
+              <p className="text-[11px] text-base-content/55">
+                {t("arcanas.filter_active", {
+                  shown: visibleFiles.length,
+                  total: files.length,
+                })}
+              </p>
             )}
 
             <div className="max-h-[50vh] overflow-y-auto rounded-xl border border-base-300">
@@ -621,7 +694,7 @@ export default function ArcanaManagerModal({
                 placeholder={t("arcanas.search_placeholder")}
                 onChange={(event) => setQuery(event.target.value)}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter") void search();
+                  if (event.key === "Enter") void runSearch(tagFilter);
                 }}
               />
               <select
@@ -650,7 +723,7 @@ export default function ArcanaManagerModal({
                 type="button"
                 data-guide="arcana-search-run"
                 className="btn btn-primary btn-sm gap-1"
-                onClick={() => void search()}
+                onClick={() => void runSearch(tagFilter)}
                 disabled={!query.trim() || searching}
               >
                 {searching ? (
@@ -670,11 +743,18 @@ export default function ArcanaManagerModal({
                     type="button"
                     className="badge badge-primary badge-sm"
                     onClick={() => toggleTag(tag)}
-                    title={t("arcanas.clear_filter")}
+                    title={t("arcanas.remove_filter_tag")}
                   >
                     {tag}
                   </button>
                 ))}
+                <button
+                  type="button"
+                  onClick={clearTagFilter}
+                  className="btn btn-ghost btn-xs gap-1 text-base-content/60"
+                >
+                  {t("arcanas.clear_filter")}
+                </button>
               </div>
             )}
             <div className="max-h-[50vh] space-y-2 overflow-y-auto">

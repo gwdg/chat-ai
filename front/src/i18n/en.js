@@ -684,7 +684,7 @@ export default {
     arcana_manager: {
       title: "Manage your Arcanas",
       step1:
-        "The Arcanas section lists the document collections you own or that were shared with you. Files are stored and indexed on the server. Only UTF-8 text is indexed; convert a PDF to Markdown first if it should be searchable.",
+        "The Arcanas section lists the document collections you own or that were shared with you. Files are stored on the server and indexed there; PDFs, Office documents and images are converted through the docling service first, so they become searchable too.",
       step2:
         "Create a collection with the + button. You become its owner and can share it later.",
       step3:
@@ -2404,17 +2404,23 @@ export default {
     index_started:
       "Indexing started. This dialog updates as files are processed.",
     index_done: "Indexing finished.",
+    index_still_running:
+      "Still indexing. Large documents take longer; the file list keeps updating while this dialog is open.",
+    index_done_failed:
+      "Indexing finished, but {{count}} file(s) could not be indexed. The file's status shows the reason.",
     upload: "Upload",
     uploading: "Uploading {{sent}}/{{total}}",
     upload_done: "Stored {{count}} file(s).",
     read_only_hint:
       "You have read-only access to this Arcana, so files cannot be changed.",
     pending_hint:
-      "{{count}} stored file(s) are not indexed yet. Use “Index files” to make them searchable. Only UTF-8 text is indexed; PDFs and images are skipped.",
+      "{{count}} stored file(s) are not indexed yet. Use “Index files” to convert and index them; PDFs, Office documents and images go through the docling service first.",
     filter_by_tag: "Filter by this tag",
+    remove_filter_tag: "Remove this tag filter",
     clear_filter: "Clear",
+    filter_active: "{{shown}} of {{total}} file(s) match the selected tags.",
     loading_files: "Loading files…",
-    no_files: "No files yet. Upload a text file to get started.",
+    no_files: "No files yet. Upload a file to get started.",
     no_tagged_files: "No file carries the selected tags.",
     chunks: "{{count}} chunks",
     edit_tags: "Edit tags",

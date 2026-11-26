@@ -43,6 +43,19 @@ export type ArcanasState = {
 };
 
 /**
+ * Did this file go through the index?
+ *
+ * The service stores the splitter's own wording in `status` ("Success",
+ * "Success,2 errors", "File doesn't contain relevant data"), not the single
+ * word `indexed`; an empty status is read as `indexed` by `list_files`. Only
+ * `stored` means "not indexed yet", and a failure means the attempt is over
+ * without a usable index.
+ */
+export function isArcanaIndexed(status: string): boolean {
+  return status !== "stored" && !/fail|error/i.test(status);
+}
+
+/**
  * Classify a collection from its file rows.
  *
  * No files is `current`: there is nothing waiting to be indexed. All indexed is
@@ -50,7 +63,7 @@ export type ArcanasState = {
  */
 export function classifyArcanaFiles(files: RagFile[]): ArcanaIndexStatus {
   if (files.length === 0) return "current";
-  const indexed = files.filter((file) => file.status === "indexed").length;
+  const indexed = files.filter((file) => isArcanaIndexed(file.status)).length;
   if (indexed === files.length) return "current";
   return indexed === 0 ? "pending" : "partial";
 }
