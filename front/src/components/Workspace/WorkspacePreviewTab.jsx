@@ -17,6 +17,11 @@ export default function WorkspacePreviewTab({
   const { t } = useTranslation();
   const entry = preview.entry;
   const isImage = getFileType({ type: entry.mime, name: entry.name }) === "image";
+  // One identity for the content: `key` remounts it (and drops the previous
+  // file's failed-media state), `resetKey` resets that state as well. The
+  // request's own `key` is bookkeeping for the Preview tab, never a prop, so it
+  // is passed here directly instead of travelling inside a spread.
+  const contentKey = resetKey ?? preview.key ?? entry.name;
   const subtitle = [
     entry.mime,
     typeof entry.size === "number" ? formatBytes(entry.size) : undefined,
@@ -84,9 +89,17 @@ export default function WorkspacePreviewTab({
         className="min-h-0 flex-1 overflow-auto p-4"
       >
         <FilePreviewContent
-          {...preview}
+          key={contentKey}
+          entry={entry}
+          url={preview.url}
+          text={preview.text}
+          data={preview.data}
+          loading={preview.loading}
+          error={preview.error}
+          onOpenPath={preview.onOpenPath}
+          resolveImage={preview.resolveImage}
           showPdfHint={showPdfHint}
-          resetKey={resetKey ?? preview.entry?.name}
+          resetKey={contentKey}
         />
       </div>
     </section>

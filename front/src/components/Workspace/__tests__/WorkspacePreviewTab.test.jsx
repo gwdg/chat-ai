@@ -95,4 +95,21 @@ describe("WorkspacePreviewTab", () => {
 
     expect(screen.queryByTestId("describe-image")).not.toBeInTheDocument();
   });
+
+  // The Preview tab marks each open with a `key` on the request. It must become
+  // React's own key, not ride along inside spread props, which React rejects.
+  it("passes the request key as the content key instead of a spread prop", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      renderTab({ preview: { ...preview, key: 7 } });
+
+      const keyWarnings = errorSpy.mock.calls
+        .map((call) => String(call[0] ?? ""))
+        .filter((message) => message.includes("prop is being spread"));
+      expect(keyWarnings).toEqual([]);
+      expect(screen.getByText("hello")).toBeInTheDocument();
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
 });
