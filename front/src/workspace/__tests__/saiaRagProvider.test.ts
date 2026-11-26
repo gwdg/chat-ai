@@ -15,6 +15,8 @@ const rag = vi.hoisted(() => ({
   members: new Map<string, any[]>(),
   calls: [] as { name: string; args: Record<string, any> }[],
   connectError: null as Error | null,
+  connectCalls: 0,
+  staleSessionFailures: 0,
 }));
 
 const json = (value: unknown) => ({
@@ -32,12 +34,21 @@ const decoder = new TextDecoder();
 vi.mock("@modelcontextprotocol/sdk/client/index.js", () => ({
   Client: class {
     async connect() {
+      rag.connectCalls += 1;
       if (rag.connectError) throw rag.connectError;
     }
     async listTools() {
       return { tools: rag.tools.map((name) => ({ name })) };
     }
     async callTool(request: { name: string; arguments: Record<string, any> }) {
+      if (rag.staleSessionFailures > 0) {
+        rag.staleSessionFailures -= 1;
+        // What the streamable HTTP transport throws when the service forgot the
+        // session id: the SDK keeps sending the dead id and never clears it.
+        throw new Error(
+          'Streamable HTTP error: Error POSTing to endpoint: {"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Session not found"}}',
+        );
+      }
       rag.calls.push({ name: request.name, args: request.arguments });
       const collection = String(request.arguments?.collection ?? "");
       const filename = String(request.arguments?.filename ?? "");
@@ -182,6 +193,8 @@ describe("SaiaRagProvider", () => {
     ]);
     rag.calls = [];
     rag.connectError = null;
+    rag.connectCalls = 0;
+    rag.staleSessionFailures = 0;
   });
 
   const provider = () => new SaiaRagProvider("rag-1", "http://localhost:9000/mcp");
@@ -346,5 +359,35 @@ describe("SaiaRagProvider", () => {
 
     await expect(ragProvider.list("/")).rejects.toMatchObject({ code: "OFFLINE" });
     expect(ragProvider.status).toBe("error");
+  });
+
+  it("reconnects once when saia-rag dropped the MCP session", async () => {
+    const ragProvider = provider();
+    await ragProvider.connect();
+    const handshakes = rag.connectCalls;
+
+    // A restarted service answers the dead session id with 404 "Session not
+    // found", which the SDK does not repair on its own.
+    rag.staleSessionFailures = 1;
+    const page = await ragProvider.list("/");
+
+    expect(page.entries.map((entry) => entry.name)).toEqual([
+      "recipes",
+      "bob__papers",
+    ]);
+    expect(rag.connectCalls).toBe(handshakes + 1);
+  });
+
+  it("surfaces the failure when a fresh session is rejected too", async () => {
+    const ragProvider = provider();
+    await ragProvider.connect();
+    const handshakes = rag.connectCalls;
+    rag.staleSessionFailures = 99;
+
+    await expect(ragProvider.list("/")).rejects.toMatchObject({
+      code: "AUTH_EXPIRED",
+      message: expect.stringContaining("Session not found"),
+    });
+    expect(rag.connectCalls).toBe(handshakes + 1);
   });
 });

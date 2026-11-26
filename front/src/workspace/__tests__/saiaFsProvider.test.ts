@@ -13,6 +13,7 @@ const sdk = vi.hoisted(() => ({
   connectError: null as Error | null,
   connectCalls: 0,
   sessionError: null as string | null,
+  staleSessionFailures: 0,
 }));
 
 const encoder = new TextEncoder();
@@ -36,6 +37,14 @@ vi.mock("@modelcontextprotocol/sdk/client/index.js", () => ({
       return { tools: sdk.tools.map((name) => ({ name })) };
     }
     async callTool(request: { name: string; arguments: Record<string, any> }) {
+      if (sdk.staleSessionFailures > 0) {
+        sdk.staleSessionFailures -= 1;
+        // What the streamable HTTP transport throws when the service forgot the
+        // session id: the SDK keeps sending the dead id and never clears it.
+        throw new Error(
+          'Streamable HTTP error: Error POSTing to endpoint: {"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Session not found"}}',
+        );
+      }
       sdk.calls.push({ name: request.name, args: request.arguments });
       const path = String(request.arguments?.path ?? "");
       switch (request.name) {
@@ -216,6 +225,7 @@ beforeEach(() => {
   sdk.connectError = null;
   sdk.connectCalls = 0;
   sdk.sessionError = null;
+  sdk.staleSessionFailures = 0;
 });
 
 describe("SaiaFsProvider", () => {
@@ -511,5 +521,30 @@ describe("SaiaFsProvider", () => {
       message: expect.stringContaining("x-auth-claim-uid"),
     });
     expect(provider.status).toBe("error");
+  });
+
+  it("reconnects once when the service dropped the MCP session", async () => {
+    const provider = await connect();
+    sdk.files.set("/kept.txt", encoder.encode("hello"));
+    const handshakes = sdk.connectCalls;
+
+    // The service restarted (or the session idled out) and answers the dead id
+    // with 404 "Session not found"; the browser must recover without a reload.
+    sdk.staleSessionFailures = 1;
+    const page = await provider.list("/");
+
+    expect(page.entries.map((entry) => entry.name)).toContain("kept.txt");
+    expect(sdk.connectCalls).toBe(handshakes + 1);
+  });
+
+  it("surfaces the failure when a fresh session is rejected too", async () => {
+    const provider = await connect();
+    const handshakes = sdk.connectCalls;
+    sdk.staleSessionFailures = 99;
+
+    // Exactly one retry: a service that keeps rejecting the session must not
+    // spin in a reconnect loop.
+    await expect(provider.list("/")).rejects.toThrow(/Session not found/);
+    expect(sdk.connectCalls).toBe(handshakes + 1);
   });
 });

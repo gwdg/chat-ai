@@ -2326,6 +2326,15 @@ becomes `CONFLICT`), and refuses the storage root. An older instance without the
 back to `move`, which on the local backend **does** overwrite, so `renameProviderEntry` /
 `rename()` pre-check the destination and refuse a conflict first.
 
+**A dropped MCP session is repaired once, not surfaced.** The streamable-HTTP transport keeps the
+`mcp-session-id` from `initialize` and never clears it when a request is rejected, so a service that
+restarted, idled the session out or was rescheduled answers every later call with `404
+{"message":"Session not found"}` and the drive looked permanently broken until a reload.
+`workspace/providers/mcpSession.ts#isStaleMcpSessionError` matches the service's session wording (a
+bare `404` is not enough, or a wrong endpoint would trigger it), and `SaiaFsProvider` /
+`SaiaRagProvider` close, reconnect once and repeat exactly that call. The retry is skipped while a
+handshake is already in flight, because retrying there would await itself.
+
 ### 4.32 The encrypted server synchronization is opt-in and lives in `front/src/sync/`
 
 Users can keep conversations, topics, settings, workspaces and agents in step across devices by

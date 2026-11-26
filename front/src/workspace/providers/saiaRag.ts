@@ -11,6 +11,7 @@ import {
 import { defaultCapabilities } from "../capabilities";
 import { fromBase64, readAll, streamOf, toBase64 } from "../bytes";
 import { normalizePath } from "../paths";
+import { isStaleMcpSessionError } from "./mcpSession";
 import type { DirectoryPage, FileProvider, ProviderEntry } from "./types";
 import { WorkspaceError } from "./types";
 
@@ -244,14 +245,36 @@ export class SaiaRagProvider implements FileProvider {
         new WorkspaceError("OFFLINE", `saia-rag is not connected (${this.endpoint})`)
       );
     }
-    let result: any;
     try {
-      result = await this.client.callTool({ name: tool, arguments: args });
+      return await this.invoke(tool, args);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (isAuthFailure(message)) throw new WorkspaceError("AUTH_EXPIRED", message);
-      throw new WorkspaceError("OFFLINE", message);
+      // saia-rag forgets the session when its process restarts or the session
+      // idles out, and the SDK keeps sending the dead id; one fresh handshake
+      // repairs the source instead of leaving the drive broken until a reload.
+      // Inside `open()` the connect promise is pending, and a retry there would
+      // wait on itself.
+      if (!isStaleMcpSessionError(error) || this.connectPromise) {
+        throw this.asWorkspaceError(error);
+      }
+      this.close();
+      await this.connect();
+      if (!this.has(tool)) {
+        throw new WorkspaceError("UNSUPPORTED", `saia-rag does not offer ${tool}`);
+      }
+      try {
+        return await this.invoke(tool, args);
+      } catch (retryError) {
+        throw this.asWorkspaceError(retryError);
+      }
     }
+  }
+
+  /** One MCP call, mapping the service's tool errors onto workspace errors. */
+  private async invoke(
+    tool: string,
+    args: Record<string, unknown>,
+  ): Promise<string> {
+    const result = await this.client.callTool({ name: tool, arguments: args });
     const { text, isError } = readToolResult(result);
     if (isError) {
       if (isAuthFailure(text)) throw new WorkspaceError("AUTH_EXPIRED", text);
@@ -259,6 +282,13 @@ export class SaiaRagProvider implements FileProvider {
       throw new WorkspaceError("PROVIDER_ERROR", text || `saia-rag ${tool} failed`);
     }
     return text;
+  }
+
+  private asWorkspaceError(error: unknown): WorkspaceError {
+    if (error instanceof WorkspaceError) return error;
+    const message = error instanceof Error ? error.message : String(error);
+    if (isAuthFailure(message)) return new WorkspaceError("AUTH_EXPIRED", message);
+    return new WorkspaceError("OFFLINE", message);
   }
 
   private async call(

@@ -8,6 +8,7 @@ import { READ_ONLY_CAPABILITIES } from "../capabilities";
 import { fromBase64, readAll, streamOf, toBase64 } from "../bytes";
 import { assertPlainName } from "../entries";
 import { baseName, joinPath, normalizePath, parentPath } from "../paths";
+import { isStaleMcpSessionError } from "./mcpSession";
 import type { DirectoryPage, FileProvider, QuotaInfo } from "./types";
 import { WorkspaceError } from "./types";
 
@@ -235,23 +236,50 @@ export class SaiaFsProvider implements FileProvider {
     }
     if (!this.has(tool)) throw new WorkspaceError("UNSUPPORTED", tool);
     try {
-      const result = await this.client.callTool({ name: tool, arguments: args });
-      if (result?.isError) {
-        const message = textOf(result) || `${tool} failed`;
-        throw new WorkspaceError(
-          isAuthFailure(message) ? "AUTH_EXPIRED" : "PROVIDER_ERROR",
-          message,
-        );
-      }
-      return textOf(result);
+      return await this.invoke(tool, args);
     } catch (error) {
-      if (error instanceof WorkspaceError) throw error;
-      const message = error instanceof Error ? error.message : String(error);
+      // A restarted or idle-timed-out service drops the MCP session while this
+      // provider keeps its dead id (the SDK never clears it on a rejection), so
+      // the drive would stay broken until the page reloaded. One fresh
+      // handshake repairs it; `connectPromise` would also mean we are inside
+      // the handshake right now, where a retry could wait on itself.
+      if (!isStaleMcpSessionError(error) || this.connectPromise) {
+        throw this.asWorkspaceError(error);
+      }
+      this.close();
+      await this.connect();
+      if (!this.has(tool)) throw new WorkspaceError("UNSUPPORTED", tool);
+      try {
+        return await this.invoke(tool, args);
+      } catch (retryError) {
+        throw this.asWorkspaceError(retryError);
+      }
+    }
+  }
+
+  /** One MCP call, with a tool-level error turned into a provider error. */
+  private async invoke(
+    tool: string,
+    args: Record<string, unknown>,
+  ): Promise<string> {
+    const result = await this.client.callTool({ name: tool, arguments: args });
+    if (result?.isError) {
+      const message = textOf(result) || `${tool} failed`;
       throw new WorkspaceError(
         isAuthFailure(message) ? "AUTH_EXPIRED" : "PROVIDER_ERROR",
         message,
       );
     }
+    return textOf(result);
+  }
+
+  private asWorkspaceError(error: unknown): WorkspaceError {
+    if (error instanceof WorkspaceError) return error;
+    const message = error instanceof Error ? error.message : String(error);
+    return new WorkspaceError(
+      isAuthFailure(message) ? "AUTH_EXPIRED" : "PROVIDER_ERROR",
+      message,
+    );
   }
 
   /**
