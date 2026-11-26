@@ -1,4 +1,5 @@
 import { getFileType } from "../utils/attachments";
+import { resolveMimeType } from "../utils/mime";
 import { downloadProviderEntry } from "./download";
 import { readAll } from "./bytes";
 import { joinPath, parentPath } from "./paths";
@@ -168,7 +169,10 @@ export async function readProviderPreview(
     return tooLarge(provider, { ...entry, size: bytes.byteLength });
   }
 
-  const mime = entry.mime;
+  // A provider that lists a remote filesystem often reports no type. Falling back
+  // to the name is what keeps a PDF in the viewer: a `Blob` typed
+  // `application/octet-stream` makes the browser save the file instead of showing it.
+  const mime = resolveMimeType(entry.name, entry.mime);
   const kind = getFileType({ type: mime, name: entry.name });
   const shown = { ...entry, mime, size: bytes.byteLength };
 

@@ -7,14 +7,17 @@ import type { FileProvider, ProviderEntry } from "../providers/types";
 // a distinguishable string, so a counter is enough.
 let urls = 0;
 const created: string[] = [];
+const blobs: Blob[] = [];
 const revoked: string[] = [];
 beforeEach(() => {
   urls = 0;
   created.length = 0;
+  blobs.length = 0;
   revoked.length = 0;
-  (URL as any).createObjectURL = vi.fn(() => {
+  (URL as any).createObjectURL = vi.fn((blob: Blob) => {
     const url = `blob:preview-${(urls += 1)}`;
     created.push(url);
+    blobs.push(blob);
     return url;
   });
   (URL as any).revokeObjectURL = vi.fn((url: string) => {
@@ -141,6 +144,44 @@ describe("readProviderPreview", () => {
     // Nothing is fetched, so nothing can be downloaded behind the user's back.
     expect(read).not.toHaveBeenCalled();
     expect(created).toEqual([]);
+  });
+
+  it("types a PDF from its name when the provider reports no type", async () => {
+    // saia-fs and saia-rag list names and sizes only. A blob typed
+    // application/octet-stream makes Chrome download the file instead of showing
+    // it, so the name has to supply the type.
+    const provider = providerFor({ "/papers/paper.pdf": "%PDF-1.7" });
+    const preview = await readProviderPreview(provider, {
+      sourceId: "rag-1",
+      path: "/papers/paper.pdf",
+      name: "paper.pdf",
+      kind: "file",
+      size: 8,
+    });
+
+    expect(preview).toMatchObject({ entry: { mime: "application/pdf" } });
+    expect(blobs).toHaveLength(1);
+    expect(blobs[0].type).toBe("application/pdf");
+  });
+
+  it("replaces a generic type with the one the name implies", async () => {
+    const provider = providerFor({ "/papers/scan.pdf": "%PDF-1.7" });
+    const preview = await readProviderPreview(provider, {
+      sourceId: "rag-1",
+      path: "/papers/scan.pdf",
+      name: "scan.pdf",
+      kind: "file",
+      mime: "application/octet-stream",
+    });
+
+    expect(blobs[0].type).toBe("application/pdf");
+  });
+
+  it("keeps a specific type the provider reports", async () => {
+    const provider = providerFor({ "/recipes/notes.md": "# Notes" });
+    const preview = await readProviderPreview(provider, markdownEntry);
+
+    expect(preview).toMatchObject({ entry: { mime: "text/markdown" } });
   });
 
   it("applies the same limit when the provider does not report a size", async () => {

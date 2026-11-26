@@ -299,6 +299,23 @@ describe("SaiaFsProvider", () => {
       kind: "file",
       size: 2,
       mtime: new Date(1700000000 * 1000).toISOString(),
+      // saia-fs lists no type, so the name supplies it. A preview needs a real
+      // type or the browser saves the file instead of rendering it.
+      mime: "text/plain",
+    });
+  });
+
+  it("infers the type of a listed PDF from its name", async () => {
+    sdk.dirs.add("/papers");
+    sdk.files.set("/papers/paper.pdf", encoder.encode("%PDF-1.7"));
+    const provider = await connect();
+
+    const page = await provider.list("/papers");
+
+    expect(page.entries[0]).toMatchObject({
+      name: "paper.pdf",
+      kind: "file",
+      mime: "application/pdf",
     });
   });
 

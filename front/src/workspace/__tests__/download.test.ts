@@ -92,8 +92,19 @@ describe("downloadProviderEntry", () => {
     expect(await downloads.bytes()).toEqual(new Uint8Array([1, 2, 3, 4, 5]));
   });
 
-  it("falls back to a generic content type without a mime", async () => {
+  it("derives the type from the name when the provider reports none", async () => {
     await downloadProviderEntry(providerWith(), entry({ mime: undefined }));
+
+    // A provider that lists a remote filesystem often reports no type; the
+    // extension is the signal, and it must reach the saved file.
+    expect(downloads.blobs[0].type).toBe("image/png");
+  });
+
+  it("falls back to a generic content type when neither type nor name knows it", async () => {
+    await downloadProviderEntry(
+      providerWith(),
+      entry({ mime: undefined, name: "random-chart", path: "/charts/random-chart" }),
+    );
 
     expect(downloads.blobs[0].type).toBe("application/octet-stream");
   });

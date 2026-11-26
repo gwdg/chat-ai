@@ -1,5 +1,6 @@
 import type { WorkspaceFileEntry } from "../db/dbTypes";
 import { downloadBlob } from "../utils/download";
+import { resolveMimeType } from "../utils/mime";
 import { readAll } from "./bytes";
 import type { FileProvider } from "./providers/types";
 
@@ -66,7 +67,7 @@ export async function downloadProviderEntry(
   const bytes = await readAll(await provider.read(entry.path));
   downloadBlob(
     new Blob([bytes as Uint8Array<ArrayBuffer>], {
-      type: entry.mime || "application/octet-stream",
+      type: resolveMimeType(entry.name, entry.mime) || "application/octet-stream",
     }),
     entry.name,
   );

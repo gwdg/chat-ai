@@ -7,6 +7,7 @@ import { authHeaders } from "../../apis/authHeaders";
 import { READ_ONLY_CAPABILITIES } from "../capabilities";
 import { fromBase64, readAll, streamOf, toBase64 } from "../bytes";
 import { assertPlainName } from "../entries";
+import { mimeForName } from "../../utils/mime";
 import { baseName, joinPath, normalizePath, parentPath } from "../paths";
 import { isStaleMcpSessionError } from "./mcpSession";
 import type { DirectoryPage, FileProvider, QuotaInfo } from "./types";
@@ -312,6 +313,10 @@ export class SaiaFsProvider implements FileProvider {
       kind,
       size: Number.isFinite(Number(size)) ? Number(size) : undefined,
       mtime: this.mtimeOf(modified),
+      // saia-fs lists names and sizes only. The name is the one type signal, and
+      // a preview needs a real type or the browser saves the file instead of
+      // rendering it.
+      mime: kind === "file" ? mimeForName(name) : undefined,
     };
   }
 

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { listOpencodeFiles, readOpencodeFile, writeOpencodeFile } from "../apis/opencodeAgents";
+import { resolveMimeType } from "../utils/mime";
 
 const TEXT_EXT =
   /\.(md|markdown|txt|csv|tsv|json|xml|ya?ml|html?|css|jsx?|tsx?|py|sh|toml|ini|log|typ|tex|rs|go|java|c|h|cpp|cs|rb|php|swift|kt|sql|dockerfile|env)$/i;
@@ -43,7 +44,10 @@ export function useOpencodeFilePreview(agent) {
       setPreview({ entry, loading: true });
       try {
         const { blob, type } = await readOpencodeFile(agent, entry.path);
-        const mime = type.split(";")[0] || "application/octet-stream";
+        // A generic type would make the browser save the file instead of showing it.
+        const mime =
+          resolveMimeType(entry.name, type.split(";")[0]) ||
+          "application/octet-stream";
         const fileEntry = { ...entry, mime, size: blob.size };
         if (isTextFile(mime, entry.name)) {
           setPreview({
