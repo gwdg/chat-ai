@@ -2336,7 +2336,16 @@ restarted, idled the session out or was rescheduled answers every later call wit
 `workspace/providers/mcpSession.ts#isStaleMcpSessionError` matches the service's session wording (a
 bare `404` is not enough, or a wrong endpoint would trigger it), and `SaiaFsProvider` /
 `SaiaRagProvider` close, reconnect once and repeat exactly that call. The retry is skipped while a
-handshake is already in flight, because retrying there would await itself.
+handshake is already in flight, because retrying there would await itself. That repair only fires
+when the 404 actually arrives, which is why a service must drain the request body before answering
+one: the MCP session manager returns 404 for an unknown `mcp-session-id` without reading the body,
+and Hypercorn 0.18 then crashes the whole HTTP/2 connection when the rest of the body arrives
+(`KeyError` in `protocol/h2.py`'s `DataReceived` branch, which lacks the `StreamEnded` guard). The
+registry reads that as `502 All instances of service '<name>' failed to respond (it may still be
+starting up)` and retries the upload, so the browser never sees the 404 — a PDF upload looks
+permanently broken with no way to recover. `saia-rag-cli` fixes this with `BufferPostBody`
+(`src/saia_rag/asgi.py`, registered in `mcp_server.build_app`); a new registry service needs the
+same buffering, and such a 502 must not be "fixed" by retrying in the front end.
 
 ### 4.32 The encrypted server synchronization is opt-in and lives in `front/src/sync/`
 
