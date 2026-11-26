@@ -328,21 +328,25 @@ describe("Meta chat local tools", () => {
     await expect(run("list_personas")).resolves.toContain("writing/editor.json");
   });
 
-  it("reports whether whole transcripts are sent for feedback", async () => {
-    const run = createMetaToolRunner(context);
-    await expect(run("get_user_settings")).resolves.toContain(
-      "as the whole transcript each time",
+  it("reports whether chat transcripts are sent for feedback", async () => {
+    const sent = createMetaToolRunner({
+      ...context,
+      userSettings: { ...context.userSettings, feedback_enabled: true },
+    });
+    await expect(sent("get_user_settings")).resolves.toContain(
+      "only the new turns, which the service appends to the stored chat",
     );
 
-    const delta = createMetaToolRunner({
+    const stopped = createMetaToolRunner({
       ...context,
       userSettings: {
         ...context.userSettings,
-        feedback_full_transcript: false,
+        feedback_enabled: true,
+        feedback_send_transcripts: false,
       },
     });
-    await expect(delta("get_user_settings")).resolves.toContain(
-      "only the new turns, which the service appends to the stored chat",
+    await expect(stopped("get_user_settings")).resolves.toContain(
+      "nothing, because chat transcripts are switched off",
     );
   });
 

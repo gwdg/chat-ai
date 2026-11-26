@@ -208,12 +208,12 @@ describe("Meta chat action markers", () => {
   it("parses the whole-transcript feedback preference", () => {
     const proposals = getMetaActionProposals(
       [
-        '[[SET_SETTING:{"key":"feedback_full_transcript","value":false}]]',
-        '[[SET_SETTING:{"key":"feedback_full_transcript","value":"yes"}]]',
+        '[[SET_SETTING:{"key":"feedback_send_transcripts","value":false}]]',
+        '[[SET_SETTING:{"key":"feedback_send_transcripts","value":"yes"}]]',
       ].join("\n"),
     );
     expect(proposals).toEqual([
-      { type: "setting", key: "feedback_full_transcript", value: false },
+      { type: "setting", key: "feedback_send_transcripts", value: false },
     ]);
   });
 

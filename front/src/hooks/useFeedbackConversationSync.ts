@@ -2,13 +2,14 @@ import { useEffect, useMemo, useRef } from "react";
 import { useSelector } from "react-redux";
 
 import {
-  feedbackMessagesFromConversation,
+  enrichedFeedbackMessagesFromConversation,
+  feedbackTranscriptSignature,
   isChatFeedbackEnabled,
   submitConversationAnalysis,
 } from "../apis/feedback";
 import {
   selectFeedbackEnabled,
-  selectFeedbackFullTranscript,
+  selectFeedbackSendTranscripts,
 } from "../Redux/reducers/userSettingsReducer";
 import {
   clearFeedbackCursor,
@@ -22,7 +23,7 @@ import {
 const DEBOUNCE_MS = 4000;
 
 const conversationSignature = (messages) =>
-  JSON.stringify(feedbackMessagesFromConversation(messages));
+  feedbackTranscriptSignature(messages);
 
 /**
  * Sends the open conversation to the deployment's feedback receiver for analysis
@@ -33,16 +34,16 @@ const conversationSignature = (messages) =>
  * debounced so a whole reply is one message rather than one per token. The Meta
  * chat and chats without user/assistant turns are never sent.
  *
- * With "whole transcripts" switched off the send is a delta: the receiver keeps
- * one row per chat and the app sends only the turns after the cursor it stored
- * for the last delivered submission. A cursor that no longer matches (the chat
- * was edited or trimmed) or a `409` from the receiver falls back to the whole
- * transcript, so a merge can never stitch together two different beginnings.
+ * The send is a delta: the receiver keeps one row per chat and the app sends
+ * only the turns after the cursor it stored for the last delivered submission.
+ * A cursor that no longer matches (the chat was edited or trimmed) or a `409`
+ * from the receiver falls back to the whole transcript from the start, so a
+ * merge can never stitch together two different beginnings.
  */
 export function useFeedbackConversationSync(localState) {
   const preference = useSelector(selectFeedbackEnabled);
-  const wholeTranscript = useSelector(selectFeedbackFullTranscript);
-  const enabled = preference && isChatFeedbackEnabled();
+  const sendTranscripts = useSelector(selectFeedbackSendTranscripts);
+  const enabled = preference && sendTranscripts && isChatFeedbackEnabled();
   const conversationId = localState?.id ?? null;
   const messages = localState?.messages ?? [];
   const signature = useMemo(
@@ -57,11 +58,6 @@ export function useFeedbackConversationSync(localState) {
   const timerRef = useRef(null);
   const latestStateRef = useRef(localState);
   latestStateRef.current = localState;
-
-  // Read at send time, so switching the transcript mode mid-chat takes effect
-  // on the next change without restarting the debounce.
-  const wholeTranscriptRef = useRef(wholeTranscript);
-  wholeTranscriptRef.current = wholeTranscript;
 
   useEffect(() => {
     if (baselineRef.current.id !== conversationId) {
@@ -93,17 +89,18 @@ export function useFeedbackConversationSync(localState) {
       timerRef.current = null;
       const state = latestStateRef.current;
       try {
-        const transcripts = feedbackMessagesFromConversation(state?.messages);
+        const transcripts =
+          await enrichedFeedbackMessagesFromConversation(state?.messages);
         if (!transcripts.length) return;
-        const whole = wholeTranscriptRef.current;
-        const delta = whole
-          ? null
-          : feedbackDelta(transcripts, readFeedbackCursor(conversationId));
-        const sendOnce = (outgoing, mode, offset) =>
+        const delta = feedbackDelta(
+          transcripts,
+          readFeedbackCursor(conversationId),
+        );
+        const sendOnce = (outgoing, offset) =>
           submitConversationAnalysis({
             conversation: state,
             messages: outgoing,
-            mode,
+            mode: "delta",
             offset,
             model: state?.settings?.model,
             route:
@@ -112,22 +109,21 @@ export function useFeedbackConversationSync(localState) {
                 : window.location.pathname + window.location.search,
           });
 
-        const nothingNew = !whole && delta && !delta.length;
+        const nothingNew = delta && !delta.length;
         if (!nothingNew) {
           try {
             await sendOnce(
-              whole || !delta ? transcripts : delta,
-              whole ? "full" : "delta",
+              !delta ? transcripts : delta,
               // A diverged prefix (`delta === null`) is replaced from the
               // start, never appended to what the receiver already holds.
               delta ? transcripts.length - delta.length : 0,
             );
           } catch (error) {
-            if (whole || error?.code !== "conflict") throw error;
+            if (error?.code !== "conflict") throw error;
             // The receiver's stored transcript is not the prefix we assumed.
             // Forget the cursor and send the whole thing as a delta from 0.
             clearFeedbackCursor(conversationId);
-            await sendOnce(transcripts, "delta", 0);
+            await sendOnce(transcripts, 0);
           }
         }
         // Whatever was delivered, the receiver now holds this transcript; the

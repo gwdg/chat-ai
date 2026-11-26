@@ -128,8 +128,9 @@ lint in your verification loop until that is fixed, and don't report it as passi
 `src/test/setup.js`). Put tests next to the code as `*.test.js|jsx|ts|tsx`. `back` has no suite
 either (`npm test` is still `exit 1`), only standalone files run with `node --test`: `test-bridge.mjs`
 (the bridge host protocol), `test-bridge-direct.mjs` (a direct agent end to end, with an opt-in live
-leg — `npm run test:bridge` / `test:bridge-direct`), `test-bridge-resources.mjs` (MCP resources) and
-`test-remote-files.mjs`. `.github/` contains only issue templates, so there is no
+leg — `npm run test:bridge` / `test:bridge-direct`), `test-bridge-resources.mjs` (MCP resources),
+`test-remote-files.mjs` and `test-feedback.mjs` (`npm run test:feedback`, the `/feedback` relay
+end to end against a dummy receiver). `.github/` contains only issue templates, so there is no
 CI. A passing build or unit test is not evidence that the full UI works; exercise changes in a
 browser when behaviour matters. **Include tests with new features:** add at least one focused
 `*.test.js|jsx|ts|tsx` covering the new behavior, plus regression coverage for bugs you fix.
@@ -293,11 +294,28 @@ restart. Read values via `import.meta.env.VITE_*`; they arrive as strings, hence
 `apis/feedback.js#feedbackEndpoint()` returns it, and `isFeedbackReportEnabled()` guards the
 footer's bug-report button and the `bug_report` feature guide's availability, so a deployment
 without a receiver shows no dead entry point. The browser posts GAIA's multipart shape (`payload`
-JSON plus up to three `screenshots`) to it; `back` `/feedback` forwards the body to
-`feedbackEndpoint` from `back.json` (with the caller's identity headers and an optional
-`feedbackToken`), because the receiver's address and token must not ship in the bundle. An unset
-`feedbackEndpoint` makes the route answer 501, which the dialog turns into a "copy the report"
-fallback.
+JSON plus up to three `screenshots`) to it. Two receivers exist, and the value names one of them:
+
+- **`back`** serves `/feedback` and forwards the body to `feedbackEndpoint` from `back.json` (with
+  the caller's identity headers and an optional `feedbackToken`), because the receiver's address and
+  token must not ship in the bundle. An unset `feedbackEndpoint` makes the route answer 501, which
+  the dialog turns into a "copy the report" fallback.
+- **The SAIA registry tunnel**, exactly like `saia-fs` (§4.31). `saia-feedback` registers a
+  connector and the registry proxies any path per service
+  (`/services/saia-feedback/<path>`), so **the engine has no feedback route**: nothing is added to
+  `chat_ai_ui_back.py` and nothing is written into the engine's database. A deployment forwards an
+  app-visible, same-origin path (`<backend>/saia-feedback`) to that tunnel and stamps
+  `x-auth-claim-uid` from the OIDC user it authenticated; `feedbackPath` then names that path plus
+  `/feedback`. A stack without the hop (the local test stack) sets `feedbackPath` to the tunnel
+  itself, e.g. `http://localhost:5000/services/saia-feedback/feedback`, carries `x-auth-claim-uid` in
+  `fakeAuthHeaders`, and relies on `saia-feedback`'s CORS default (loopback origins) — that direct
+  call is the only case where the browser names the registry.
+
+The receiver reads the caller as `x-auth-claim-uid` (falling back to `x-consumer-custom-id`), because
+`saia-feedback` — like `saia-fs` — reads no other identity header. Which arcana a report lands in is
+the receiver's decision, not the app's: `saia-feedback`'s `DEFAULT_ARCANA` accepts an `owner/arcana`
+ref (e.g. `gwdg/chat-ai`), files every submission into that team arcana, and creates the folder at
+startup.
 
 `userSettings` maps to `VITE_USER_SETTINGS` (JSON) and seeds the Redux `user_settings` store through
 `Redux/reducers/userSettingsReducer.jsx#getDefaultUserSettings()`, which reuses the validation of a

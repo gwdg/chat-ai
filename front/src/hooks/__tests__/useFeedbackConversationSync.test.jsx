@@ -4,7 +4,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import userSettingsReducer, {
-  setFeedbackFullTranscript,
+  setFeedbackSendTranscripts,
 } from "../../Redux/reducers/userSettingsReducer";
 import {
   transcriptHash,
@@ -19,12 +19,28 @@ const api = vi.hoisted(() => ({
       (message) => message?.role === "user" || message?.role === "assistant",
     ),
   ),
+  enrichedFeedbackMessagesFromConversation: vi.fn(async (messages) =>
+    (messages ?? []).filter(
+      (message) => message?.role === "user" || message?.role === "assistant",
+    ),
+  ),
+  feedbackTranscriptSignature: vi.fn((messages) =>
+    JSON.stringify([
+      (messages ?? []).filter(
+        (message) => message?.role === "user" || message?.role === "assistant",
+      ),
+      (messages ?? []).map((message) => message?.meta?.quizAnswers ?? null),
+    ]),
+  ),
   submitConversationAnalysis: vi.fn(async () => ({ id: "x" })),
 }));
 
 vi.mock("../../apis/feedback", () => ({
   isChatFeedbackEnabled: api.isChatFeedbackEnabled,
   feedbackMessagesFromConversation: api.feedbackMessagesFromConversation,
+  enrichedFeedbackMessagesFromConversation:
+    api.enrichedFeedbackMessagesFromConversation,
+  feedbackTranscriptSignature: api.feedbackTranscriptSignature,
   submitConversationAnalysis: api.submitConversationAnalysis,
 }));
 
@@ -39,14 +55,14 @@ const conversation = (overrides = {}) => ({
   ...overrides,
 });
 
-const storeFor = (feedbackEnabled = true, fullTranscript = true) =>
+const storeFor = (feedbackEnabled = true, sendTranscripts = true) =>
   configureStore({
     reducer: { user_settings: userSettingsReducer },
     preloadedState: {
       user_settings: {
         ...userSettingsReducer(undefined, { type: "@@INIT" }),
         feedback_enabled: feedbackEnabled,
-        feedback_full_transcript: fullTranscript,
+        feedback_send_transcripts: sendTranscripts,
       },
     },
   });
@@ -54,8 +70,8 @@ const storeFor = (feedbackEnabled = true, fullTranscript = true) =>
 const wrapperForStore = (store) =>
   ({ children }) => <Provider store={store}>{children}</Provider>;
 
-const wrapperFor = (feedbackEnabled = true, fullTranscript = true) =>
-  wrapperForStore(storeFor(feedbackEnabled, fullTranscript));
+const wrapperFor = (feedbackEnabled = true, sendTranscripts = true) =>
+  wrapperForStore(storeFor(feedbackEnabled, sendTranscripts));
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -207,11 +223,11 @@ describe("useFeedbackConversationSync", () => {
       hash: transcriptHash(api.feedbackMessagesFromConversation(messages)),
     });
 
-  it("sends the whole transcript by default", async () => {
+  it("sends the first change as a delta from the start", async () => {
     const opened = conversation();
     const { rerender } = renderHook(
       ({ state }) => useFeedbackConversationSync(state),
-      { wrapper: wrapperFor(true, true), initialProps: { state: opened } },
+      { wrapper: wrapperFor(true), initialProps: { state: opened } },
     );
 
     rerender({
@@ -219,17 +235,33 @@ describe("useFeedbackConversationSync", () => {
     });
     await settle();
 
+    // With no cursor yet, a delta starts at 0 and carries the whole chat.
     const sent = api.submitConversationAnalysis.mock.calls[0][0];
-    expect(sent).toMatchObject({ mode: "full", offset: 0 });
+    expect(sent).toMatchObject({ mode: "delta", offset: 0 });
     expect(sent.messages).toHaveLength(4);
   });
 
-  it("sends only the new turns when whole transcripts are off", async () => {
+  it("sends nothing while chat transcripts are off", async () => {
+    const opened = conversation();
+    const { rerender } = renderHook(
+      ({ state }) => useFeedbackConversationSync(state),
+      { wrapper: wrapperFor(true, false), initialProps: { state: opened } },
+    );
+
+    rerender({
+      state: conversation({ messages: [...opened.messages, ...turn(3)] }),
+    });
+    await settle();
+
+    expect(api.submitConversationAnalysis).not.toHaveBeenCalled();
+  });
+
+  it("continues from the stored cursor on later changes", async () => {
     const opened = conversation();
     cursorForOpenedChat(opened.messages);
     const { rerender } = renderHook(
       ({ state }) => useFeedbackConversationSync(state),
-      { wrapper: wrapperFor(true, false), initialProps: { state: opened } },
+      { wrapper: wrapperFor(true), initialProps: { state: opened } },
     );
 
     const four = conversation({ messages: [...opened.messages, ...turn(3)] });
@@ -261,7 +293,7 @@ describe("useFeedbackConversationSync", () => {
       .mockResolvedValueOnce({ id: "x" });
     const { rerender } = renderHook(
       ({ state }) => useFeedbackConversationSync(state),
-      { wrapper: wrapperFor(true, false), initialProps: { state: opened } },
+      { wrapper: wrapperFor(true), initialProps: { state: opened } },
     );
 
     rerender({
@@ -284,7 +316,7 @@ describe("useFeedbackConversationSync", () => {
     cursorForOpenedChat(opened.messages);
     const { rerender } = renderHook(
       ({ state }) => useFeedbackConversationSync(state),
-      { wrapper: wrapperFor(true, false), initialProps: { state: opened } },
+      { wrapper: wrapperFor(true), initialProps: { state: opened } },
     );
 
     rerender({
@@ -303,7 +335,35 @@ describe("useFeedbackConversationSync", () => {
     expect(sent.messages).toHaveLength(4);
   });
 
-  it("keeps using the same chat after switching to deltas", async () => {
+  it("sends again when a brand kept state changes without the text moving", async () => {
+    // A quiz answer lives in the message meta; the turn's markdown is unchanged,
+    // so only the brand's signature contribution marks it as a change.
+    const opened = conversation();
+    cursorForOpenedChat(opened.messages);
+    const { rerender } = renderHook(
+      ({ state }) => useFeedbackConversationSync(state),
+      { wrapper: wrapperFor(true), initialProps: { state: opened } },
+    );
+
+    rerender({
+      state: conversation({
+        messages: [
+          opened.messages[0],
+          {
+            ...opened.messages[1],
+            meta: { quizAnswers: { "question-98": { selection: [1], checked: true } } },
+          },
+        ],
+      }),
+    });
+    await settle();
+
+    const sent = api.submitConversationAnalysis.mock.calls[0][0];
+    expect(sent).toMatchObject({ mode: "delta", offset: 0 });
+    expect(sent.messages).toHaveLength(2);
+  });
+
+  it("resumes from the stored cursor after chat transcripts are switched off", async () => {
     const store = storeFor(true, true);
     const opened = conversation();
     const { rerender } = renderHook(
@@ -315,19 +375,35 @@ describe("useFeedbackConversationSync", () => {
     rerender({ state: four });
     await settle();
     expect(api.submitConversationAnalysis.mock.calls[0][0]).toMatchObject({
-      mode: "full",
+      mode: "delta",
+      offset: 0,
     });
 
     await act(async () => {
-      store.dispatch(setFeedbackFullTranscript(false));
+      store.dispatch(setFeedbackSendTranscripts(false));
+    });
+    const six = conversation({ messages: [...four.messages, ...turn(4)] });
+    rerender({ state: six });
+    await settle();
+    expect(api.submitConversationAnalysis).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      store.dispatch(setFeedbackSendTranscripts(true));
     });
     rerender({
-      state: conversation({ messages: [...four.messages, ...turn(4)] }),
+      state: conversation({ messages: [...six.messages, ...turn(5)] }),
     });
     await settle();
 
+    // The receiver still holds the first four turns, so both turns written
+    // while the switch was off are delivered now.
     const second = api.submitConversationAnalysis.mock.calls[1][0];
     expect(second).toMatchObject({ mode: "delta", offset: 4 });
-    expect(second.messages.map((message) => message.id)).toEqual(["u4", "a4"]);
+    expect(second.messages.map((message) => message.id)).toEqual([
+      "u4",
+      "a4",
+      "u5",
+      "a5",
+    ]);
   });
 });

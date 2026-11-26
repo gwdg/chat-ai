@@ -1,12 +1,12 @@
 /**
  * Where the feedback receiver stands for one conversation.
  *
- * With "whole transcripts" switched off, the app sends only the turns added
- * since its last submission and the receiver appends them to the row it already
- * stores. That only works while the beginning of the transcript is unchanged,
- * so the cursor keeps both the number of messages that were sent and a hash of
- * them: a chat that was edited, reverted or trimmed at the front no longer
- * matches and the next submission carries the whole transcript again.
+ * The app sends chat transcripts as a delta: only the turns added since its
+ * last submission, and the receiver appends them to the row it already stores.
+ * That only works while the beginning of the transcript is unchanged, so the
+ * cursor keeps both the number of messages that were sent and a hash of them:
+ * a chat that was edited, reverted or trimmed at the front no longer matches
+ * and the next submission carries the whole transcript again.
  *
  * This is display state, not user data: it lives in `localStorage` so a reload
  * does not resend everything, and losing it only costs one full submission.

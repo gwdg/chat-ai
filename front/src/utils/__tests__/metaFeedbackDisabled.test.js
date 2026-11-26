@@ -17,7 +17,7 @@ describe("Meta chat without the feedback module", () => {
   it("drops the transcript preference but keeps unrelated settings", () => {
     const proposals = getMetaActionProposals(
       [
-        '[[SET_SETTING:{"key":"feedback_full_transcript","value":false}]]',
+        '[[SET_SETTING:{"key":"feedback_send_transcripts","value":false}]]',
         '[[SET_SETTING:{"key":"render_typst","value":true}]]',
       ].join("\n"),
     );

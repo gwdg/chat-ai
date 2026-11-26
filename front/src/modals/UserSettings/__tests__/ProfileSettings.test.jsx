@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import ProfileSettings from "../ProfileSettings";
 import {
   setFeedbackEnabled,
-  setFeedbackFullTranscript,
+  setFeedbackSendTranscripts,
 } from "../../../Redux/reducers/userSettingsReducer";
 
 const api = vi.hoisted(() => ({
@@ -176,20 +176,20 @@ describe("ProfileSettings", () => {
     expect(api.dispatch).toHaveBeenCalledWith(setFeedbackEnabled(false));
   });
 
-  it("offers the whole-transcript switch beside the feedback one", () => {
+  it("offers the chat-transcript switch beside the feedback one", () => {
     api.feedback.enabled = true;
 
     render(<ProfileSettings userData={userData} />);
     fireEvent.click(screen.getByRole("tab", { name: "Feedback" }));
 
     const transcript = screen.getByRole("switch", {
-      name: /Send whole transcripts/,
+      name: /Send chat transcripts/,
     });
     expect(transcript).toHaveAttribute("aria-checked", "true");
 
     fireEvent.click(transcript);
 
-    expect(api.dispatch).toHaveBeenCalledWith(setFeedbackFullTranscript(false));
+    expect(api.dispatch).toHaveBeenCalledWith(setFeedbackSendTranscripts(false));
   });
 
   it("hides the feedback section without a configured receiver", () => {    render(<ProfileSettings userData={userData} />);

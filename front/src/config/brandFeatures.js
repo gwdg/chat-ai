@@ -6,6 +6,8 @@
 //   fences: { "<markdown language>": Component }  // renderer for a fenced block
 //   personaBanner: Component                      // a row inside PersonaChatBanner
 //   chatTool: (context) => ({ definitions, run }) // OpenAI function tools
+//   feedbackText: async (text, message) => string // readable text for a feedback transcript
+//   feedbackSignature: (message) => unknown       // extra state the transcript depends on
 //
 // It is enabled only while the *merged* brand profile sets `ui.<key> === true`,
 // so an `extends` parent's flag is inherited together with its module. The flag
@@ -112,6 +114,45 @@ export function brandFence(language) {
     if (component) return component;
   }
   return null;
+}
+
+/**
+ * Rewrites one turn of a feedback transcript so a feature's fenced block is
+ * readable outside the app (a quiz names its question and the chosen answer
+ * rather than only the ids). A feature that throws leaves the text unchanged:
+ * sending feedback must never fail over an enrichment.
+ */
+export async function brandFeedbackText(text, message) {
+  let result = text;
+  for (const feature of brandFeatures()) {
+    if (typeof feature.feedbackText !== "function") continue;
+    try {
+      const next = await feature.feedbackText(result, message);
+      if (typeof next === "string") result = next;
+    } catch (error) {
+      console.warn("Could not enrich feedback text", error);
+    }
+  }
+  return result;
+}
+
+/**
+ * The state a feature keeps on a message that its transcript text depends on
+ * (the quiz answer lives in `message.meta`, not in the content). It is folded
+ * into the feedback signature so answering a question counts as a change.
+ */
+export function brandFeedbackSignature(message) {
+  const parts = [];
+  for (const feature of brandFeatures()) {
+    if (typeof feature.feedbackSignature !== "function") continue;
+    try {
+      const value = feature.feedbackSignature(message);
+      if (value !== undefined) parts.push(value);
+    } catch {
+      // A broken signature hook must not block feedback.
+    }
+  }
+  return parts;
 }
 
 /** The components a feature contributes to the persona chat banner. */

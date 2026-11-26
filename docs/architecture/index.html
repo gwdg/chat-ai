@@ -4416,9 +4416,22 @@ x-saia-bridge-depth: 2
         <li>
           <b>Outbound features are deployment config, never a form without a sink.</b> The bug report
           dialog exists only while <code>feedbackPath</code> is set (<code>VITE_FEEDBACK_ENDPOINT</code>).
-          The browser posts the multipart report to <code>back</code>'s <code>/feedback</code>, which
-          forwards it to <code>feedbackEndpoint</code> from <code>back.json</code> with the caller's
-          identity and an optional token, so the receiver's address and secret never ship in the bundle.
+          The browser posts the multipart report either to <code>back</code>'s <code>/feedback</code>,
+          which forwards it to <code>feedbackEndpoint</code> from <code>back.json</code> with the
+          caller's identity and an optional token, or to the SAIA registry's service tunnel, which is
+          how a SAIA deployment reaches <code>saia-feedback</code>: the service registers a connector
+          and the registry proxies any path to it, so no engine route exists. A deployment forwards
+          an app-visible <code>&lt;backend&gt;/saia-feedback</code> to
+          <code>/services/saia-feedback/</code> and stamps <code>x-auth-claim-uid</code> from the
+          authenticated user; a stack without that hop points <code>feedbackPath</code> at the tunnel
+          itself and carries the header in <code>fakeAuthHeaders</code>. Either way the receiver's
+          address and secret never ship in the bundle, and the browser names the registry only for
+          that direct local case. The identity goes as <code>x-auth-claim-uid</code>, derived from
+          <code>oidc_claim_uid</code> when a gateway injects only that, because
+          <code>saia-feedback</code> reads no other user header. Which arcana a report lands in is the
+          receiver's decision, not the app's: <code>saia-feedback</code>'s <code>DEFAULT_ARCANA</code>
+          accepts an <code>owner/arcana</code> reference such as <code>gwdg/chat-ai</code> and files
+          every submission into that team inbox.
           The same rule covers the install button: it appears only while the browser's one-shot
           <code>beforeinstallprompt</code> event exists, so an installed app or an unsupporting browser
           shows no dead control.
@@ -4547,8 +4560,9 @@ x-saia-bridge-depth: 2
           </tr>
           <tr>
             <td>Feedback relay</td>
-            <td>Multipart bug report, hidden until <code>feedbackPath</code> is set; <code>back</code>
-                forwards it with the caller's identity.</td>
+            <td>Multipart bug report, hidden until <code>feedbackPath</code> is set; <code>back</code> or
+                the deployment's forward to the registry's <code>saia-feedback</code> tunnel relays it
+                with the caller's identity.</td>
             <td><span class="mono">modals/Feedback/BugReportModal.jsx · apis/feedback.js · back/service.mjs</span></td>
           </tr>
           <tr>
@@ -4639,7 +4653,8 @@ x-saia-bridge-depth: 2
         <li><span class="mono">front/src/config/branding/&lt;folder&gt;/*.md</span> - the brand's own About and
             accessibility copy</li>
         <li><span class="mono">front/src/modals/Feedback/BugReportModal.jsx</span> - the report form, and
-            <span class="mono">back/service.mjs#POST /feedback</span> for the hop</li>
+            <span class="mono">back/service.mjs#POST /feedback</span> or
+            <span class="mono">saia-engine …/server/chat_ai_ui_back.py#feedback</span> for the hop</li>
       </ul>
 
       <div class="callout info">

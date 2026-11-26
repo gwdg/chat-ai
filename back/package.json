@@ -13,7 +13,8 @@
     "dummy:rag": "node dummy-rag-web.mjs",
     "test:bridge": "node --test test-bridge.mjs",
     "test:bridge-direct": "node --test test-bridge-direct.mjs",
-    "test:remote-files": "node test-remote-files.mjs"
+    "test:remote-files": "node test-remote-files.mjs",
+    "test:feedback": "node --test test-feedback.mjs"
   },
   "keywords": [],
   "author": "Gesellschaft für wissenschaftliche Datenverarbeitung mbH Göttingen",

@@ -1,10 +1,15 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("../../utils/courseCatalog", () => ({ ensureCourse: vi.fn() }));
+
+import { ensureCourse } from "../../utils/courseCatalog";
 import { getBrandProfile, setCurrentBrand } from "../brands";
 import {
   brandChatTool,
   brandFeatureFlag,
   brandFeatures,
+  brandFeedbackSignature,
+  brandFeedbackText,
   brandFence,
   brandFolderChain,
   brandPersonaBanners,
@@ -103,5 +108,56 @@ describe("brandChatTool", () => {
     expect(
       brandChatTool({ persona: { courseId: "c-programmierung" } }),
     ).toBeNull();
+  });
+});
+
+describe("brandFeedbackText", () => {
+  it("applies the active feature's readable transcript", async () => {
+    ensureCourse.mockResolvedValue({
+      id: "c",
+      title: "C",
+      questions: [
+        {
+          id: "q1",
+          type: "single_choice",
+          question: "Frage?",
+          answers: ["A", "B"],
+          correct: [1],
+          skills: [],
+        },
+      ],
+    });
+    useBrand("gaia");
+
+    const out = await brandFeedbackText(
+      '```gaia-quiz\n{"course":"c","id":"q1"}\n```',
+      { meta: { quizAnswers: { q1: { selection: [1], checked: true } } } },
+    );
+    expect(out).toContain("Question: Frage?");
+    expect(out).toContain("2. B (correct) (selected)");
+    expect(out).toContain("User selected: 2. B");
+    expect(out).not.toContain("```");
+  });
+
+  it("leaves the text alone without the feature", async () => {
+    useBrand("chat-ai");
+    await expect(
+      brandFeedbackText("```gaia-quiz\n{}\n```", {}),
+    ).resolves.toBe("```gaia-quiz\n{}\n```");
+    expect(ensureCourse).not.toHaveBeenCalled();
+  });
+});
+
+describe("brandFeedbackSignature", () => {
+  it("collects the feature's contribution only for the active brand", () => {
+    const message = { meta: { quizAnswers: { q1: { selection: [0] } } } };
+
+    useBrand("gaia");
+    expect(brandFeedbackSignature(message)).toEqual([
+      { q1: { selection: [0] } },
+    ]);
+
+    useBrand("chat-ai");
+    expect(brandFeedbackSignature(message)).toEqual([]);
   });
 });

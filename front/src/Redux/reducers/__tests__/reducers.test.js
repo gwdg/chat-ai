@@ -37,8 +37,8 @@ import userSettingsReducer, {
   setMcpToolPolicy,
   setFeedbackEnabled,
   selectFeedbackEnabled,
-  setFeedbackFullTranscript,
-  selectFeedbackFullTranscript,
+  setFeedbackSendTranscripts,
+  selectFeedbackSendTranscripts,
   addE2eeKey,
   updateE2eeKey,
   removeE2eeKey,
@@ -351,28 +351,28 @@ describe("user settings reducer", () => {
     vi.unstubAllEnvs();
   });
 
-  it("sends whole transcripts by default and can send only new turns", () => {
+  it("sends chat transcripts by default and can stop them", () => {
     let state = init(userSettingsReducer);
-    expect(state.feedback_full_transcript).toBe(true);
-    expect(selectFeedbackFullTranscript({ user_settings: state })).toBe(true);
+    expect(state.feedback_send_transcripts).toBe(true);
+    expect(selectFeedbackSendTranscripts({ user_settings: state })).toBe(true);
 
-    state = userSettingsReducer(state, setFeedbackFullTranscript(false));
-    expect(selectFeedbackFullTranscript({ user_settings: state })).toBe(false);
+    state = userSettingsReducer(state, setFeedbackSendTranscripts(false));
+    expect(selectFeedbackSendTranscripts({ user_settings: state })).toBe(false);
 
     // An import keeps a boolean and ignores anything else.
     state = userSettingsReducer(
       state,
-      importUserSettings({ feedback_full_transcript: "no" }),
+      importUserSettings({ feedback_send_transcripts: "no" }),
     );
-    expect(selectFeedbackFullTranscript({ user_settings: state })).toBe(false);
+    expect(selectFeedbackSendTranscripts({ user_settings: state })).toBe(false);
     state = userSettingsReducer(
       state,
-      importUserSettings({ feedback_full_transcript: true }),
+      importUserSettings({ feedback_send_transcripts: true }),
     );
-    expect(selectFeedbackFullTranscript({ user_settings: state })).toBe(true);
+    expect(selectFeedbackSendTranscripts({ user_settings: state })).toBe(true);
 
-    // A profile stored before the setting existed follows the default.
-    expect(selectFeedbackFullTranscript({ user_settings: {} })).toBe(true);
+    // A profile stored before the setting existed follows the default (on).
+    expect(selectFeedbackSendTranscripts({ user_settings: {} })).toBe(true);
   });
 
   it("toggles diagram rendering preferences and imports them", () => {    let state = init(userSettingsReducer);

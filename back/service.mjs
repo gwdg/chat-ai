@@ -491,6 +491,13 @@ function feedbackHeaders(req) {
     const value = req.headers[name];
     if (value) headers[name] = value;
   }
+  // `saia-feedback` (like `saia-fs`) reads only x-auth-claim-uid. A gateway
+  // that injects oidc_claim_uid must still arrive as the same user, otherwise
+  // the receiver refuses the report with "x-auth-claim-uid header required".
+  if (!headers["x-auth-claim-uid"]) {
+    const uid = req.headers["x-consumer-custom-id"] || req.headers["oidc_claim_uid"];
+    if (uid) headers["x-auth-claim-uid"] = uid;
+  }
   return headers;
 }
 

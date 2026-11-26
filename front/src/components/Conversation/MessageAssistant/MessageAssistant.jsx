@@ -29,7 +29,7 @@ import { getUseCaseMarker } from "../../../config/useCases";
 import { getPersonaMarkers } from "../../../utils/personaCatalog";
 import { getMetaActionProposals } from "../../../utils/metaActions";
 import {
-  feedbackMessagesFromConversation,
+  enrichedFeedbackMessagesFromConversation,
   feedbackTextOf,
   isChatFeedbackEnabled,
   submitFeedbackComment,
@@ -37,6 +37,7 @@ import {
 } from "../../../apis/feedback";
 import { selectFeedbackEnabled } from "../../../Redux/reducers/userSettingsReducer";
 import { useToast } from "../../../hooks/useToast";
+import { stripThinking } from "../../../utils/thinking";
 import { useBrand } from "../../../config/BrandProvider";
 import { localizeBrandValue, withBase } from "../../../config/brands";
 import { useTranslation } from "react-i18next";
@@ -160,7 +161,7 @@ export default React.memo(({ localState, setLocalState, message_index, modelsDat
     const rated = ratingInt === 1 || ratingInt === -1;
     const resultText =
       (typeof expectedStr === "string" && expectedStr) ||
-      feedbackTextOf(target.content).trim();
+      stripThinking(feedbackTextOf(target.content));
     const feedback = {};
     if (rated) feedback.rating = ratingInt;
     if (typeof commentStr === "string" && commentStr.trim()) {
@@ -179,8 +180,10 @@ export default React.memo(({ localState, setLocalState, message_index, modelsDat
       return { ...prev, messages };
     });
 
-    const ratedMessages = feedbackMessagesFromConversation(
-      localState.messages.slice(0, message_index + 1),
+    const ratedMessages = (
+      await enrichedFeedbackMessagesFromConversation(
+        localState.messages.slice(0, message_index + 1),
+      )
     ).slice(-2);
 
     if (!rated) {

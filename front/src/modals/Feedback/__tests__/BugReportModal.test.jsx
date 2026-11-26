@@ -88,6 +88,29 @@ describe("BugReportModal", () => {
     expect(await screen.findByText("Thank you — the report was sent.")).toBeInTheDocument();
   });
 
+  it("files the report under the chat it was filed from", async () => {
+    const fetchMock = vi.fn(() =>
+      Promise.resolve({ ok: true, status: 201, text: () => Promise.resolve("") }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    window.history.pushState({}, "", "/chat/conv-7?message=m2");
+    try {
+      renderModal();
+
+      typeDescription("This answer was cut off.");
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Send report" }));
+      });
+
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+      const payload = JSON.parse(fetchMock.mock.calls[0][1].body.get("payload"));
+      expect(payload.conversation_id).toBe("conv-7");
+      expect(payload.context.conversation_id).toBe("conv-7");
+    } finally {
+      window.history.pushState({}, "", "/");
+    }
+  });
+
   it("offers the assembled text when the deployment has no receiver", async () => {
     vi.stubGlobal(
       "fetch",

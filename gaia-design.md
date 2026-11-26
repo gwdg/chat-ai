@@ -67,9 +67,10 @@ Out of scope: layout parity with the GAIA Svelte UI (item J), internal
   tutoring features this deployment does not have. `/sitemap` is generated from
   the live data and offers only what the deployment shows.
 - **Bug report** is configuration-gated, never a form without a sink: without
-  `feedbackPath` there is no button. `back` `/feedback` forwards the multipart
-  report to `feedbackEndpoint`, so the browser never holds the receiver's URL or
-  token.
+  `feedbackPath` there is no button. Either `back` `/feedback` forwards the
+  multipart report to `feedbackEndpoint`, or the deployment forwards an
+  app-visible path to the registry's `saia-feedback` tunnel, so the browser never
+  holds the receiver's URL or token.
 
 ## 3. Architecture
 

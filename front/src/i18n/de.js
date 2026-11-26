@@ -972,9 +972,9 @@ export default {
     feedback: {
       title: "Feedback senden",
       step1:
-        "Bewerten Sie eine Antwort mit den Feedback-Schaltflächen unter einer Assistenten-Nachricht. Ein geänderter Chat wird bei aktivierter Funktion zusätzlich zur Auswertung an den Feedback-Dienst gesendet.",
+        "Bewerten Sie eine Antwort mit den Feedback-Schaltflächen unter einer Assistenten-Nachricht. Ein geänderter Chat wird bei aktivierten Chatverläufen zusätzlich zur Auswertung an den Feedback-Dienst gesendet.",
       step2:
-        "Unter Profil → Feedback können Sie Antwort-Feedback und Chat-Auswertung ein- oder ausschalten. Schalten Sie vollständige Verläufe aus, werden nur die neuen Nachrichten gesendet und der Feedback-Dienst ergänzt den bereits gespeicherten Chat.",
+        "Unter Profil → Feedback können Sie Antwort-Bewertungen und Chatverläufe ein- oder ausschalten. Chatverläufe werden als nur die neuen Nachrichten gesendet, die der Feedback-Dienst an den bereits gespeicherten Chat anhängt; ausgeschaltet werden keine Chatverläufe gesendet.",
       step3:
         "Derselbe Bereich listet alles, was dieses Konto gesendet hat, und löscht es wieder.",
     },
@@ -1680,11 +1680,11 @@ export default {
       feedback: {
         label: "Feedback an den Betrieb senden",
         description:
-          "Zeigt unter jeder Antwort Daumen hoch/runter und sendet den Chat bei jeder Änderung zur Auswertung an den Server. Wenn Sie dies ausschalten, verschwinden die Bewertungsschaltflächen und der Chat wird nicht mehr gesendet.",
+          "Zeigt unter jeder Antwort Daumen hoch/runter. Wenn Sie dies ausschalten, verschwinden die Bewertungsschaltflächen und es werden auch keine Chatverläufe mehr gesendet.",
         transcript: {
-          label: "Vollständige Verläufe senden",
+          label: "Chatverläufe senden",
           description:
-            "Sendet bei jeder Änderung den gesamten Chat zur Auswertung. Ausgeschaltet werden nur die neuen Nachrichten gesendet und der Feedback-Dienst ergänzt den bereits gespeicherten Chat.",
+            "Sendet den Chat bei jeder Änderung zur Auswertung, und zwar nur die neuen Nachrichten, die der Feedback-Dienst an den gespeicherten Chat anhängt. Ausgeschaltet werden keine Chatverläufe gesendet.",
         },
       },
       submission: {

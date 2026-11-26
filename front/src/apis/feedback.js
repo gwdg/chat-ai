@@ -1,5 +1,10 @@
 import { authHeaders } from "./authHeaders.js";
 import { isFeedbackEnabled as isFeedbackModuleEnabled } from "../utils/modules.js";
+import { stripThinking } from "../utils/thinking.js";
+import {
+  brandFeedbackSignature,
+  brandFeedbackText,
+} from "../config/brandFeatures.js";
 import packageJson from "../../package.json" with { type: "json" };
 
 /**
@@ -39,6 +44,22 @@ export const MAX_FEEDBACK_MESSAGES_CHARS = 190_000;
 const MAX_FEEDBACK_TEXT_CHARS = 5000;
 const MAX_FEEDBACK_CONTEXT_CHARS = 500;
 
+/**
+ * The chat a route belongs to (`/chat/<id>`, with or without a query), so a
+ * bug report filed from a chat can be grouped with that chat on the receiver.
+ * Every other route names no chat and yields an empty string.
+ */
+export const feedbackConversationIdFromRoute = (route) => {
+  if (typeof route !== "string") return "";
+  const match = /^\/chat\/([^/?#]+)/.exec(route);
+  if (!match) return "";
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return match[1];
+  }
+};
+
 export class FeedbackError extends Error {
   constructor(message, { status = 0, code = "" } = {}) {
     super(message);
@@ -59,6 +80,7 @@ export const submitFeedbackReport = async ({
   email = "",
   screenshots = [],
   context = {},
+  conversationId = "",
   fetchImpl = globalThis.fetch,
 }) => {
   const endpoint = feedbackEndpoint();
@@ -68,6 +90,17 @@ export const submitFeedbackReport = async ({
     });
   }
 
+  // A report filed from a chat belongs to that chat, so the receiver can file it
+  // with the chat's transcript and ratings. The dialog passes the id it derived
+  // from the route; the route is the fallback for any other caller.
+  const chatId = String(
+    conversationId || feedbackConversationIdFromRoute(context.route) || "",
+  ).trim();
+  const reportContext =
+    chatId && !context.conversation_id
+      ? { ...context, conversation_id: chatId }
+      : context;
+
   const body = new FormData();
   body.append(
     "payload",
@@ -75,7 +108,8 @@ export const submitFeedbackReport = async ({
       type,
       message,
       email: email || undefined,
-      context,
+      context: reportContext,
+      conversation_id: chatId || undefined,
     }),
   );
   for (const file of screenshots) body.append("screenshots", file);
@@ -147,28 +181,30 @@ export const feedbackTextOf = (content) => {
 };
 
 /**
- * The user/assistant turns of a conversation, newest kept first when the whole
- * transcript would exceed the receiver's cap. System prompts are not sent.
+ * The user/assistant turns of a conversation with the original message kept
+ * beside the text, so a feature can read what that turn stored on it.
  */
-export const feedbackMessagesFromConversation = (
-  messages = [],
-  limit = MAX_FEEDBACK_MESSAGES_CHARS,
-) => {
-  const normalized = (Array.isArray(messages) ? messages : [])
+const normalizedFeedbackMessages = (messages) =>
+  (Array.isArray(messages) ? messages : [])
     .filter(
       (message) =>
         message && (message.role === "user" || message.role === "assistant"),
     )
     .map((message) => ({
+      message,
       role: message.role,
-      content: feedbackTextOf(message.content).trim(),
+      // Reasoning is the model's working, not its answer: it stays in the app
+      // (rendered in its own block) and never travels with a feedback turn.
+      content: stripThinking(feedbackTextOf(message.content)),
     }))
-    .filter((message) => message.content);
+    .filter((entry) => entry.content);
 
+/** Keeps the newest turns while the serialized transcript fits `limit`. */
+const newestWithinLimit = (messages, limit) => {
   const kept = [];
   let size = 2; // "[]"
-  for (let index = normalized.length - 1; index >= 0; index -= 1) {
-    const entry = normalized[index];
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const entry = messages[index];
     const entrySize = JSON.stringify(entry).length + (kept.length ? 1 : 0);
     if (kept.length && size + entrySize > limit) break;
     kept.unshift(entry);
@@ -176,6 +212,57 @@ export const feedbackMessagesFromConversation = (
   }
   return kept;
 };
+
+/**
+ * The user/assistant turns of a conversation, newest kept first when the whole
+ * transcript would exceed the receiver's cap. System prompts are not sent.
+ */
+export const feedbackMessagesFromConversation = (
+  messages = [],
+  limit = MAX_FEEDBACK_MESSAGES_CHARS,
+) =>
+  newestWithinLimit(
+    normalizedFeedbackMessages(messages).map(({ role, content }) => ({
+      role,
+      content,
+    })),
+    limit,
+  );
+
+/**
+ * The same transcript with every brand feature's readable form applied (a GAIA
+ * quiz names its question and the chosen answer instead of only two ids).
+ * Asynchronous because a fence may name data the feature has to load first; a
+ * feature that fails leaves its turn as the message carried it.
+ */
+export const enrichedFeedbackMessagesFromConversation = async (
+  messages = [],
+  limit = MAX_FEEDBACK_MESSAGES_CHARS,
+) => {
+  const enriched = [];
+  for (const entry of normalizedFeedbackMessages(messages)) {
+    const rewritten = await brandFeedbackText(entry.content, entry.message);
+    enriched.push({
+      role: entry.role,
+      content: String(rewritten ?? "").trim() || entry.content,
+    });
+  }
+  return newestWithinLimit(enriched, limit);
+};
+
+/**
+ * The identity of the transcript that would be sent. The message text alone is
+ * not enough: a feature may keep the state its readable form shows on the
+ * message itself (a selected quiz answer), so that is folded in as well and a
+ * new answer counts as a change.
+ */
+export const feedbackTranscriptSignature = (messages = []) =>
+  JSON.stringify([
+    feedbackMessagesFromConversation(messages),
+    (Array.isArray(messages) ? messages : []).map((message) =>
+      brandFeedbackSignature(message),
+    ),
+  ]);
 
 const modelLabel = (model) => {
   if (!model) return "";
@@ -250,6 +337,10 @@ export const submitFeedbackRating = async ({
       comment: clip(comment, MAX_FEEDBACK_TEXT_CHARS) || undefined,
       messages: messages.length ? messages : undefined,
       model: clip(modelLabel(model), 200) || undefined,
+      // The same chat id a transcript report carries, so the receiver can file
+      // this rating with its conversation (`context` repeats it for older
+      // receivers, which read it from there).
+      conversation_id: conversationId ? String(conversationId) : undefined,
       context: feedbackContext({ conversationId, title, route, appVersion }),
     },
     fetchImpl,
@@ -260,18 +351,17 @@ export const submitFeedbackRating = async ({
  * Sends the conversation for analysis after it changed. Returns `null` when
  * there is nothing to send (an empty or system-only chat).
  *
- * `mode` is `"full"` (the whole transcript, a new submission every time) or
- * `"delta"`: `messages` then holds only the turns after the first `offset`
- * messages of the same conversation and the receiver appends them to the row
- * it already stores. `messages` may be passed in so the caller hashes exactly
- * what it sends; otherwise the whole transcript is used.
+ * `mode` is `"delta"` (the app's mode: only the turns after the first `offset`
+ * messages of the same conversation, appended by the receiver) or `"full"` (the
+ * whole transcript as a new submission). `messages` may be passed in so the
+ * caller hashes exactly what it sends; otherwise the whole transcript is used.
  */
 export const submitConversationAnalysis = async ({
   conversation,
   model,
   route,
   appVersion,
-  mode = "full",
+  mode = "delta",
   offset = 0,
   messages: outgoing,
   fetchImpl = globalThis.fetch,

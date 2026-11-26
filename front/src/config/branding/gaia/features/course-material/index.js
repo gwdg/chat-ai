@@ -11,6 +11,10 @@ import CourseMaterialAsk from "./CourseMaterialAsk.jsx";
 import CourseQuizBlock from "./CourseQuizBlock.jsx";
 import { combineTools } from "./combineTools";
 import { coursePageTool } from "./coursePageTool";
+import {
+  courseMaterialFeedbackSignature,
+  courseMaterialFeedbackText,
+} from "./courseMaterialFeedback";
 import { courseQuizTool } from "./courseQuizTool";
 
 export default {
@@ -20,6 +24,8 @@ export default {
     "gaia-page": CoursePageBlock,
   },
   personaBanner: CourseMaterialAsk,
+  feedbackText: courseMaterialFeedbackText,
+  feedbackSignature: courseMaterialFeedbackSignature,
   chatTool: ({ persona } = {}) =>
     combineTools(
       courseQuizTool({ courseId: persona?.courseId }),
