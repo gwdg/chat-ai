@@ -61,7 +61,7 @@ import { useWindowSize } from "../../hooks/useWindowSize";
 import { getWorkspaceSize } from "../../agent/workspace";
 import { sortConversations } from "../../utils/conversationSort";
 import { formatBytes } from "../../utils/formatBytes";
-import { isAgentsEnabled } from "../../utils/modules";
+import { isAgentsEnabled, isArcanasEnabled } from "../../utils/modules";
 import {
   formatCompactDate,
   formatModifiedTime,
@@ -104,6 +104,7 @@ import RenameChatButton from "./Buttons/RenameChatButton";
 import TutorialStatus from "../Others/TutorialStatus";
 import WorkspaceList from "../Workspace/WorkspaceList";
 import AgentList from "./AgentList";
+import ArcanaList from "./ArcanaList";
 import McpServerList from "./McpServerList";
 import { isFeatureEnabled } from "../../config/deployment";
 import { isBrandExternalAllowed } from "../../config/brandPolicy";
@@ -136,8 +137,12 @@ export default function SidebarContent({
   // Advanced mode is off by default: an ordinary account sees chats, topics and
   // workspaces only; the Agents and MCP server lists stay hidden until it is on.
   const advancedMode = useSelector(selectAdvancedMode);
-  const { agents: showAgents, mcpServers: showMcpServers } =
-    showAdvancedSidebarSections(advancedMode, isAgentsEnabled());
+  const { agents: showAgents, mcpServers: showMcpServers, arcanas: showArcanas } =
+    showAdvancedSidebarSections(
+      advancedMode,
+      isAgentsEnabled(),
+      isArcanasEnabled(),
+    );
   const collapsedTopicIds = useSelector(selectCollapsedTopics) ?? [];
   const chatsCollapsed = collapsedTopicIds.includes("__chats__");
 
@@ -1289,6 +1294,7 @@ export default function SidebarContent({
                   />
                 </>
               )}
+              {showArcanas && <ArcanaList />}
               {showMcpServers &&
                 isFeatureEnabled("mcp_servers") &&
                 isBrandExternalAllowed("mcp") && (

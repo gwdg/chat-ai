@@ -12,6 +12,8 @@ const rag = vi.hoisted(() => ({
   collections: [] as any[],
   // collection storage name -> file name -> bytes
   files: new Map<string, Map<string, Uint8Array>>(),
+  // collection storage name -> file name -> tags
+  tags: new Map<string, Map<string, string[]>>(),
   // `${collection}\0${filename}` -> bytes staged so far by upload_file_chunk
   staged: new Map<string, Uint8Array>(),
   members: new Map<string, any[]>(),
@@ -60,6 +62,7 @@ vi.mock("@modelcontextprotocol/sdk/client/index.js", () => ({
         case "list_files": {
           const files = rag.files.get(collection);
           if (!files) return failure(`Collection '${collection}' not found`);
+          const tags = rag.tags.get(collection);
           return json({
             collection,
             files: [...files.entries()].map(([name, bytes]) => ({
@@ -67,9 +70,82 @@ vi.mock("@modelcontextprotocol/sdk/client/index.js", () => ({
               size: bytes.length,
               status: "indexed",
               chunks: 1,
+              ...(request.arguments?.include_tags
+                ? { tags: tags?.get(name) ?? [] }
+                : {}),
             })),
           });
         }
+        case "get_file_tags": {
+          const fileTags = rag.tags.get(collection)?.get(filename);
+          if (!fileTags?.length) return text(`'${filename}' has no tags.`);
+          return text(fileTags.join(", "));
+        }
+        case "list_tags": {
+          const counts = new Map<string, number>();
+          for (const fileTags of rag.tags.get(collection)?.values() ?? []) {
+            for (const tag of fileTags) {
+              counts.set(tag, (counts.get(tag) ?? 0) + 1);
+            }
+          }
+          if (!counts.size) return text("No tags in this collection.");
+          return text(
+            [...counts.entries()]
+              .sort(([a], [b]) => a.localeCompare(b))
+              .map(([tag, count]) => `${tag} (${count})`)
+              .join("\n"),
+          );
+        }
+        case "set_file_tags": {
+          let tags = rag.tags.get(collection);
+          if (!tags) {
+            tags = new Map();
+            rag.tags.set(collection, tags);
+          }
+          tags.set(filename, request.arguments.tags);
+          return json({
+            collection,
+            filename,
+            tags: request.arguments.tags,
+          });
+        }
+        case "tag_file": {
+          let tags = rag.tags.get(collection);
+          if (!tags) {
+            tags = new Map();
+            rag.tags.set(collection, tags);
+          }
+          const current = tags.get(filename) ?? [];
+          const merged = [...new Set([...current, ...request.arguments.tags])];
+          tags.set(filename, merged);
+          return text(`Tagged '${filename}': ${merged.join(", ")}`);
+        }
+        case "remove_file": {
+          rag.files.get(collection)?.delete(filename);
+          rag.tags.get(collection)?.delete(filename);
+          return text(`Removed '${filename}' from '${collection}'.`);
+        }
+        case "upload_file": {
+          let files = rag.files.get(collection);
+          if (!files) {
+            files = new Map();
+            rag.files.set(collection, files);
+          }
+          files.set(filename, encoder.encode(request.arguments.content));
+          return text(`Stored '${filename}'.`);
+        }
+        case "index_collection":
+          return json({ collection, job_id: "job-7", status: "running" });
+        case "search_chunks":
+          return text(
+            "[notes.md score=0.870]\nfirst chunk\n\n[paper.pdf score=0.310]\nsecond chunk",
+          );
+        case "search_documents":
+          return text("1. notes.md (score=0.870)\n2. paper.pdf (score=0.310)");
+        case "search_preview":
+          return text(
+            "1. notes.md (score=0.870)\n# hi\n\n2. paper.pdf (score=0.310)\n%PDF",
+          );
         case "read_file_base64": {
           const bytes = rag.files.get(collection)?.get(filename);
           if (!bytes) return failure(`${filename} is not in this collection`);
@@ -188,11 +264,21 @@ const ALL_TOOLS = [
   "read_file_base64",
   "upload_file_base64",
   "upload_file_chunk",
+  "upload_file",
   "create_collection",
   "delete_collection",
+  "remove_file",
+  "index_collection",
   "list_members",
   "add_member",
   "remove_member",
+  "list_tags",
+  "get_file_tags",
+  "tag_file",
+  "set_file_tags",
+  "search_chunks",
+  "search_documents",
+  "search_preview",
 ];
 
 const ownCollection = {
@@ -226,6 +312,9 @@ describe("SaiaRagProvider", () => {
     rag.members = new Map([
       ["alice__recipes", [{ user: "alice", role: "owner", kind: "user" }]],
     ]);
+    rag.tags = new Map([
+      ["alice__recipes", new Map([["notes.md", ["recipe", "quick"]]])],
+    ]);
     rag.staged = new Map();
     rag.calls = [];
     rag.connectError = null;
@@ -256,6 +345,8 @@ describe("SaiaRagProvider", () => {
         name: "notes.md",
         path: "/recipes/notes.md",
         kind: "file",
+        // The collection lists names only; the name supplies the type.
+        mime: "text/markdown",
         readOnly: false,
       }),
     ]);
@@ -268,6 +359,8 @@ describe("SaiaRagProvider", () => {
     expect(page.entries[0]).toMatchObject({
       name: "paper.pdf",
       path: "/bob__papers/paper.pdf",
+      // The name is the only type signal a flat collection gives.
+      mime: "application/pdf",
       readOnly: true,
     });
     expect(rag.calls).toContainEqual({
@@ -443,7 +536,7 @@ describe("SaiaRagProvider", () => {
     ).rejects.toMatchObject({ code: "PERMISSION_DENIED" });
   });
 
-  it("keeps collection creation and per-file deletion out of the tree", async () => {
+  it("keeps collection-level operations out of the tree but allows per-file removal", async () => {
     const ragProvider = provider();
     expect(ragProvider.capabilities).toMatchObject({
       read: true,
@@ -458,9 +551,153 @@ describe("SaiaRagProvider", () => {
     await expect(ragProvider.mkdir("/recipes/folder")).rejects.toMatchObject({
       code: "UNSUPPORTED",
     });
-    await expect(
-      ragProvider.remove("/recipes/notes.md", { recursive: false }),
-    ).rejects.toMatchObject({ code: "UNSUPPORTED" });
+    await ragProvider.remove("/recipes/notes.md");
+    expect(rag.files.get("alice__recipes")!.has("notes.md")).toBe(false);
+  });
+
+  it("reads per-file tags in the listing call when the service offers it", async () => {
+    const ragProvider = provider();
+    const files = await ragProvider.listFiles("recipes", { includeTags: true });
+
+    expect(files[0]).toMatchObject({
+      name: "notes.md",
+      tags: ["recipe", "quick"],
+    });
+    expect(rag.calls).toContainEqual({
+      name: "list_files",
+      args: { collection: "alice__recipes", include_tags: true },
+    });
+    expect(rag.calls.some((call) => call.name === "get_file_tags")).toBe(false);
+  });
+
+  it("falls back to one tag call per file on an older service", async () => {
+    rag.tools = ALL_TOOLS.filter((tool) => tool !== "set_file_tags");
+    const ragProvider = provider();
+    const files = await ragProvider.listFiles("recipes");
+
+    expect(files[0].tags).toEqual(["recipe", "quick"]);
+    expect(
+      rag.calls.filter((call) => call.name === "get_file_tags"),
+    ).toHaveLength(1);
+  });
+
+  it("replaces a file's tags and can clear them", async () => {
+    const ragProvider = provider();
+
+    expect(
+      await ragProvider.setFileTags("recipes", "notes.md", ["soup"]),
+    ).toEqual(["soup"]);
+    expect(rag.calls).toContainEqual({
+      name: "set_file_tags",
+      args: { collection: "alice__recipes", filename: "notes.md", tags: ["soup"] },
+    });
+
+    expect(await ragProvider.setFileTags("recipes", "notes.md", [])).toEqual([]);
+    expect(rag.tags.get("alice__recipes")!.get("notes.md")).toEqual([]);
+  });
+
+  it("adds tags through tag_file when replacing is not offered", async () => {
+    rag.tools = ALL_TOOLS.filter((tool) => tool !== "set_file_tags");
+    const ragProvider = provider();
+
+    expect(
+      await ragProvider.setFileTags("recipes", "notes.md", ["new"]),
+    ).toEqual(["recipe", "quick", "new"]);
+    expect(rag.calls).toContainEqual({
+      name: "tag_file",
+      args: { collection: "alice__recipes", filename: "notes.md", tags: ["new"] },
+    });
+  });
+
+  it("lists the tags of a collection with their counts", async () => {
+    const ragProvider = provider();
+    expect(await ragProvider.listTags("recipes")).toEqual([
+      { name: "quick", count: 1 },
+      { name: "recipe", count: 1 },
+    ]);
+  });
+
+  it("removes a file together with its tags", async () => {
+    const ragProvider = provider();
+    await ragProvider.removeFile("recipes", "notes.md");
+
+    expect(rag.calls).toContainEqual({
+      name: "remove_file",
+      args: { collection: "alice__recipes", filename: "notes.md" },
+    });
+    expect(rag.files.get("alice__recipes")!.has("notes.md")).toBe(false);
+    expect(rag.tags.get("alice__recipes")!.has("notes.md")).toBe(false);
+  });
+
+  it("stores a text file through upload_file", async () => {
+    const ragProvider = provider();
+    await ragProvider.uploadTextFile("recipes", "new.md", "# new");
+
+    expect(rag.calls).toContainEqual({
+      name: "upload_file",
+      args: {
+        collection: "alice__recipes",
+        filename: "new.md",
+        content: "# new",
+      },
+    });
+    expect(
+      decoder.decode(rag.files.get("alice__recipes")!.get("new.md")),
+    ).toBe("# new");
+  });
+
+  it("starts indexing and returns the service's job id", async () => {
+    const ragProvider = provider();
+    expect(await ragProvider.indexCollection("recipes")).toBe("job-7");
+    expect(rag.calls).toContainEqual({
+      name: "index_collection",
+      args: { collection: "alice__recipes" },
+    });
+  });
+
+  it("searches with the tool for the chosen mode and parses the hits", async () => {
+    const ragProvider = provider();
+
+    const previews = await ragProvider.search(
+      "recipes",
+      "hi",
+      "previews",
+      3,
+      ["recipe"],
+    );
+    expect(rag.calls).toContainEqual({
+      name: "search_preview",
+      args: {
+        collection: "alice__recipes",
+        query: "hi",
+        count: 3,
+        tags: ["recipe"],
+      },
+    });
+    expect(previews.results).toEqual([
+      { filename: "notes.md", score: 0.87, text: "# hi" },
+      { filename: "paper.pdf", score: 0.31, text: "%PDF" },
+    ]);
+
+    const chunks = await ragProvider.search("recipes", "hi", "chunks");
+    expect(rag.calls).toContainEqual({
+      name: "search_chunks",
+      args: { collection: "alice__recipes", query: "hi", count: 5 },
+    });
+    expect(chunks.results[0]).toMatchObject({
+      filename: "notes.md",
+      text: "first chunk",
+    });
+
+    const documents = await ragProvider.search("recipes", "hi", "documents");
+    expect(rag.calls).toContainEqual({
+      name: "search_documents",
+      args: { collection: "alice__recipes", query: "hi", count: 5 },
+    });
+    expect(documents.results.map((hit) => hit.filename)).toEqual([
+      "notes.md",
+      "paper.pdf",
+    ]);
   });
 
   it("reports a refused session instead of listing nothing", async () => {

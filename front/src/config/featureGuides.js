@@ -714,6 +714,41 @@ export const featureGuides = {
       },
     ],
   },
+  arcana_manager: {
+    titleKey: "feature_guide.arcana_manager.title",
+    prompt:
+      "The Arcanas section of the sidebar lists your SAIA document collections. Open one to upload files, edit its per-file tags, start indexing and search inside it. Only UTF-8 text is indexed; PDFs and images are stored but skipped, so convert them to Markdown first if they should be searchable.",
+    keywords: [
+      "arcana",
+      "arcanas",
+      "collection",
+      "collections",
+      "document",
+      "documents",
+      "tags",
+      "tag",
+      "index",
+      "indexing",
+      "saia rag",
+      "saia-rag",
+      "rag",
+    ],
+    steps: [
+      {
+        target: '[data-guide="arcanas"]',
+        textKey: "feature_guide.arcana_manager.step1",
+      },
+      {
+        target: '[data-guide="arcanas-add"]',
+        textKey: "feature_guide.arcana_manager.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="arcanas"]',
+        textKey: "feature_guide.arcana_manager.step3",
+      },
+    ],
+  },
   diagram_renderers: {
     titleKey: "feature_guide.diagram_renderers.title",
     prompt:
@@ -2114,6 +2149,7 @@ export const FEATURE_GUIDE_AVAILABILITY = {
   audio_generation: () => isToolPanelAvailable(),
   arcana: () => isToolPanelAvailable() && isArcanasEnabled(),
   arcana_tools: () => isToolPanelAvailable() && isArcanasEnabled(),
+  arcana_manager: () => isArcanasEnabled(),
   mcp_server: () => isFeatureEnabled("mcp_servers") && isToolPanelAvailable(),
   feedback: () => isChatFeedbackEnabled(),
   // The install button renders only while the browser offers an install prompt;
@@ -2181,6 +2217,7 @@ export const FEATURE_CATEGORIES = {
     "image_analysis",
     "audio_generation",
     "arcana_tools",
+    "arcana_manager",
     "mcp_server",
   ],
   chats: [

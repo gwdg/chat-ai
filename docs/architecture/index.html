@@ -3389,6 +3389,282 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
         derived from that storage name, so the two can never drift.
       </div>
     </section>
+    <section class="feature-page" id="arcanas-sidebar"
+             data-title="Arcanas sidebar and collection manager"
+             data-category="Workspace"
+             data-summary="The same collections, managed outside a workspace"
+             data-added="2026-11">
+      <div class="eyebrow">
+        <span>Workspace</span>
+        <span class="chip">Sidebar/ArcanaList.tsx · workspace/arcanas.ts · modals/Arcana/</span>
+      </div>
+      <h1>Arcanas sidebar and collection manager</h1>
+      <p class="lead">
+        The Arcanas section lists the caller's <code>saia-rag</code> collections directly in the
+        sidebar, without a workspace. Opening one gives the files of that collection, a per-file tag
+        editor, an index button and a search box. It is the same service and the same
+        <code>SaiaRagProvider</code> the workspace drive uses, so a file uploaded here is the file a
+        workspace mount sees; only the surface is different.
+      </p>
+
+      <h2>The 100-foot view</h2>
+      <p class="section-note">The sidebar decides whether the section exists; the dialog holds everything a 240 px rail cannot.</p>
+
+      <div class="flow-wrap">
+        <div class="flow" role="img"
+             aria-label="Arcanas path: the sidebar section gates on the module, advanced mode and the saia-rag health probe, then reads one shared collection list from a module singleton provider; the manager dialog sends upload, tag, index, search and remove calls through the same provider to the service.">
+          <div class="node kind-secret">
+            <div class="node-kicker">1 · Sidebar</div>
+            <div class="node-title">Arcanas section</div>
+            <div class="node-sub">Module + advanced mode + health probe</div>
+            <span class="sees can">one row per collection</span>
+          </div>
+          <div class="flow-arrow" aria-hidden="true"><span>open</span></div>
+          <div class="node kind-edge">
+            <div class="node-kicker">2 · Shared state</div>
+            <div class="node-title"><code>arcanas.ts</code></div>
+            <div class="node-sub">One provider, one collection list, one handshake</div>
+            <span class="sees can">cached rows across remounts</span>
+          </div>
+          <div class="flow-arrow" aria-hidden="true"><span>MCP</span></div>
+          <div class="node kind-edge">
+            <div class="node-kicker">3 · Service</div>
+            <div class="node-title">saia-rag</div>
+            <div class="node-sub"><code>list_files</code>, <code>upload_file_chunk</code>, <code>set_file_tags</code>, <code>index_collection</code>, <code>remove_file</code>, search</div>
+            <span class="sees can">files, tags, index state</span>
+          </div>
+          <div class="flow-arrow" aria-hidden="true"><span>backend</span></div>
+          <div class="node kind-opaque">
+            <div class="node-kicker">4 · Embeddings</div>
+            <div class="node-title">Index pipeline</div>
+            <div class="node-sub">UTF-8 text only; stored PDFs and images wait for a conversion</div>
+            <span class="sees cannot">no folder tree</span>
+          </div>
+        </div>
+
+        <div class="flow-legend">
+          <span><i class="swatch green"></i> holds collections and files</span>
+          <span><i class="swatch grey"></i> caches and routes</span>
+          <span>A probe that does not answer renders no section at all.</span>
+        </div>
+      </div>
+
+      <h2>How it works</h2>
+      <ol class="steps">
+        <li>
+          <b>The section is opt-in three times over.</b> It renders only while
+          <code>isArcanasEnabled()</code>, advanced mode and the deployment's
+          <code>saia-rag</code> health probe all agree. The probe is the same one the workspace drive
+          uses: <code>GET &lt;base&gt;/health</code> with a five-second timeout, accepting only
+          <code>{"status":"alive"}</code>. Anything else - <code>checking</code> or
+          <code>unavailable</code> - renders nothing rather than an empty heading, so a deployment
+          without the service never shows a dead branch.
+        </li>
+        <li>
+          <b>It sits above MCP Servers, not inside it.</b> The order is Workspaces, Arcanas, Agents,
+          MCP Servers. Arcanas has its own module flag and its own probe, so it must not be nested in
+          the <code>showMcpServers</code> block; that block also carries the Agents section, which
+          would otherwise hide Arcanas behind an MCP toggle.
+        </li>
+        <li>
+          <b>One provider, one list, one handshake.</b> Every page mounts its own sidebar, and a
+          second <code>SaiaRagProvider</code> would mean a second MCP session per page change. The
+          provider and the collection list are module state in
+          <code>workspace/arcanas.ts</code>, read through <code>useSyncExternalStore</code>, so a
+          remounted sidebar paints the rows it already had instead of flashing empty. Concurrent
+          reads share one request, and a failed refresh keeps the known rows and adds an error banner,
+          because a service that blinks must not empty the section.
+        </li>
+        <li>
+          <b>The sidebar row is small on purpose; the dialog is the collection.</b> A row carries the
+          name, the caller's role and a shared-by line for a collection owned by somebody else. The
+          options menu offers Files and search, Add files, Search and - only for a collection the
+          caller can manage - Delete, which asks through <code>confirmAction</code>. Everything wider
+          than a name happens in <code>ArcanaManagerModal</code>: it would not fit in a 240 px rail.
+        </li>
+        <li>
+          <b>Deleting a shared collection uses its storage name.</b> A collection owned by the caller
+          is addressed by its plain name; one shared with them is
+          <code>&lt;owner&gt;__&lt;name&gt;</code>. The dialog's title and toasts show the readable
+          name, and the delete call converts through <code>ragCollectionDisplayName</code> so it can
+          never delete the wrong collection when two people own a <code>papers</code>.
+        </li>
+        <li>
+          <b>Tags are per file, and a save replaces the list.</b> The tag button opens one
+          comma-separated input under the file row; saving splits, trims and de-duplicates it and
+          calls <code>set_file_tags</code>, which deletes the file's rows and re-adds the cleaned list.
+          Removing a tag is therefore just leaving it out, and an empty input clears them. An older
+          service without the tool falls back to <code>tag_file</code>, which merges instead of
+          replacing - the dialog says so by keeping the row's existing tags in the input.
+        </li>
+        <li>
+          <b>The file list carries its tags in one call when the service offers it.</b>
+          <code>list_files(include_tags=True)</code> is requested only when
+          <code>set_file_tags</code> is advertised, because the two landed together. A service that
+          predates them gets one <code>get_file_tags</code> call per file, which is slower but keeps
+          the tag filter working.
+        </li>
+        <li>
+          <b>Indexing is text-only, so a PDF is stored but not searchable.</b>
+          <code>index_collection</code> runs the pipeline with <code>text_only=True</code>: a stored
+          file whose first 8192 bytes contain a <code>NUL</code> or which is not valid UTF-8 is
+          skipped. That is what makes "upload a PDF and search it" fail honestly instead of indexing
+          binary noise. The CLI's <code>convert</code> command is where a PDF becomes Markdown (Docling
+          or pandoc), and the converted <code>.md</code> is what should be uploaded. The HTTP route
+          keeps its old <code>index_stored_files(text_only=False)</code> behaviour.
+        </li>
+        <li>
+          <b>Indexing polls the file list, not the job.</b> The manager starts the job, then re-reads
+          <code>list_files</code> every 2.5 s until no file is still <code>stored</code>, bounded to
+          120 attempts. Closing the dialog cancels the loop; the service keeps working. The pending
+          banner counts the files still in <code>stored</code> and names the button that fixes them.
+        </li>
+        <li>
+          <b>Removing a file is a file action, not a provider capability.</b>
+          <code>remove_file</code> deletes the stored bytes and their index entries for exactly one
+          file in one collection. The provider still reports <code>capabilities.delete: false</code>,
+          because the workspace tree must not offer Delete on a collection row; the manager calls
+          <code>removeFile</code> directly and asks inline (a second dialog would replace the
+          manager).
+        </li>
+        <li>
+          <b>Search has three shapes and no JSON.</b> The service's <code>search_preview</code>,
+          <code>search_documents</code> and <code>search_chunks</code> tools answer formatted plain
+          text. <code>parseSearchResults</code> splits chunks and previews into filename, score and
+          snippet, reads the document ranking without a snippet, and treats "No results found" as the
+          empty list. Anything it cannot split is shown verbatim instead of being dropped.
+        </li>
+        <li>
+          <b>Upload chooses the path by service age.</b> With <code>index_collection</code> present,
+          every file goes through the chunked binary upload and is indexed afterwards. Without it, a
+          text file goes through <code>upload_file</code>, which stores and indexes in one step, while
+          a binary file still uses the chunked path. That keeps an older deployment usable without
+          pretending a PDF can be indexed.
+        </li>
+        <li>
+          <b>A reader sees the collection but cannot change it.</b> <code>can_write</code> comes from
+          the service. It disables Upload, Index, the tag editor and Remove, and the dialog shows a
+          read-only hint. The service enforces the same rule, so the disabled buttons are a courtesy,
+          not the guard.
+        </li>
+      </ol>
+
+      <h2>Components</h2>
+      <table class="table">
+        <thead>
+          <tr><th>Component</th><th>Responsibility</th><th>Where</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Sidebar section</td>
+            <td>Gates on module, advanced mode and the probe; rows, role copy, add and delete; opens
+                the manager.</td>
+            <td><span class="mono">front/src/components/Sidebar/ArcanaList.tsx</span></td>
+          </tr>
+          <tr>
+            <td>Visibility helper</td>
+            <td>One answer for the three advanced sections, so a new flag cannot be forgotten in one
+                place.</td>
+            <td><span class="mono">Sidebar/sidebarVisibility.ts</span></td>
+          </tr>
+          <tr>
+            <td>Shared state</td>
+            <td>Module singleton provider, cached collection list, shared in-flight read, retry.</td>
+            <td><span class="mono">front/src/workspace/arcanas.ts</span></td>
+          </tr>
+          <tr>
+            <td>Create dialog</td>
+            <td>Name-only creation; the caller becomes owner.</td>
+            <td><span class="mono">front/src/modals/Arcana/ArcanaCreateModal.tsx</span></td>
+          </tr>
+          <tr>
+            <td>Manager dialog</td>
+            <td>Files tab: upload, pending banner, status badges, tag filter, inline tag editor and
+                remove confirmation. Search tab: mode, count, tag filter and results.</td>
+            <td><span class="mono">front/src/modals/Arcana/ArcanaManagerModal.tsx</span></td>
+          </tr>
+          <tr>
+            <td>Provider</td>
+            <td>Tool constants, collection addressing, tag and search parsers, chunked upload, index,
+                remove, capabilities.</td>
+            <td><span class="mono">front/src/workspace/providers/saiaRag.ts</span></td>
+          </tr>
+          <tr>
+            <td>Service tools</td>
+            <td><code>remove_file</code>, <code>index_collection</code>, <code>set_file_tags</code>,
+                <code>list_files(include_tags)</code>, plus the text-only index policy.</td>
+            <td><span class="mono">saia/saia-rag-cli/src/saia_rag/{mcp_server,ingestion/pipeline,metadata/repository}.py</span></td>
+          </tr>
+          <tr>
+            <td>Feature guide</td>
+            <td><code>arcana_manager</code>, gated on <code>isArcanasEnabled()</code>, targeting the
+                section and its add button.</td>
+            <td><span class="mono">front/src/config/featureGuides.js</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Invariants worth keeping</h2>
+      <ul class="checks">
+        <li><b>Fail closed.</b> No confirmed probe means no section, not an empty one.</li>
+        <li><b>Arcanas is not an MCP feature.</b> Its module flag, probe and rendering are independent
+            of the MCP Servers block.</li>
+        <li><b>One handshake per page.</b> The provider and the list stay module state; a component
+            must not construct its own <code>SaiaRagProvider</code>.</li>
+        <li><b>The storage name is the address.</b> A shared collection is always
+            <code>&lt;owner&gt;__&lt;name&gt;</code> in a tool call, whatever the row shows.</li>
+        <li><b>Tags replace, never merge, when the service can.</b> A user who removes a tag must see
+            it gone.</li>
+        <li><b>Index only text.</b> A stored binary is named as pending, not silently indexed as noise.</li>
+        <li><b>No collection Delete on a workspace row.</b> The provider keeps
+            <code>delete: false</code>; per-file removal goes through the manager.</li>
+        <li><b>The service is the guard.</b> <code>can_write</code> disables controls; the service
+            still rejects a write that gets through.</li>
+      </ul>
+
+      <h3>Limits</h3>
+      <ul class="checks limits">
+        <li>A collection with no indexed text is searchable by nothing; upload the converted Markdown,
+            not the PDF.</li>
+        <li>The index loop is bounded to 120 polls at 2.5 s, so a very large collection finishes after
+            the dialog stopped watching; reopening it shows the final status.</li>
+        <li>Tag filtering is client-side over the files the listing returned, not a server-side query.</li>
+        <li>Search answers are parsed from formatted text. A service that changes its formatting still
+            shows the raw answer, but loses the per-hit fields.</li>
+        <li><code>list_files(include_tags)</code> exists only on services that also have
+            <code>set_file_tags</code>; the per-file fallback costs one call per file.</li>
+        <li>The section manages collections, not members. Sharing is the workspace drive's inline
+            member panel, which speaks the same service.</li>
+      </ul>
+
+      <h2>Where to look</h2>
+      <ul class="paths">
+        <li><span class="mono">front/src/components/Sidebar/ArcanaList.tsx</span> - section chrome,
+            rows, add and delete</li>
+        <li><span class="mono">front/src/components/Sidebar/sidebarVisibility.ts</span> - the
+            module + advanced-mode gate</li>
+        <li><span class="mono">front/src/workspace/arcanas.ts</span> - singleton provider and shared
+            collection state</li>
+        <li><span class="mono">front/src/modals/Arcana/ArcanaCreateModal.tsx</span> - creation</li>
+        <li><span class="mono">front/src/modals/Arcana/ArcanaManagerModal.tsx</span> - files, tags,
+            index, search and remove</li>
+        <li><span class="mono">front/src/workspace/providers/saiaRag.ts</span> - the tool calls and
+            the text parsers</li>
+        <li><span class="mono">saia/saia-rag-cli/src/saia_rag/mcp_server.py</span> - the MCP tools
+            this section calls, and <span class="mono">ingestion/pipeline.py</span> for the text-only
+            index policy</li>
+        <li><span class="mono">saia/saia-rag-cli/src/saia_rag/__main__.py</span> - the
+            <code>convert</code> command, where a PDF becomes Markdown</li>
+      </ul>
+
+      <div class="callout info">
+        <strong>Why a second surface for the same service.</strong> A workspace is the right home for a
+        collection that belongs to a project, but a user with a personal set of notes should not have
+        to create a workspace to search it. The sidebar section is that shortcut: same provider, same
+        tools, same ACL, one manager dialog. The workspace drive stays the place where a collection is
+        mounted into a project and where sharing is managed.
+      </div>
+    </section>
     <section class="feature-page" id="workspace-files"
              data-title="Workspace providers and file manager"
              data-category="Workspace"

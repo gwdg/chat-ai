@@ -8,6 +8,7 @@ import {
   readToolResult,
   saiaRagMcpUrl,
 } from "../../apis/saiaRag";
+import { mimeForName } from "../../utils/mime";
 import { defaultCapabilities } from "../capabilities";
 import {
   arrayParts,
@@ -52,11 +53,21 @@ const LIST_FILES_TOOL = "list_files";
 const READ_BASE64_TOOL = "read_file_base64";
 const WRITE_BASE64_TOOL = "upload_file_base64";
 const WRITE_CHUNK_TOOL = "upload_file_chunk";
+const UPLOAD_TEXT_TOOL = "upload_file";
 const CREATE_COLLECTION_TOOL = "create_collection";
 const DELETE_COLLECTION_TOOL = "delete_collection";
+const REMOVE_FILE_TOOL = "remove_file";
+const INDEX_COLLECTION_TOOL = "index_collection";
 const LIST_MEMBERS_TOOL = "list_members";
 const ADD_MEMBER_TOOL = "add_member";
 const REMOVE_MEMBER_TOOL = "remove_member";
+const LIST_TAGS_TOOL = "list_tags";
+const GET_FILE_TAGS_TOOL = "get_file_tags";
+const TAG_FILE_TOOL = "tag_file";
+const SET_FILE_TAGS_TOOL = "set_file_tags";
+const SEARCH_CHUNKS_TOOL = "search_chunks";
+const SEARCH_DOCUMENTS_TOOL = "search_documents";
+const SEARCH_PREVIEW_TOOL = "search_preview";
 
 /**
  * Raw bytes per chunk. Base64 and the JSON envelope make this ~1.4 MiB on the
@@ -90,6 +101,51 @@ export type RagMember = {
 
 export type RagMemberRole = "reader" | "editor";
 export type RagPrincipalKind = "user" | "group";
+
+/** One stored file, as `list_files` reports it. */
+export type RagFile = {
+  name: string;
+  size?: number;
+  /** `stored` (not indexed), `indexed`, or `Failed: …` from the service. */
+  status: string;
+  chunks: number;
+  tags: string[];
+};
+
+/** One tag of a collection and how many files carry it. */
+export type RagTag = {
+  name: string;
+  count: number;
+};
+
+export type RagSearchMode = "chunks" | "documents" | "previews";
+
+/** One search hit, or the service's own formatted text when it cannot be split. */
+export type RagSearchResult = {
+  filename: string;
+  score?: number;
+  text: string;
+};
+
+const TEXT_EXTENSIONS = new Set([
+  "txt", "md", "markdown", "rst", "org", "ref", "csv", "tsv", "json",
+  "jsonl", "yaml", "yml", "xml", "html", "htm", "tex", "log", "py",
+  "js", "jsx", "ts", "tsx", "css", "java", "c", "cpp", "h", "hpp",
+  "go", "rs", "sh", "sql",
+]);
+
+/**
+ * Whether a file name looks like UTF-8 text.
+ *
+ * Only used to choose `upload_file` (which indexes on the way in) for a service
+ * that does not offer `index_collection`; the current service stores every file
+ * through the binary path and then indexes the text ones itself.
+ */
+export const isTextFileName = (name: string): boolean => {
+  const dot = name.lastIndexOf(".");
+  if (dot <= 0 || dot === name.length - 1) return false;
+  return TEXT_EXTENSIONS.has(name.slice(dot + 1).toLowerCase());
+};
 
 /**
  * The path segment a collection is addressed by. A caller's own collection uses
@@ -153,6 +209,68 @@ const page = (entries: ProviderEntry[], cursor?: string): DirectoryPage => {
   };
 };
 
+/**
+ * `list_tags` and `get_file_tags` answer human-formatted text, not JSON: each
+ * tag is `name (count)` and a file's tags are comma-separated. Parsing them
+ * here keeps that quirk out of the UI.
+ */
+const parseTagList = (text: string): RagTag[] => {
+  const rows: RagTag[] = [];
+  for (const line of text.split("\n")) {
+    const match = line.match(/^(.*?)\s+\((\d+)\)\s*$/);
+    if (match) rows.push({ name: match[1].trim(), count: Number(match[2]) });
+  }
+  return rows;
+};
+
+const parseFileTags = (text: string): string[] => {
+  if (!text || /no tags/i.test(text)) return [];
+  return text
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+};
+
+/**
+ * The search tools render their hits as text. `search_preview` and
+ * `search_chunks` can be split back into one result per hit; `search_documents`
+ * is only a numbered list, so a line is one result with no snippet.
+ */
+export const parseSearchResults = (
+  text: string,
+  mode: RagSearchMode,
+): RagSearchResult[] => {
+  if (!text || /no (matching|results)/i.test(text)) return [];
+  if (mode === "chunks") {
+    return text
+      .split(/\n{2,}(?=\[)/)
+      .map((block) => {
+        const match = block.match(/^\[(.*?) score=([\d.]+)\]\s*\n?([\s\S]*)$/);
+        if (!match) return { filename: "", text: block.trim() };
+        return {
+          filename: match[1],
+          score: Number(match[2]),
+          text: match[3].trim(),
+        };
+      })
+      .filter((result) => result.text);
+  }
+  const results: RagSearchResult[] = [];
+  const blocks = mode === "previews" ? text.split(/\n{2,}(?=\d+\. )/) : text.split("\n");
+  for (const block of blocks) {
+    const head = block.split("\n")[0] ?? "";
+    const match = head.match(/^\d+\.\s+(.*?)\s+\(score=([\d.]+)/);
+    if (!match) continue;
+    const rest = block.slice(head.length).replace(/^\n/, "").trim();
+    results.push({
+      filename: match[1],
+      score: Number(match[2]),
+      text: rest,
+    });
+  }
+  return results;
+};
+
 export class SaiaRagProvider implements FileProvider {
   readonly kind = "saia-rag" as const;
   capabilities: WorkspaceCapabilities = defaultCapabilities("saia-rag");
@@ -207,10 +325,11 @@ export class SaiaRagProvider implements FileProvider {
       this.tools = new Set(tools);
       await this.verifySession();
       this.connectError = null;
-      // A collection is not a folder and the service has no per-file
-      // delete/rename/move/copy. Deleting a collection is the source browser's
-      // owner-only action, never this tree's per-row Delete, so `delete` stays
-      // false here even though the tool exists.
+      // A collection is not a folder and `delete` is a provider-wide capability,
+      // so it stays false: enabling it would offer Delete on a collection row
+      // (which cannot be removed through the tree). Per-file removal exists for
+      // the Arcanas manager through `removeFile`; deleting a collection is the
+      // source browser's owner-only action.
       this.capabilities = { ...defaultCapabilities("saia-rag") };
       this.status = "connected";
     } catch (error) {
@@ -397,6 +516,189 @@ export class SaiaRagProvider implements FileProvider {
     this.collections.delete(display);
   }
 
+  /** Does this service advertise a tool? The Arcanas UI hides what it cannot do. */
+  supportsTool(tool: string): boolean {
+    return this.has(tool);
+  }
+
+  // ---- files ------------------------------------------------------------
+
+  /** Every file of a collection, optionally filtered by tags. */
+  async listFiles(
+    display: string,
+    options: { tags?: string[]; includeTags?: boolean } = {},
+  ): Promise<RagFile[]> {
+    const collection = await this.resolveCollection(display);
+    const args: Record<string, unknown> = {
+      collection: collection.collection,
+    };
+    if (options.tags?.length) args.tags = options.tags;
+    // `include_tags` shipped with `set_file_tags`, so its presence tells us the
+    // service can answer tags in this one call. An older service gets them per
+    // file below, which is slower but keeps the UI usable.
+    const batched = options.includeTags !== false && this.has(SET_FILE_TAGS_TOOL);
+    if (batched) args.include_tags = true;
+    const text = await this.call(LIST_FILES_TOOL, args);
+    const payload = parseJson(text);
+    const rows = Array.isArray(payload?.files) ? payload.files : [];
+    const files: RagFile[] = rows
+      .map((row: any) => {
+        const name = String(row?.name ?? "").trim();
+        if (!name) return null;
+        return {
+          name,
+          size: typeof row.size === "number" ? row.size : undefined,
+          status: String(row.status ?? "indexed"),
+          chunks: typeof row.chunks === "number" ? row.chunks : 0,
+          tags: Array.isArray(row.tags)
+            ? row.tags.map((tag: unknown) => String(tag)).filter(Boolean)
+            : [],
+        };
+      })
+      .filter((file: RagFile | null): file is RagFile => file !== null)
+      .sort((a: RagFile, b: RagFile) => a.name.localeCompare(b.name));
+
+    if (options.includeTags !== false && !batched && this.has(GET_FILE_TAGS_TOOL)) {
+      await Promise.all(
+        files.map(async (file) => {
+          try {
+            file.tags = await this.getFileTags(display, file.name);
+          } catch {
+            file.tags = [];
+          }
+        }),
+      );
+    }
+    return files;
+  }
+
+  async getFileTags(display: string, filename: string): Promise<string[]> {
+    const collection = await this.resolveCollection(display);
+    const text = await this.call(GET_FILE_TAGS_TOOL, {
+      collection: collection.collection,
+      filename,
+    });
+    return parseFileTags(text);
+  }
+
+  async listTags(display: string): Promise<RagTag[]> {
+    const collection = await this.resolveCollection(display);
+    const text = await this.call(LIST_TAGS_TOOL, {
+      collection: collection.collection,
+    });
+    return parseTagList(text);
+  }
+
+  /**
+   * Replace a file's tags. A service without `set_file_tags` can only add, so
+   * the caller is told which mode it got and hides the remove buttons.
+   */
+  async setFileTags(
+    display: string,
+    filename: string,
+    tags: string[],
+  ): Promise<string[]> {
+    const collection = await this.resolveCollection(display);
+    if (this.has(SET_FILE_TAGS_TOOL)) {
+      const text = await this.call(SET_FILE_TAGS_TOOL, {
+        collection: collection.collection,
+        filename,
+        tags,
+      });
+      const payload = parseJson(text);
+      return Array.isArray(payload?.tags)
+        ? payload.tags.map((tag: unknown) => String(tag)).filter(Boolean)
+        : tags;
+    }
+    const added = await this.call(TAG_FILE_TOOL, {
+      collection: collection.collection,
+      filename,
+      tags,
+    });
+    const match = added.match(/:\s*(.*)$/);
+    return match ? parseFileTags(match[1]) : tags;
+  }
+
+  async removeFile(display: string, filename: string): Promise<void> {
+    const collection = await this.resolveCollection(display);
+    await this.call(REMOVE_FILE_TOOL, {
+      collection: collection.collection,
+      filename,
+    });
+  }
+
+  /**
+   * Store one file through `upload_file_chunk`, then let the caller index the
+   * collection. Binary files are stored exactly as they arrived.
+   */
+  async uploadFile(display: string, file: File): Promise<void> {
+    const collection = await this.resolveCollection(display);
+    if (!collection.can_write) {
+      throw new WorkspaceError(
+        "PERMISSION_DENIED",
+        "You have read-only access to this collection",
+      );
+    }
+    await this.write(
+      `/${display}/${file.name}`,
+      file.stream() as ReadableStream<Uint8Array>,
+      { size: file.size, overwrite: true },
+    );
+  }
+
+  /**
+   * The text upload path of an older service: it indexes the file as it stores
+   * it, which is the only indexing an older service offers.
+   */
+  async uploadTextFile(
+    display: string,
+    filename: string,
+    content: string,
+  ): Promise<void> {
+    const collection = await this.resolveCollection(display);
+    await this.call(UPLOAD_TEXT_TOOL, {
+      collection: collection.collection,
+      filename,
+      content,
+    });
+  }
+
+  /** Start indexing every stored text file. Returns the service's job id. */
+  async indexCollection(display: string): Promise<string> {
+    const collection = await this.resolveCollection(display);
+    const text = await this.call(INDEX_COLLECTION_TOOL, {
+      collection: collection.collection,
+    });
+    const payload = parseJson(text);
+    return String(payload?.job_id ?? "");
+  }
+
+  // ---- search -----------------------------------------------------------
+
+  async search(
+    display: string,
+    query: string,
+    mode: RagSearchMode = "previews",
+    count = 5,
+    tags: string[] = [],
+  ): Promise<{ results: RagSearchResult[]; raw: string }> {
+    const collection = await this.resolveCollection(display);
+    const tool =
+      mode === "chunks"
+        ? SEARCH_CHUNKS_TOOL
+        : mode === "documents"
+          ? SEARCH_DOCUMENTS_TOOL
+          : SEARCH_PREVIEW_TOOL;
+    const args: Record<string, unknown> = {
+      collection: collection.collection,
+      query,
+      count,
+    };
+    if (tags.length) args.tags = tags;
+    const text = await this.call(tool, args);
+    return { results: parseSearchResults(text, mode), raw: text };
+  }
+
   // ---- members ----------------------------------------------------------
 
   async listMembers(display: string): Promise<RagMember[]> {
@@ -477,32 +779,20 @@ export class SaiaRagProvider implements FileProvider {
       throw new WorkspaceError("UNSUPPORTED", "saia-rag collections are flat");
     }
     const collection = await this.resolveCollection(parts[0]);
-    const text = await this.call(LIST_FILES_TOOL, {
-      collection: collection.collection,
-    });
-    const payload = parseJson(text);
-    const rows = Array.isArray(payload?.files) ? payload.files : [];
     const display = ragCollectionDisplayName(collection);
+    const files = await this.listFiles(display, { includeTags: false });
     return page(
-      rows
-        .map((file: any) => {
-          const name = String(file?.name ?? "").trim();
-          if (!name) return null;
-          return {
-            sourceId: this.sourceId,
-            path: `/${display}/${name}`,
-            name,
-            kind: "file" as const,
-            size: typeof file.size === "number" ? file.size : undefined,
-            readOnly: !collection.can_write,
-          };
-        })
-        .filter((entry: WorkspaceFileEntry | null): entry is WorkspaceFileEntry =>
-          entry !== null,
-        )
-        .sort((a: WorkspaceFileEntry, b: WorkspaceFileEntry) =>
-          a.name.localeCompare(b.name),
-        ),
+      files.map((file) => ({
+        sourceId: this.sourceId,
+        path: `/${display}/${file.name}`,
+        name: file.name,
+        kind: "file" as const,
+        size: file.size,
+        // The collection lists names only; without a type a PDF would be handed
+        // to the browser as `application/octet-stream` and downloaded.
+        mime: mimeForName(file.name),
+        readOnly: !collection.can_write,
+      })),
       cursor,
     );
   }
@@ -540,6 +830,9 @@ export class SaiaRagProvider implements FileProvider {
       name,
       kind: "file",
       size: typeof file.size === "number" ? file.size : undefined,
+      // The collection lists names only; without a type a PDF would be handed to
+      // the browser as `application/octet-stream` and downloaded.
+      mime: mimeForName(name),
       readOnly: !collection.can_write,
     };
   }
@@ -605,6 +898,7 @@ export class SaiaRagProvider implements FileProvider {
       name,
       kind: "file",
       size,
+      mime: mimeForName(name),
       readOnly: !collection.can_write,
     };
   }
@@ -741,10 +1035,14 @@ export class SaiaRagProvider implements FileProvider {
     );
   }
 
-  async remove(): Promise<void> {
-    throw new WorkspaceError(
-      "UNSUPPORTED",
-      "Files cannot be deleted from a saia-rag collection here",
-    );
+  async remove(path: string): Promise<void> {
+    const parts = this.parts(path);
+    if (parts.length !== 2) {
+      throw new WorkspaceError(
+        "UNSUPPORTED",
+        "saia-rag collections are deleted from the collection list",
+      );
+    }
+    await this.removeFile(parts[0], parts[1]);
   }
 }
