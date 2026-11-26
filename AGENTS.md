@@ -1730,7 +1730,10 @@ password from `front.json` on load. `modules.agents: false` in
 `front.json` sets `VITE_MODULE_AGENTS=false`, hiding the sidebar section and its route. Removing an
 agent interrupts its running session first, then deletes the OpenCode session; the local agent is
 dropped only after that succeeds; if the server is unreachable or rejects authentication, the local
-agent entry can still be removed.
+agent entry can still be removed. That check must also match the error's code
+(`AGENT_SERVER_UNAVAILABLE`, `DIRECT_AGENT_BLOCKED`), not just a message or a `TypeError`:
+`rawRequest` wraps a refused or hung connection in `AGENT_SERVER_UNAVAILABLE`, so a
+`TypeError`-only check never fired for a dead server and the row stayed.
 
 A service-managed agent is removed when the service answers `409` with `code: "conflict"`: that row
 cannot be served, and no retry repairs it. `apis/opencodeAgents.js` reports it through

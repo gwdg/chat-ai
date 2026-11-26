@@ -24,9 +24,11 @@ import { useModal } from "../../modals/ModalContext";
 import { useToast } from "../../hooks/useToast";
 import {
   deleteOpencodeSession,
+  DIRECT_AGENT_BLOCKED,
   getOpencodeInfo,
   getOpencodeSessionStatus,
   interruptOpencodeSession,
+  isAgentServerUnavailable,
 } from "../../apis/opencodeAgents";
 import { deleteServiceAgent } from "../../apis/agentService";
 import {
@@ -82,10 +84,18 @@ import {
   readAgentSessionDrag,
 } from "./sessionDrop";
 
+// The agent entry and its history belong to this browser, so a server-side
+// cleanup that can never succeed must not keep the row alive. `rawRequest`
+// reports an unreachable server or a non-OpenCode answer as
+// `AGENT_SERVER_UNAVAILABLE` (not a TypeError), which is exactly the case this
+// check used to miss; a direct connection this deployment may not make can
+// never be cleaned up either.
 const canRemoveLocally = (reason: unknown) => {
+  if (isAgentServerUnavailable(reason)) return true;
   const message = String(reason instanceof Error ? reason.message : reason);
   return (
     reason instanceof TypeError ||
+    message === DIRECT_AGENT_BLOCKED ||
     /failed to fetch|networkerror|load failed|fetch failed|rejected the password|unauthorized|forbidden|not found|\b(401|403|404|502|503|504)\b/i.test(
       message,
     )

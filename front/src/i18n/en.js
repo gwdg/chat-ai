@@ -470,9 +470,9 @@ export default {
       step2: "Choose Manage Workspace to manage the files behind this switch. One attached workspace opens its editor — the same dialog as Create workspace, with its storage locations, its name, icon and colour, and Apply Changes. With several, the menu turns into the list of attached workspaces: pick one to open that workspace's editor, or use the back arrow to return to these settings.",
     },
     workspace_saia_fs: {
-      title: "Your SAIA files in a workspace",
+      title: "Your SAIA-FS storage in a workspace",
       step1: "Start a new workspace with Create workspace. Its Sources rail is where a workspace gets its files.",
-      step2: "SAIA Files is your account folder. It is listed only while this deployment's saia-fs service answers its health check; open it to pick a folder and add it to the workspace.",
+      step2: "SAIA-FS is your cloud HPC storage — your account folder. It is listed only while this deployment's saia-fs service answers its health check; open it to pick a folder and add it to the workspace.",
     },
     workspace_edit_storage: {
       title: "Manage a workspace",
@@ -2934,7 +2934,7 @@ export default {
       device: "Your Device",
       chats: "Browser",
       mcp: "MCP",
-      saia_fs: "SAIA Files",
+      saia_fs: "SAIA-FS - Your cloud HPC storage",
       saia_hint: "Your SAIA account folder",
       rag: "SAIA RAG",
       rag_hint: "Your document collections",

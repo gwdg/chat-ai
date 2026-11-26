@@ -480,9 +480,9 @@ export default {
       step2: "Wählen Sie „Arbeitsbereich verwalten“, um die Dateien hinter diesem Schalter zu verwalten. Bei einem verknüpften Arbeitsbereich öffnet sich dessen Editor — derselbe Dialog wie „Arbeitsbereich erstellen“, mit Speicherorten, Name, Symbol und Farbe sowie „Änderungen übernehmen“. Bei mehreren wird das Menü zur Liste der verknüpften Arbeitsbereiche: ein Klick öffnet den Editor des gewählten Arbeitsbereichs, der Pfeil zurück führt wieder zu diesen Einstellungen.",
     },
     workspace_saia_fs: {
-      title: "Ihre SAIA-Dateien in einem Arbeitsbereich",
+      title: "Ihr SAIA-FS-Speicher in einem Arbeitsbereich",
       step1: "Erstellen Sie mit „Arbeitsbereich erstellen“ einen neuen Arbeitsbereich. In der Quellen-Leiste erhält er seine Dateien.",
-      step2: "SAIA-Dateien ist Ihr Kontoordner. Er erscheint nur, solange der Dienst saia-fs dieser Installation seinen Health-Check beantwortet; öffnen Sie ihn, wählen Sie einen Ordner und fügen Sie ihn dem Arbeitsbereich hinzu.",
+      step2: "SAIA-FS ist Ihr Cloud-HPC-Speicher — Ihr Kontoordner. Er erscheint nur, solange der Dienst saia-fs dieser Installation seinen Health-Check beantwortet; öffnen Sie ihn, wählen Sie einen Ordner und fügen Sie ihn dem Arbeitsbereich hinzu.",
     },
     workspace_edit_storage: {
       title: "Einen Arbeitsbereich verwalten",
@@ -2965,7 +2965,7 @@ export default {
       device: "Dieses Gerät",
       chats: "Browser",
       mcp: "MCP",
-      saia_fs: "SAIA-Dateien",
+      saia_fs: "SAIA-FS - Dein Cloud-HPC Speicher",
       saia_hint: "Dein SAIA-Kontoordner",
       rag: "SAIA RAG",
       rag_hint: "Deine Dokumentensammlungen",

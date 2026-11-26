@@ -47,6 +47,10 @@ vi.mock("../../../apis/opencodeAgents", () => ({
   interruptOpencodeSession: (...args) => mocks.interrupt(...args),
   deleteOpencodeSession: (...args) => mocks.deleteSession(...args),
   getOpencodeSessionStatus: (...args) => mocks.status(...args),
+  isAgentServerUnavailable: (error) =>
+    error?.code === "AGENT_SERVER_UNAVAILABLE",
+  DIRECT_AGENT_BLOCKED:
+    "Direct agent connections are only available when Chat AI runs locally. In a deployment, agents run through the agent service (SAIA).",
   opencodeDefaults: () => ({ serverUrl: "", username: "opencode", password: "" }),
 }));
 vi.mock("../../../hooks/useToast", () => ({
@@ -247,7 +251,28 @@ describe("AgentList", () => {
   it("removes the agent locally when the server is unreachable", async () => {
     renderAgentList();
     addAgentThroughModal();
-    mocks.deleteSession.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    // What `rawRequest` really throws for a refused/hung connection or a
+    // non-OpenCode answer: `AGENT_SERVER_UNAVAILABLE`, not a bare TypeError.
+    const unavailable = new Error("The agent server is unavailable.");
+    unavailable.code = "AGENT_SERVER_UNAVAILABLE";
+    mocks.deleteSession.mockRejectedValueOnce(unavailable);
+
+    removeAgentThroughMenu();
+
+    await waitFor(() =>
+      expect(screen.queryByText("HPC project 1")).not.toBeInTheDocument(),
+    );
+    expect(mocks.notifyError).toHaveBeenCalled();
+  });
+
+  it("removes a direct agent that this deployment may not contact", async () => {
+    renderAgentList();
+    addAgentThroughModal();
+    mocks.deleteSession.mockRejectedValueOnce(
+      new Error(
+        "Direct agent connections are only available when Chat AI runs locally. In a deployment, agents run through the agent service (SAIA).",
+      ),
+    );
 
     removeAgentThroughMenu();
 

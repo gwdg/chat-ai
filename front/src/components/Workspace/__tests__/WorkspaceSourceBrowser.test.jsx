@@ -726,7 +726,7 @@ describe("WorkspaceSourceBrowser", () => {
           sourceId: "saia-1",
           sourceKind: "saia-fs",
           path: "/",
-          name: "SAIA Files",
+          name: "SAIA-FS - Your cloud HPC storage",
           kind: "dir",
         }),
       ]),

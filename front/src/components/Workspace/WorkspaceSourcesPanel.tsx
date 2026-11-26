@@ -65,7 +65,7 @@ function DriveCard({
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-1">
-          <span className="min-w-0 flex-1 truncate text-xs font-semibold text-base-content">
+          <span className="line-clamp-2 min-w-0 flex-1 text-xs font-semibold text-base-content">
             {title}
           </span>
           {broken && (
