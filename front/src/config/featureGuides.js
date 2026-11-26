@@ -8,6 +8,7 @@ import {
   mcpConfigured,
   openAgentMenu,
   openAgentRecovery,
+  openArcanaShare,
   openChatWorkspaces,
   openConversationMenu,
   openConversationSettings,
@@ -746,6 +747,41 @@ export const featureGuides = {
       {
         target: '[data-guide="arcanas"]',
         textKey: "feature_guide.arcana_manager.step3",
+      },
+    ],
+  },
+  arcana_share: {
+    titleKey: "feature_guide.arcana_share.title",
+    prompt:
+      "An Arcana can be shared with other people, so a document collection stays one copy for a team. Open an Arcana in the sidebar and switch to its Share tab: it lists everyone who can open it with their role, and the owner can add a person by username or e-mail address as an editor (can add and change files) or a reader (read and search only). Only the owner can add or remove people. Collections that were shared with you show who shared them and your role under their name in the sidebar.",
+    keywords: [
+      "share",
+      "shared",
+      "sharing",
+      "member",
+      "members",
+      "collaborate",
+      "collaboration",
+      "team",
+      "invite",
+      "access",
+    ],
+    steps: [
+      {
+        target: '[data-guide="arcana-row"]',
+        textKey: "feature_guide.arcana_share.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="arcana-tab-share"]',
+        prepare: openArcanaShare,
+        textKey: "feature_guide.arcana_share.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="arcana-share-add"]',
+        prepare: openArcanaShare,
+        textKey: "feature_guide.arcana_share.step3",
       },
     ],
   },
@@ -2150,6 +2186,7 @@ export const FEATURE_GUIDE_AVAILABILITY = {
   arcana: () => isToolPanelAvailable() && isArcanasEnabled(),
   arcana_tools: () => isToolPanelAvailable() && isArcanasEnabled(),
   arcana_manager: () => isArcanasEnabled(),
+  arcana_share: () => isArcanasEnabled(),
   mcp_server: () => isFeatureEnabled("mcp_servers") && isToolPanelAvailable(),
   feedback: () => isChatFeedbackEnabled(),
   // The install button renders only while the browser offers an install prompt;
@@ -2218,6 +2255,7 @@ export const FEATURE_CATEGORIES = {
     "audio_generation",
     "arcana_tools",
     "arcana_manager",
+    "arcana_share",
     "mcp_server",
   ],
   chats: [

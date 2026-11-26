@@ -154,6 +154,7 @@ export default function ArcanaList() {
                 <button
                   type="button"
                   onClick={() => openManager(collection)}
+                  data-guide="arcana-row"
                   className="flex min-w-0 flex-1 items-center gap-2 text-left"
                   title={collection.collection}
                 >

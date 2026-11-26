@@ -705,6 +705,15 @@ export default {
       step3:
         "Klicken Sie auf eine Sammlung, um ihre Verwaltung zu öffnen: Dateien hochladen, Tags pro Datei bearbeiten, die Indexierung starten und den Inhalt durchsuchen.",
     },
+    arcana_share: {
+      title: "Eine Arcana teilen",
+      step1:
+        "Öffnen Sie eine Arcana, die Ihnen gehört. Bei Sammlungen, die mit Ihnen geteilt wurden, stehen der Eigentümer und Ihre Rolle unter dem Namen in der Seitenleiste.",
+      step2:
+        "Der Reiter Teilen listet alle Personen, die diese Arcana öffnen können, mit ihrer Rolle auf.",
+      step3:
+        "Eigentümer fügen eine Person über Benutzername oder E-Mail-Adresse hinzu und wählen Darf bearbeiten oder Nur lesen. Nur der Eigentümer kann Personen hinzufügen oder entfernen.",
+    },
     diagram_renderers: {
       title: "Diagramme aus Codeblöcken rendern",
       step1: "Fragen Sie nach einem Codeblock: ```dot für Graphviz, ```vega-lite für Vega-Lite oder ```chart für eine Chart.js-JSON-Konfiguration.",
@@ -2470,6 +2479,21 @@ export default {
     no_results: "Keine passenden Dokumente.",
     search_hint: "Gib eine Suchanfrage ein, um diese Arcana zu durchsuchen.",
     result: "Treffer",
+    tab_share: "Teilen",
+    share_hint:
+      "Alle Personen in dieser Liste können diese Arcana mit der angezeigten Rolle öffnen. Teile sie über einen Benutzernamen oder eine E-Mail-Adresse.",
+    share_owner_only:
+      "Diese Arcana wurde mit dir geteilt. Nur die Eigentümerin oder der Eigentümer kann den Zugriff ändern.",
+    share_placeholder: "Benutzername oder E-Mail",
+    share_role: "Rolle",
+    share_add: "Teilen",
+    share_loading: "Personen werden geladen…",
+    share_empty: "Derzeit kannst nur du diese Arcana öffnen.",
+    share_added: "Mit {{name}} geteilt.",
+    share_removed: "{{name}} entfernt.",
+    share_remove: "Entfernen",
+    share_remove_confirm: "{{name}} aus dieser Arcana entfernen?",
+    share_group: "Gruppe",
   },
   mcp: {
     section_title: "MCP-Server",

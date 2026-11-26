@@ -48,6 +48,9 @@ const hasDynamicTools = sourceText.includes(
 const hasDynamicSettingsTabs = sourceText.includes(
   "data-guide={`settings-tab-${tab.id}`}",
 );
+const hasDynamicArcanaTabs = sourceText.includes(
+  "data-guide={`arcana-tab-${id}`}",
+);
 const hasDynamicDataSubtabs = sourceText.includes(
   "data-guide={`data-subtab-${section.id}`}",
 );
@@ -87,6 +90,7 @@ function checkTarget(target, featureId, label, errors) {
         !staticGuideValues.has(value) &&
         !(value.startsWith("tool-") && hasDynamicTools) &&
         !(value.startsWith("settings-tab-") && hasDynamicSettingsTabs) &&
+        !(value.startsWith("arcana-tab-") && hasDynamicArcanaTabs) &&
         !(value.startsWith("data-subtab-") && hasDynamicDataSubtabs) &&
         !(value.startsWith("profile-subtab-") && hasDynamicProfileSubtabs) &&
         !(value.startsWith("meta-tab-") && hasDynamicMetaTabs) &&

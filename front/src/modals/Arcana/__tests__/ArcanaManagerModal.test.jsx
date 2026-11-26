@@ -9,6 +9,9 @@ const mocks = vi.hoisted(() => ({
   supportsTool: vi.fn(() => true),
   search: vi.fn(),
   indexCollection: vi.fn(),
+  listMembers: vi.fn(),
+  addMember: vi.fn(),
+  removeMember: vi.fn(),
   notifySuccess: vi.fn(),
   notifyError: vi.fn(),
 }));
@@ -32,6 +35,9 @@ vi.mock("../../../workspace/arcanas", () => ({
     supportsTool: mocks.supportsTool,
     search: mocks.search,
     indexCollection: mocks.indexCollection,
+    listMembers: mocks.listMembers,
+    addMember: mocks.addMember,
+    removeMember: mocks.removeMember,
   }),
   arcanaDisplayName: (collection) => collection.name,
   classifyArcanaFiles: () => "current",
@@ -60,6 +66,11 @@ describe("ArcanaManagerModal", () => {
     mocks.listTags.mockReset();
     mocks.search.mockReset();
     mocks.indexCollection.mockReset();
+    mocks.listMembers.mockReset();
+    mocks.addMember.mockReset();
+    mocks.removeMember.mockReset();
+    mocks.notifySuccess.mockReset();
+    mocks.notifyError.mockReset();
     mocks.listFiles.mockResolvedValue(files);
     mocks.listTags.mockResolvedValue([
       { name: "alpha", count: 1 },
@@ -70,6 +81,12 @@ describe("ArcanaManagerModal", () => {
       raw: "",
     });
     mocks.indexCollection.mockResolvedValue("job-1");
+    mocks.listMembers.mockResolvedValue([
+      { user: "alice", role: "owner", kind: "user" },
+      { user: "bob", role: "editor", kind: "user" },
+    ]);
+    mocks.addMember.mockResolvedValue(undefined);
+    mocks.removeMember.mockResolvedValue(undefined);
   });
 
   it("filters the file list by tag and clears that filter again", async () => {
@@ -130,5 +147,79 @@ describe("ArcanaManagerModal", () => {
         [],
       ),
     );
+  });
+
+  it("lists, adds and removes people on the Share tab", async () => {
+    render(
+      <ArcanaManagerModal
+        isOpen
+        onClose={() => {}}
+        collection={collection}
+      />,
+    );
+
+    await screen.findByText("a.md");
+    // The member list is only read when the tab is opened.
+    expect(mocks.listMembers).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByText("arcanas.tab_share"));
+    await screen.findByText("bob");
+    expect(mocks.listMembers).toHaveBeenCalledWith("recipes");
+    expect(screen.getByText("alice")).toBeInTheDocument();
+    // The owner row cannot be removed, so only bob has a remove control.
+    expect(screen.getAllByTitle("arcanas.share_remove")).toHaveLength(1);
+
+    fireEvent.change(
+      screen.getByPlaceholderText("arcanas.share_placeholder"),
+      { target: { value: " Carol@Example.org " } },
+    );
+    fireEvent.change(screen.getByRole("combobox"), {
+      target: { value: "reader" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "arcanas.share_add" }));
+
+    await waitFor(() =>
+      expect(mocks.addMember).toHaveBeenCalledWith(
+        "recipes",
+        "Carol@Example.org",
+        "reader",
+      ),
+    );
+    expect(mocks.notifySuccess).toHaveBeenCalledWith("arcanas.share_added");
+
+    fireEvent.click(screen.getByTitle("arcanas.share_remove"));
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "arcanas.share_remove" })[1],
+    );
+    await waitFor(() =>
+      expect(mocks.removeMember).toHaveBeenCalledWith("recipes", "bob"),
+    );
+  });
+
+  it("shows a shared Arcana read-only and offers no sharing controls", async () => {
+    render(
+      <ArcanaManagerModal
+        isOpen
+        onClose={() => {}}
+        collection={{
+          ...collection,
+          owner: "bob",
+          role: "reader",
+          can_write: false,
+          can_manage: false,
+          shared: true,
+        }}
+      />,
+    );
+
+    await screen.findByText("a.md");
+    fireEvent.click(screen.getByText("arcanas.tab_share"));
+
+    await screen.findByText("alice");
+    expect(screen.getByText("arcanas.share_owner_only")).toBeInTheDocument();
+    expect(
+      screen.queryByPlaceholderText("arcanas.share_placeholder"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByTitle("arcanas.share_remove")).not.toBeInTheDocument();
   });
 });

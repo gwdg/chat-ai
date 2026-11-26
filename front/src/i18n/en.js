@@ -690,6 +690,15 @@ export default {
       step3:
         "Click a collection to open its manager: upload files, edit per-file tags, start indexing and search inside it.",
     },
+    arcana_share: {
+      title: "Share an Arcana",
+      step1:
+        "Open an Arcana that you own. Collections shared with you show who shared them and your role under the name in the sidebar.",
+      step2:
+        "The Share tab lists everyone who can open this Arcana, with their role.",
+      step3:
+        "Owners add a person by username or e-mail address and choose Can edit or Read only. Only the owner can add or remove people.",
+    },
     diagram_renderers: {
       title: "Render diagrams from code blocks",
       step1: "Ask for a fenced code block: ```dot for Graphviz, ```vega-lite for Vega-Lite, or ```chart for a Chart.js JSON config.",
@@ -2446,6 +2455,21 @@ export default {
     no_results: "No matching documents.",
     search_hint: "Type a query to search inside this Arcana.",
     result: "Result",
+    tab_share: "Share",
+    share_hint:
+      "Everyone in this list can open this Arcana with the role shown. Share it with a username or an e-mail address.",
+    share_owner_only:
+      "This Arcana is shared with you. Only its owner can change who has access.",
+    share_placeholder: "Username or e-mail",
+    share_role: "Role",
+    share_add: "Share",
+    share_loading: "Loading people…",
+    share_empty: "Only you can open this Arcana right now.",
+    share_added: "Shared with {{name}}.",
+    share_removed: "Removed {{name}}.",
+    share_remove: "Remove",
+    share_remove_confirm: "Remove {{name}} from this Arcana?",
+    share_group: "Group",
   },
   mcp: {
     section_title: "MCP Servers",

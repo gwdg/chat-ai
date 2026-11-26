@@ -6,6 +6,7 @@ import {
   Document,
   Renew,
   Search,
+  Share,
   Tag,
   TrashCan,
   Upload,
@@ -25,6 +26,8 @@ import { isTextFileName } from "../../workspace/providers/saiaRag";
 import type {
   RagCollection,
   RagFile,
+  RagMember,
+  RagMemberRole,
   RagSearchMode,
   RagSearchResult,
   RagTag,
@@ -37,7 +40,7 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const INDEX_POLL_MS = 2500;
 const INDEX_POLL_LIMIT = 240;
 
-type Tab = "files" | "search";
+type Tab = "files" | "search" | "share";
 
 /**
  * The file list, tag editor and search of one collection.
@@ -90,6 +93,19 @@ export default function ArcanaManagerModal({
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<RagSearchResult[]>([]);
   const [rawResults, setRawResults] = useState("");
+
+  // Sharing. The member list is read lazily: a chat that only uploads a file
+  // never pays for the ACL call.
+  const [members, setMembers] = useState<RagMember[]>([]);
+  const [membersLoaded, setMembersLoaded] = useState(false);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [membersError, setMembersError] = useState("");
+  const [newPrincipal, setNewPrincipal] = useState("");
+  const [newRole, setNewRole] = useState<RagMemberRole>("editor");
+  const [memberBusy, setMemberBusy] = useState("");
+  const [confirmRemoveMember, setConfirmRemoveMember] = useState<string | null>(
+    null,
+  );
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const aliveRef = useRef(true);
@@ -145,6 +161,25 @@ export default function ArcanaManagerModal({
     }
   }, [collection.collection, display, provider]);
 
+  const loadMembers = useCallback(async () => {
+    setMembersLoading(true);
+    setMembersError("");
+    try {
+      const rows = await provider.listMembers(display);
+      if (!aliveRef.current) return;
+      setMembers(rows);
+      setMembersLoaded(true);
+    } catch (reason) {
+      if (!aliveRef.current) return;
+      // Keep `membersLoaded` false but show the reason: a failure must not
+      // re-trigger the lazy load on every render, so the effect waits for the
+      // next explicit Refresh.
+      setMembersError(reason instanceof Error ? reason.message : String(reason));
+    } finally {
+      if (aliveRef.current) setMembersLoading(false);
+    }
+  }, [display, provider]);
+
   useEffect(() => {
     setTab(initialTab);
   }, [initialTab, display]);
@@ -152,6 +187,27 @@ export default function ArcanaManagerModal({
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  // A different collection has a different ACL; never show the previous one's
+  // people while the new list loads.
+  useEffect(() => {
+    setMembers([]);
+    setMembersLoaded(false);
+    setMembersError("");
+    setConfirmRemoveMember(null);
+    setNewPrincipal("");
+  }, [display]);
+
+  useEffect(() => {
+    if (
+      tab === "share" &&
+      !membersLoaded &&
+      !membersLoading &&
+      !membersError
+    ) {
+      void loadMembers();
+    }
+  }, [tab, membersLoaded, membersLoading, membersError, loadMembers]);
 
   useEffect(() => {
     if (focus === "upload") {
@@ -309,6 +365,57 @@ export default function ArcanaManagerModal({
   };
 
   /**
+   * Share the collection with a person by username or e-mail.
+   *
+   * The service validates and normalises the name (an address is stored
+   * lower-cased) and owns the permission check; the form is only shown to the
+   * owner, so the error path is a genuine failure (unknown service, dropped
+   * connection) rather than a permission message.
+   */
+  const addMemberToCollection = async () => {
+    const principal = newPrincipal.trim();
+    if (!principal || memberBusy) return;
+    setMemberBusy("add");
+    setMembersError("");
+    try {
+      await provider.addMember(display, principal, newRole);
+      if (!aliveRef.current) return;
+      notifySuccess(t("arcanas.share_added", { name: principal }));
+      setNewPrincipal("");
+      await loadMembers();
+    } catch (reason) {
+      if (!aliveRef.current) return;
+      setMembersError(
+        reason instanceof Error ? reason.message : String(reason),
+      );
+    } finally {
+      if (aliveRef.current) setMemberBusy("");
+    }
+  };
+
+  const removeMemberFromCollection = async (member: RagMember) => {
+    setMemberBusy(`remove:${member.user}`);
+    setMembersError("");
+    try {
+      await provider.removeMember(display, member.user);
+      if (!aliveRef.current) return;
+      setConfirmRemoveMember(null);
+      notifySuccess(t("arcanas.share_removed", { name: member.user }));
+      await loadMembers();
+    } catch (reason) {
+      if (!aliveRef.current) return;
+      setMembersError(
+        reason instanceof Error ? reason.message : String(reason),
+      );
+    } finally {
+      if (aliveRef.current) setMemberBusy("");
+    }
+  };
+
+  const roleLabel = (role: string) =>
+    t(`arcanas.role_${role}`, { defaultValue: role });
+
+  /**
    * Run the query with an explicit tag filter.
    *
    * The filter is a parameter because a click that changes it re-runs the
@@ -437,6 +544,7 @@ export default function ArcanaManagerModal({
           <div className="flex items-center gap-1">
             {tabButton("files", <Document size={14} />, t("arcanas.tab_files"))}
             {tabButton("search", <Search size={14} />, t("arcanas.tab_search"))}
+            {tabButton("share", <Share size={14} />, t("arcanas.tab_share"))}
           </div>
           {tab === "files" ? (
             <div className="flex items-center gap-1.5">
@@ -491,6 +599,17 @@ export default function ArcanaManagerModal({
                 onChange={(event) => void upload(event.target.files)}
               />
             </div>
+          ) : tab === "share" ? (
+            <button
+              type="button"
+              className="btn btn-ghost btn-xs gap-1"
+              onClick={() => void loadMembers()}
+              disabled={membersLoading}
+              title={t("arcanas.refresh")}
+            >
+              <Renew size={14} />
+              {t("arcanas.refresh")}
+            </button>
           ) : null}
         </div>
 
@@ -685,7 +804,7 @@ export default function ArcanaManagerModal({
               )}
             </div>
           </div>
-        ) : (
+        ) : tab === "search" ? (
           <div className="flex min-h-0 flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <input
@@ -793,6 +912,169 @@ export default function ArcanaManagerModal({
                 ))
               )}
             </div>
+          </div>
+        ) : (
+          <div className="flex min-h-0 flex-col gap-3" data-guide="arcana-share">
+            <p className="text-xs text-base-content/60">
+              {collection.can_manage
+                ? t("arcanas.share_hint")
+                : t("arcanas.share_owner_only")}
+            </p>
+
+            {membersError && (
+              <div className="flex items-start gap-1.5 rounded-lg bg-error/10 px-2 py-1.5 text-xs text-error">
+                <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                <span className="min-w-0 break-words">{membersError}</span>
+              </div>
+            )}
+
+            {collection.can_manage && (
+              <form
+                className="flex flex-wrap items-end gap-2"
+                data-guide="arcana-share-add"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void addMemberToCollection();
+                }}
+              >
+                <label className="flex min-w-[12rem] flex-1 flex-col gap-1">
+                  <span className="text-[11px] text-base-content/60">
+                    {t("arcanas.share_placeholder")}
+                  </span>
+                  <input
+                    className="input input-sm w-full"
+                    data-guide="arcana-share-input"
+                    value={newPrincipal}
+                    placeholder={t("arcanas.share_placeholder")}
+                    onChange={(event) => setNewPrincipal(event.target.value)}
+                    autoComplete="off"
+                  />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-[11px] text-base-content/60">
+                    {t("arcanas.share_role")}
+                  </span>
+                  <select
+                    className="select select-sm w-auto"
+                    value={newRole}
+                    onChange={(event) =>
+                      setNewRole(event.target.value as RagMemberRole)
+                    }
+                  >
+                    <option value="editor">{t("arcanas.role_editor")}</option>
+                    <option value="reader">{t("arcanas.role_reader")}</option>
+                  </select>
+                </label>
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-sm gap-1"
+                  disabled={!newPrincipal.trim() || Boolean(memberBusy)}
+                >
+                  {memberBusy === "add" ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <Add size={14} />
+                  )}
+                  {t("arcanas.share_add")}
+                </button>
+              </form>
+            )}
+
+            {membersLoading && members.length === 0 ? (
+              <div className="flex items-center justify-center gap-2 py-8 text-xs text-base-content/60">
+                <Loader2 size={14} className="animate-spin" />
+                {t("arcanas.share_loading")}
+              </div>
+            ) : members.length === 0 ? (
+              membersError ? null : (
+                <p className="rounded-xl border border-dashed border-base-300 px-3 py-8 text-center text-xs text-base-content/60">
+                  {t("arcanas.share_empty")}
+                </p>
+              )
+            ) : (
+              <ul className="max-h-[45vh] divide-y divide-base-300 overflow-y-auto rounded-xl border border-base-300">
+                {members.map((member) => (
+                  <li
+                    key={`${member.kind}:${member.user}`}
+                    className="px-3 py-2"
+                    data-guide="arcana-member"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-base-200 text-base-content/55">
+                        <Share size={14} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className="truncate text-xs font-medium"
+                          title={member.user}
+                        >
+                          {member.user}
+                        </p>
+                        {member.kind === "group" && (
+                          <p className="text-[10px] text-base-content/50">
+                            {t("arcanas.share_group")}
+                          </p>
+                        )}
+                      </div>
+                      <span
+                        className={`badge badge-sm whitespace-nowrap ${
+                          member.role === "owner"
+                            ? "badge-primary"
+                            : "badge-ghost"
+                        }`}
+                      >
+                        {roleLabel(member.role)}
+                      </span>
+                      {collection.can_manage && member.role !== "owner" && (
+                        <button
+                          type="button"
+                          data-guide="arcana-member-remove"
+                          className="btn btn-ghost btn-xs btn-square text-error"
+                          onClick={() =>
+                            setConfirmRemoveMember(
+                              confirmRemoveMember === member.user
+                                ? null
+                                : member.user,
+                            )
+                          }
+                          disabled={Boolean(memberBusy)}
+                          title={t("arcanas.share_remove")}
+                          aria-label={t("arcanas.share_remove")}
+                        >
+                          <TrashCan size={14} />
+                        </button>
+                      )}
+                    </div>
+                    {confirmRemoveMember === member.user && (
+                      <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-error/10 px-2 py-1.5 pl-9 text-xs">
+                        <span className="min-w-0 flex-1 text-error">
+                          {t("arcanas.share_remove_confirm", {
+                            name: member.user,
+                          })}
+                        </span>
+                        <button
+                          type="button"
+                          className="btn btn-error btn-xs"
+                          onClick={() =>
+                            void removeMemberFromCollection(member)
+                          }
+                          disabled={memberBusy === `remove:${member.user}`}
+                        >
+                          {t("arcanas.share_remove")}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-xs"
+                          onClick={() => setConfirmRemoveMember(null)}
+                        >
+                          {t("common.cancel")}
+                        </button>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
 

@@ -234,6 +234,25 @@ export function arcanaIdEntered() {
   return !!input?.value?.trim();
 }
 
+/**
+ * Open the first Arcana and switch its manager to the Share tab.
+ *
+ * The tour runs from whatever screen the user is on, so it opens the dialog
+ * itself. Clicking a row of the sidebar is enough; the tab click is retried
+ * because the manager mounts a moment later.
+ */
+export function openArcanaShare() {
+  if (!find('[data-guide="arcana-tab-share"]')) {
+    click('[data-guide="arcana-row"]');
+  }
+  retry(() => {
+    const tab = find('[data-guide="arcana-tab-share"]');
+    if (!tab) return false;
+    tab.click();
+    return true;
+  });
+}
+
 export function mcpConfigured() {
   const input = find('[data-guide="mcp-input"]');
   return !!input?.value?.trim();
