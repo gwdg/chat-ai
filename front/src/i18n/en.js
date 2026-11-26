@@ -472,7 +472,7 @@ export default {
     workspace_saia_fs: {
       title: "Your SAIA-FS storage in a workspace",
       step1: "Start a new workspace with Create workspace. Its Sources rail is where a workspace gets its files.",
-      step2: "SAIA-FS is your cloud HPC storage — your account folder. It is listed only while this deployment's saia-fs service answers its health check; open it to pick a folder and add it to the workspace.",
+      step2: "SAIA-FS is your cloud HPC storage. It is listed only while this deployment's saia-fs service answers its health check; open it to pick a folder and add it to the workspace.",
     },
     workspace_edit_storage: {
       title: "Manage a workspace",

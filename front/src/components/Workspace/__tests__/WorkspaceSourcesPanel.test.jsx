@@ -448,7 +448,7 @@ describe("WorkspaceSourcesPanel", () => {
     renderPanel();
 
     expect(
-      within(drive("workspace-source-saia-fs")).getByText("Your SAIA account folder"),
+      within(drive("workspace-source-saia-fs")).getByText("Your cloud HPC storage"),
     ).toBeInTheDocument();
     // The account folder's size is not exposed, so there is no meter and no usage line.
     expect(
