@@ -4,7 +4,7 @@ import {
   ragCollectionDisplayName,
   SaiaRagProvider,
 } from "./providers/saiaRag";
-import type { RagCollection } from "./providers/saiaRag";
+import type { RagCollection, RagFile } from "./providers/saiaRag";
 
 /**
  * The Arcanas sidebar section and its manager dialog share one connection and
@@ -22,13 +22,38 @@ import type { RagCollection } from "./providers/saiaRag";
 
 const SOURCE_ID = "arcanas-sidebar";
 
+/**
+ * How much of a collection is searchable.
+ *
+ * `stored` files are uploaded but not indexed yet, and a failed file is not
+ * indexed either, so every non-`indexed` status counts as pending. The sidebar
+ * paints this as one dot, which is why it has to be a single word rather than a
+ * pair of counts.
+ */
+export type ArcanaIndexStatus = "current" | "pending" | "partial";
+
 export type ArcanasState = {
   collections: RagCollection[];
+  /** Keyed by the collection's storage name (`collection.collection`). */
+  statuses: Record<string, ArcanaIndexStatus>;
   loading: boolean;
   /** At least one listing has completed; a remount does not refetch. */
   loaded: boolean;
   error: string | null;
 };
+
+/**
+ * Classify a collection from its file rows.
+ *
+ * No files is `current`: there is nothing waiting to be indexed. All indexed is
+ * `current`, nothing indexed is `pending`, anything in between is `partial`.
+ */
+export function classifyArcanaFiles(files: RagFile[]): ArcanaIndexStatus {
+  if (files.length === 0) return "current";
+  const indexed = files.filter((file) => file.status === "indexed").length;
+  if (indexed === files.length) return "current";
+  return indexed === 0 ? "pending" : "partial";
+}
 
 let provider: SaiaRagProvider | null = null;
 
@@ -40,6 +65,7 @@ export function arcanasProvider(): SaiaRagProvider {
 
 let state: ArcanasState = {
   collections: [],
+  statuses: {},
   loading: false,
   loaded: false,
   error: null,
@@ -62,6 +88,52 @@ const subscribe = (listener: () => void) => {
 const snapshot = () => state;
 
 let inflight: Promise<RagCollection[]> | null = null;
+let statusGeneration = 0;
+
+/**
+ * Read every collection's file list to classify its index.
+ *
+ * The rows paint first and the dots fill in afterwards: one `list_files` call
+ * per collection is not worth delaying the sidebar. A newer pass invalidates an
+ * older one, so a slow answer cannot overwrite the current state.
+ */
+function loadStatuses(collections: RagCollection[]): void {
+  const generation = ++statusGeneration;
+  void Promise.all(
+    collections.map(async (collection) => {
+      try {
+        const files = await arcanasProvider().listFiles(
+          ragCollectionDisplayName(collection),
+          { includeTags: false },
+        );
+        return [collection.collection, classifyArcanaFiles(files)] as const;
+      } catch {
+        return null;
+      }
+    }),
+  ).then((rows) => {
+    if (generation !== statusGeneration) return;
+    const statuses: Record<string, ArcanaIndexStatus> = {};
+    for (const row of rows) {
+      if (row) statuses[row[0]] = row[1];
+    }
+    setState({ statuses });
+  });
+}
+
+/** Re-read the index state of the collections already listed. */
+export function refreshArcanaStatuses(): void {
+  if (state.collections.length) loadStatuses(state.collections);
+}
+
+/** Record one collection's state without re-reading the others. */
+export function updateArcanaStatus(
+  collection: string,
+  status: ArcanaIndexStatus,
+): void {
+  if (state.statuses[collection] === status) return;
+  setState({ statuses: { ...state.statuses, [collection]: status } });
+}
 
 /**
  * Read the collection list. Concurrent callers share one request, and a
@@ -75,6 +147,7 @@ export function refreshArcanas(): Promise<RagCollection[]> {
     try {
       const collections = await arcanasProvider().listCollections();
       setState({ collections, loaded: true, loading: false, error: null });
+      loadStatuses(collections);
       return collections;
     } catch (error) {
       setState({

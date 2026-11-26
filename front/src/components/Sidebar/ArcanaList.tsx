@@ -43,7 +43,7 @@ export default function ArcanaList() {
   const access = useSaiaRagAccess();
   const collapsedTopicIds = useSelector(selectCollapsedTopics) ?? [];
   const collapsed = collapsedTopicIds.includes("__arcanas__");
-  const { collections, loading, loaded, error } = useArcanas();
+  const { collections, statuses, loading, loaded, error } = useArcanas();
 
   if (access !== SAIA_RAG_AVAILABLE) return null;
 
@@ -136,6 +136,16 @@ export default function ArcanaList() {
             const role = t(`arcanas.role_${collection.role}`, {
               defaultValue: collection.role,
             });
+            const indexStatus = statuses[collection.collection];
+            const indexLabel = t(`arcanas.index_${indexStatus ?? "unknown"}`);
+            const indexDot =
+              indexStatus === "current"
+                ? "bg-success"
+                : indexStatus === "pending"
+                  ? "bg-error"
+                  : indexStatus === "partial"
+                    ? "bg-warning"
+                    : "bg-base-content/20";
             return (
               <div
                 key={collection.collection}
@@ -147,8 +157,14 @@ export default function ArcanaList() {
                   className="flex min-w-0 flex-1 items-center gap-2 text-left"
                   title={collection.collection}
                 >
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-base-200 text-base-content/55">
-                    <Catalog size={14} />
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center">
+                    <span
+                      role="img"
+                      data-index-status={indexStatus ?? "unknown"}
+                      className={`h-2.5 w-2.5 rounded-full ${indexDot}`}
+                      title={indexLabel}
+                      aria-label={indexLabel}
+                    />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-xs font-medium">

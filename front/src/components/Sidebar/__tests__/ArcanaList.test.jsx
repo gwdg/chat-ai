@@ -33,6 +33,10 @@ const mocks = vi.hoisted(() => ({
     loading: false,
     loaded: true,
     error: null,
+    statuses: {
+      alice__recipes: "current",
+      bob__papers: "partial",
+    },
   },
 }));
 
@@ -94,6 +98,10 @@ beforeEach(() => {
     loading: false,
     loaded: true,
     error: null,
+    statuses: {
+      alice__recipes: "current",
+      bob__papers: "partial",
+    },
   };
 });
 
@@ -117,8 +125,19 @@ describe("ArcanaList", () => {
     expect(screen.getByText("shared by bob · Read only")).toBeInTheDocument();
   });
 
-  it("opens the manager when a collection is clicked", () => {
-    render(<ArcanaList />);
+  it("paints the index state as a dot instead of a collection icon", () => {
+    const { container } = render(<ArcanaList />);
+
+    const current = container.querySelector('[data-index-status="current"]');
+    const partial = container.querySelector('[data-index-status="partial"]');
+
+    expect(current).toHaveAttribute("title", "Index up to date");
+    expect(current?.className).toContain("bg-success");
+    expect(partial).toHaveAttribute("title", "Partially indexed");
+    expect(partial?.className).toContain("bg-warning");
+  });
+
+  it("opens the manager when a collection is clicked", () => {    render(<ArcanaList />);
 
     fireEvent.click(screen.getByText("recipes"));
 

@@ -17,7 +17,8 @@ import { useToast } from "../../hooks/useToast";
 import {
   arcanasProvider,
   arcanaDisplayName,
-  refreshArcanas,
+  classifyArcanaFiles,
+  updateArcanaStatus,
 } from "../../workspace/arcanas";
 import { isTextFileName } from "../../workspace/providers/saiaRag";
 import type {
@@ -123,6 +124,10 @@ export default function ArcanaManagerModal({
       if (!aliveRef.current) return;
       setFiles(nextFiles);
       setTags(nextTags);
+      updateArcanaStatus(
+        collection.collection,
+        classifyArcanaFiles(nextFiles),
+      );
       setTools({
         index: provider.supportsTool("index_collection"),
         remove: provider.supportsTool("remove_file"),
@@ -134,7 +139,7 @@ export default function ArcanaManagerModal({
     } finally {
       if (aliveRef.current) setLoading(false);
     }
-  }, [display, provider]);
+  }, [collection.collection, display, provider]);
 
   useEffect(() => {
     setTab(initialTab);
@@ -208,6 +213,10 @@ export default function ArcanaManagerModal({
         const next = await provider.listFiles(display, { includeTags: true });
         if (!aliveRef.current) return;
         setFiles(next);
+        updateArcanaStatus(
+          collection.collection,
+          classifyArcanaFiles(next),
+        );
         if (!next.some((file) => file.status === "stored")) break;
       }
       if (aliveRef.current) notifySuccess(t("arcanas.index_done"));
@@ -257,7 +266,12 @@ export default function ArcanaManagerModal({
     try {
       await provider.removeFile(display, file.name);
       setConfirmRemove(null);
-      setFiles((current) => current.filter((row) => row.name !== file.name));
+      const remaining = files.filter((row) => row.name !== file.name);
+      setFiles(remaining);
+      updateArcanaStatus(
+        collection.collection,
+        classifyArcanaFiles(remaining),
+      );
       notifySuccess(t("arcanas.file_removed", { name: file.name }));
     } catch (reason) {
       notifyError(reason instanceof Error ? reason.message : String(reason));

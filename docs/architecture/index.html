@@ -3476,6 +3476,14 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           because a service that blinks must not empty the section.
         </li>
         <li>
+          <b>The row's dot is the index state, not an icon.</b> Each collection row shows one
+          status dot instead of the document glyph: green when every file is indexed (or the
+          collection is empty, so nothing is waiting), red when nothing is indexed yet, yellow while
+          some files are still stored. It comes from one <code>list_files</code> call per collection
+          after the list paints, so the sidebar never waits on it, and the manager updates the same
+          entry after an upload, an index pass or a removal.
+        </li>
+        <li>
           <b>The sidebar row is small on purpose; the dialog is the collection.</b> A row carries the
           name, the caller's role and a shared-by line for a collection owned by somebody else. The
           options menu offers Files and search, Add files, Search and - only for a collection the
@@ -3557,8 +3565,8 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
         <tbody>
           <tr>
             <td>Sidebar section</td>
-            <td>Gates on module, advanced mode and the probe; rows, role copy, add and delete; opens
-                the manager.</td>
+            <td>Gates on module, advanced mode and the probe; rows with their index dot, role copy,
+                add and delete; opens the manager.</td>
             <td><span class="mono">front/src/components/Sidebar/ArcanaList.tsx</span></td>
           </tr>
           <tr>
