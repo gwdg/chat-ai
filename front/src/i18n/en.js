@@ -2436,8 +2436,6 @@ export default {
     no_results: "No matching documents.",
     search_hint: "Type a query to search inside this Arcana.",
     result: "Result",
-    to_search: "Search",
-    to_files: "Files",
   },
   mcp: {
     section_title: "MCP Servers",

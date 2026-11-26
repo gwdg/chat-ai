@@ -2459,8 +2459,6 @@ export default {
     no_results: "Keine passenden Dokumente.",
     search_hint: "Gib eine Suchanfrage ein, um diese Arcana zu durchsuchen.",
     result: "Treffer",
-    to_search: "Suche",
-    to_files: "Dateien",
   },
   mcp: {
     section_title: "MCP-Server",

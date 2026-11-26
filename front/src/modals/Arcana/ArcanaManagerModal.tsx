@@ -10,7 +10,7 @@ import {
   TrashCan,
   Upload,
 } from "@carbon/icons-react";
-import { AlertCircle, ChevronDown, Loader2 } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 
 import BaseModal from "../BaseModal";
 import { useToast } from "../../hooks/useToast";
@@ -702,15 +702,7 @@ export default function ArcanaManagerModal({
           </div>
         )}
 
-        <div className="flex items-center justify-between gap-2 border-t border-base-300 pt-2">
-          <button
-            type="button"
-            className="btn btn-ghost btn-xs gap-1 text-base-content/60"
-            onClick={() => setTab(tab === "files" ? "search" : "files")}
-          >
-            <ChevronDown size={12} className="rotate-[-90deg]" />
-            {tab === "files" ? t("arcanas.to_search") : t("arcanas.to_files")}
-          </button>
+        <div className="flex items-center justify-end gap-2 border-t border-base-300 pt-2">
           <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>
             {t("common.close")}
           </button>
