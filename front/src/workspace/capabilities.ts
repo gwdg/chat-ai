@@ -84,6 +84,26 @@ export function defaultCapabilities(kind: SourceKind): WorkspaceCapabilities {
       range: false,
     };
   }
+  if (kind === "saia-rag") {
+    // saia-rag is a flat collection of whole files: read, write and append,
+    // but no folder tree and no per-file delete/rename/move/copy. Collections
+    // are created and deleted through the source browser's own actions.
+    return {
+      read: true,
+      write: true,
+      append: true,
+      delete: false,
+      mkdir: false,
+      rename: false,
+      move: false,
+      copy: false,
+      serverSideMove: false,
+      serverSideCopy: false,
+      quota: false,
+      watch: false,
+      range: false,
+    };
+  }
   return {
     ...READ_ONLY_CAPABILITIES,
     quota: false,

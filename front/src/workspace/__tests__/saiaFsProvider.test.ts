@@ -461,11 +461,11 @@ describe("SaiaFsProvider", () => {
   it("reports an unreachable instance as offline, naming the endpoint", async () => {
     sdk.connectError = new TypeError("Failed to fetch");
 
-    const provider = new SaiaFsProvider("source-1", "http://localhost:8081/saia-fs/mcp");
+    const provider = new SaiaFsProvider("source-1", "http://localhost:8081/mcp/saia-fs/mcp");
 
     await expect(provider.connect()).rejects.toMatchObject({ code: "OFFLINE" });
     expect(provider.status).toBe("error");
-    await expect(provider.connect()).rejects.toThrow(/localhost:8081\/saia-fs\/mcp/);
+    await expect(provider.connect()).rejects.toThrow(/localhost:8081\/mcp\/saia-fs\/mcp/);
   });
 
   it("names a missing identity instead of a bare fetch error", async () => {
@@ -481,7 +481,7 @@ describe("SaiaFsProvider", () => {
     // root. That must report the handshake failure, not "UNSUPPORTED list".
     sdk.connectError = new TypeError("Failed to fetch");
 
-    const provider = new SaiaFsProvider("source-1", "http://localhost:8081/saia-fs/mcp");
+    const provider = new SaiaFsProvider("source-1", "http://localhost:8081/mcp/saia-fs/mcp");
     await expect(provider.connect()).rejects.toMatchObject({ code: "OFFLINE" });
 
     await expect(provider.list("/")).rejects.toMatchObject({
@@ -504,7 +504,7 @@ describe("SaiaFsProvider", () => {
     // with the bare "Error executing tool exists", which looked like an empty
     // folder in the browser.
     sdk.sessionError = "Error executing tool exists";
-    const provider = new SaiaFsProvider("source-1", "http://localhost:8081/saia-fs/mcp");
+    const provider = new SaiaFsProvider("source-1", "http://localhost:8081/mcp/saia-fs/mcp");
 
     await expect(provider.connect()).rejects.toMatchObject({
       code: "AUTH_EXPIRED",

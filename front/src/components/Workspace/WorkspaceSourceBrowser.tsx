@@ -12,6 +12,8 @@ import {
   HardDrive,
   MessageSquare,
   Plus,
+  Users,
+  X,
 } from "lucide-react";
 
 import { useConversationList } from "../../db";
@@ -25,6 +27,14 @@ import type {
   FileProvider,
   QuotaInfo,
 } from "../../workspace/providers/types";
+import {
+  ragCollectionDisplayName,
+  type RagCollection,
+  type RagMember,
+  type RagMemberRole,
+  type RagPrincipalKind,
+  SaiaRagProvider,
+} from "../../workspace/providers/saiaRag";
 import { sourceProblem } from "../../workspace/sourceStatus";
 import { useWorkspaceProviders } from "../../workspace/useWorkspaceProviders";
 import { formatBytes } from "../../utils/formatBytes";
@@ -38,18 +48,20 @@ export type SourcesSelection = {
     | "arcana-filesystem"
     | "arcana"
     | "mcp"
-    | "saia-fs";
+    | "saia-fs"
+    | "saia-rag";
   path: string;
   name: string;
   kind: "dir" | "file";
   conversationId?: string;
   title?: string;
+  readOnly?: boolean;
 };
 
 export type SourceTarget =
   | { drive: "device"; sourceId?: string }
   | { drive: "chats"; conversationId?: string }
-  | { drive: "arcanas" }
+  | { drive: "rag" }
   | { drive: "mcp" }
   | { drive: "saia-fs" };
 
@@ -68,7 +80,9 @@ type McpSourceView = {
   label: string;
 };
 type ChatsView = { drive: "chats"; level: "drives" };
-type ArcanasView = { drive: "arcanas"; level: "browse" };
+// saia-rag is a list of collections plus one level of flat files, so a single
+// browse level covers both: `/` lists collections, `/collection` its files.
+type RagView = { drive: "rag"; level: "browse" };
 // The SAIA filesystem is a single account folder, so there is no source list to
 // choose from: the drive opens straight into that folder.
 type SaiaFsView = { drive: "saia-fs"; level: "browse" };
@@ -78,7 +92,7 @@ type View =
   | McpView
   | McpSourceView
   | ChatsView
-  | ArcanasView
+  | RagView
   | SaiaFsView;
 
 type Row = {
@@ -88,6 +102,9 @@ type Row = {
   kind: "dir" | "file";
   size?: number;
   referenceId?: string;
+  readOnly?: boolean;
+  /** Set on a collection row at the saia-rag root. */
+  collection?: RagCollection;
 };
 
 type Conversation = {
@@ -113,6 +130,7 @@ const fromEntries = (entries: WorkspaceFileEntry[]): Row[] =>
       path: entry.path,
       kind: entry.kind === "dir" ? "dir" : "file",
       size: entry.size,
+      readOnly: entry.readOnly,
     })),
   );
 
@@ -120,6 +138,12 @@ async function listProvider(provider: FileProvider, path: string): Promise<Row[]
   const page = await provider.list(path || "/");
   return fromEntries(page.entries);
 }
+
+/** The provider under a read-only wrapper, for the extras it guards. */
+const baseProvider = (provider: FileProvider): FileProvider =>
+  "innerProvider" in provider
+    ? ((provider as unknown as { innerProvider: FileProvider }).innerProvider)
+    : provider;
 
 export function QuotaMeter({
   quota,
@@ -164,15 +188,15 @@ export function useSourceQuotas(sources: WorkspaceSourceRow[]) {
     () => sources.filter((source) => source.kind === "mcp"),
     [sources],
   );
-  const arcanaSources = useMemo(
-    () =>
-      sources.filter(
-        (source) =>
-          source.kind === "arcana-filesystem" || source.kind === "arcana",
-      ),
+  // Where the Arcana filesystem card used to be, the workspace now shows the
+  // saia-rag collections. An existing workspace may still carry an
+  // `arcana-filesystem` row (and its mounts) from before the switch; the row is
+  // left alone, but the rail no longer offers a second document drive.
+  const ragSources = useMemo(
+    () => sources.filter((source) => source.kind === "saia-rag"),
     [sources],
   );
-  const arcanaSource = arcanaSources[0] ?? null;
+  const ragSource = ragSources[0] ?? null;
   // saia-fs reports no quota (the account folder's size is not exposed), so it
   // has a card without a meter.
   const saiaSource =
@@ -229,21 +253,19 @@ export function useSourceQuotas(sources: WorkspaceSourceRow[]) {
     return provider ? (quotas[provider.sourceId] ?? null) : null;
   }, [providers, quotas]);
 
-  const arcanasQuota = arcanaSource
-    ? (quotas[arcanaSource.id] ?? null)
-    : null;
+  const ragQuota = ragSource ? (quotas[ragSource.id] ?? null) : null;
 
   return {
     providers,
     quotas,
     localSources,
     mcpSources,
-    arcanaSources,
-    arcanaSource,
+    ragSources,
+    ragSource,
     saiaSource,
     deviceQuota,
     chatsQuota,
-    arcanasQuota,
+    ragQuota,
   };
 }
 
@@ -283,7 +305,7 @@ export default function WorkspaceSourceBrowser({
 }) {
   const { t } = useTranslation();
   const conversations = (useConversationList() || []) as Conversation[];
-  const { providers, quotas, localSources, mcpSources, arcanaSource, saiaSource } =
+  const { providers, quotas, localSources, mcpSources, ragSource, saiaSource } =
     useSourceQuotas(sources);
   const [view, setView] = useState<View | null>(null);
   const [path, setPath] = useState("/");
@@ -297,6 +319,24 @@ export default function WorkspaceSourceBrowser({
   const [unmounting, setUnmounting] = useState(false);
   const [dropActive, setDropActive] = useState(false);
   const [dropError, setDropError] = useState("");
+  // Collection management is inline, not a modal: the storage manager lives
+  // inside the create-workspace dialog, and opening a second dialog there would
+  // replace that draft.
+  const [ragNewOpen, setRagNewOpen] = useState(false);
+  const [ragNewName, setRagNewName] = useState("");
+  const [ragBusy, setRagBusy] = useState(false);
+  const [ragError, setRagError] = useState("");
+  const [ragConfirmDelete, setRagConfirmDelete] = useState<string | null>(null);
+  const [ragRevision, setRagRevision] = useState(0);
+  const [membersFor, setMembersFor] = useState<{
+    display: string;
+    collection: RagCollection;
+  } | null>(null);
+  const [members, setMembers] = useState<RagMember[] | null>(null);
+  const [membersError, setMembersError] = useState("");
+  const [memberName, setMemberName] = useState("");
+  const [memberRole, setMemberRole] = useState<RagMemberRole>("editor");
+  const [memberKind, setMemberKind] = useState<RagPrincipalKind>("user");
 
   const localById = useMemo(
     () => new Map(localSources.map((source) => [source.id, source])),
@@ -338,10 +378,10 @@ export default function WorkspaceSourceBrowser({
         ? false
         : mcpById.get(view.sourceId)?.readOnly === true;
     }
-    if (view.drive === "arcanas") return arcanaSource?.readOnly === true;
     if (view.drive === "saia-fs") return saiaSource?.readOnly === true;
+    if (view.drive === "rag") return ragSource?.readOnly === true;
     return false;
-  }, [view, localById, mcpById, arcanaSource, saiaSource]);
+  }, [view, localById, mcpById, ragSource, saiaSource]);
 
   useEffect(() => {
     setPath("/");
@@ -376,7 +416,7 @@ export default function WorkspaceSourceBrowser({
       setView({ drive: "saia-fs", level: "browse" });
       return;
     }
-    setView({ drive: "arcanas", level: "browse" });
+    setView({ drive: "rag", level: "browse" });
   }, [targetDrive, targetSourceId]);
 
   useEffect(() => {
@@ -444,12 +484,32 @@ export default function WorkspaceSourceBrowser({
           const provider = providers.get(saiaSource.id);
           if (!provider) return;
           next = await listProvider(provider, path);
-        } else if (!arcanaSource) {
-          throw new Error(t("workspace.source_browser.unavailable"));
-        } else {
-          const provider = providers.get(arcanaSource.id);
+        } else if (view.drive === "rag") {
+          if (!ragSource) throw new Error(t("workspace.source_browser.unavailable"));
+          const provider = providers.get(ragSource.id);
           if (!provider) return;
-          next = await listProvider(provider, path);
+          if (path === "/") {
+            // Collections carry the caller's role, which the rows show and the
+            // owner-only actions need, so the metadata comes from the provider's
+            // own list rather than from a plain directory listing.
+            const rag = baseProvider(provider) as unknown as SaiaRagProvider;
+            const collections = await rag.listCollections();
+            next = sortRows(
+              collections.map((collection) => {
+                const display = ragCollectionDisplayName(collection);
+                return {
+                  id: collection.collection,
+                  name: display,
+                  path: `/${display}`,
+                  kind: "dir" as const,
+                  readOnly: !collection.can_write,
+                  collection,
+                };
+              }),
+            );
+          } else {
+            next = await listProvider(provider, path);
+          }
         }
         if (!cancelled) {
           setRows(next);
@@ -478,8 +538,9 @@ export default function WorkspaceSourceBrowser({
     mcpById,
     conversations,
     conversationTitle,
-    arcanaSource,
+    ragSource,
     saiaSource,
+    ragRevision,
     t,
   ]);
 
@@ -555,21 +616,27 @@ export default function WorkspaceSourceBrowser({
           name: row.name,
           kind: row.kind,
           title: row.kind === "dir" ? row.name : undefined,
+          readOnly: saiaSource.readOnly === true,
         };
       }
-      if (!arcanaSource) return null;
-      const sourceKind: Extract<SourceKind, "arcana" | "arcana-filesystem"> =
-        arcanaSource.kind === "arcana" ? "arcana" : "arcana-filesystem";
-      return {
-        sourceId: arcanaSource.id,
-        sourceKind,
-        path: row.path,
-        name: row.name,
-        kind: row.kind,
-        title: row.kind === "dir" ? row.name : undefined,
-      };
+      if (view.drive === "rag") {
+        if (!ragSource) return null;
+        return {
+          sourceId: ragSource.id,
+          sourceKind: "saia-rag",
+          path: row.path,
+          name: row.name,
+          kind: row.kind,
+          title: row.kind === "dir" ? row.name : undefined,
+          readOnly:
+            ragSource.readOnly === true ||
+            row.readOnly === true ||
+            row.collection?.can_write === false,
+        };
+      }
+      return null;
     },
-    [view, localById, mcpById, arcanaSource, saiaSource],
+    [view, localById, mcpById, ragSource, saiaSource],
   );
 
   // The folder that is open right now. An empty folder has no row to select, so
@@ -609,21 +676,32 @@ export default function WorkspaceSourceBrowser({
         name,
         kind: "dir",
         title: name,
+        readOnly: saiaSource.readOnly === true,
       };
     }
-    if (!arcanaSource) return null;
-    const name =
-      path === "/" ? t("workspace.source_browser.arcanas") : baseName(path);
-    return {
-      sourceId: arcanaSource.id,
-      sourceKind:
-        arcanaSource.kind === "arcana" ? "arcana" : "arcana-filesystem",
-      path,
-      name,
-      kind: "dir",
-      title: name,
-    };
-  }, [view, path, localById, mcpById, arcanaSource, saiaSource, t]);
+    if (view.drive === "rag") {
+      // The collection list is not a folder that can be mounted; each collection
+      // is. Inside a collection, its own read-only role travels with the mount.
+      if (!ragSource || path === "/") return null;
+      const name = baseName(path);
+      const provider = providers.get(ragSource.id);
+      const collection = provider
+        ? (baseProvider(provider) as unknown as Partial<SaiaRagProvider>)
+            .collectionFor?.(name)
+        : undefined;
+      return {
+        sourceId: ragSource.id,
+        sourceKind: "saia-rag",
+        path,
+        name,
+        kind: "dir",
+        title: name,
+        readOnly:
+          ragSource.readOnly === true || collection?.can_write === false,
+      };
+    }
+    return null;
+  }, [view, path, localById, mcpById, ragSource, providers, saiaSource, t]);
 
   const visibleItems = useMemo(
     () =>
@@ -812,6 +890,127 @@ export default function WorkspaceSourceBrowser({
     }
   };
 
+  // ---- saia-rag collections ------------------------------------------------
+  //
+  // Collections are created, deleted and shared here rather than through the
+  // tree: a collection is not a folder, and these actions belong to the drive
+  // rail. The panel is inline on purpose — the storage manager lives inside the
+  // create-workspace dialog, so a second dialog would replace that draft.
+  const ragProvider = useCallback((): SaiaRagProvider | null => {
+    if (!ragSource) return null;
+    const provider = providers.get(ragSource.id);
+    if (!provider) return null;
+    return baseProvider(provider) as unknown as SaiaRagProvider;
+  }, [providers, ragSource]);
+
+  const ragAtRoot = view?.drive === "rag" && path === "/";
+
+  const refreshCollections = () => setRagRevision((value) => value + 1);
+
+  const createCollection = async () => {
+    const provider = ragProvider();
+    const name = ragNewName.trim();
+    if (!provider || !name || ragBusy) return;
+    setRagBusy(true);
+    setRagError("");
+    try {
+      await provider.createCollection(name);
+      setRagNewName("");
+      setRagNewOpen(false);
+      refreshCollections();
+    } catch (reason) {
+      setRagError(reason instanceof Error ? reason.message : String(reason));
+    } finally {
+      setRagBusy(false);
+    }
+  };
+
+  const deleteCollection = async (collection: RagCollection) => {
+    const provider = ragProvider();
+    if (!provider || ragBusy) return;
+    setRagBusy(true);
+    setRagError("");
+    setRagConfirmDelete(null);
+    try {
+      await provider.deleteCollection(ragCollectionDisplayName(collection));
+      if (membersFor?.display === ragCollectionDisplayName(collection)) {
+        setMembersFor(null);
+        setMembers(null);
+      }
+      refreshCollections();
+    } catch (reason) {
+      setRagError(reason instanceof Error ? reason.message : String(reason));
+    } finally {
+      setRagBusy(false);
+    }
+  };
+
+  const openMembers = async (collection: RagCollection) => {
+    const provider = ragProvider();
+    const display = ragCollectionDisplayName(collection);
+    setMembersFor({ display, collection });
+    setMembers(null);
+    setMembersError("");
+    setMemberName("");
+    setMemberRole("editor");
+    setMemberKind("user");
+    if (!provider) {
+      setMembersError(t("workspace.source_browser.unavailable"));
+      return;
+    }
+    try {
+      setMembers(await provider.listMembers(display));
+    } catch (reason) {
+      setMembersError(reason instanceof Error ? reason.message : String(reason));
+    }
+  };
+
+  const closeMembers = () => {
+    setMembersFor(null);
+    setMembers(null);
+    setMembersError("");
+    setMemberName("");
+  };
+
+  const addMember = async () => {
+    const provider = ragProvider();
+    const name = memberName.trim();
+    if (!provider || !membersFor || !name || ragBusy) return;
+    setRagBusy(true);
+    setMembersError("");
+    try {
+      await provider.addMember(
+        membersFor.display,
+        name,
+        memberRole,
+        memberKind,
+      );
+      setMemberName("");
+      setMembers(await provider.listMembers(membersFor.display));
+      refreshCollections();
+    } catch (reason) {
+      setMembersError(reason instanceof Error ? reason.message : String(reason));
+    } finally {
+      setRagBusy(false);
+    }
+  };
+
+  const removeMember = async (member: RagMember) => {
+    const provider = ragProvider();
+    if (!provider || !membersFor || ragBusy) return;
+    setRagBusy(true);
+    setMembersError("");
+    try {
+      await provider.removeMember(membersFor.display, member.user);
+      setMembers(await provider.listMembers(membersFor.display));
+      refreshCollections();
+    } catch (reason) {
+      setMembersError(reason instanceof Error ? reason.message : String(reason));
+    } finally {
+      setRagBusy(false);
+    }
+  };
+
   const driveName = view
     ? view.drive === "device"
       ? t("workspace.source_browser.device")
@@ -821,7 +1020,7 @@ export default function WorkspaceSourceBrowser({
           ? t("workspace.source_browser.mcp")
           : view.drive === "saia-fs"
             ? t("workspace.source_browser.saia_fs")
-            : t("workspace.source_browser.arcanas")
+            : t("workspace.source_browser.rag")
     : "";
   const pending = adding || unmounting || busy;
   const usageLabel = (quota: QuotaInfo | null, shared = false) =>
@@ -854,6 +1053,8 @@ export default function WorkspaceSourceBrowser({
           return t("workspace.storage_badge_mcp");
         case "saia-fs":
           return t("workspace.storage_badge_saia");
+        case "saia-rag":
+          return t("workspace.storage_badge_rag");
         case "agent":
           return t("workspace.storage_badge_agent");
         default:
@@ -867,7 +1068,7 @@ export default function WorkspaceSourceBrowser({
     () => {
       if (view?.drive === "chats") return t("workspace.storage_badge_browser");
       if (view?.drive === "mcp") return t("workspace.storage_badge_mcp");
-      if (view?.drive === "arcanas") return t("workspace.storage_badge_arcana");
+      if (view?.drive === "rag") return t("workspace.storage_badge_rag");
       if (view?.drive === "saia-fs")
         return t("workspace.storage_badge_saia");
       const source =
@@ -1003,7 +1204,159 @@ export default function WorkspaceSourceBrowser({
             data-guide="workspace-source-browser-list"
             className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-1"
           >
-            {loading ? (
+            {membersFor ? (
+              <div
+                className="flex flex-col gap-2 p-1"
+                data-guide="workspace-rag-members"
+              >
+                <div className="flex items-start justify-between gap-1">
+                  <div className="min-w-0">
+                    <div className="truncate text-[11px] font-semibold text-base-content">
+                      {t("workspace.source_browser.rag_members_title", {
+                        name: membersFor.collection.name,
+                      })}
+                    </div>
+                    <div className="text-[10px] leading-snug text-base-content/50">
+                      {t("workspace.source_browser.rag_members_hint")}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={closeMembers}
+                    title={t("workspace.source_browser.rag_members_close")}
+                    aria-label={t("workspace.source_browser.rag_members_close")}
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-base-content/40 transition hover:bg-base-200 hover:text-base-content"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+
+                {members === null && !membersError ? (
+                  <div className="flex items-center gap-2 p-2 text-[11px] text-base-content/50">
+                    <span className="loading loading-spinner loading-xs" />
+                    <span>{t("workspace.source_browser.loading")}</span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-0.5">
+                    {(members ?? []).map((member) => (
+                      <div
+                        key={`${member.kind}:${member.user}`}
+                        className="flex min-w-0 items-center gap-1 rounded-lg border border-base-300/60 px-1.5 py-1"
+                      >
+                        <span className="min-w-0 flex-1 truncate text-[11px] text-base-content">
+                          {member.user}
+                        </span>
+                        <span className="shrink-0 rounded-full border border-base-300 px-1.5 py-px text-[9px] font-medium tracking-wide text-base-content/55">
+                          {t(
+                            `workspace.source_browser.rag_role_${member.role}`,
+                          )}
+                        </span>
+                        <span className="shrink-0 rounded-full border border-base-300 px-1.5 py-px text-[9px] font-medium tracking-wide text-base-content/55">
+                          {member.kind === "group"
+                            ? t("workspace.source_browser.rag_kind_group")
+                            : t("workspace.source_browser.rag_kind_user")}
+                        </span>
+                        {member.role !== "owner" && (
+                          <button
+                            type="button"
+                            onClick={() => void removeMember(member)}
+                            disabled={ragBusy}
+                            title={t(
+                              "workspace.source_browser.rag_remove_member",
+                            )}
+                            aria-label={t(
+                              "workspace.source_browser.rag_remove_member",
+                            )}
+                            className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-base-content/40 transition hover:bg-error/10 hover:text-error"
+                          >
+                            <TrashCan size={12} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    {(members ?? []).length === 0 && (
+                      <p className="px-1 py-1 text-[10px] text-base-content/45">
+                        {t("workspace.source_browser.rag_members_empty")}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {membersError && (
+                  <div className="flex items-start gap-1.5 text-[10px] text-error">
+                    <AlertCircle size={12} className="mt-0.5 shrink-0" />
+                    <span className="min-w-0 break-words">{membersError}</span>
+                  </div>
+                )}
+
+                <div className="mt-1 flex flex-col gap-1 border-t border-base-300 pt-1.5">
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-base-content/50">
+                    {t("workspace.source_browser.rag_add_member")}
+                  </div>
+                  <input
+                    className="input input-xs w-full"
+                    value={memberName}
+                    placeholder={t(
+                      "workspace.source_browser.rag_member_placeholder",
+                    )}
+                    onChange={(event) => setMemberName(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        void addMember();
+                      }
+                    }}
+                  />
+                  <div className="flex items-center gap-1">
+                    <select
+                      className="select select-xs min-w-0 flex-1"
+                      value={memberKind}
+                      onChange={(event) =>
+                        setMemberKind(event.target.value as RagPrincipalKind)
+                      }
+                      aria-label={t(
+                        "workspace.source_browser.rag_member_kind",
+                      )}
+                    >
+                      <option value="user">
+                        {t("workspace.source_browser.rag_kind_user")}
+                      </option>
+                      <option value="group">
+                        {t("workspace.source_browser.rag_kind_group")}
+                      </option>
+                    </select>
+                    <select
+                      className="select select-xs min-w-0 flex-1"
+                      value={memberRole}
+                      onChange={(event) =>
+                        setMemberRole(event.target.value as RagMemberRole)
+                      }
+                      aria-label={t(
+                        "workspace.source_browser.rag_member_role",
+                      )}
+                    >
+                      <option value="editor">
+                        {t("workspace.source_browser.rag_role_editor")}
+                      </option>
+                      <option value="reader">
+                        {t("workspace.source_browser.rag_role_reader")}
+                      </option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => void addMember()}
+                      disabled={!memberName.trim() || ragBusy}
+                      className="btn btn-primary btn-xs shrink-0"
+                    >
+                      {ragBusy && (
+                        <span className="loading loading-spinner loading-xs" />
+                      )}
+                      {t("workspace.source_browser.rag_add_member_action")}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : loading ? (
               <div className="flex items-center justify-center gap-2 p-4 text-[11px] text-base-content/50">
                 <span className="loading loading-spinner loading-xs" />
                 <span className="truncate">
@@ -1067,7 +1420,9 @@ export default function WorkspaceSourceBrowser({
               <div className="flex flex-col items-center gap-1.5 p-4 text-center text-[11px] text-base-content/50">
                 <Folder size={18} className="text-base-content/30" />
                 <span className="truncate">
-                  {t("workspace.source_browser.empty")}
+                  {ragAtRoot
+                    ? t("workspace.source_browser.rag_empty")
+                    : t("workspace.source_browser.empty")}
                 </span>
                 {currentFolder &&
                   (currentFolderInWorkspace ? (
@@ -1102,6 +1457,8 @@ export default function WorkspaceSourceBrowser({
               <div className="flex flex-col gap-0.5">
                 {visibleItems.map(({ row, selection, inWorkspace }) => {
                   const checked = selected.has(selectionKey(selection));
+                  const ragCollection =
+                    view.drive === "rag" ? row.collection : undefined;
                   const inWorkspaceLabel = t(
                     "workspace.source_browser.in_workspace",
                   );
@@ -1291,7 +1648,22 @@ export default function WorkspaceSourceBrowser({
                         <span className="min-w-0 flex-1 truncate text-[11px] text-base-content">
                           {row.name}
                         </span>
-                        {viewReadOnly && (
+                        {ragCollection &&
+                          ["owner", "editor", "reader"].includes(
+                            ragCollection.role,
+                          ) && (
+                            <span
+                              className="shrink-0 rounded-full border border-base-300 px-1.5 py-px text-[9px] font-medium tracking-wide text-base-content/55"
+                              title={t(
+                                `workspace.source_browser.rag_role_${ragCollection.role}`,
+                              )}
+                            >
+                              {t(
+                                `workspace.source_browser.rag_role_${ragCollection.role}`,
+                              )}
+                            </span>
+                          )}
+                        {(viewReadOnly || row.readOnly) && (
                           <span
                             className="shrink-0 text-warning"
                             title={t("workspace.mount_read_only")}
@@ -1321,12 +1693,153 @@ export default function WorkspaceSourceBrowser({
                           {inWorkspaceLabel}
                         </span>
                       )}
+                      {ragCollection && ragCollection.can_manage && (
+                        <span className="flex shrink-0 items-center gap-0.5">
+                          {ragConfirmDelete === ragCollection.collection ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  void deleteCollection(ragCollection)
+                                }
+                                disabled={ragBusy}
+                                title={t(
+                                  "workspace.source_browser.rag_delete_confirm",
+                                )}
+                                aria-label={t(
+                                  "workspace.source_browser.rag_delete_confirm",
+                                )}
+                                className="flex h-5 items-center gap-0.5 rounded px-1 text-[9px] font-semibold uppercase text-error transition hover:bg-error/10"
+                              >
+                                <TrashCan size={12} />
+                                {t("common.delete")}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setRagConfirmDelete(null)}
+                                title={t("common.cancel")}
+                                aria-label={t("common.cancel")}
+                                className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 transition hover:bg-base-200 hover:text-base-content"
+                              >
+                                <X size={12} />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  void openMembers(ragCollection);
+                                }}
+                                title={t(
+                                  "workspace.source_browser.rag_manage_members",
+                                )}
+                                aria-label={t(
+                                  "workspace.source_browser.rag_manage_members",
+                                )}
+                                className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:bg-base-200 hover:text-base-content focus-visible:opacity-100 group-hover:opacity-100"
+                              >
+                                <Users size={12} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setRagError("");
+                                  setRagConfirmDelete(
+                                    ragCollection.collection,
+                                  );
+                                }}
+                                title={t("common.delete")}
+                                aria-label={t("common.delete")}
+                                className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:bg-error/10 hover:text-error focus-visible:opacity-100 group-hover:opacity-100"
+                              >
+                                <TrashCan size={12} />
+                              </button>
+                            </>
+                          )}
+                        </span>
+                      )}
                     </div>
                   );
                 })}
               </div>
             )}
           </div>
+
+          {ragAtRoot && !membersFor && (
+            <div className="shrink-0 border-t border-base-300 px-1 py-1">
+              {ragError && (
+                <div className="flex items-start gap-1.5 px-1 pb-1 text-[10px] text-error">
+                  <AlertCircle size={12} className="mt-0.5 shrink-0" />
+                  <span className="min-w-0 break-words">{ragError}</span>
+                </div>
+              )}
+              {ragNewOpen ? (
+                <div className="flex flex-col gap-1">
+                  <input
+                    className="input input-xs w-full"
+                    autoFocus
+                    value={ragNewName}
+                    placeholder={t(
+                      "workspace.source_browser.rag_new_collection_placeholder",
+                    )}
+                    onChange={(event) => setRagNewName(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        void createCollection();
+                      }
+                      if (event.key === "Escape") {
+                        setRagNewOpen(false);
+                        setRagNewName("");
+                      }
+                    }}
+                  />
+                  <div className="flex items-center justify-end gap-1">
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-xs"
+                      onClick={() => {
+                        setRagNewOpen(false);
+                        setRagNewName("");
+                      }}
+                    >
+                      {t("common.cancel")}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-xs"
+                      disabled={!ragNewName.trim() || ragBusy}
+                      onClick={() => void createCollection()}
+                    >
+                      {ragBusy && (
+                        <span className="loading loading-spinner loading-xs" />
+                      )}
+                      {t("workspace.source_browser.rag_create")}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  data-guide="workspace-rag-new-collection"
+                  onClick={() => {
+                    setRagError("");
+                    setRagNewOpen(true);
+                  }}
+                  disabled={ragSource?.readOnly === true}
+                  className="flex w-full min-w-0 items-center gap-2 rounded-lg border border-dashed border-base-300 px-2 py-1.5 text-left text-[11px] font-medium text-base-content/70 transition hover:border-accent/40 hover:bg-base-200/60 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Plus size={14} className="shrink-0" />
+                  <span className="min-w-0 truncate">
+                    {t("workspace.source_browser.rag_new_collection")}
+                  </span>
+                </button>
+              )}
+            </div>
+          )}
 
           {deviceRoot && !deviceEmpty && onAddDeviceFolder && (
               <div className="shrink-0 border-t border-base-300 px-1 py-1">

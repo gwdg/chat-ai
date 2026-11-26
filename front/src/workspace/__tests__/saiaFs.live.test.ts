@@ -12,8 +12,8 @@
 //   saia-fs-mcp --user tester --root /tmp/saia-fs --port 8011
 //   SAIA_FS_TEST_URL=http://127.0.0.1:8011/mcp npm run test:live
 //
-// Point `SAIA_FS_TEST_URL` at `<backend>/saia-fs/mcp` to exercise the proxy and
-// the identity header as well.
+// Point `SAIA_FS_TEST_URL` at `<backend>/mcp/saia-fs/mcp` to exercise the proxy
+// and the identity header as well.
 import { describe, expect, it } from "vitest";
 
 import { readAll, streamOf } from "../bytes";

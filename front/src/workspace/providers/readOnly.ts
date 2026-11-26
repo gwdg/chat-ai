@@ -22,6 +22,15 @@ export class ReadOnlyProvider implements FileProvider {
     this.capabilities = readOnlyCapabilities(inner.capabilities);
   }
 
+  /**
+   * The provider this wrapper guards. A host that needs a concrete provider's
+   * own extras (the saia-rag collection list and its management calls) reads it
+   * here instead of guessing at the wrapper.
+   */
+  get innerProvider(): FileProvider {
+    return this.inner;
+  }
+
   get sourceId() {
     return this.inner.sourceId;
   }

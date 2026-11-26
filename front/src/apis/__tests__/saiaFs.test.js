@@ -9,7 +9,6 @@ import {
 
 beforeEach(() => {
   vi.stubEnv("VITE_BACKEND_ENDPOINT", "http://localhost:8081/");
-  vi.stubEnv("VITE_SAIA_FS_ENDPOINT", "");
   vi.stubEnv("VITE_API_KEY", "");
   vi.stubEnv("VITE_FAKE_AUTH_HEADERS", "");
 });
@@ -21,38 +20,16 @@ afterEach(() => {
 });
 
 describe("saia-fs URLs", () => {
-  it("builds every route from the backend endpoint", () => {
-    expect(saiaFsBaseUrl()).toBe("http://localhost:8081/saia-fs");
-    expect(saiaFsMcpUrl()).toBe("http://localhost:8081/saia-fs/mcp");
-    expect(saiaFsHealthUrl()).toBe("http://localhost:8081/saia-fs/health");
+  it("builds every route from the backend endpoint, with no extra setting", () => {
+    expect(saiaFsBaseUrl()).toBe("http://localhost:8081/mcp/saia-fs");
+    expect(saiaFsMcpUrl()).toBe("http://localhost:8081/mcp/saia-fs/mcp");
+    expect(saiaFsHealthUrl()).toBe("http://localhost:8081/mcp/saia-fs/health");
   });
 
   it("resolves a relative backend path against the page origin", () => {
     vi.stubEnv("VITE_BACKEND_ENDPOINT", "/backend");
 
-    expect(saiaFsBaseUrl()).toBe("http://localhost/backend/saia-fs");
-  });
-
-  it("uses a configured endpoint instead of the deployment path", () => {
-    // A stack without the `<backend>/saia-fs` hop (the local test stack reaches
-    // saia-fs on its own port) names the service itself.
-    vi.stubEnv("VITE_SAIA_FS_ENDPOINT", "http://localhost:8003/");
-
-    expect(saiaFsBaseUrl()).toBe("http://localhost:8003");
-    expect(saiaFsMcpUrl()).toBe("http://localhost:8003/mcp");
-    expect(saiaFsHealthUrl()).toBe("http://localhost:8003/health");
-  });
-
-  it("resolves a relative endpoint against the page origin", () => {
-    vi.stubEnv("VITE_SAIA_FS_ENDPOINT", "/storage/");
-
-    expect(saiaFsHealthUrl()).toBe("http://localhost/storage/health");
-  });
-
-  it("keeps the deployment path when the endpoint is blank", () => {
-    vi.stubEnv("VITE_SAIA_FS_ENDPOINT", "   ");
-
-    expect(saiaFsBaseUrl()).toBe("http://localhost:8081/saia-fs");
+    expect(saiaFsBaseUrl()).toBe("http://localhost/backend/mcp/saia-fs");
   });
 });
 
@@ -67,7 +44,7 @@ describe("isSaiaFsAvailable", () => {
     await expect(isSaiaFsAvailable()).resolves.toBe(true);
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://localhost:8081/saia-fs/health",
+      "http://localhost:8081/mcp/saia-fs/health",
       expect.objectContaining({
         method: "GET",
         headers: { Authorization: "Bearer local-dev-key" },
@@ -165,17 +142,5 @@ describe("isSaiaFsAvailable", () => {
     controller.abort();
 
     await expect(pending).resolves.toBe(false);
-  });
-
-  it("probes a configured endpoint instead of the deployment path", async () => {
-    vi.stubEnv("VITE_SAIA_FS_ENDPOINT", "http://localhost:8003");
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ status: "alive" }), { status: 200 }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
-
-    await expect(isSaiaFsAvailable()).resolves.toBe(true);
-
-    expect(fetchMock.mock.calls[0][0]).toBe("http://localhost:8003/health");
   });
 });

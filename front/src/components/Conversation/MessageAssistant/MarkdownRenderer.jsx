@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, memo, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, memo, useCallback, useMemo, createContext, useContext } from "react";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
@@ -53,14 +53,38 @@ import { brandFence } from "../../../config/brandFeatures";
 
 // Markdown images load automatically, so keep them on the same origin when
 // external references are disabled. Plain links are not fetched until clicked.
+//
+// A rendered markdown *file* can reference a picture next to it (`![](bild.png)`).
+// Its host passes a resolver through the context below, which turns the relative
+// path into an object URL read from the same provider; a chat message has no
+// resolver, so its images are untouched.
+const MarkdownImageResolverContext = createContext(null);
+
 const MarkdownImage = ({ src, alt, ...props }) => {
   const loadExternal = useSelector(selectHtmlLoadExternal);
+  const resolveImage = useContext(MarkdownImageResolverContext);
+  const [resolved, setResolved] = useState(null);
   // react-markdown passes its AST node as a prop; never forward it to the DOM.
   delete props.node;
-  if (!loadExternal && isExternalUrl(src)) {
+  useEffect(() => {
+    setResolved(null);
+    if (!resolveImage || typeof src !== "string") return undefined;
+    if (src.startsWith("data:") || src.startsWith("#")) return undefined;
+    let cancelled = false;
+    void Promise.resolve(resolveImage(src))
+      .then((url) => {
+        if (!cancelled && typeof url === "string") setResolved(url);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [resolveImage, src]);
+  const effective = resolved || src;
+  if (!loadExternal && isExternalUrl(effective)) {
     return <span className="text-base-content/70">{alt || ""}</span>;
   }
-  return <img src={src} alt={alt} {...props} />;
+  return <img src={effective} alt={alt} {...props} />;
 };
 
 // Conversation links produced by the Meta chat navigate inside the SPA.
@@ -968,7 +992,7 @@ const stripGuideMarkers = (content) => {
  * Main MarkdownRenderer
  * -------------------------------------------- */
 const MarkdownRenderer = memo(
-  ({ children, isDarkMode, isLoading, renderMode = "Default" }) => {
+  ({ children, isDarkMode, isLoading, renderMode = "Default", resolveImage }) => {
     const loadExternal = useSelector(selectHtmlLoadExternal);
     // KaTeX styling
     useEffect(() => {
@@ -1188,7 +1212,7 @@ const MarkdownRenderer = memo(
 
     if (!children) return null;
 
-    return (
+    const rendered = (
       <>
         <div className={`markdown-body ${isDarkMode ? "dark" : "light"}`}>
           {thinkingBlocks.map((content, index) => (
@@ -1221,6 +1245,15 @@ const MarkdownRenderer = memo(
           />
         )}
       </>
+    );
+
+    // A markdown file preview supplies the resolver; a chat message does not.
+    return resolveImage ? (
+      <MarkdownImageResolverContext.Provider value={resolveImage}>
+        {rendered}
+      </MarkdownImageResolverContext.Provider>
+    ) : (
+      rendered
     );
   }
 );

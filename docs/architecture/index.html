@@ -2944,7 +2944,7 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
 
       <div class="flow-wrap">
         <div class="flow" role="img"
-             aria-label="saia-fs path: the workspace browser calls the deployment's saia-fs hop, which signs the caller's identity; the saia-fs service exposes MCP file tools over the user's namespace.">
+             aria-label="saia-fs path: the workspace browser calls the engine's generic /v1/mcp/saia-fs hop, which forwards to the registry and passes the caller's identity; the saia-fs service exposes MCP file tools over the user's namespace.">
           <div class="node kind-secret">
             <div class="node-kicker">1 · Browser</div>
             <div class="node-title">Workspace</div>
@@ -2953,9 +2953,9 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           </div>
           <div class="flow-arrow" aria-hidden="true"><span>HTTPS</span></div>
           <div class="node kind-opaque">
-            <div class="node-kicker">2 · Deployment hop</div>
-            <div class="node-title"><code>/saia-fs</code></div>
-            <div class="node-sub">Forwards to the registry, adds the identity header</div>
+            <div class="node-kicker">2 · Engine hop</div>
+            <div class="node-title"><code>/v1/mcp/saia-fs</code></div>
+            <div class="node-sub">Allowlisted name, forwarded; the gateway stamps the identity</div>
             <span class="sees cannot">no file state</span>
           </div>
           <div class="flow-arrow" aria-hidden="true"><span>MCP</span></div>
@@ -2993,12 +2993,12 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           fails closed instead of offering a dead card.
         </li>
         <li>
-          <b>The base URL is a deployment path.</b> By default it is
-          <code>&lt;backend&gt;/saia-fs</code>; <code>saiaFsEndpoint</code>
-          (<code>VITE_SAIA_FS_ENDPOINT</code>) replaces it with an absolute or same-origin URL for a
-          stack where the service listens on its own port. Chat AI's own <code>back</code> proxies
-          nothing there, so the default path has to be forwarded by the deployment and must add the
-          caller's identity.
+          <b>The base URL is <code>&lt;backend&gt;/mcp/saia-fs</code>, with no config key.</b> The app
+          derives it from <code>backendPath</code>; the engine's generic
+          <code>/v1/mcp/&lt;service&gt;</code> hop forwards the exchange to the registered service and
+          passes <code>x-auth-claim-uid</code> through. Chat AI's own <code>back</code> proxies nothing
+          there, and nothing else configures the address: a stack that cannot reach the service is
+          missing the hop, and that belongs in the engine or gateway.
         </li>
         <li>
           <b>Identity is the whole authorization.</b> The service reads <code>x-auth-claim-uid</code>
@@ -3123,6 +3123,262 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
         <strong>Why the health probe exists.</strong> A registry can hold an instance that is asleep, and
         a model-list entry can outlive the service. Asking the service itself is the only answer that
         reflects the current deployment, and it costs one request when a workspace is opened.
+      </div>
+    </section>
+    <section class="feature-page" id="saia-rag"
+             data-title="SAIA RAG collections as a workspace drive"
+             data-category="Workspace"
+             data-summary="Live collections with per-collection roles"
+             data-added="2026-11">
+      <div class="eyebrow">
+        <span>Workspace</span>
+        <span class="chip">apis/saiaRag.js · providers/saiaRag.ts · saia-rag</span>
+      </div>
+      <h1>SAIA RAG collections as a workspace drive</h1>
+      <p class="lead">
+        <code>saia-rag</code> is the SAIA document-collections service and appears as a drive in a
+        workspace's Sources rail, where it replaces the old Arcana drive. The root lists the caller's
+        collections, each collection lists flat files, and a collection is mounted live rather than
+        copied. Every collection carries an ACL - owner, editor or reader - and the service enforces
+        it on every tool call, so the read-only state in the UI is a mirror, never the guard.
+      </p>
+
+      <h2>The 100-foot view</h2>
+      <p class="section-note">The browser talks MCP to the service; the deployment hop is what supplies the caller and their groups.</p>
+
+      <div class="flow-wrap">
+        <div class="flow" role="img"
+             aria-label="saia-rag path: the workspace probes health and speaks MCP to the engine's generic /v1/mcp hop, which forwards to the registered service and passes the caller's identity; the service resolves a collection name against its ACL and reads files from the per-collection store.">
+          <div class="node kind-secret">
+            <div class="node-kicker">1 · Browser</div>
+            <div class="node-title">Workspace</div>
+            <div class="node-sub">Health probe, MCP client, live collection mount</div>
+            <span class="sees can">caller's role per collection</span>
+          </div>
+          <div class="flow-arrow" aria-hidden="true"><span>HTTPS</span></div>
+          <div class="node kind-opaque">
+            <div class="node-kicker">2 · Engine hop</div>
+            <div class="node-title"><code>/v1/mcp/saia-rag</code></div>
+            <div class="node-sub">Allowlisted name, streamed through; the gateway stamps the identity</div>
+            <span class="sees cannot">no file state</span>
+          </div>
+          <div class="flow-arrow" aria-hidden="true"><span>MCP</span></div>
+          <div class="node kind-edge">
+            <div class="node-kicker">3 · Service</div>
+            <div class="node-title">saia-rag</div>
+            <div class="node-sub"><code>list_collections</code>, <code>list_files</code>, <code>read_file_base64</code>, <code>upload_file_base64</code>, members</div>
+            <span class="sees can">the ACL of every collection</span>
+          </div>
+          <div class="flow-arrow" aria-hidden="true"><span>backend</span></div>
+          <div class="node kind-edge">
+            <div class="node-kicker">4 · Storage</div>
+            <div class="node-title">Per-collection database</div>
+            <div class="node-sub">Files plus a <code>permissions</code> table</div>
+            <span class="sees can">file bytes and roles</span>
+          </div>
+        </div>
+
+        <div class="flow-legend">
+          <span><i class="swatch green"></i> holds files or roles</span>
+          <span><i class="swatch grey"></i> routes and authenticates</span>
+          <span>No drive row is created when the probe does not answer.</span>
+        </div>
+      </div>
+
+      <h2>How it works</h2>
+      <ol class="steps">
+        <li>
+          <b>It replaces the Arcana drive instead of sitting beside it.</b> A new workspace gets a
+          <code>saia-rag</code> source only while the service answers
+          <code>GET &lt;base&gt;/health</code> with <code>{"status":"alive"}</code>. Existing
+          workspaces keep the <code>arcana-filesystem</code> row they already had, so their mounts
+          and files are untouched; the drive card shown at the top of the rail is the RAG one.
+        </li>
+        <li>
+          <b>Availability is a probe, not a catalogue entry.</b> <code>saia-rag</code> is not a chat
+          model, so <code>/v1/models</code> cannot say whether a deployment offers it. The probe has a
+          five-second timeout and never throws: a 404, a 503, a timeout or a refused connection all
+          mean "no drive", which is the fail-closed answer the source list needs. The base is
+          <code>&lt;backend&gt;/mcp/saia-rag</code>, derived from <code>backendPath</code> and nothing
+          else: the engine's generic <code>/v1/mcp/&lt;service&gt;</code> route forwards to the
+          registered service and passes the caller's identity header through, so there is no service
+          address to configure.
+        </li>
+        <li>
+          <b>The root is collections, and a collection is flat.</b> <code>/</code> lists collections;
+          <code>/&lt;display&gt;</code> lists the files of one collection, with no folders inside it.
+          A collection the caller owns shows its plain name; one shared with them shows
+          <code>&lt;owner&gt;__&lt;name&gt;</code>, because two people can each own a
+          <code>papers</code>. The provider keeps the <code>list_collections</code> answer around to
+          turn a display name back into the storage name the tools take.
+        </li>
+        <li>
+          <b>The role is data from the service.</b> <code>list_collections</code> reports
+          <code>role</code>, <code>can_write</code> and <code>can_manage</code> per collection. The
+          provider marks a reader-only collection <code>readOnly</code>; every file row inside it
+          inherits that, and a mount carries it too, so a reader cannot drag a file into a collection
+          that would reject the write. The service enforces the same rule, which is why a UI bug
+          cannot grant a role the caller does not have.
+        </li>
+        <li>
+          <b>Names resolve to <code>&lt;owner&gt;__&lt;name&gt;</code> before any check.</b> A short
+          name is always prefixed with the caller, so it can never reach somebody else's collection; a
+          name with a separator names its owner explicitly. The caller's own namespace is owned even
+          when the ACL carries no row for them, but anything outside it needs an explicit permission
+          row - an empty ACL is not an invitation to write into another user's collection.
+        </li>
+        <li>
+          <b>Identity is the caller plus their groups.</b> The service reads
+          <code>x-auth-claim-uid</code> (falling back to <code>x-consumer-custom-id</code>) and rejects
+          anything that is not a safe username. Group principals come from the group headers a gateway
+          may inject; one list of names then covers user rows and group rows alike, because the ACL
+          compares names. A missing group header is normal - the caller is then only a person.
+        </li>
+        <li>
+          <b>Ownership and membership are owner-only.</b> <code>create_collection</code> makes the
+          caller its owner. <code>delete_collection</code>, <code>list_members</code>,
+          <code>add_member</code> and <code>remove_member</code> require that role, and a group can be
+          reader or editor but never owner. Removing the last owner is refused, so a collection cannot
+          be left unmanageable.
+        </li>
+        <li>
+          <b>Bytes travel as base64.</b> Images and PDFs are written with
+          <code>upload_file_base64</code> and read with <code>read_file_base64</code>, so a preview
+          and a download see the exact bytes. Those uploads are stored but not indexed, so they remain
+          plain files rather than searchable documents. A Markdown preview that references
+          <code>![](bild.png)</code> resolves the picture in the browser through the same provider, not
+          on the service.
+        </li>
+        <li>
+          <b>The UI offers only what a flat collection can do.</b> Capabilities report read, write and
+          append, and explicitly not delete, mkdir, rename, move or copy: a collection has no folder
+          tree and the service has no file-delete tool. New folder and New file are therefore hidden on
+          this drive while Upload stays, a drag needs a move the provider does not have, and removing or
+          renaming a collection is not a file action.
+        </li>
+        <li>
+          <b>Collection management is inline, not a dialog.</b> Create, delete and the member panel are
+          rendered inside the browser pane. The manager is shown by Create workspace, and a second
+          modal would replace that dialog and drop its draft, so the actions live in the pane the
+          dialog already owns.
+        </li>
+        <li>
+          <b>Append is a read and a write.</b> There is no native append tool, so the provider reads the
+          existing bytes, concatenates the new ones and writes the result back. That is correct for the
+          text writes the app makes and needs no new tool on the service.
+        </li>
+      </ol>
+
+      <h2>Components</h2>
+      <table class="table">
+        <thead>
+          <tr><th>Component</th><th>Responsibility</th><th>Where</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Endpoint and probe</td>
+            <td>Builds the base, MCP and health URLs; the timeout-bounded liveness check that never
+                throws.</td>
+            <td><span class="mono">front/src/apis/saiaRag.js</span></td>
+          </tr>
+          <tr>
+            <td>File provider</td>
+            <td>MCP client, collection addressing, role mapping, base64 reads and writes, append,
+                collection and member calls, error reduction.</td>
+            <td><span class="mono">front/src/workspace/providers/saiaRag.ts</span></td>
+          </tr>
+          <tr>
+            <td>Access hook</td>
+            <td>Runs the probe once per view and returns checking / available / unavailable.</td>
+            <td><span class="mono">front/src/hooks/useSaiaRagAccess.ts</span></td>
+          </tr>
+          <tr>
+            <td>Provisioning</td>
+            <td>Creates the <code>saia-rag</code> source row only while the probe says available.</td>
+            <td><span class="mono">WorkspaceStorageManager.jsx</span>,
+                <span class="mono">workspaceDb.ts#ensureSaiaRagSource</span></td>
+          </tr>
+          <tr>
+            <td>Drive card and browser</td>
+            <td>The RAG drive, collection listing, collection create/delete, the member panel, and
+                the read-only badges.</td>
+            <td><span class="mono">WorkspaceSourcesPanel.tsx</span>,
+                <span class="mono">WorkspaceSourceBrowser.tsx</span></td>
+          </tr>
+          <tr>
+            <td>Mounting</td>
+            <td>Mounts one collection live, carries its <code>readOnly</code> role, and refuses the
+                collection list itself.</td>
+            <td><span class="mono">workspace/addSelectionToWorkspace.ts</span></td>
+          </tr>
+          <tr>
+            <td>Relative images</td>
+            <td>Resolves a Markdown picture through the provider that produced the preview.</td>
+            <td><span class="mono">workspace/filePreview.ts</span>,
+                <span class="mono">MarkdownRenderer.jsx</span></td>
+          </tr>
+          <tr>
+            <td>Service ACL</td>
+            <td>Name resolution, role checks, identity and group headers, member and collection
+                tools.</td>
+            <td><span class="mono">saia-rag-cli/src/saia_rag/{access,identity,mcp_server}.py</span>,
+                <span class="mono">acl/service.py</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Invariants worth keeping</h2>
+      <ul class="checks">
+        <li><b>The service is the guard.</b> The UI mirrors a role; it never grants one.</li>
+        <li><b>A short name stays yours.</b> Every unprefixed reference is resolved inside the
+            caller's namespace.</li>
+        <li><b>An empty ACL is not a share.</b> Only the owner's own namespace is implied; everything
+            else needs a row.</li>
+        <li><b>A group can never own.</b> Groups are reader or editor, and the last owner stays.</li>
+        <li><b>A mount is live and keeps its role.</b> Mounting a reader-only collection must not
+            quietly become writable.</li>
+        <li><b>No button a flat collection cannot honour.</b> Delete, rename, move and new folder are
+            absent rather than failing at the click.</li>
+        <li><b>Binary survives the trip.</b> Bytes go through base64, not a text decoder.</li>
+      </ul>
+
+      <h3>Limits</h3>
+      <ul class="checks limits">
+        <li>Listing a shared collection means opening its database to read the ACL, so the service
+            bounds the scan and caches the visible list briefly; a brand-new share can take a moment
+            to appear.</li>
+        <li>An MCP exchange carries a whole file: there is no range read, so a preview reads the file
+            and the UI refuses one above its preview limit.</li>
+        <li>Files uploaded as base64 are stored but not indexed, so a search over the collection may
+            not find them.</li>
+        <li>The exact group model is the deployment's business: the service accepts several claim
+            spellings and treats every value as one principal name.</li>
+        <li>A reader's collection still appears in the list and can be mounted; it is marked locked and
+            the service rejects any write that gets through.</li>
+        <li>A missing or unreachable identity header is answered by the service as a plain tool error,
+            which reaches the UI as the reason on the source row.</li>
+      </ul>
+
+      <h2>Where to look</h2>
+      <ul class="paths">
+        <li><span class="mono">front/src/apis/saiaRag.js</span> - base URL, probe, timeout</li>
+        <li><span class="mono">front/src/workspace/providers/saiaRag.ts</span> - collections, roles,
+            base64 I/O, members</li>
+        <li><span class="mono">front/src/hooks/useSaiaRagAccess.ts</span> - availability per view</li>
+        <li><span class="mono">front/src/components/Workspace/WorkspaceSourceBrowser.tsx</span> - the
+            browsing and inline management UI</li>
+        <li><span class="mono">front/src/workspace/addSelectionToWorkspace.ts</span> - live mount and
+            the carried role</li>
+        <li><span class="mono">saia/saia-rag-cli/src/saia_rag/</span> - the service, its ACL and its
+            tools</li>
+      </ul>
+
+      <div class="callout info">
+        <strong>Why <code>&lt;owner&gt;__&lt;name&gt;</code>.</strong> Collections live in one flat
+        storage root, one database per collection. Prefixing the owner keeps two people's
+        <code>papers</code> apart without a second index, and resolving a short name to the caller's own
+        prefix means a typo cannot address somebody else's data. The display name the browser shows is
+        derived from that storage name, so the two can never drift.
       </div>
     </section>
     <section class="feature-page" id="workspace-files"
@@ -3360,10 +3616,10 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
       <p class="lead">
         The drive in a workspace's Sources rail is backed by a separate service. <code>saia-fs</code> gives
         every user exactly one folder, exposes it as thirteen MCP tools, and makes it reachable through the
-        SAIA registry with an embedded connector. In a deployment the browser calls
-        <code>&lt;backendPath&gt;/saia-fs</code>, the deployment's hop forwards that to the registry and
-        stamps the caller's identity, and the registry tunnels it to the instance. It is deliberately
-        <em>not</em> a chat model and creates no engine-side service row.
+        SAIA registry with an embedded connector. The browser calls
+        <code>&lt;backendPath&gt;/mcp/saia-fs</code>, the engine's generic hop forwards that to the
+        registry and passes the caller's identity, and the registry tunnels it to the instance. It is
+        deliberately <em>not</em> a chat model and creates no engine-side service row.
       </p>
 
       <h2>The 100-foot view</h2>
@@ -3371,7 +3627,7 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
 
       <div class="flow-wrap">
         <div class="flow" role="img"
-             aria-label="saia-fs path in a deployment: the browser speaks MCP to its own origin at backendPath/saia-fs, the deployment hop forwards that to the engine registry and adds the caller's identity, the registry forwards over a pooled tunnel to the saia-fs process, which resolves the user's folder and reads or writes the storage backend.">
+             aria-label="saia-fs path: the browser speaks MCP to its own origin at backendPath/mcp/saia-fs, the engine's generic hop forwards that to the registry and passes the caller's identity, the registry forwards over a pooled tunnel to the saia-fs process, which resolves the user's folder and reads or writes the storage backend.">
           <div class="node kind-edge">
             <div class="node-kicker">1 · Browser</div>
             <div class="node-title">Chat AI</div>
@@ -3380,9 +3636,9 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           </div>
           <div class="flow-arrow" aria-hidden="true"><span>MCP</span></div>
           <div class="node kind-secret">
-            <div class="node-kicker">2 · Deployment hop</div>
-            <div class="node-title"><code>…/saia-fs</code></div>
-            <div class="node-sub">Forwards, stamps identity</div>
+            <div class="node-kicker">2 · Engine hop</div>
+            <div class="node-title"><code>…/v1/mcp/saia-fs</code></div>
+            <div class="node-sub">Forwards an allowlisted name, passes the identity</div>
             <span class="sees can">who is asking</span>
           </div>
           <div class="flow-arrow" aria-hidden="true"><span>forward</span></div>
@@ -3425,15 +3681,17 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           second mode is for a single-user client, not a deployment.
         </li>
         <li>
-          <b>The browser is the MCP client, and in a deployment it calls its own origin.</b>
-          <code>apis/saiaFs.js#saiaFsBaseUrl</code> returns <code>&lt;backendPath&gt;/saia-fs</code> unless
-          <code>saiaFsEndpoint</code> is set; the workspace provider speaks streamable HTTP to
-          <code>…/mcp</code> and the availability probe reads <code>…/health</code>. Nothing in this
-          repository serves that path: <code>back</code> has no <code>/saia-fs</code> route and the engine
-          does not forward it either, so the deployment in front has to rewrite
-          <code>&lt;backendPath&gt;/saia-fs/&lt;rest&gt;</code> to the registry's
-          <code>/services/saia-fs/&lt;rest&gt;</code> and add <code>x-auth-claim-uid</code>. That hop is
-          where the user is established; everything after it treats the header as given.
+          <b>The browser is the MCP client, and it calls its own origin.</b>
+          <code>apis/saiaFs.js#saiaFsBaseUrl</code> returns
+          <code>&lt;backendPath&gt;/mcp/saia-fs</code>; the workspace provider speaks streamable HTTP to
+          <code>…/mcp</code> and the availability probe reads <code>…/health</code>. The engine serves
+          that path generically: <code>/v1/mcp/&lt;service&gt;/&lt;path&gt;</code> forwards method, body,
+          query and headers to the registry service and streams the answer back, for every name in
+          <code>SAIA_MCP_SERVICES</code> (default <code>saia-rag,saia-fs,saia-feedback</code>). The
+          allowlist is the boundary, because the registry's own listener is unauthenticated; an
+          unlisted name answers 404. The hop drops the engine's <code>authorization</code> and the
+          caller's <code>cookie</code>; <code>x-auth-claim-uid</code> is where the user is established,
+          and everything after the hop treats the header as given.
         </li>
         <li>
           <b>An agent does not dial saia-fs by itself.</b> When the OpenCode bridge exposes a workspace, the
@@ -3441,12 +3699,10 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           provider, so the request takes the same path. There is no second client and no second credential.
         </li>
         <li>
-          <b>Two shapes of that path.</b> A deployment keeps the derived URL, so the browser never learns a
-          service address and the identity comes from the hop. A stack without the hop - the local test
-          stack, where the service listens on <code>:8003</code> - sets <code>saiaFsEndpoint</code> and the
-          browser talks to the service directly; the identity then has to arrive another way, which local
-          testing does with <code>fakeAuthHeaders</code>. Leaving the override unset in a deployment is not
-          cosmetic: a direct endpoint would have to authenticate the caller itself.
+          <b>The local stack reuses the same path.</b> There is no service-address override to set: a
+          local stack without a gateway serves <code>/v1/mcp/saia-fs</code> from the engine itself, and
+          <code>fakeAuthHeaders</code> supplies the identity the gateway would stamp. A stack that
+          cannot reach the service is missing the hop, not a front-end setting.
         </li>
         <li>
           <b>One folder, ensured on first contact.</b> Every path becomes
@@ -3524,7 +3780,7 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
 
       <h3>What the request path looks like</h3>
       <pre class="code"><span class="c">// 1. browser -> the deployment's own origin: the only URL Chat AI builds</span>
-POST &lt;backendPath&gt;/saia-fs/mcp
+POST &lt;backendPath&gt;/mcp/saia-fs/mcp
 Mcp-Session-Id: &lt;id from initialize&gt;
 
 {
@@ -3537,8 +3793,8 @@ Mcp-Session-Id: &lt;id from initialize&gt;
   }
 }
 
-<span class="c">// 2. the deployment hop forwards it to the registry and stamps the caller</span>
-POST &lt;engine&gt;:5000/services/saia-fs/mcp
+<span class="c">// 2. the engine's generic MCP hop forwards it to the registry</span>
+POST &lt;engine&gt;/public/v1/mcp/saia-fs/mcp
 x-auth-claim-uid: tester
 
 <span class="c">// 3. the registry sends it down the instance's pooled h2c tunnel</span>
@@ -3557,16 +3813,16 @@ saia-fs  ->  &lt;root&gt;/tester/notes/a.txt</pre>
         <tbody>
           <tr>
             <td>Browser client</td>
-            <td>The base URL (<code>saiaFsEndpoint</code> or <code>&lt;backendPath&gt;/saia-fs</code>), the
+            <td>The base URL (<code>&lt;backendPath&gt;/mcp/saia-fs</code>), the
                 <code>/health</code> probe, the MCP session and the 13 tool calls.</td>
             <td><span class="mono">apis/saiaFs.js · workspace/providers/saiaFs.ts</span></td>
           </tr>
           <tr>
-            <td>Deployment hop</td>
-            <td>Forwards <code>&lt;backendPath&gt;/saia-fs/*</code> to the registry's
-                <code>/services/saia-fs/*</code> and adds <code>x-auth-claim-uid</code>. Outside both
-                repositories; <code>e2e/scripts/saia-fs-edge.mjs</code> is the working reference.</td>
-            <td><span class="mono">deployment gateway / reverse proxy</span></td>
+            <td>Engine MCP hop</td>
+            <td><code>api.py#mcp_proxy</code>: forwards <code>/v1/mcp/&lt;service&gt;/&lt;path&gt;</code>
+                to the registry's <code>/services/&lt;service&gt;/&lt;path&gt;</code>, streamed.
+                <code>SAIA_MCP_SERVICES</code> allowlists the names (404 otherwise).</td>
+            <td><span class="mono">saia-engine/src/saia_engine/server/api.py</span></td>
           </tr>
           <tr>
             <td>Application</td>
@@ -3638,7 +3894,7 @@ saia-fs  ->  &lt;root&gt;/tester/notes/a.txt</pre>
             cost grows with file size and concurrent appends can lose data.</li>
         <li><code>mcp</code> mode has no authentication at all. <code>saia</code> mode is only as strong as
             the proxy that sets <code>x-auth-claim-uid</code>.</li>
-        <li>A deployment without the <code>/saia-fs</code> hop simply shows no drive: the probe gets
+        <li>A stack without the <code>/v1/mcp/saia-fs</code> hop simply shows no drive: the probe gets
             <code>404</code> and no source row is created. That is fail-closed on purpose, but it looks like
             a missing feature rather than a routing mistake, so check the hop before the service.</li>
         <li>The pool holds 32 idle tunnels; a registry that keeps evicting them costs reconnect latency,
@@ -3654,8 +3910,8 @@ saia-fs  ->  &lt;root&gt;/tester/notes/a.txt</pre>
         <li><span class="mono">front/src/apis/saiaFs.js</span> - how the URL is built, and the probe</li>
         <li><span class="mono">front/src/workspace/providers/saiaFs.ts</span> - the MCP client and its
             capabilities</li>
-        <li><span class="mono">e2e/scripts/saia-fs-edge.mjs</span> - a working <code>/saia-fs</code> hop,
-            including the identity header and CORS</li>
+        <li><span class="mono">e2e/scripts/saia-fs-edge.mjs</span> - the test stand-in for
+            <code>/mcp/saia-fs</code>, including the identity header and CORS</li>
         <li><span class="mono">saia/saia-fs/README.md</span> - modes, connector, why there is no model row</li>
         <li><span class="mono">saia/saia-fs/api.md</span> - the complete tool and backend reference</li>
         <li><span class="mono">saia/saia-fs/src/saia_fs/</span> - server, identity, storage, connector</li>
@@ -3792,7 +4048,9 @@ saia-fs  ->  &lt;root&gt;/tester/notes/a.txt</pre>
           <code>saia-fs</code> on <code>:8003</code> with <code>ROOT=./data/fs</code> and registers
           <code>saia-fs/local-1</code> at <code>127.0.0.1:9999</code>; <code>make smoke</code> there calls
           <code>:5000/services/saia-fs/mcp</code> as <code>tester</code>, writes and reads a file, and
-          checks it under <code>data/fs/tester/</code>. From the parent <code>saia/saia-fs</code>,
+          checks it under <code>data/fs/tester/</code> (the browser never names that port: it reaches the
+          same instance through the engine's <code>/public/v1/mcp/saia-fs</code> hop). From the parent
+          <code>saia/saia-fs</code>,
           <code>make local-up</code> starts the stack and <code>make saia-fs</code> serves with that
           directory's own defaults (<code>ROOT=data</code>, instance <code>&lt;hostname&gt;-1</code>).
           No engine row is created: the registry proxy uses its connection table, and a row would only
@@ -3810,9 +4068,10 @@ saia-fs  ->  &lt;root&gt;/tester/notes/a.txt</pre>
         <li>
           <b>Chat AI points at the stack with one config file.</b> <code>secrets/front-local-conf.json</code>
           already sets <code>backendPath</code> and <code>modelsPath</code> to
-          <code>http://localhost:10000/public/v1</code>, <code>saiaFsEndpoint</code> to
-          <code>http://localhost:8003</code>, the fixed key, the <code>x-auth-claim-uid: tester</code> header
-          and <code>agentServiceMode: "tunnel"</code>. Start it with
+          <code>http://localhost:10000/public/v1</code>, the fixed key, the
+          <code>x-auth-claim-uid: tester</code> header and <code>agentServiceMode: "tunnel"</code>. The
+          tool services need no address: they are reached through the engine's
+          <code>/v1/mcp/&lt;service&gt;</code> hop under that same <code>backendPath</code>. Start it with
           <code>CONFIG_LOCATION=../secrets/front-local-conf.json npm run dev</code> from <code>front/</code>.
         </li>
         <li>
@@ -4418,16 +4677,14 @@ x-saia-bridge-depth: 2
           dialog exists only while <code>feedbackPath</code> is set (<code>VITE_FEEDBACK_ENDPOINT</code>).
           The browser posts the multipart report either to <code>back</code>'s <code>/feedback</code>,
           which forwards it to <code>feedbackEndpoint</code> from <code>back.json</code> with the
-          caller's identity and an optional token, or to the SAIA registry's service tunnel, which is
-          how a SAIA deployment reaches <code>saia-feedback</code>: the service registers a connector
-          and the registry proxies any path to it, so no engine route exists. A deployment forwards
-          an app-visible <code>&lt;backend&gt;/saia-feedback</code> to
-          <code>/services/saia-feedback/</code> and stamps <code>x-auth-claim-uid</code> from the
-          authenticated user; a stack without that hop points <code>feedbackPath</code> at the tunnel
-          itself and carries the header in <code>fakeAuthHeaders</code>. Either way the receiver's
-          address and secret never ship in the bundle, and the browser names the registry only for
-          that direct local case. The identity goes as <code>x-auth-claim-uid</code>, derived from
-          <code>oidc_claim_uid</code> when a gateway injects only that, because
+          caller's identity and an optional token, or through the SAIA engine's MCP hop, which is how a
+          SAIA deployment reaches <code>saia-feedback</code>: the service registers a connector and the
+          engine forwards any sub-path of <code>/v1/mcp/saia-feedback</code> to it, so no separate
+          engine route exists. A deployment's gateway stamps <code>x-auth-claim-uid</code> from the
+          authenticated user and <code>feedbackPath</code> names
+          <code>&lt;backend&gt;/mcp/saia-feedback/feedback</code>; a stack without that gateway mapping
+          carries the header in <code>fakeAuthHeaders</code>. Either way the receiver's address and
+          secret never ship in the bundle. The identity goes as <code>x-auth-claim-uid</code>, because
           <code>saia-feedback</code> reads no other user header. Which arcana a report lands in is the
           receiver's decision, not the app's: <code>saia-feedback</code>'s <code>DEFAULT_ARCANA</code>
           accepts an <code>owner/arcana</code> reference such as <code>gwdg/chat-ai</code> and files
@@ -4670,7 +4927,7 @@ x-saia-bridge-depth: 2
       <p>
         Sources: the repository at <span class="mono">gwdg/chat-ai</span>, its developer notes and the
         feature documents under <span class="mono">docs/</span>. Facts are checked against the code on
-        25 November 2026; this page is a reading aid, not a specification.
+        26 November 2026; this page is a reading aid, not a specification.
       </p>
       <p>
         Not covered here on purpose: visual polish and sidebar work, tutorial copy, and internal

@@ -49,11 +49,11 @@ const browserSource = {
   lastModified: 1,
 };
 
-const arcanaSource = {
-  id: "arcana-1",
+const ragSource = {
+  id: "rag-1",
   workspaceId: "ws-1",
-  kind: "arcana-filesystem",
-  label: "Arcana filesystem",
+  kind: "saia-rag",
+  label: "SAIA RAG",
   config: {},
   capabilities: {},
   status: "connected",
@@ -97,9 +97,9 @@ const mcpProvider = {
   quota: vi.fn(),
 };
 
-const arcanaProvider = {
-  sourceId: "arcana-1",
-  kind: "arcana-filesystem",
+const ragProvider = {
+  sourceId: "rag-1",
+  kind: "saia-rag",
   status: "connected",
   capabilities: {},
   quota: vi.fn(),
@@ -138,11 +138,11 @@ const renderPanel = (props = {}) =>
 const drive = (guide) => document.querySelector(`[data-guide="${guide}"]`);
 
 beforeEach(() => {
-  mocks.sources = [localSource, browserSource, arcanaSource];
+  mocks.sources = [localSource, browserSource, ragSource];
   mocks.providers = new Map([
     ["local-1", localProvider],
     ["browser-1", browserProvider],
-    ["arcana-1", arcanaProvider],
+    ["rag-1", ragProvider],
   ]);
   mocks.conversations = [{ id: "conv-uuid-1", title: "Planning chat" }];
   mocks.onOpenTarget.mockReset();
@@ -159,8 +159,8 @@ beforeEach(() => {
     quota: 100 * 1024 * 1024,
     scope: "origin",
   });
-  arcanaProvider.quota.mockReset();
-  arcanaProvider.quota.mockResolvedValue({
+  ragProvider.quota.mockReset();
+  ragProvider.quota.mockResolvedValue({
     usage: 1 * 1024 * 1024,
     quota: 5 * 1024 * 1024,
     scope: "account",
@@ -176,10 +176,10 @@ describe("WorkspaceSourcesPanel", () => {
     expect(screen.getByText("Storage locations")).toBeInTheDocument();
     expect(screen.getByText("Your Device")).toBeInTheDocument();
     expect(screen.getByText("Browser")).toBeInTheDocument();
-    expect(screen.getByText("Arcanas")).toBeInTheDocument();
+    expect(screen.getByText("SAIA RAG")).toBeInTheDocument();
     expect(within(drive("workspace-source-device")).getByText("1 folder")).toBeInTheDocument();
     expect(within(drive("workspace-source-chats")).getByText("1 chat")).toBeInTheDocument();
-    expect(within(drive("workspace-source-arcanas")).getByText("1 collection")).toBeInTheDocument();
+    expect(within(drive("workspace-source-rag")).getByText("Your document collections")).toBeInTheDocument();
 
     fireEvent.click(drive("workspace-sources-add"));
     expect(mocks.onAddSource).toHaveBeenCalledTimes(1);
@@ -210,12 +210,12 @@ describe("WorkspaceSourcesPanel", () => {
       "title",
       "512 KB of 2.0 MB used",
     );
-    expect(drive("workspace-source-arcanas")).toHaveAttribute(
+    expect(drive("workspace-source-rag")).toHaveAttribute(
       "title",
       "1.0 MB of 5.0 MB used",
     );
     expect(
-      within(drive("workspace-source-arcanas")).getByText("1.0 MB of 5.0 MB used"),
+      within(drive("workspace-source-rag")).getByText("1.0 MB of 5.0 MB used"),
     ).toBeInTheDocument();
 
     expect(
@@ -225,7 +225,7 @@ describe("WorkspaceSourcesPanel", () => {
       drive("workspace-source-chats").querySelector("[data-quota-bar]"),
     ).toHaveStyle({ width: "10%" });
     expect(
-      drive("workspace-source-arcanas").querySelector("[data-quota-bar]"),
+      drive("workspace-source-rag").querySelector("[data-quota-bar]"),
     ).toHaveStyle({ width: "20%" });
   });
 
@@ -234,7 +234,7 @@ describe("WorkspaceSourcesPanel", () => {
 
     expect(drive("workspace-source-chats")).toHaveAttribute("aria-pressed", "true");
     expect(drive("workspace-source-device")).toHaveAttribute("aria-pressed", "false");
-    expect(drive("workspace-source-arcanas")).toHaveAttribute("aria-pressed", "false");
+    expect(drive("workspace-source-rag")).toHaveAttribute("aria-pressed", "false");
     await act(async () => {});
   });
 
@@ -243,7 +243,7 @@ describe("WorkspaceSourcesPanel", () => {
       localSource,
       browserSource,
       {
-        ...arcanaSource,
+        ...ragSource,
         status: "error",
         error: "Arcana Tools is unreachable",
       },
@@ -251,11 +251,11 @@ describe("WorkspaceSourcesPanel", () => {
     renderPanel();
 
     const badge = within(
-      drive("workspace-source-arcanas"),
-    ).getByRole("img", { name: /arcana filesystem could not be opened/i });
+      drive("workspace-source-rag"),
+    ).getByRole("img", { name: /saia rag could not be opened/i });
     expect(badge).toHaveAttribute(
       "title",
-      "Arcana filesystem could not be opened: Arcana Tools is unreachable",
+      "SAIA RAG could not be opened: Arcana Tools is unreachable",
     );
     expect(badge).toHaveAttribute(
       "data-guide",
@@ -273,16 +273,16 @@ describe("WorkspaceSourcesPanel", () => {
     mocks.sources = [
       localSource,
       browserSource,
-      { ...arcanaSource, status: "error", error: "Failed to fetch" },
+      { ...ragSource, status: "error", error: "Failed to fetch" },
     ];
     renderPanel();
 
     const badge = within(
-      drive("workspace-source-arcanas"),
+      drive("workspace-source-rag"),
     ).getByRole("img", { name: /could not be reached/i });
     expect(badge).toHaveAttribute(
       "title",
-      "Arcana filesystem could not be reached — the service is not answering right now.",
+      "SAIA RAG could not be reached — the service is not answering right now.",
     );
     expect(badge.getAttribute("title")).not.toMatch(/fetch/i);
   });
@@ -295,16 +295,16 @@ describe("WorkspaceSourcesPanel", () => {
     mocks.sources = [
       localSource,
       browserSource,
-      { ...arcanaSource, status: "error", error: "Failed to fetch" },
+      { ...ragSource, status: "error", error: "Failed to fetch" },
     ];
     renderPanel();
 
     const badge = within(
-      drive("workspace-source-arcanas"),
+      drive("workspace-source-rag"),
     ).getByRole("img", { name: /nicht erreichbar/i });
     expect(badge).toHaveAttribute(
       "title",
-      "„Arcana filesystem“ ist nicht erreichbar — der Dienst antwortet gerade nicht.",
+      "„SAIA RAG“ ist nicht erreichbar — der Dienst antwortet gerade nicht.",
     );
     await act(async () => {
       await i18n.changeLanguage("en");
@@ -315,7 +315,7 @@ describe("WorkspaceSourcesPanel", () => {
     mocks.sources = [
       { ...localSource, status: "needs-permission", error: "Permission denied" },
       browserSource,
-      arcanaSource,
+      ragSource,
     ];
     renderPanel();
 
@@ -330,7 +330,7 @@ describe("WorkspaceSourcesPanel", () => {
       localSource,
       browserSource,
       {
-        ...arcanaSource,
+        ...ragSource,
         status: "error",
         error: "Arcana Tools is unreachable",
       },
@@ -338,14 +338,14 @@ describe("WorkspaceSourcesPanel", () => {
     renderPanel();
 
     const badge = within(
-      drive("workspace-source-arcanas"),
+      drive("workspace-source-rag"),
     ).getByRole("img", { name: /could not be opened/i });
     const trigger = badge.closest(".cursor-help");
     expect(trigger).not.toBeNull();
 
     fireEvent.mouseEnter(trigger);
     expect(screen.getByRole("tooltip")).toHaveTextContent(
-      "Arcana filesystem could not be opened: Arcana Tools is unreachable",
+      "SAIA RAG could not be opened: Arcana Tools is unreachable",
     );
     fireEvent.mouseLeave(trigger);
     expect(screen.queryByRole("tooltip")).toBeNull();
@@ -372,12 +372,12 @@ describe("WorkspaceSourcesPanel", () => {
 
     fireEvent.click(drive("workspace-source-device"));
     fireEvent.click(drive("workspace-source-chats"));
-    fireEvent.click(drive("workspace-source-arcanas"));
+    fireEvent.click(drive("workspace-source-rag"));
 
     expect(mocks.onOpenTarget.mock.calls).toEqual([
       [{ drive: "device" }],
       [{ drive: "chats" }],
-      [{ drive: "arcanas" }],
+      [{ drive: "rag" }],
     ]);
     await act(async () => {});
   });

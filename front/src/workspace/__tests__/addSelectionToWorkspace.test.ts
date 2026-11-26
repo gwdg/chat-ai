@@ -123,6 +123,7 @@ describe("addSelectionToWorkspace mounting folders", () => {
       sourceId: "source-1",
       sourcePath: "/Docs/My Project",
       path: "/My Project",
+      readOnly: false,
     });
     expect(api.runTransfer).not.toHaveBeenCalled();
     expect(result).toEqual({ mounted: 1, copied: 0, failed: [] });
@@ -138,9 +139,49 @@ describe("addSelectionToWorkspace mounting folders", () => {
       sourceId: "source-1",
       sourcePath: "/docs",
       path: "/docs",
+      readOnly: false,
     });
     expect(api.runTransfer).not.toHaveBeenCalled();
     expect(result).toEqual({ mounted: 1, copied: 0, failed: [] });
+  });
+
+  it("mounts a saia-rag collection live and keeps its reader role", async () => {
+    const result = await addSelectionToWorkspace("ws-1", [
+      {
+        sourceId: "source-1",
+        sourceKind: "saia-rag",
+        path: "/bob__papers",
+        name: "bob__papers",
+        kind: "dir",
+        readOnly: true,
+      },
+    ]);
+
+    expect(api.addWorkspaceMount).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceId: "source-1",
+        sourcePath: "/bob__papers",
+        readOnly: true,
+      }),
+    );
+    expect(api.runTransfer).not.toHaveBeenCalled();
+    expect(result).toEqual({ mounted: 1, copied: 0, failed: [] });
+  });
+
+  it("refuses to mount the whole saia-rag collection list", async () => {
+    const result = await addSelectionToWorkspace("ws-1", [
+      {
+        sourceId: "source-1",
+        sourceKind: "saia-rag",
+        path: "/",
+        name: "SAIA RAG",
+        kind: "dir",
+      },
+    ]);
+
+    expect(api.addWorkspaceMount).not.toHaveBeenCalled();
+    expect(result.mounted).toBe(0);
+    expect(result.failed).toHaveLength(1);
   });
 
   it("suffixes a second folder with the same name", async () => {

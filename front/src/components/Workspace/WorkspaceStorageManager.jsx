@@ -7,6 +7,7 @@ import WorkspaceStorageTree from "./WorkspaceStorageTree";
 import {
   detachWorkspaceChat,
   ensureSaiaFsSource,
+  ensureSaiaRagSource,
   removeWorkspaceMount,
   unmountLocalFolder,
   useAllWorkspaceChats,
@@ -18,6 +19,7 @@ import {
 } from "../../db/workspaceDb";
 import { useModal } from "../../modals/ModalContext";
 import { useSaiaFsAccess, SAIA_FS_AVAILABLE } from "../../hooks/useSaiaFsAccess";
+import { useSaiaRagAccess, SAIA_RAG_AVAILABLE } from "../../hooks/useSaiaRagAccess";
 import { addSelectionToWorkspace } from "../../workspace/addSelectionToWorkspace";
 import {
   addLocalSourceToWorkspace,
@@ -38,6 +40,7 @@ export default function WorkspaceStorageManager({
   const [adding, setAdding] = useState(false);
   const [addProgress, setAddProgress] = useState(null);
   const saiaFsAccess = useSaiaFsAccess();
+  const saiaRagAccess = useSaiaRagAccess();
   const workspaceSources = useWorkspaceSources(workspaceId ?? undefined);
 
   // The SAIA filesystem is per account, not per workspace, so every workspace gets one source
@@ -49,6 +52,14 @@ export default function WorkspaceStorageManager({
     if (!workspaceId || saiaFsAccess !== SAIA_FS_AVAILABLE) return;
     void ensureSaiaFsSource(workspaceId);
   }, [workspaceId, saiaFsAccess]);
+
+  // The saia-rag collections are per account too, and the same fail-closed rule applies: the
+  // source is provisioned only while the service answers its health probe. A disappearing
+  // service leaves the row and its mounts in place; the row reports the error itself.
+  useEffect(() => {
+    if (!workspaceId || saiaRagAccess !== SAIA_RAG_AVAILABLE) return;
+    void ensureSaiaRagSource(workspaceId);
+  }, [workspaceId, saiaRagAccess]);
   // "Your Device" lists every folder this browser has been granted, not only the
   // ones already mounted in this workspace.
   const deviceSources = useDeviceLocalSources(workspaceId ?? undefined);

@@ -20,7 +20,8 @@ export type WorkspaceSelection = {
     | "arcana-filesystem"
     | "arcana"
     | "mcp"
-    | "saia-fs";
+    | "saia-fs"
+    | "saia-rag";
   /** Provider path; "/" means the source (or chat) root. */
   path: string;
   name: string;
@@ -29,6 +30,12 @@ export type WorkspaceSelection = {
   conversationId?: string;
   /** Display name to mount under, defaults to `name`. */
   title?: string;
+  /**
+   * The entry itself cannot be written (a reader-only saia-rag collection). A
+   * mount carries the flag, so writes through it are refused like the service
+   * does server-side.
+   */
+  readOnly?: boolean;
 };
 
 const mountSegment = (value: string): string => {
@@ -155,13 +162,22 @@ export async function addSelectionToWorkspace(
           entry.sourceKind === "mcp" ||
           // The SAIA filesystem belongs to the account, not to the workspace, so
           // it is mounted live like an Arcana folder rather than copied.
-          entry.sourceKind === "saia-fs")
+          entry.sourceKind === "saia-fs" ||
+          // A saia-rag collection is live too, and keeps its reader/editor
+          // role: a reader-only collection must stay read-only when mounted.
+          entry.sourceKind === "saia-rag")
       ) {
+        if (entry.sourceKind === "saia-rag" && entry.path === "/") {
+          throw new Error(
+            "A saia-rag collection is mounted, not the whole collection list.",
+          );
+        }
         await addWorkspaceMount({
           workspaceId,
           sourceId: entry.sourceId,
           sourcePath: entry.path,
           path: uniqueMountPath(entry),
+          readOnly: entry.readOnly === true,
         });
         mounted += 1;
       } else {

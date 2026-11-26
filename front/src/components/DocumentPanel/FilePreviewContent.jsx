@@ -151,6 +151,7 @@ export default function FilePreviewContent({
   loading = false,
   error,
   onOpenPath,
+  resolveImage,
   showPdfHint = false,
   resetKey,
 }) {
@@ -329,7 +330,11 @@ export default function FilePreviewContent({
     // same text in a message: headings, tables, KaTeX, and the same fence renderers
     // (mermaid, typst, latex, code highlighting).
     if (fileType === "markdown" && text.trim()) {
-      return <MarkdownRenderer isLoading={false}>{text}</MarkdownRenderer>;
+      return (
+        <MarkdownRenderer isLoading={false} resolveImage={resolveImage}>
+          {text}
+        </MarkdownRenderer>
+      );
     }
 
     return (

@@ -170,7 +170,6 @@ export async function createWorkspace(
   };
   await db.workspaces.add(workspace);
   await ensureBrowserSource(id);
-  await ensureArcanaFilesystemSource(id);
   return id;
 }
 
@@ -390,6 +389,34 @@ export async function ensureArcanaFilesystemSource(
     workspaceId,
     kind: "arcana-filesystem",
     label: i18n.t("workspace.kind_arcana-filesystem"),
+    config: {},
+    status: "offline",
+  });
+}
+
+/**
+ * The caller's saia-rag collections, for every workspace.
+ *
+ * Like the SAIA filesystem this is reconciled by `WorkspaceStorageManager` once
+ * the service's health probe answers, because availability is an async HTTP
+ * question that neither a Dexie upgrade nor `createWorkspace` can answer. It
+ * replaced the Arcana filesystem as the document drive; existing workspaces
+ * keep an `arcana-filesystem` row they already had, but a new one is no longer
+ * created.
+ */
+export async function ensureSaiaRagSource(
+  workspaceId: string,
+): Promise<string | undefined> {
+  if (!workspaceId) return undefined;
+  const existing = await db.workspace_sources
+    .where("[workspaceId+kind]")
+    .equals([workspaceId, "saia-rag"])
+    .first();
+  if (existing) return existing.id;
+  return addSource({
+    workspaceId,
+    kind: "saia-rag",
+    label: i18n.t("workspace.kind_saia-rag"),
     config: {},
     status: "offline",
   });

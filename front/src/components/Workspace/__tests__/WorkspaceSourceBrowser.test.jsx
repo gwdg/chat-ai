@@ -45,11 +45,11 @@ const localSource = {
   lastModified: 1,
 };
 
-const arcanaSource = {
-  id: "arcana-1",
+const ragSource = {
+  id: "rag-1",
   workspaceId: "ws-1",
-  kind: "arcana-filesystem",
-  label: "Arcana filesystem",
+  kind: "saia-rag",
+  label: "SAIA RAG",
   config: {},
   capabilities: {},
   status: "connected",
@@ -78,13 +78,14 @@ const mcpSource = {
   lastModified: 1,
 };
 
-const arcanaProvider = {
-  sourceId: "arcana-1",
-  kind: "arcana-filesystem",
+const ragProvider = {
+  sourceId: "rag-1",
+  kind: "saia-rag",
   status: "connected",
   capabilities: {},
   quota: vi.fn(),
   list: vi.fn(),
+  listCollections: vi.fn(),
 };
 
 const mcpProvider = {
@@ -150,10 +151,10 @@ const addButton = () => guide("workspace-add-to-workspace");
 const unmountButton = () => guide("workspace-unmount");
 
 beforeEach(() => {
-  mocks.sources = [localSource, arcanaSource];
+  mocks.sources = [localSource, ragSource];
   mocks.providers = new Map([
     ["local-1", localProvider],
-    ["arcana-1", arcanaProvider],
+    ["rag-1", ragProvider],
   ]);
   mocks.conversations = [{ id: "conv-uuid-1", title: "Planning chat" }];
   mocks.chatStorageDir.mockReset();
@@ -188,18 +189,30 @@ beforeEach(() => {
     quota: 2 * 1024 * 1024,
     scope: "origin",
   });
-  arcanaProvider.list.mockReset();
-  arcanaProvider.list.mockResolvedValue({
+  ragProvider.list.mockReset();
+  ragProvider.list.mockResolvedValue({
     entries: [
-      { sourceId: "arcana-1", path: "/recipes", name: "recipes", kind: "dir" },
+      { sourceId: "rag-1", path: "/recipes", name: "recipes", kind: "dir" },
     ],
   });
-  arcanaProvider.quota.mockReset();
-  arcanaProvider.quota.mockResolvedValue({
+  ragProvider.quota.mockReset();
+  ragProvider.quota.mockResolvedValue({
     usage: 1 * 1024 * 1024,
     quota: 5 * 1024 * 1024,
     scope: "account",
   });
+  ragProvider.listCollections.mockReset();
+  ragProvider.listCollections.mockResolvedValue([
+    {
+      name: "recipes",
+      collection: "alice__recipes",
+      owner: "alice",
+      role: "owner",
+      can_write: true,
+      can_manage: true,
+      shared: false,
+    },
+  ]);
   mcpProvider.list.mockReset();
   mcpProvider.list.mockResolvedValue({
     entries: [
@@ -274,7 +287,7 @@ describe("WorkspaceSourceBrowser", () => {
   it("marks a mounted folder that cannot be opened with a red exclamation", async () => {
     mocks.sources = [
       { ...localSource, status: "error", error: "Folder handle is missing" },
-      arcanaSource,
+      ragSource,
     ];
     renderBrowser({ target: { drive: "device" } });
 
@@ -300,7 +313,7 @@ describe("WorkspaceSourceBrowser", () => {
     await act(async () => {
       await i18n.changeLanguage("de");
     });
-    mocks.sources = [{ ...localSource, readOnly: true }, arcanaSource];
+    mocks.sources = [{ ...localSource, readOnly: true }, ragSource];
     renderBrowser({ target: { drive: "device" } });
 
     const row = (await screen.findByText("Project")).closest(".group");
@@ -312,7 +325,7 @@ describe("WorkspaceSourceBrowser", () => {
   });
 
   it("shows the read-only lock on a mounted folder card", async () => {
-    mocks.sources = [{ ...localSource, readOnly: true }, arcanaSource];
+    mocks.sources = [{ ...localSource, readOnly: true }, ragSource];
     renderBrowser({ target: { drive: "device" } });
 
     const row = (await screen.findByText("Project")).closest(".group");
@@ -351,10 +364,10 @@ describe("WorkspaceSourceBrowser", () => {
   });
 
   it("locks the rows inside a read-only source", async () => {
-    mocks.sources = [{ ...localSource, readOnly: true }, arcanaSource];
+    mocks.sources = [{ ...localSource, readOnly: true }, ragSource];
     mocks.providers = new Map([
       ["local-1", localProvider],
-      ["arcana-1", arcanaProvider],
+      ["rag-1", ragProvider],
     ]);
     renderBrowser({ target: { drive: "device" } });
 
@@ -642,18 +655,18 @@ describe("WorkspaceSourceBrowser", () => {
     expect(embeddedSection).not.toHaveClass("h-full");
   });
 
-  it("browses the arcana collection", async () => {
-    renderBrowser({ target: { drive: "arcanas" } });
+  it("lists the RAG collections", async () => {
+    renderBrowser({ target: { drive: "rag" } });
 
     expect(await screen.findByText("recipes")).toBeInTheDocument();
-    expect(arcanaProvider.list).toHaveBeenCalledWith("/");
+    expect(ragProvider.listCollections).toHaveBeenCalled();
   });
 
   it("browses the SAIA account folder and mounts one of its folders", async () => {
-    mocks.sources = [localSource, arcanaSource, saiaSource];
+    mocks.sources = [localSource, ragSource, saiaSource];
     mocks.providers = new Map([
       ["local-1", localProvider],
-      ["arcana-1", arcanaProvider],
+      ["rag-1", ragProvider],
       ["saia-1", saiaProvider],
     ]);
     renderBrowser({ target: { drive: "saia-fs" } });
@@ -748,10 +761,10 @@ describe("WorkspaceSourceBrowser", () => {
   });
 
   it("lists MCP sources, drills in, and adds an MCP folder", async () => {
-    mocks.sources = [localSource, arcanaSource, mcpSource];
+    mocks.sources = [localSource, ragSource, mcpSource];
     mocks.providers = new Map([
       ["local-1", localProvider],
-      ["arcana-1", arcanaProvider],
+      ["rag-1", ragProvider],
       ["mcp-1", mcpProvider],
     ]);
     renderBrowser({ target: { drive: "mcp" } });

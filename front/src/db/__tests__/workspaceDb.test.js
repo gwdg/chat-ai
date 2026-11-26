@@ -121,16 +121,15 @@ describe("workspace database", () => {
     expect((await getWorkspace(workspaceId))?.pinned).toBe(false);
   });
 
-  it("adds browser and Arcana filesystem sources to new workspaces", async () => {
+  it("creates only the browser source; other drives are provisioned on demand", async () => {
     const workspaceId = await createWorkspace("With defaults");
     const sources = await db.workspace_sources
       .where("workspaceId")
       .equals(workspaceId)
       .toArray();
-    expect(sources.map((source) => source.kind).sort()).toEqual([
-      "arcana-filesystem",
-      "browser",
-    ]);
+    // saia-rag and saia-fs are both added by the storage manager once their
+    // health probe answers, so creation cannot know about them yet.
+    expect(sources.map((source) => source.kind)).toEqual(["browser"]);
     expect(
       sources.find((source) => source.kind === "browser"),
     ).toMatchObject({
@@ -139,11 +138,11 @@ describe("workspace database", () => {
     });
   });
 
-  it("keeps the browser source when Arcanas are disabled", async () => {
+  it("does not add the RAG drive at creation, even with Arcanas enabled", async () => {
     const original = import.meta.env.VITE_MODULE_ARCANAS;
-    import.meta.env.VITE_MODULE_ARCANAS = "false";
+    import.meta.env.VITE_MODULE_ARCANAS = "true";
     try {
-      const workspaceId = await createWorkspace("Without Arcana");
+      const workspaceId = await createWorkspace("Without RAG yet");
       const sources = await db.workspace_sources
         .where("workspaceId")
         .equals(workspaceId)
@@ -453,7 +452,7 @@ describe("workspace database", () => {
     await syncChatStorageSources(workspaceId, [
       { id: "chat-1", title: "Trip planning" },
     ]);
-    expect(await db.workspace_sources.count()).toBe(3);
+    expect(await db.workspace_sources.count()).toBe(2);
     expect((await db.workspace_sources.get(source.id))?.lastModified).toBe(
       before.lastModified,
     );

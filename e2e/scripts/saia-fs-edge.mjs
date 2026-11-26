@@ -1,21 +1,24 @@
 // Deployment edge for the opt-in saia-fs scenario.
 //
-// Chat AI reaches the SAIA filesystem at `<backendPath>/saia-fs`, which the
-// deployment in front of it has to forward to the registry's
-// `/services/saia-fs/<path>` and stamp with the caller's identity. Neither
-// `back` nor the engine does that (`AGENTS.md` §4.31), so a local stack has no
-// such hop at all. This script is that hop for the test: it forwards the MCP
-// exchange unchanged, adds `x-auth-claim-uid` from the same `oidc_claim_uid`
-// header `back` maps, and answers the CORS preflight a browser needs.
+// Chat AI reaches the SAIA filesystem at `<backendPath>/mcp/saia-fs`, which the
+// engine's generic MCP hop forwards to the registry's `/services/saia-fs/<path>`
+// and stamps with the caller's identity. A local stack has no such hop, so this
+// script is that hop for the test: it forwards the exchange unchanged, adds
+// `x-auth-claim-uid` from the same `oidc_claim_uid` header `back` maps, and
+// answers the CORS preflight a browser needs.
 //
-// It is a test double, not a deployment component. Started by
-// `playwright.config.ts` when `E2E_SAIA_FS_EDGE=harness`; with `E2E_SAIA_FS=1`
-// alone the scenario talks to a bare saia-fs instance (`E2E_SAIA_FS_URL`, default
-// `http://127.0.0.1:8003`) through the config's `saiaFsEndpoint`.
+// The upstream is the registry by default. `E2E_SAIA_FS_URL` points the edge at
+// a bare saia-fs instance instead (the local stack's `http://127.0.0.1:8003`),
+// which is also how the scenario ran before the generic hop existed.
+//
+// It is a test double, not a deployment component. `playwright.config.ts`
+// starts it whenever the scenario does not name a real deployment hop
+// (`E2E_SAIA_FS_BACKEND_URL`).
 import { createServer } from "node:http";
 
 const PORT = Number(process.env.E2E_SAIA_FS_EDGE_PORT ?? 4102);
 const REGISTRY = (process.env.E2E_SAIA_FS_REGISTRY ?? "http://127.0.0.1:5000").replace(/\/+$/, "");
+const INSTANCE = (process.env.E2E_SAIA_FS_URL ?? "").replace(/\/+$/, "");
 const DEFAULT_USER = process.env.E2E_SAIA_FS_USER ?? "tester";
 const ORIGIN = process.env.E2E_SAIA_FS_ORIGIN ?? "*";
 
@@ -34,6 +37,12 @@ const corsHeaders = (req) => ({
   "access-control-expose-headers": EXPOSED.join(", "),
 });
 
+/** The upstream URL for one request below the hop prefix. */
+const upstreamUrl = (suffix, query) => {
+  if (INSTANCE) return `${INSTANCE}${suffix}${query ? `?${query}` : ""}`;
+  return `${REGISTRY}/services/saia-fs${suffix}${query ? `?${query}` : ""}`;
+};
+
 const server = createServer(async (req, res) => {
   const cors = corsHeaders(req);
 
@@ -44,15 +53,17 @@ const server = createServer(async (req, res) => {
   }
   if (req.url === "/__edge/health") {
     res.writeHead(200, { ...cors, "content-type": "application/json" });
-    res.end(JSON.stringify({ status: "ok", registry: REGISTRY }));
+    res.end(JSON.stringify({ status: "ok", upstream: INSTANCE || REGISTRY }));
     return;
   }
 
   const [pathname, query = ""] = (req.url ?? "/").split("?");
-  const match = /^\/saia-fs(\/.*)?$/.exec(pathname);
+  // The app talks to `<backendPath>/mcp/saia-fs/...`, which is what the engine
+  // hop serves in a deployment.
+  const match = /^\/mcp\/saia-fs(\/.*)?$/.exec(pathname);
   if (!match) {
     res.writeHead(404, { ...cors, "content-type": "application/json" });
-    res.end(JSON.stringify({ error: `the test edge only serves /saia-fs, not ${pathname}` }));
+    res.end(JSON.stringify({ error: `the test edge only serves /mcp/saia-fs, not ${pathname}` }));
     return;
   }
 
@@ -72,7 +83,7 @@ const server = createServer(async (req, res) => {
     header(req.headers, "inference-id") ??
     DEFAULT_USER;
 
-  const target = `${REGISTRY}/services/saia-fs${match[1] || "/mcp"}${query ? `?${query}` : ""}`;
+  const target = upstreamUrl(match[1] || "/mcp", query);
   try {
     const upstream = await fetch(target, {
       method: req.method,
@@ -106,7 +117,7 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(PORT, "127.0.0.1", () => {
-  console.log(`[saia-fs edge] http://127.0.0.1:${PORT}/saia-fs -> ${REGISTRY}/services/saia-fs`);
+  console.log(`[saia-fs edge] http://127.0.0.1:${PORT}/mcp/saia-fs -> ${INSTANCE || `${REGISTRY}/services/saia-fs`}`);
 });
 
 for (const signal of ["SIGINT", "SIGTERM"]) {

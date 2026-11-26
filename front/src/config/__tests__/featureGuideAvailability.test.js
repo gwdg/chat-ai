@@ -87,13 +87,13 @@ describe("feature guide availability", () => {
     expect(isFeatureGuideAvailable("arcana")).toBe(false);
     expect(isFeatureGuideAvailable("arcana_tools")).toBe(false);
     expect(isFeatureGuideAvailable("web_search")).toBe(true);
-    expect(
-      isFeatureGuideAvailable("arcana_filesystem"),
-    ).toBe(false);
+    // The workspace's document drive is saia-rag now, not the Arcana source, so
+    // the Arcanas module no longer gates it.
+    expect(isFeatureGuideAvailable("workspace_saia_rag")).toBe(true);
 
     state.arcanas = true;
     expect(isFeatureGuideAvailable("arcana")).toBe(true);
-    expect(isFeatureGuideAvailable("arcana_filesystem")).toBe(true);
+    expect(isFeatureGuideAvailable("workspace_saia_rag")).toBe(true);
   });
 
   it("follows the workspace feature and the agents module", () => {

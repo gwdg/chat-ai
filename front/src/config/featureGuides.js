@@ -48,7 +48,7 @@ export const featureGuides = {
     titleKey: "feature_guide.workspace_overview.title",
     prompt:
       "Open a workspace from the sidebar. A workspace is the home of the chats you run there: a prompt box starts a new chat, the list holds the ones already in it, and the right-hand panel shows what's new, the files the workspace stores, and the agent it runs.",
-    keywords: ["workspace", "workspaces", "files", "browser storage", "local folder", "arcana files", "mcp files"],
+    keywords: ["workspace", "workspaces", "files", "browser storage", "local folder", "saia rag", "mcp files"],
     steps: [
       {
         target: '[data-guide="meta-tab-files"]',
@@ -102,7 +102,7 @@ export const featureGuides = {
   workspace_edit_storage: {
     titleKey: "feature_guide.workspace_edit_storage.title",
     prompt:
-      "Manage a workspace that already exists. Open the workspace's options menu in the sidebar and choose Manage Workspace: it is Create workspace with the fields filled in, so you rename the workspace, change its icon and colour, and work on the same storage locations rail — browser storage, this device, Arcanas, the SAIA account folder and MCP servers — mount a folder, or add a local folder, a Git repository or an MCP server.",
+      "Manage a workspace that already exists. Open the workspace's options menu in the sidebar and choose Manage Workspace: it is Create workspace with the fields filled in, so you rename the workspace, change its icon and colour, and work on the same storage locations rail — browser storage, this device, SAIA RAG collections, the SAIA account folder and MCP servers — mount a folder, or add a local folder, a Git repository or an MCP server.",
     keywords: [
       "edit storage",
       "workspace storage",
@@ -181,28 +181,39 @@ export const featureGuides = {
       },
     ],
   },
-  arcana_filesystem: {
-    titleKey: "feature_guide.arcana_filesystem.title",
+  workspace_saia_rag: {
+    titleKey: "feature_guide.workspace_saia_rag.title",
     prompt:
-      "Every workspace includes an Arcana filesystem source. It lists every Arcana as a folder, and each collection's files inside it.",
-    keywords: ["arcana filesystem", "arcana files", "browse arcanas", "arcana folder"],
+      "Every workspace shows your saia-rag document collections as a drive in its Sources rail. It appears while this deployment's saia-rag service answers its health check, which Chat AI runs when a workspace's storage opens. Open Create workspace or a workspace's storage: the rail lists SAIA RAG next to browser storage, this device, the SAIA account folder and MCP servers. Create a collection there and mount it into the workspace; an owner can also appoint editors and share a collection with people and groups.",
+    keywords: [
+      "saia rag",
+      "rag",
+      "document collections",
+      "collections",
+      "knowledge base",
+      "share collection",
+      "collection access",
+    ],
     steps: [
       {
-        target: '[data-guide="meta-tab-files"]',
-        textKey: "feature_guide.arcana_filesystem.step1",
+        target: '[data-guide="workspace-add-source"]',
+        textKey: "feature_guide.workspace_saia_rag.step1",
         completeOnTargetClick: true,
       },
       {
-        target: '[data-guide="workspace-files"]',
-        textKey: "feature_guide.arcana_filesystem.step2",
-        prepare: openWorkspaceFiles,
+        target: '[data-guide="workspace-source-rag"]',
+        textKey: "feature_guide.workspace_saia_rag.step2",
+      },
+      {
+        target: '[data-guide="workspace-rag-new-collection"]',
+        textKey: "feature_guide.workspace_saia_rag.step3",
       },
     ],
   },
   workspace_saia_fs: {
     titleKey: "feature_guide.workspace_saia_fs.title",
     prompt:
-      "Chat AI can show your SAIA account folder as a filesystem inside a workspace. It only appears while this deployment's saia-fs service answers its health check, which Chat AI runs when a workspace's storage opens. Open Create workspace: the Sources rail lists it next to browser storage, this device, Arcanas and MCP servers, and you can mount one of its folders into the workspace.",
+      "Chat AI can show your SAIA account folder as a filesystem inside a workspace. It only appears while this deployment's saia-fs service answers its health check, which Chat AI runs when a workspace's storage opens. Open Create workspace: the Sources rail lists it next to browser storage, this device, SAIA RAG collections and MCP servers, and you can mount one of its folders into the workspace.",
     keywords: [
       "saia files",
       "saia filesystem",
@@ -2081,7 +2092,7 @@ export const FEATURE_GUIDE_AVAILABILITY = {
   workspace_clone: () => isFeatureEnabled("workspaces"),
   workspace_upload: () => isFeatureEnabled("workspaces"),
   workspace_multiselect: () => isFeatureEnabled("workspaces"),
-  arcana_filesystem: () => isFeatureEnabled("workspaces") && isArcanasEnabled(),
+  workspace_saia_rag: () => isFeatureEnabled("workspaces"),
   workspace_saia_fs: () => isFeatureEnabled("workspaces"),
   attach_from_workspace: () => isFeatureEnabled("workspaces"),
   attach_chat_to_workspace: () => isFeatureEnabled("workspaces"),
@@ -2187,7 +2198,7 @@ export const FEATURE_CATEGORIES = {
     "summarize_conversation",
     "close_chat",
   ],
-  workspace: ["workspace_overview", "manage_chat_data", "pin_workspace", "pin_agent", "workspace_edit_storage", "workspace_clone", "workspace_upload", "workspace_multiselect", "arcana_filesystem", "workspace_saia_fs", "attach_from_workspace", "remote_agents", "agent_recovery", "close_group_sessions", "session_workspaces", "agent_workspace_access"],
+  workspace: ["workspace_overview", "manage_chat_data", "pin_workspace", "pin_agent", "workspace_edit_storage", "workspace_clone", "workspace_upload", "workspace_multiselect", "workspace_saia_rag", "workspace_saia_fs", "attach_from_workspace", "remote_agents", "agent_recovery", "close_group_sessions", "session_workspaces", "agent_workspace_access"],
   personas: ["chat_with_persona", "course_view", "course_quiz_chat"],
   settings: [
     "settings_overview",
@@ -2265,6 +2276,7 @@ const germanGuideKeywords = {
   browser_storage: ["browserspeicher", "browser speicher", "arbeitsbereich", "arbeitsfläche", "opfs", "lokale dateien"],
   workspace_edit_storage: ["speicher bearbeit", "speicherort", "quelle hinzufüg", "quelle einhäng", "ordner hinzufüg", "speicher hinzufüg"],
   workspace_saia_fs: ["saia dateien", "saia-dateien", "saia dateisystem", "kontoordner", "saia-fs"],
+  workspace_saia_rag: ["saia rag", "rag", "dokumentensammlung", "dokumentensammlungen", "sammlung", "sammlungen", "wissensdatenbank", "freigabe", "teilen"],
   tools_overview: ["werkzeuge", "tools", "gwdg tools", "tool nutzung", "werkzeug verwend"],
   search_chats: ["chats durchsuch", "chat durchsuch", "chat such", "unterhaltung such", "chat find", "suche nach chat"],
   manage_topics: ["thema", "themen", "topic", "themen erstell", "chats organisier"],

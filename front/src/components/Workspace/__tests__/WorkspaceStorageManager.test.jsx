@@ -17,6 +17,7 @@ vi.mock("../../../db/workspaceDb", () => ({
   useAllWorkspaceChats: () => [],
   detachWorkspaceChat: vi.fn(),
   ensureSaiaFsSource: vi.fn(),
+  ensureSaiaRagSource: vi.fn(),
   removeWorkspaceMount: vi.fn(),
   unmountLocalFolder: vi.fn(),
 }));
@@ -28,6 +29,11 @@ vi.mock("../../../modals/ModalContext", () => ({
 vi.mock("../../../hooks/useSaiaFsAccess", () => ({
   useSaiaFsAccess: () => "unavailable",
   SAIA_FS_AVAILABLE: "available",
+}));
+
+vi.mock("../../../hooks/useSaiaRagAccess", () => ({
+  useSaiaRagAccess: () => "unavailable",
+  SAIA_RAG_AVAILABLE: "available",
 }));
 
 vi.mock("../../../workspace/addSelectionToWorkspace", () => ({

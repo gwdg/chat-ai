@@ -355,37 +355,36 @@ returns no models. The status is always 200 — even for a rejected key — so t
 ### Real SAIA filesystem (opt-in)
 
 `tests/saia-fs.spec.ts` exercises the workspace's **SAIA Files** drive against a real saia-fs
-service. Chat AI probes `saiaFsEndpoint` when `front.json` sets it, otherwise `<backendPath>/saia-fs`
-(`AGENTS.md` §4.31). The deployment path needs a hop that forwards `/saia-fs/health` and
-`/saia-fs/mcp` to the SAIA registry and adds `x-auth-claim-uid`; the endpoint key is for a stack
-without one, where the browser talks to the service itself. The scenario creates a workspace, waits
-for the drive, opens the caller's account folder, asserts the listing, mounts the folder into the
-workspace in the create dialog, and then reopens the same mount through the workspace row's **Edit
-storage** entry. `/models`, `/user` and `/chat/completions` stay mocked, so no model is needed.
+service. Chat AI probes `<backendPath>/mcp/saia-fs` (`AGENTS.md` §4.31), which the engine's generic
+MCP hop forwards to the SAIA registry and stamps with the caller's identity. A local stack has no
+such hop, so the run starts `scripts/saia-fs-edge.mjs`, a stand-in that forwards
+`/mcp/saia-fs/<path>` to the registry's `/services/saia-fs/<path>` and maps `oidc_claim_uid` onto
+`x-auth-claim-uid`; the scenario then runs the whole browser → edge → registry → saia-fs path. The
+scenario creates a workspace, waits for the drive, opens the caller's account folder, asserts the
+listing, mounts the folder into the workspace in the create dialog, and then reopens the same mount
+through the workspace row's **Edit storage** entry. `/models`, `/user` and `/chat/completions` stay
+mocked, so no model is needed.
 
 ```bash
 cd e2e
-E2E_SAIA_FS=1 npm run test:saia-fs                          # the bare service at :8003
-E2E_SAIA_FS=1 E2E_SAIA_FS_EDGE=harness npm run test:saia-fs # through the bundled edge
+E2E_SAIA_FS=1 npm run test:saia-fs                          # edge -> registry -> saia-fs
+E2E_SAIA_FS=1 E2E_SAIA_FS_URL=http://127.0.0.1:8003 npm run test:saia-fs # edge -> bare instance
 E2E_SAIA_FS=1 E2E_SAIA_FS_BACKEND_URL=https://host/base npm run test:saia-fs # a real deployment
 ```
 
-Without the edge the app is generated with `saiaFsEndpoint = E2E_SAIA_FS_URL` and
-`fakeAuthHeaders` carrying `x-auth-claim-uid`, because no hop stamps the identity. A failure names
-the probe URL, its status and body, a repeat request from Node (so a browser CORS refusal is
-distinguishable from a 404) and the full traffic list. With `E2E_SAIA_FS_EDGE=harness` the run also
-starts `scripts/saia-fs-edge.mjs`, a stand-in for the deployment hop that forwards to the registry's
-`/services/saia-fs/<path>` and maps `oidc_claim_uid` onto `x-auth-claim-uid`; the scenario then runs
-the whole browser → edge → registry → saia-fs path on the deployment route rather than the override.
+The app is always generated with `backendPath` pointing at the edge (or the deployment named by
+`E2E_SAIA_FS_BACKEND_URL`) and `fakeAuthHeaders` carrying both the claim and `x-auth-claim-uid`,
+because the engine forwards that header verbatim. A failure names the probe URL, its status and
+body, a repeat request from Node (so a browser CORS refusal is distinguishable from a 404) and the
+full traffic list.
 
 | env | default | meaning |
 | --- | --- | --- |
 | `E2E_SAIA_FS` | unset | `1` switches the run to the saia-fs mode |
-| `E2E_SAIA_FS_URL` | `http://127.0.0.1:8003`, unless a deployment base is configured | written as `saiaFsEndpoint`; the bare instance the browser talks to |
-| `E2E_SAIA_FS_BACKEND_URL` | the edge's URL with `E2E_SAIA_FS_EDGE=harness`, otherwise `http://127.0.0.1:10000/public/v1` | `backendPath`; with it the app uses `<base>/saia-fs` |
-| `E2E_SAIA_FS_EDGE` | `off` | `harness` starts the bundled edge and points the app at it |
+| `E2E_SAIA_FS_URL` | unset (the edge forwards to the registry) | bare saia-fs instance the edge talks to, e.g. `http://127.0.0.1:8003` |
+| `E2E_SAIA_FS_BACKEND_URL` | unset (the app uses the edge's URL) | `backendPath`; naming it skips the edge and uses a real MCP hop |
 | `E2E_SAIA_FS_REGISTRY` | `http://127.0.0.1:5000` | registry the edge forwards to |
-| `E2E_SAIA_FS_USER` | `tester` | identity the request carries (`oidc_claim_uid` for the edge, `x-auth-claim-uid` for the bare service) |
+| `E2E_SAIA_FS_USER` | `tester` | identity the request carries (`oidc_claim_uid` for the edge, `x-auth-claim-uid` for a real hop) |
 | `E2E_SAIA_FS_ENTRY` | `local-testing` | folder in the account root the scenario expects and mounts; empty skips that step |
 | `E2E_SAIA_FS_APP_URL` | `http://127.0.0.1:8093` | app instance to test, when you serve it yourself |
 

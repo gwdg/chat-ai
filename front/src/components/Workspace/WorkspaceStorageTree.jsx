@@ -573,6 +573,8 @@ export default function WorkspaceStorageTree({
           return t("workspace.storage_badge_mcp");
         case "saia-fs":
           return t("workspace.storage_badge_saia");
+        case "saia-rag":
+          return t("workspace.storage_badge_rag");
         case "agent":
           return t("workspace.storage_badge_agent");
         default:
@@ -671,6 +673,10 @@ export default function WorkspaceStorageTree({
     // Only an entry of a real provider moves: mounts, `/chats` and the parents of a
     // nested mount belong to no folder that could give them up.
     if (!node.context && node.entry.local !== true) return false;
+    const provider = providerForNode(node);
+    // A drag always moves (transferPlanner.ts), so a provider without a move of
+    // its own — saia-rag removes nothing — must not offer the row for dragging.
+    if (provider?.capabilities?.move !== true) return false;
     return !readOnlyFor(node);
   };
 
@@ -1334,6 +1340,17 @@ export default function WorkspaceStorageTree({
     return rootProvider;
   };
 
+  // The toolbar offers only what the folder it writes into can do. saia-rag has
+  // no folder tree and no delete of its own, so New folder and New file are
+  // simply absent there; Upload remains the one way in.
+  const targetCapabilities = useMemo(() => {
+    const provider =
+      target?.provider ??
+      (target?.mount ? providers.get(target.mount.sourceId) : null) ??
+      rootProvider;
+    return provider?.capabilities ?? {};
+  }, [target, providers, rootProvider]);
+
   // A file row asks the preview pane to show its content. The pane gets a
   // loading request at once, then the bytes (or a plain error).
   const openFile = useCallback(
@@ -1566,6 +1583,7 @@ export default function WorkspaceStorageTree({
             type="button"
             className="btn btn-ghost btn-xs"
             onClick={() => createEntry("dir")}
+            hidden={targetCapabilities.mkdir !== true}
           >
             <FolderAdd size={14} />
             {t("workspace.new_folder")}
@@ -1574,6 +1592,10 @@ export default function WorkspaceStorageTree({
             type="button"
             className="btn btn-ghost btn-xs"
             onClick={() => createEntry("file")}
+            hidden={
+              targetCapabilities.write !== true ||
+              targetCapabilities.delete !== true
+            }
           >
             <DocumentAdd size={14} />
             {t("workspace.new_file")}

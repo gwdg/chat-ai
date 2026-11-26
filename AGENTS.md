@@ -152,7 +152,7 @@ cd e2e && npm run test:e2e             # deterministic suite against the mocked 
 cd e2e && npm run test:opencode        # opt-in: local OpenCode agent, both specs
 cd e2e && npm run test:opencode:agentic # opt-in: only the agentic scenario
 cd e2e && npm run test:real            # opt-in: real model behind a back service you started
-cd e2e && npm run test:saia-fs         # opt-in: the SAIA filesystem (`saiaFsEndpoint`, default :8003)
+cd e2e && npm run test:saia-fs         # opt-in: the SAIA filesystem (bundled edge, default :8003 upstream)
 ```
 
 The default suite mocks `/models`, `/user` and `/chat/completions`, and every documented step
@@ -178,14 +178,15 @@ refused by the config instead of silently sharing ports.
 `tests/saia-fs.spec.ts` (`E2E_SAIA_FS=1`, `--project=saia-fs`) is the extended test for the SAIA
 filesystem drive (§4.31). It mocks only `/models`, `/user` and `/chat/completions`, mounts the
 caller's account folder into a draft workspace through the create dialog's storage browser, and
-reopens that mount through the workspace row's **Edit storage**. By default it points the app's
-`saiaFsEndpoint` at `E2E_SAIA_FS_URL` (the local stack's `http://127.0.0.1:8003`) and sends
-`x-auth-claim-uid` from `fakeAuthHeaders`, so a bare instance is enough. A failure before the drive
-appears reports the probe URL, its status and body plus a repeat request from Node, which is the
-diagnosis of a deployment that does not forward `/saia-fs`. `E2E_SAIA_FS_EDGE=harness` instead
-starts `scripts/saia-fs-edge.mjs`, a stand-in hop that forwards to the registry's `/services/saia-fs`
-and maps `oidc_claim_uid` onto `x-auth-claim-uid`, so the whole browser → edge → registry → service
-path can be exercised on a local stack that has no such edge. The shared resolution lives in
+reopens that mount through the workspace row's **Edit storage**. There is no config key any more, so
+the run always starts `scripts/saia-fs-edge.mjs`, a stand-in for the deployment hop: it forwards
+`<backendPath>/mcp/saia-fs/<path>` to the registry's `/services/saia-fs/<path>` (or to a bare
+instance named by `E2E_SAIA_FS_URL`, the local stack's `http://127.0.0.1:8003`) and maps
+`oidc_claim_uid` onto `x-auth-claim-uid`, so the whole browser → edge → registry → service path can
+be exercised on a local stack that has no such edge. `E2E_SAIA_FS_BACKEND_URL` names a real
+deployment instead and skips the harness, with `fakeAuthHeaders` carrying the identity. A failure
+before the drive appears reports the probe URL, its status and body plus a repeat request from Node,
+which is the diagnosis of a deployment without the hop. The shared resolution lives in
 `e2e/src/saiaFsTarget.ts`.
 
 `npm i` can rewrite `package-lock.json`. Check `git status` afterwards and keep unrelated lockfile
@@ -284,7 +285,7 @@ inside `db/`. UI strings and i18n keys say topic.
 `VITE_PROPOSAL_GENERATION_MODEL`, `VITE_ANNOUNCEMENT`, `VITE_USE_OPENAI_SDK`,
 `VITE_E2EE_KEY_URL`, `VITE_OPENCODE_SERVER_URL`, `VITE_OPENCODE_SERVER_USERNAME`,
 `VITE_OPENCODE_SERVER_PASSWORD`, `VITE_AGENT_SERVICE_MODE`, `VITE_AGENT_SERVICE_MODEL`,
-`VITE_BRIDGE_PATH`, `VITE_BRIDGE_KEY`, `VITE_FAKE_AUTH_HEADERS`, `VITE_SAIA_FS_ENDPOINT`,
+`VITE_BRIDGE_PATH`, `VITE_BRIDGE_KEY`, `VITE_FAKE_AUTH_HEADERS`,
 `VITE_FEEDBACK_ENDPOINT`, `VITE_MODULE_*`. Consequences: **a new
 config key requires editing `front/vite.config.js` too**, and a config change requires a dev-server
 restart. Read values via `import.meta.env.VITE_*`; they arrive as strings, hence the
@@ -300,16 +301,13 @@ JSON plus up to three `screenshots`) to it. Two receivers exist, and the value n
   the caller's identity headers and an optional `feedbackToken`), because the receiver's address and
   token must not ship in the bundle. An unset `feedbackEndpoint` makes the route answer 501, which
   the dialog turns into a "copy the report" fallback.
-- **The SAIA registry tunnel**, exactly like `saia-fs` (§4.31). `saia-feedback` registers a
-  connector and the registry proxies any path per service
-  (`/services/saia-feedback/<path>`), so **the engine has no feedback route**: nothing is added to
-  `chat_ai_ui_back.py` and nothing is written into the engine's database. A deployment forwards an
-  app-visible, same-origin path (`<backend>/saia-feedback`) to that tunnel and stamps
-  `x-auth-claim-uid` from the OIDC user it authenticated; `feedbackPath` then names that path plus
-  `/feedback`. A stack without the hop (the local test stack) sets `feedbackPath` to the tunnel
-  itself, e.g. `http://localhost:5000/services/saia-feedback/feedback`, carries `x-auth-claim-uid` in
-  `fakeAuthHeaders`, and relies on `saia-feedback`'s CORS default (loopback origins) — that direct
-  call is the only case where the browser names the registry.
+- **The SAIA engine's MCP hop** (§4.31). `saia-feedback` registers a connector and the engine
+  forwards any sub-path of `<backendPath>/mcp/saia-feedback` to it (`/feedback`, `/mcp`, `/health`),
+  so no separate engine route exists and nothing is written into the engine's database. A
+  deployment's gateway stamps `x-auth-claim-uid` from the OIDC user it authenticated; `feedbackPath`
+  then names `<backend>/mcp/saia-feedback/feedback`. A stack without that gateway mapping (the local
+  test stack) carries `x-auth-claim-uid` in `fakeAuthHeaders` and points `feedbackPath` at
+  `http://localhost:10000/public/v1/mcp/saia-feedback/feedback`.
 
 The receiver reads the caller as `x-auth-claim-uid` (falling back to `x-consumer-custom-id`), because
 `saia-feedback` — like `saia-fs` — reads no other identity header. Which arcana a report lands in is
@@ -2289,21 +2287,25 @@ calls `GET <base>/health`, and requires HTTP 200 with `{"status":"alive"}`. Ever
 `unavailable`, because `hooks/useSaiaFsAccess` fails closed and `WorkspaceStorageManager` provisions
 the `saia-fs` source row only for `available`. The probe never throws.
 
-**The base is the deployment path unless `saiaFsEndpoint` names one.** By default the app builds
-`<backend>/saia-fs` from `backendPath`; Chat AI proxies nothing itself (`back` has no `/saia-fs`
-route), so that path has to forward the exchange to the registry and add the caller's identity. The
-optional `saiaFsEndpoint` key (`VITE_SAIA_FS_ENDPOINT`, mapped in `vite.config.js`, so a change needs
-a dev-server restart) replaces the base with an absolute or same-origin URL for a stack that has no
-such hop — the local test stack, where saia-fs listens on its own port. The browser then talks to
-that endpoint itself, so it must authenticate the caller: the local profile pairs it with
-`fakeAuthHeaders["x-auth-claim-uid"]`. Leave it unset in a deployment. Where nothing answers the
-probe, no drive appears — the fail-closed behaviour above is the whole fallback.
+**The base is `<backend>/mcp/saia-fs`, and there is no config key for it.** The app builds it from
+`backendPath` like every other request. The engine serves that path generically:
+`/v1/mcp/<service>/<path>` forwards method, body, query and headers to the registry service of that
+name and streams the answer back, so one route carries every MCP plugin — `saia-rag`, `saia-fs` and
+`saia-feedback` today. `SAIA_MCP_SERVICES` (engine env, default `saia-rag,saia-fs,saia-feedback`,
+empty switches the hop off) is the allowlist, because the registry's HTTP listener has no
+authentication and would otherwise expose model instances and the tool gateway too; an unlisted name
+answers 404, not 403, so a probe learns nothing. The hop drops the engine's `authorization` and the
+caller's `cookie` and passes `x-auth-claim-uid` through. Chat AI proxies nothing itself (`back` has
+no such route), and where nothing answers the probe, no drive appears — the fail-closed behaviour
+above is the whole fallback. A stack that cannot reach the service is missing the engine hop, not a
+front-end setting.
 
 **saia-fs in `--mode saia` needs the caller's identity.** It reads `x-auth-claim-uid` only, and
 answers an unhandled `IdentityError` as the bare `"Error executing tool <name>"` — MCP does not
-forward the exception text, so the folder looked empty. A deployment maps `oidc_claim_uid` to that
-header; a direct `saiaFsEndpoint` stack sends it from `fakeAuthHeaders`, because it is still the
-browser's own request. `SaiaFsProvider` calls `exists("/")` once after the handshake: a failing
+forward the exception text, so the folder looked empty. A deployment's gateway stamps that header
+from the OIDC user; the engine forwards it verbatim and never derives one. The local test stack has
+no such gateway, so `fakeAuthHeaders` carries it, because it is still the browser's own request.
+`SaiaFsProvider` calls `exists("/")` once after the handshake: a failing
 session becomes a connect error on the source row (shown as the drive's tooltip) instead of a silent
 empty listing. A provider whose connect failed, or that was closed, reports the reason on `list()` —
 it used to answer `UNSUPPORTED "list"`, which said nothing.
@@ -2631,6 +2633,64 @@ look — not an API reference. Beyond the lead, the sections every page shares a
 100-foot view" flow diagram. The `saia/` subprojects (engine, fs, e2ee, rag) are independent
 checkouts, so a claim about the bridge, the registry or `saia-fs` has to be read there; this
 repository does not contain their source.
+
+### 4.35 The SAIA RAG drive replaces the Arcana drive in a workspace
+
+`saia-rag` is the SAIA document-collections MCP service, and a workspace shows it as a source of
+kind `saia-rag` (`front/src/workspace/providers/saiaRag.ts`). It replaces the `arcana-filesystem`
+drive card directly: `createWorkspace` adds only the `browser` source, and
+`WorkspaceStorageManager` provisions the `saia-rag` row through `ensureSaiaRagSource` once
+`useSaiaRagAccess` says `available`. Existing workspaces keep an `arcana-filesystem` row and its
+mounts, so `ensureArcanaFilesystemSource` stays but is no longer called by `createWorkspace`.
+
+**Availability is a probe, not a model row.** Like `saia-fs`, the service is not a chat model.
+`apis/saiaRag.js#isSaiaRagAvailable` calls `GET <base>/health` and accepts only HTTP 200 with
+`{"status":"alive"}`; every other answer is `unavailable` and the drive row is not created. The base
+is the deployment's `<backendPath>/mcp/saia-rag` (e.g. `<engine>/public/v1/mcp/saia-rag`) and
+nothing else configures it: the engine's generic `/v1/mcp/<service>` hop forwards the exchange to the
+registered service and passes the caller's identity header through (§4.31). The MCP endpoint is
+`<base>/mcp`. Do not reintroduce a service-address key: a stack that cannot reach the drive is
+missing the hop, and that belongs in the engine or gateway, not in `front.json`.
+
+**The path shape is collections, then flat files.** `/` lists collections, `/<display>` lists that
+collection's files; a collection has no folders. A caller's own collection uses its name, a shared one
+is `<owner>__<name>` (`providers/saiaRag.ts#ragCollectionDisplayName`). The provider caches the
+`list_collections` answer to turn that display name back into the storage name the tools take; an own
+collection whose name itself contains `__` would otherwise be read as an owner reference.
+
+**Roles come from the service and are enforced there.** `list_collections` returns `role`,
+`can_write` and `can_manage` per collection; a reader-only collection is `readOnly` on its row, every
+file inside it, and a mount made from it. That is a mirror: `saia-rag-cli/src/saia_rag/access.py`
+resolves `<owner>__<name>` and `require_role` checks the caller's principals on every tool call. The
+caller's own namespace is owned even without an ACL row; anything outside it needs an explicit row,
+so an empty ACL never opens somebody else's collection. `create_collection` makes the caller owner;
+`delete_collection`, `list_members`, `add_member` and `remove_member` are owner-only, and a group may
+be `reader`/`editor`, never `owner`. `add_member` takes `{collection, principal, role, kind}` and
+`kind` is `user` or `group`.
+
+**Identity and groups.** The service reads `x-auth-claim-uid` (falling back to
+`x-consumer-custom-id`); group principals come from `x-auth-claim-groups`, `x-user-groups`,
+`x-user-group` or `x-auth-claim-group`, because the exact claim is not settled. The ACL compares
+names, so one principal list covers user rows and group rows (`identity.py`). A deployment maps the
+OIDC claim to those headers; a direct stack sends them through `fakeAuthHeaders`.
+
+**Capabilities forbid what a flat collection cannot do.** `read`, `write` and `append` are offered;
+`delete`, `mkdir`, `rename`, `move`, `copy`, `range` and `quota` are not, so the tree hides New
+folder/New file and only offers Upload, and a drag needs a `move` the provider does not report.
+`append` is a provider-side read + concatenate + write, because the service has no append tool.
+A collection is mounted live (`addSelectionToWorkspace`), and the collection list `/` is refused as a
+mount target.
+
+**Bytes and previews.** Files are read and written through `read_file_base64` /
+`upload_file_base64`, so images and PDFs keep their bytes; those uploads are stored but not indexed.
+A Markdown preview resolves `![](bild.png)` in the browser: `workspace/filePreview.ts` builds a
+`resolveImage` callback from the same provider, and `MarkdownRenderer` consumes it through a context
+only when a preview passes one, so chat messages are unaffected.
+
+**Collection management is inline.** Create, delete and the member panel are rendered inside
+`WorkspaceSourceBrowser` (not a modal), because that browser is hosted by `CreateWorkspaceModal` and
+a second dialog would replace the draft. The feature guide is `workspace_saia_rag` (gated only by
+`workspaces`, not by the Arcanas module), and a page exists in `docs/architecture/index.html`.
 
 ## 5. Conventions
 

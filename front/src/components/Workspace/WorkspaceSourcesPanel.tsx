@@ -117,12 +117,12 @@ export default function WorkspaceSourcesPanel({
   const conversations = useConversationList() || [];
   const {
     localSources,
-    arcanaSources,
     mcpSources,
+    ragSource,
     saiaSource,
     deviceQuota,
     chatsQuota,
-    arcanasQuota,
+    ragQuota,
   } = useSourceQuotas(sources);
   const activeDrive = activeTarget?.drive ?? null;
   const usageLabel = (quota: QuotaInfo | null) =>
@@ -196,19 +196,19 @@ export default function WorkspaceSourcesPanel({
           active={activeDrive === "chats"}
           onClick={() => onOpenTarget({ drive: "chats" })}
         />
-        <DriveCard
-          dataGuide="workspace-source-arcanas"
-          icon={Boxes}
-          title={t("workspace.source_browser.arcanas")}
-          subtitle={t("workspace.source_browser.collections", {
-            count: arcanaSources.length,
-          })}
-          quota={arcanasQuota}
-          usageLabel={usageLabel(arcanasQuota)}
-          broken={brokenReason(arcanaSources)}
-          active={activeDrive === "arcanas"}
-          onClick={() => onOpenTarget({ drive: "arcanas" })}
-        />
+        {ragSource && (
+          <DriveCard
+            dataGuide="workspace-source-rag"
+            icon={Boxes}
+            title={t("workspace.source_browser.rag")}
+            subtitle={t("workspace.source_browser.rag_hint")}
+            quota={ragQuota}
+            usageLabel={usageLabel(ragQuota)}
+            broken={brokenReason([ragSource])}
+            active={activeDrive === "rag"}
+            onClick={() => onOpenTarget({ drive: "rag" })}
+          />
+        )}
         {saiaSource && (
           <DriveCard
             dataGuide="workspace-source-saia-fs"

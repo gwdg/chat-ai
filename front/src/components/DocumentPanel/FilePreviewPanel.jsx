@@ -96,6 +96,7 @@ export default function FilePreviewPanel({
           loading={preview.loading}
           error={preview.error}
           onOpenPath={preview.onOpenPath}
+          resolveImage={preview.resolveImage}
           showPdfHint={showPdfHint}
           resetKey={resetKey ?? preview.url ?? entry.name}
         />

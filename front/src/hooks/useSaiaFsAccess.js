@@ -3,7 +3,7 @@
 // saia-fs used to be registered as a model in an access group, so `/v1/models`
 // was the availability answer. It is no longer a model (`apis/serviceModels`),
 // and the question is now asked of the service itself: the deployment forwards
-// `/saia-fs/health` to the registry, which answers `{"status":"alive"}` only
+// `/mcp/saia-fs/health` to the registry, which answers `{"status":"alive"}` only
 // while an instance is registered.
 //
 // Three states, and only `available` provisions a source:

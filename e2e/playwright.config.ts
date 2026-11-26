@@ -69,15 +69,16 @@ const REAL_SPEC = /chat-real-model\.spec\.ts/;
 
 /**
  * Opt-in scenario against a real SAIA filesystem: the workspace's "SAIA Files"
- * drive. Chat AI normally reaches it at `<backendPath>/saia-fs`, which only a
- * deployment hop can serve (AGENTS.md §4.31), so the scenario runs in one of two
+ * drive. Chat AI reaches it at `<backendPath>/mcp/saia-fs`, which the engine's
+ * generic MCP hop serves (AGENTS.md §4.31), so the scenario runs in one of two
  * shapes — see `src/saiaFsTarget.ts` for how each variable is resolved:
  *
- * - a hop: `E2E_SAIA_FS_EDGE=harness` starts `scripts/saia-fs-edge.mjs`, a
- *   stand-in for the deployment edge, and the app keeps the deployment path;
- * - a bare instance: `E2E_SAIA_FS_URL` (default `http://127.0.0.1:8003`) is
- *   written as `saiaFsEndpoint`, and `fakeAuthHeaders` carries the identity
- *   because no hop stamps it.
+ * - the bundled edge: `scripts/saia-fs-edge.mjs` stands in for the deployment
+ *   hop. Its upstream is the registry, or a bare instance named by
+ *   `E2E_SAIA_FS_URL` (default `http://127.0.0.1:8003`);
+ * - a real hop: `E2E_SAIA_FS_BACKEND_URL` names the deployment origin and no
+ *   harness is started; `fakeAuthHeaders` carries the identity because the
+ *   engine forwards `x-auth-claim-uid` verbatim.
  *
  * `/models`, `/user` and `/chat/completions` stay mocked, so no model is needed.
  */
@@ -95,8 +96,8 @@ const SAIA_FS_CONFIG_FILE = "results/front.e2e-saia-fs.json";
 
 /**
  * Same app as the mocked matrix, built against whatever serves saia-fs.
- * `fakeAuthHeaders` gives the deployment hop the claim it maps onto
- * `x-auth-claim-uid`; without a hop it carries that header itself.
+ * `fakeAuthHeaders` carries the claim the edge stamps (and the header itself for
+ * a real deployment hop, whose engine forwards it verbatim).
  */
 function writeSaiaFsConfig(): void {
   const base = JSON.parse(readFileSync("fixtures/front.e2e.json", "utf8"));
@@ -105,10 +106,7 @@ function writeSaiaFsConfig(): void {
   base.backendPath = SAIA_FS_BACKEND_URL;
   base.modelsPath = `${SAIA_FS_BACKEND_URL}/models`;
   base.userDataPath = `${SAIA_FS_BACKEND_URL}/user`;
-  base.fakeAuthHeaders = SAIA_FS_TARGET.endpoint
-    ? { oidc_claim_uid: SAIA_FS_USER, "x-auth-claim-uid": SAIA_FS_USER }
-    : { oidc_claim_uid: SAIA_FS_USER };
-  if (SAIA_FS_TARGET.endpoint) base.saiaFsEndpoint = SAIA_FS_TARGET.endpoint;
+  base.fakeAuthHeaders = { oidc_claim_uid: SAIA_FS_USER, "x-auth-claim-uid": SAIA_FS_USER };
 
   mkdirSync(dirname(resolve(SAIA_FS_CONFIG_FILE)), { recursive: true });
   writeFileSync(SAIA_FS_CONFIG_FILE, `${JSON.stringify(base, null, 2)}\n`);
@@ -223,7 +221,8 @@ if (REAL_MODEL_ENABLED && !USE_EXTERNAL_APP) {
   });
 }
 if (SAIA_FS_ENABLED && SAIA_FS_EDGE) {
-  // The deployment hop chat-ai expects, for a local stack that has none.
+  // The deployment hop chat-ai expects, for a local stack that has none. Its
+  // upstream is the registry, or a bare instance E2E_SAIA_FS_URL names.
   webServer.push({
     command: "node scripts/saia-fs-edge.mjs",
     url: `http://127.0.0.1:${SAIA_FS_EDGE_PORT}/__edge/health`,
@@ -232,6 +231,7 @@ if (SAIA_FS_ENABLED && SAIA_FS_EDGE) {
     env: {
       E2E_SAIA_FS_EDGE_PORT: SAIA_FS_EDGE_PORT,
       E2E_SAIA_FS_USER: SAIA_FS_USER,
+      ...(SAIA_FS_TARGET.upstream ? { E2E_SAIA_FS_URL: SAIA_FS_TARGET.upstream } : {}),
       ...(process.env.E2E_SAIA_FS_REGISTRY
         ? { E2E_SAIA_FS_REGISTRY: process.env.E2E_SAIA_FS_REGISTRY }
         : {}),
@@ -239,7 +239,7 @@ if (SAIA_FS_ENABLED && SAIA_FS_EDGE) {
   });
 }
 if (SAIA_FS_ENABLED && !USE_EXTERNAL_APP) {
-  // Same front end, built against the backend that serves `/saia-fs`.
+  // Same front end, built against the backend that serves the MCP hop.
   webServer.push({
     command: `CONFIG_LOCATION=../e2e/${SAIA_FS_CONFIG_FILE} npm run dev -- --port ${SAIA_FS_APP_PORT} --strictPort`,
     cwd: "../front",

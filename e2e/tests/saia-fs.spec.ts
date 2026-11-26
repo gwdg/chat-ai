@@ -7,19 +7,20 @@ import { expect, openApp, openSidebar, test } from "./fixtures";
  * Opt-in integration scenario: the workspace's "SAIA Files" drive against a real
  * saia-fs service.
  *
- * Chat AI normally reaches the filesystem at `<backendPath>/saia-fs`, a path only
- * a deployment hop can serve (`AGENTS.md` §4.31). Two ways to run this scenario:
+ * Chat AI reaches the filesystem at `<backendPath>/mcp/saia-fs`, which the
+ * engine's generic MCP hop serves (`AGENTS.md` §4.31). A local stack has none,
+ * so the scenario runs in one of two shapes:
  *
  *   E2E_SAIA_FS=1 npm run test:saia-fs
- *     the generated config sets `saiaFsEndpoint` to `E2E_SAIA_FS_URL` (default
- *     `http://127.0.0.1:8003`, where the local stack serves saia-fs) and sends
- *     the caller's identity as `x-auth-claim-uid`, because no hop stamps it.
- *     The browser talks to that instance directly.
- *
- *   E2E_SAIA_FS=1 E2E_SAIA_FS_EDGE=harness npm run test:saia-fs
  *     `scripts/saia-fs-edge.mjs` stands in for the deployment hop and the
- *     scenario runs the whole browser → edge → registry → saia-fs path, with the
- *     app on the `saiaFsEndpoint`-free `<backendPath>/saia-fs` route.
+ *     scenario runs the whole browser → edge → registry → saia-fs path.
+ *
+ *   E2E_SAIA_FS=1 E2E_SAIA_FS_URL=http://127.0.0.1:8003 npm run test:saia-fs
+ *     the same edge forwards to that bare instance instead of the registry.
+ *
+ *   E2E_SAIA_FS=1 E2E_SAIA_FS_BACKEND_URL=https://host/base npm run test:saia-fs
+ *     a real deployment hop; no edge is started and `fakeAuthHeaders` carries
+ *     the caller's identity.
  *
  * Either way `/models`, `/user` and `/chat/completions` stay mocked, so no model
  * or API key is needed; only the filesystem traffic is real.
@@ -30,7 +31,7 @@ const ENABLED = process.env.E2E_SAIA_FS === "1";
 const USER = SAIA_FS_TARGET.user;
 /** The folder inside the account root the scenario mounts into the workspace. */
 const ENTRY = SAIA_FS_TARGET.entry;
-/** The base the app probes: `saiaFsEndpoint`, or `<backendPath>/saia-fs`. */
+/** The base the app probes: `<backendPath>/mcp/saia-fs`. */
 const BASE = SAIA_FS_TARGET.base;
 const HEALTH_URL = `${BASE}/health`;
 
@@ -86,7 +87,7 @@ async function diagnose(page: Page, calls: Call[]): Promise<string> {
 
   if (!calls.length) {
     lines.push(
-      `The app never requested ${BASE} at all, so nothing could be probed. Check that the run really uses the saia-fs config (the SAIA filesystem endpoint Vite logs at startup) and that the workspace dialog mounted.`,
+      `The app never requested ${BASE} at all, so nothing could be probed. Check that the run really uses the saia-fs config (the backend path Vite logs at startup) and that the workspace dialog mounted.`,
     );
   } else if (!health) {
     lines.push("The app requested saia-fs, but not its health probe:");
@@ -110,7 +111,7 @@ async function diagnose(page: Page, calls: Call[]): Promise<string> {
 
   lines.push(
     "",
-    "Chat AI probes `saiaFsEndpoint` when the config sets it, otherwise `<backendPath>/saia-fs`. The deployment path needs a hop that forwards `/saia-fs/health` and `/saia-fs/mcp` to the SAIA registry and adds `x-auth-claim-uid`; a 404 there means that hop does not exist. Point E2E_SAIA_FS_URL at a bare instance, or run with E2E_SAIA_FS_EDGE=harness to use scripts/saia-fs-edge.mjs.",
+    "Chat AI probes `<backendPath>/mcp/saia-fs/health`, which the engine's MCP hop forwards to the SAIA registry and passes `x-auth-claim-uid` through; a 404 there means that hop does not exist. The bundled edge (scripts/saia-fs-edge.mjs) stands in for it, against the registry or a bare instance named by E2E_SAIA_FS_URL.",
     "",
     "Traffic:",
     ...(calls.length

@@ -9,6 +9,7 @@ import { LocalProvider } from "./local";
 import { McpProvider } from "./mcp";
 import { ReadOnlyProvider } from "./readOnly";
 import { SaiaFsProvider } from "./saiaFs";
+import { SaiaRagProvider } from "./saiaRag";
 import type { FileProvider } from "./types";
 
 export function createProvider(source: WorkspaceSourceRow): FileProvider {
@@ -48,8 +49,12 @@ export function createProvider(source: WorkspaceSourceRow): FileProvider {
     provider = new ArcanaFilesystemProvider(source.id);
   } else if (source.kind === "saia-fs") {
     // The per-user folder on the SAIA filesystem, reached through the
-    // deployment's /saia-fs MCP path (providers/saiaFs.ts).
+    // deployment's /mcp/saia-fs path (providers/saiaFs.ts).
     provider = new SaiaFsProvider(source.id);
+  } else if (source.kind === "saia-rag") {
+    // The per-user document collections on saia-rag, reached through the
+    // deployment's /mcp/saia-rag path (providers/saiaRag.ts).
+    provider = new SaiaRagProvider(source.id);
   } else {
     provider = new McpProvider(
       source.id,

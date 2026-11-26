@@ -1,17 +1,11 @@
-// The SAIA filesystem (saia-fs), normally reached through `<backend>/saia-fs`.
+// The SAIA filesystem (saia-fs), reached through the engine's
+// `<backend>/mcp/saia-fs` path.
 //
-// saia-fs is an MCP server that registers in the SAIA registry, and the
-// registry's HTTP listener is not published. In a deployment the
-// `<backend>/saia-fs` path forwards the MCP exchange to the registry and stamps
-// the caller's identity; Chat AI only builds that URL from `backendPath`, so no
-// service address is needed.
-//
-// `saiaFsEndpoint` (VITE_SAIA_FS_ENDPOINT) covers the one stack that path cannot
-// serve: one without such a hop, e.g. the local test stack where saia-fs listens
-// on its own port. It replaces the derived base; when it is unset the deployment
-// path is used. The browser then talks to that endpoint itself, so it has to
-// authenticate the caller (or the identity arrives as a fake auth header) — a
-// real deployment keeps the override unset.
+// saia-fs is an MCP server (streamable HTTP at `/mcp`) behind the SAIA
+// registry. The engine owns the hop: its `/v1/mcp/<service>` route forwards the
+// whole exchange to the registered service and passes the caller's identity
+// header through, so the browser only knows `backendPath` and there is nothing
+// else to configure.
 //
 // The service is not a chat model, so `/v1/models` cannot say whether a
 // deployment offers it. Availability is a real probe: `<base>/health` answers
@@ -24,31 +18,12 @@ import { authHeaders } from "./authHeaders";
 
 const trimSlashes = (url) => url.replace(/\/+$/, "");
 
-/** The configured override, or `""` when the deployment path applies. */
-const configuredEndpoint = () => {
-  const value = import.meta.env.VITE_SAIA_FS_ENDPOINT;
-  if (typeof value !== "string") return "";
-  return trimSlashes(value.trim());
-};
-
-const absoluteUrl = (url) => {
-  try {
-    return trimSlashes(new URL(url).toString());
-  } catch {
-    // A relative override stays same-origin, like a relative `backendPath`.
-    return trimSlashes(new URL(url, window.location.origin).toString());
-  }
-};
-
 /**
- * The base URL the browser uses for saia-fs: `saiaFsEndpoint` when the stack
- * configures one, otherwise the deployment's `<backend>/saia-fs` path.
+ * The base URL the browser uses for saia-fs: the deployment's
+ * `<backend>/mcp/saia-fs` path, derived from `backendPath` like every other app
+ * request.
  */
-export const saiaFsBaseUrl = () => {
-  const override = configuredEndpoint();
-  if (override) return absoluteUrl(override);
-  return `${trimSlashes(agentEndpoint())}/saia-fs`;
-};
+export const saiaFsBaseUrl = () => `${trimSlashes(agentEndpoint())}/mcp/saia-fs`;
 
 /** The MCP endpoint of the service, as `SaiaFsProvider` expects it. */
 export const saiaFsMcpUrl = () => `${saiaFsBaseUrl()}/mcp`;

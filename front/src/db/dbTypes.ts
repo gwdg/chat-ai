@@ -189,6 +189,10 @@ export type SourceKind =
   // The caller's folder on the SAIA filesystem (saia/saia-rag-cli/saia-fs), auto-provisioned per
   // workspace while the deployment serves it (db/workspaceDb.ts#ensureSaiaFsSource).
   | 'saia-fs'
+  // The caller's document collections on saia-rag, auto-provisioned per workspace while the
+  // deployment serves it (db/workspaceDb.ts#ensureSaiaRagSource). It replaces the Arcana
+  // filesystem drive in Storage.
+  | 'saia-rag'
 
 export type SourceStatus =
   | 'connected'
@@ -230,8 +234,11 @@ export type ArcanaConfig = { remoteWorkspaceId: string; baseUrl?: string }
 export type AgentFilesConfig = { agentId: string }
 export type ChatStorageConfig = { conversationId: string }
 // The folder belongs to the caller's SAIA account, so the row carries no
-// address of its own: the endpoint is the deployment's `/saia-fs` path.
+// address of its own: the endpoint is the deployment's `/mcp/saia-fs` path.
 export type SaiaFsConfig = Record<string, never>
+// saia-rag collections also belong to the caller's account, so the row has no
+// address: the endpoint is the deployment's `/mcp/saia-rag` path.
+export type SaiaRagConfig = Record<string, never>
 
 export type SourceConfig =
   | BrowserConfig
@@ -241,6 +248,7 @@ export type SourceConfig =
   | AgentFilesConfig
   | ChatStorageConfig
   | SaiaFsConfig
+  | SaiaRagConfig
 
 export type WorkspaceRow = {
   id: string
@@ -301,6 +309,11 @@ export type WorkspaceFileEntry = {
   mime?: string
   etag?: string
   childCount?: number
+  /**
+   * The entry cannot be written. A saia-rag collection carries the caller's role, so a
+   * reader-only collection marks its row (and everything below it) read-only.
+   */
+  readOnly?: boolean
 }
 
 export type WorkspaceMountRow = {
