@@ -3,7 +3,9 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Add,
+  Copy,
   Document,
+  Launch,
   Renew,
   Search,
   Share,
@@ -33,6 +35,8 @@ import type {
   RagTag,
 } from "../../workspace/providers/saiaRag";
 import { formatBytes } from "../../utils/formatBytes";
+import { buildArcanaShareLink } from "../../utils/arcanaShareLink";
+import { isAgentEnabled } from "../../utils/modules";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -106,6 +110,7 @@ export default function ArcanaManagerModal({
   const [confirmRemoveMember, setConfirmRemoveMember] = useState<string | null>(
     null,
   );
+  const [shareCopied, setShareCopied] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const aliveRef = useRef(true);
@@ -226,6 +231,25 @@ export default function ArcanaManagerModal({
   );
 
   const pending = files.filter((file) => file.status === "stored").length;
+
+  // The link opens a new chat wired to this collection; recipients still need
+  // the role the member list above grants them. Only the browser agent runs the
+  // app-side tools, so the link is offered only while that workflow is on.
+  const chatLinkAvailable = isAgentEnabled();
+  const shareLink = useMemo(
+    () => buildArcanaShareLink(collection.collection),
+    [collection.collection],
+  );
+
+  const copyShareLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareLink);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 1600);
+    } catch {
+      notifyError(t("arcanas.share_link_copy_failed"));
+    }
+  };
 
   const upload = async (list: FileList | null) => {
     const picked = Array.from(list ?? []);
@@ -915,6 +939,51 @@ export default function ArcanaManagerModal({
           </div>
         ) : (
           <div className="flex min-h-0 flex-col gap-3" data-guide="arcana-share">
+            {chatLinkAvailable && (
+              <div
+                className="rounded-xl border border-base-300 bg-base-200/40 p-3"
+                data-guide="arcana-share-link"
+              >
+                <p className="text-xs font-medium">
+                  {t("arcanas.share_link_title")}
+                </p>
+                <p className="mt-0.5 text-[11px] text-base-content/60">
+                  {t("arcanas.share_link_hint")}
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <input
+                    readOnly
+                    className="input input-sm min-w-0 flex-1 font-mono text-[11px]"
+                    value={shareLink}
+                    aria-label={t("arcanas.share_link_title")}
+                    onFocus={(event) => event.currentTarget.select()}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-sm gap-1"
+                    data-guide="arcana-share-link-copy"
+                    onClick={() => void copyShareLink()}
+                    disabled={!shareLink}
+                  >
+                    <Copy size={14} />
+                    {shareCopied
+                      ? t("arcanas.share_link_copied")
+                      : t("arcanas.share_link_copy")}
+                  </button>
+                  <a
+                    className="btn btn-ghost btn-sm gap-1"
+                    href={shareLink || undefined}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-disabled={!shareLink}
+                  >
+                    <Launch size={14} />
+                    {t("arcanas.share_link_open")}
+                  </a>
+                </div>
+              </div>
+            )}
+
             <p className="text-xs text-base-content/60">
               {collection.can_manage
                 ? t("arcanas.share_hint")

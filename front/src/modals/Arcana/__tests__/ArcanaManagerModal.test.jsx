@@ -196,6 +196,43 @@ describe("ArcanaManagerModal", () => {
     );
   });
 
+  it("offers a chat link for the collection on the Share tab", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+      writable: true,
+    });
+
+    render(
+      <ArcanaManagerModal
+        isOpen
+        onClose={() => {}}
+        collection={collection}
+      />,
+    );
+
+    await screen.findByText("a.md");
+    fireEvent.click(screen.getByText("arcanas.tab_share"));
+    await screen.findByText("bob");
+
+    const expected = `${window.location.origin}/chat?arcana_share=alice__recipes`;
+    const field = screen.getByLabelText("arcanas.share_link_title");
+    expect(field).toHaveValue(expected);
+    // The link opens a new chat rather than navigating this tab.
+    expect(
+      screen.getByRole("link", { name: "arcanas.share_link_open" }),
+    ).toHaveAttribute("href", expected);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "arcanas.share_link_copy" }),
+    );
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(expected));
+    expect(
+      await screen.findByText("arcanas.share_link_copied"),
+    ).toBeInTheDocument();
+  });
+
   it("shows a shared Arcana read-only and offers no sharing controls", async () => {
     render(
       <ArcanaManagerModal

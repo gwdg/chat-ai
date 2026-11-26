@@ -698,6 +698,8 @@ export default {
         "The Share tab lists everyone who can open this Arcana, with their role.",
       step3:
         "Owners add a person by username or e-mail address and choose Can edit or Read only. Only the owner can add or remove people.",
+      step4:
+        "The chat link at the top of the Share tab opens a new chat that already searches and reads this Arcana. Share the link after you added the people who may use it.",
     },
     diagram_renderers: {
       title: "Render diagrams from code blocks",
@@ -2456,6 +2458,13 @@ export default {
     search_hint: "Type a query to search inside this Arcana.",
     result: "Result",
     tab_share: "Share",
+    share_link_title: "Chat link",
+    share_link_hint:
+      "Anyone who can open this Arcana can use this link to start a chat that searches and reads it. Add people to the list below first.",
+    share_link_copy: "Copy link",
+    share_link_copied: "Copied",
+    share_link_copy_failed: "Could not copy the link.",
+    share_link_open: "Open chat",
     share_hint:
       "Everyone in this list can open this Arcana with the role shown. Share it with a username or an e-mail address.",
     share_owner_only:

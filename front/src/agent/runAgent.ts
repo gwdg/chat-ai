@@ -21,6 +21,9 @@ import i18n from "../i18n";
 import { activeMcpServers, connectMcpServers, McpUnavailableError, type McpServer, type McpToolPolicy, type McpTools } from "./mcp";
 import { beginMcpConfirmationSession } from "./mcpConfirmation";
 import { createTools } from "./tools";
+import { createArcanaChatTools } from "./arcanaChatTools";
+import { arcanaShareFromSettings } from "../utils/arcanaShareLink";
+import { isArcanasEnabled } from "../utils/modules";
 import { createConnectedAgentTools, type ConnectedAgentContext } from "./connectedAgentTools";
 import { createWorkspaceTools, type WorkspaceFileAccess, type WorkspaceToolContext } from "./workspaceTools";
 import { storageAccessEnabled, storageToolSettings, writeAccessEnabled } from "./storageAccess";
@@ -43,6 +46,8 @@ const NO_BROWSER_STORAGE_PROMPT = "The user has turned off access to storage for
 
 const ARCANA_TOOLS_PROMPT = "Arcana Tools is enabled. Use these tools to inspect Arcana collections, manage their files, check or start indexing, and manage sharing. Ask the user for explicit confirmation before deleting files or an index, changing sharing, or uploading and replacing files unless they already asked for that exact change.";
 
+const arcanaSharePrompt = (share: { name: string; collection: string }) =>
+  `This chat is linked to the Arcana collection "${share.name}" (${share.collection}). Use search_arcana to find relevant passages, list_arcana_documents to see the files of that collection, and read_arcana_document to read one text file. Base answers about the collection on those results, and say so when they contain nothing relevant.`;
 
 type ModelSpec = { id: string; name?: string; input?: string[] };
 
@@ -281,6 +286,13 @@ export async function runAgentTurn({
     settings.tools?.arcana_tools === true ||
     settings.tools?.arcana_v2 === true ||
     settings.tools?.remote_file_access === true;
+  // A share link binds the chat to one collection; the tools are read-only and
+  // the collection is fixed here, so a prompt cannot point them elsewhere. They
+  // are data access, so "Access storage" off means they are not offered either.
+  const arcanaShare =
+    isArcanasEnabled() && useTools && browserStorage
+      ? arcanaShareFromSettings(settings)
+      : null;
   const model = toModel(spec);
   const vision = model.input.includes("image");
 
@@ -288,6 +300,7 @@ export async function runAgentTurn({
   const attachedWorkspace = await getChatWorkspaceBundle(conversationId).catch(
     () => null,
   );
+  let arcanaChatTools: ReturnType<typeof createArcanaChatTools> | null = null;
   try {
     // Writing is always on in the chat's own storage; an attached workspace has its own switch.
     const writeAccess =
@@ -423,6 +436,10 @@ export async function runAgentTurn({
         })
       : [];
     tools.push(...workspaceToolList);
+    if (useTools && arcanaShare) {
+      arcanaChatTools = createArcanaChatTools(arcanaShare);
+      tools.push(...arcanaChatTools.tools);
+    }
     let connectedAgentContext: ConnectedAgentContext | null = null;
     if (useTools && browserStorage) {
       try {
@@ -503,6 +520,7 @@ export async function runAgentTurn({
               : NO_BROWSER_STORAGE_PROMPT
             : NO_TOOLS_PROMPT,
           useTools && arcanaTools ? ARCANA_TOOLS_PROMPT : "",
+          arcanaShare ? arcanaSharePrompt(arcanaShare) : "",
           workspaceContext?.workspaces.length
             ? `This chat is attached to the workspace(s) ${workspaceContext.workspaces
                 .map((workspace) => `${workspace.name} (${workspace.id})`)
@@ -624,6 +642,7 @@ export async function runAgentTurn({
     }
     return { ...snapshot(), usage, error };
   } finally {
+    arcanaChatTools?.close();
     attachedWorkspace?.close();
   }
 }

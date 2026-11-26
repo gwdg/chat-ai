@@ -205,6 +205,27 @@ describe("Meta chat action markers", () => {
     });
   });
 
+  it("accepts an Arcana share binding and refuses a bare collection name", () => {
+    const accepted = getMetaActionProposals(
+      '[[SET_CONVERSATION_SETTING:{"id":"c1","key":"arcana_share","value":{"collection":"alice__papers","name":"Papers"}}]]',
+    );
+    expect(accepted).toHaveLength(1);
+    expect(accepted[0]).toMatchObject({
+      type: "conversation_setting",
+      scope: "conversation",
+      conversationId: "c1",
+      key: "arcana_share",
+      value: { collection: "alice__papers", name: "Papers" },
+    });
+
+    // A short name is never a storage reference: it has no owner prefix.
+    expect(
+      getMetaActionProposals(
+        '[[SET_CONVERSATION_SETTING:{"id":"c1","key":"arcana_share","value":"papers"}]]',
+      ),
+    ).toEqual([]);
+  });
+
   it("parses the whole-transcript feedback preference", () => {
     const proposals = getMetaActionProposals(
       [

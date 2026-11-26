@@ -282,6 +282,7 @@ export function buildConversationSettingsSummary(settings = {}) {
     `storage access ${browserStorage ? "enabled" : "disabled"}`,
     `writing in this chat ${browserStorage ? "enabled" : "disabled"}; writing in attached workspaces ${workspaceWrite ? "enabled" : "disabled"}`,
     `arcana ${arcanaId || "none"}`,
+    `arcana share link ${settings.arcana_share?.collection ? `${settings.arcana_share.name || settings.arcana_share.collection} (${settings.arcana_share.collection})` : "none"}`,
     `MCP ${tools.mcp ? "enabled" : "disabled"}${mcpDescription ? ` (${mcpDescription})` : ""}`,
   ].join("; ");
 }

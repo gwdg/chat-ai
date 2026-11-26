@@ -19,9 +19,14 @@ const modalMocks = vi.hoisted(() => ({
   closeModal: vi.fn(),
 }));
 
+const routerMocks = vi.hoisted(() => ({
+  /** The query string the mocked `useSearchParams` hands the hook. */
+  params: [],
+}));
+
 vi.mock("react-router-dom", () => ({
   useNavigate: () => vi.fn(),
-  useSearchParams: () => [new URLSearchParams(), vi.fn()],
+  useSearchParams: () => [new URLSearchParams(routerMocks.params), vi.fn()],
 }));
 
 vi.mock("react-redux", () => ({
@@ -133,6 +138,65 @@ describe("useSyncConversation hydration", () => {
     const setLocalState = renderSync(conversation);
 
     await waitFor(() => expect(setLocalState).toHaveBeenCalledWith(conversation));
+  });
+});
+
+describe("useSyncConversation Arcana share links", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    routerMocks.params = [];
+  });
+
+  it("wires the chat to the shared collection and persists the binding", async () => {
+    routerMocks.params = [["arcana_share", "alice__papers"]];
+    const conversation = {
+      ...makeConversation([{ role: "user", content: [{ type: "text", text: "" }] }]),
+      title: "Untitled Chat",
+      hasFirstPrompt: false,
+    };
+    dbMocks.updateConversation.mockResolvedValue(456);
+    const setLocalState = renderSync(conversation);
+
+    await waitFor(() => expect(setLocalState).toHaveBeenCalled());
+
+    const state = lastState(setLocalState);
+    expect(state.settings.arcana_share).toEqual({
+      collection: "alice__papers",
+      owner: "alice",
+      name: "papers",
+    });
+    // The agent tools are only offered while tools are enabled.
+    expect(state.settings.enable_tools).toBe(true);
+    // A chat the share link created is named after the collection.
+    expect(state.title).toBe("papers");
+
+    await waitFor(() => expect(dbMocks.updateConversation).toHaveBeenCalled());
+    const payload = dbMocks.updateConversation.mock.calls.at(-1)[1];
+    expect(payload.settings.arcana_share.collection).toBe("alice__papers");
+    // The optimistic-concurrency token is threaded through.
+    expect(payload.lastModified).toBe(123);
+  });
+
+  it("leaves a chat that already has a title alone", async () => {
+    routerMocks.params = [["arcana_share", "alice__papers"]];
+    const setLocalState = renderSync(makeConversation([]));
+
+    await waitFor(() => expect(setLocalState).toHaveBeenCalled());
+
+    const state = lastState(setLocalState);
+    expect(state.title).toBe("Chat");
+    expect(state.settings.arcana_share.collection).toBe("alice__papers");
+  });
+
+  it("ignores a share value that is not a collection reference", async () => {
+    routerMocks.params = [["arcana_share", "papers"]];
+    const setLocalState = renderSync(makeConversation([]));
+
+    await waitFor(() => expect(setLocalState).toHaveBeenCalled());
+
+    // The unrelated branch still applies query settings, but adds no binding.
+    expect(lastState(setLocalState).settings.arcana_share).toBeUndefined();
+    expect(dbMocks.updateConversation).not.toHaveBeenCalled();
   });
 });
 

@@ -2722,6 +2722,41 @@ only when a preview passes one, so chat messages are unaffected.
 a second dialog would replace the draft. The feature guide is `workspace_saia_rag` (gated only by
 `workspaces`, not by the Arcanas module), and a page exists in `docs/architecture/index.html`.
 
+### 4.36 A shared Arcana opens as a chat with three read-only tools
+
+The Arcana manager's **Share** tab (`modals/Arcana/ArcanaManagerModal.tsx`) carries the member list
+and, above it, a link `/chat?arcana_share=<owner>__<name>`. It is built by
+`utils/arcanaShareLink.ts#buildArcanaShareLink` from the collection's **storage name**, because that
+is what the saia-rag tools take; `parseArcanaShareRef` is the only reader (it splits at the first
+`__` and refuses empty parts, path separators, control characters and over-long text). The card is
+rendered only while `isAgentEnabled()`, since the tools run inside the browser agent; the member list
+is still the whole access control. **The link is not a grant** — it only writes
+`settings.arcana_share = {collection, name, owner}`; the service re-checks the caller's role on
+every tool call, so a recipient outside the member list is refused.
+
+`hooks/useSyncConversation.ts` applies `?arcana_share=` when it hydrates a chat that has no
+important state yet: it sets the binding, sets `enable_tools = true` unless
+`isBrandLocked("tools")`, names a chat still called `Untitled Chat` after the collection, strips the
+query parameter and persists through `updateConversation` with the `lastModified` it read (handling
+`-1` by leaving the ref alone). `hooks/useImportConversation.jsx` restores the same binding from an
+export. The setting is unindexed, needs no Dexie version bump, and travels in the full export.
+
+`agent/arcanaChatTools.ts#createArcanaChatTools` adds exactly three read-only tools for that fixed
+collection: `search_arcana` (`search_chunks`), `list_arcana_documents` (`list_files`) and
+`read_arcana_document` (`read_file_base64`, text files only). The collection comes from the setting,
+never from the prompt, so a tool call cannot be pointed at another collection. The MCP client is
+opened lazily on the first call, shared by the three tools of one turn, closed in `runAgent`'s
+`finally`, and reconnected once when `isStaleMcpSessionError` matches (same repair as the workspace
+provider). The tools are registered only when `modelSupportsTools`, `isArcanasEnabled()` **and**
+`storageAccessEnabled` (they are data access, like the workspace tools); `runAgent` also appends a
+short prompt naming the collection. A model without tool support gets the plain chat path with the
+binding stored but no access.
+
+The Meta chat reads the binding through `get_user_settings`/`buildConversationSettingsSummary` and
+proposes it with `SET_CONVERSATION_SETTING` `key: "arcana_share"` (`value` is a collection reference
+or `null`); `MetaActionCard` resolves it to the stored object. The feature guide `arcana_share`
+gained a fourth step that targets the link card.
+
 ## 5. Conventions
 
 - **Gradual TypeScript.** `.jsx` and `.tsx` coexist. `front/tsconfig.json` is `strict: false`,

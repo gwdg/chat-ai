@@ -57,6 +57,7 @@ import {
 } from "../../../db/workspaceDb";
 import { getDefaultSettings } from "../../../utils/conversationUtils";
 import { isConversationSettingLocked } from "../../../utils/metaActions";
+import { parseArcanaShareRef } from "../../../utils/arcanaShareLink";
 import { useToast } from "../../../hooks/useToast";
 import {
   importUserSettings,
@@ -416,6 +417,7 @@ export default function MetaActionCard({
     browser_storage: "settings.label_browser_storage",
     workspace_write_access: "settings.label_write_access",
     arcana_tools: "settings.label_arcana_tools",
+    arcana_share: "arcanas.share_link_title",
   };
 
   const formatSettingValue = (key, value) => {
@@ -490,6 +492,13 @@ export default function MetaActionCard({
       return value === null || value === undefined
         ? t("settings.default")
         : String(value);
+    }
+    if (key === "arcana_share") {
+      if (!value) return t("meta_chat.setting_off");
+      return (
+        (typeof value === "object" && (value.name || value.collection)) ||
+        String(value)
+      );
     }
     if (typeof value === "boolean") {
       return value ? t("meta_chat.setting_on") : t("meta_chat.setting_off");
@@ -908,6 +917,16 @@ export default function MetaActionCard({
             );
             if (!model) throw new Error("Model not found");
             nextValue = model;
+          }
+          if (action.key === "arcana_share") {
+            // The marker carries the collection reference; the chat stores the
+            // resolved object the agent tools read.
+            nextValue =
+              parseArcanaShareRef(
+                typeof action.value === "string"
+                  ? action.value
+                  : action.value?.collection,
+              ) ?? undefined;
           }
           entry.previous[action.key] = readConversationSetting(
             conversation.settings,

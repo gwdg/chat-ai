@@ -753,7 +753,7 @@ export const featureGuides = {
   arcana_share: {
     titleKey: "feature_guide.arcana_share.title",
     prompt:
-      "An Arcana can be shared with other people, so a document collection stays one copy for a team. Open an Arcana in the sidebar and switch to its Share tab: it lists everyone who can open it with their role, and the owner can add a person by username or e-mail address as an editor (can add and change files) or a reader (read and search only). Only the owner can add or remove people. Collections that were shared with you show who shared them and your role under their name in the sidebar.",
+      "An Arcana can be shared with other people, so a document collection stays one copy for a team. Open an Arcana in the sidebar and switch to its Share tab: it lists everyone who can open it with their role, and the owner can add a person by username or e-mail address as an editor (can add and change files) or a reader (read and search only). Only the owner can add or remove people. Collections that were shared with you show who shared them and your role under their name in the sidebar. The same tab shows a chat link that opens a new chat already wired to the collection, with read-only tools to search and read it; the link is only a convenience, because the people using it still need access through the member list.",
     keywords: [
       "share",
       "shared",
@@ -783,6 +783,17 @@ export const featureGuides = {
         prepare: openArcanaShare,
         textKey: "feature_guide.arcana_share.step3",
       },
+      // The chat link card is rendered only while the browser agent is on, and
+      // a tour does not start at all when one of its targets is missing.
+      ...(isAgentEnabled()
+        ? [
+            {
+              target: '[data-guide="arcana-share-link"]',
+              prepare: openArcanaShare,
+              textKey: "feature_guide.arcana_share.step4",
+            },
+          ]
+        : []),
     ],
   },
   diagram_renderers: {

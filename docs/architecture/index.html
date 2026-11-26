@@ -3563,6 +3563,31 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           read-only hint. The service enforces the same rule, so the disabled buttons are a courtesy,
           not the guard.
         </li>
+        <li>
+          <b>Sharing and the chat link live in the same tab.</b> The Share tab lists the people and
+          groups that hold a role (<code>list_members</code>, owner-only <code>add_member</code> /
+          <code>remove_member</code>) and, above that list, the chat link
+          <code>/chat?arcana_share=&lt;owner&gt;__&lt;name&gt;</code>. Opening the link creates a
+          normal chat whose settings carry <code>arcana_share</code>; the chat page strips the query
+          parameter, enables tools (unless a brand fixes that switch), names an untouched
+          <code>Untitled Chat</code> after the collection and persists the binding through
+          <code>updateConversation</code> with the <code>lastModified</code> it read. From then on
+          <code>agent/arcanaChatTools.ts</code> offers exactly three read-only tools for that one
+          collection - <code>search_arcana</code> (<code>search_chunks</code>),
+          <code>list_arcana_documents</code> (<code>list_files</code>) and
+          <code>read_arcana_document</code> (<code>read_file_base64</code>, text files only). The
+          reference is fixed in the setting, so a prompt cannot aim them at another collection, and
+          nothing in the tool set writes.
+        </li>
+        <li>
+          <b>The link grants nothing.</b> The service resolves
+          <code>&lt;owner&gt;__&lt;name&gt;</code> against the caller's own principals on every tool
+          call, so a recipient who is not in the member list gets the service's refusal, not the
+          documents. The card is shown only while the browser agent workflow is on
+          (<code>isAgentEnabled()</code>), because those tools run inside it; the tools themselves
+          also need a model that supports tools and the chat's <b>Access storage</b> switch, since
+          they read data outside the workspace.
+        </li>
       </ol>
 
       <h2>Components</h2>
@@ -3596,8 +3621,21 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           <tr>
             <td>Manager dialog</td>
             <td>Files tab: upload, pending banner, status badges, tag filter, inline tag editor and
-                remove confirmation. Search tab: mode, count, tag filter and results.</td>
+                remove confirmation. Search tab: mode, count, tag filter and results. Share tab: the
+                member list, its add/remove controls, and the chat link that opens a new chat wired to
+                the collection.</td>
             <td><span class="mono">front/src/modals/Arcana/ArcanaManagerModal.tsx</span></td>
+          </tr>
+          <tr>
+            <td>Share link</td>
+            <td><code>?arcana_share=</code> parsing, the absolute link and the stored binding.</td>
+            <td><span class="mono">front/src/utils/arcanaShareLink.ts</span></td>
+          </tr>
+          <tr>
+            <td>Chat tools</td>
+            <td>The three read-only tools for the bound collection, one lazily opened MCP client per
+                turn, one reconnect on a lost session.</td>
+            <td><span class="mono">front/src/agent/arcanaChatTools.ts</span></td>
           </tr>
           <tr>
             <td>Provider</td>
@@ -3636,6 +3674,12 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
             <code>delete: false</code>; per-file removal goes through the manager.</li>
         <li><b>The service is the guard.</b> <code>can_write</code> disables controls; the service
             still rejects a write that gets through.</li>
+        <li><b>A share link is convenience, never a grant.</b> It only writes
+            <code>settings.arcana_share</code>; access is still the member list, and the collection
+            reference is fixed in the setting so the tools cannot be aimed elsewhere.</li>
+        <li><b>The chat tools are read-only.</b> They wrap <code>search_chunks</code>,
+            <code>list_files</code> and <code>read_file_base64</code> only; upload, tag, index and
+            member changes stay in the manager dialog.</li>
       </ul>
 
       <h3>Limits</h3>
@@ -3649,8 +3693,13 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
             shows the raw answer, but loses the per-hit fields.</li>
         <li><code>list_files(include_tags)</code> exists only on services that also have
             <code>set_file_tags</code>; the per-file fallback costs one call per file.</li>
-        <li>The section manages collections, not members. Sharing is the workspace drive's inline
-            member panel, which speaks the same service.</li>
+        <li>The share link needs a tool-supporting model and the browser agent workflow. A model
+            without tool support opens the chat with the binding stored but no tools, so the
+            collection is not reachable there.</li>
+        <li>A collection keeps the original bytes, so <code>read_arcana_document</code> refuses a
+            PDF or image and points at <code>search_arcana</code> for the indexed text.</li>
+        <li>The section manages collections, not members. Sharing is the manager's Share tab, which
+            speaks the same service and enforces owner-only changes there.</li>
       </ul>
 
       <h2>Where to look</h2>
@@ -3663,7 +3712,11 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
             collection state</li>
         <li><span class="mono">front/src/modals/Arcana/ArcanaCreateModal.tsx</span> - creation</li>
         <li><span class="mono">front/src/modals/Arcana/ArcanaManagerModal.tsx</span> - files, tags,
-            index, search and remove</li>
+            index, search, remove, members and the chat link</li>
+        <li><span class="mono">front/src/utils/arcanaShareLink.ts</span> - the
+            <code>?arcana_share=</code> reference, its link and its stored binding</li>
+        <li><span class="mono">front/src/agent/arcanaChatTools.ts</span> - the three read-only chat
+            tools and their MCP client, wired in <span class="mono">agent/runAgent.ts</span></li>
         <li><span class="mono">front/src/workspace/providers/saiaRag.ts</span> - the tool calls and
             the text parsers</li>
         <li><span class="mono">saia/saia-rag-cli/src/saia_rag/mcp_server.py</span> - the MCP tools

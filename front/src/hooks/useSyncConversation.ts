@@ -16,6 +16,11 @@ import { getDefaultConversation } from "../utils/conversationUtils";
 import { CONVERSATION_MOVED_EVENT } from "../utils/conversationEvents";
 import { useImportConversation } from "./useImportConversation";
 import { decodeBase64UrlUtf8 } from "../utils/base64url";
+import {
+  ARCANA_SHARE_PARAM,
+  parseArcanaShareRef,
+} from "../utils/arcanaShareLink";
+import { isBrandLocked } from "../config/brandPolicy";
 function validateConversationId(conversationId: string): boolean {
   return validateUUID(conversationId) && versionUUID(conversationId) === 4;
 }
@@ -409,18 +414,50 @@ export function useSyncConversation({
         // Set settings from query params in URL
         const arcanaParam = searchParams.get("arcana");
         const modelParam = searchParams.get("model");
-        const enableToolsParam = searchParams.get("enable_tools")
-        
-        let extraSettings = {};
+        const enableToolsParam = searchParams.get("enable_tools");
+        const arcanaShare = parseArcanaShareRef(
+          searchParams.get(ARCANA_SHARE_PARAM),
+        );
+
+        const extraSettings: any = {};
         if (arcanaParam) { extraSettings.arcana = { id: arcanaParam }; };
         if (modelParam) { extraSettings.model = { id: modelParam }; };
-        if (enableToolsParam) { extraSettings.enable_tools = enableToolsParam; };
+        const enableTools = coerceBoolean(enableToolsParam);
+        if (enableTools !== undefined) extraSettings.enable_tools = enableTools;
+        if (arcanaShare) {
+          // The link wires this chat to one collection. It is not a grant: the
+          // owner still has to share the collection with the recipient.
+          if (!isBrandLocked("tools")) extraSettings.enable_tools = true;
+          extraSettings.arcana_share = arcanaShare;
+        }
+        const renameToCollection =
+          arcanaShare &&
+          !conversation.hasFirstPrompt &&
+          (!conversation.title || conversation.title === "Untitled Chat");
         const updatedConversation = {
           ...conversation,
+          ...(renameToCollection ? { title: arcanaShare.name } : {}),
           settings: {...conversation.settings, ...extraSettings}
         }
         setSearchParams();
         setLocalState( updatedConversation );
+        // A share link is opened once; persist it so a reload keeps the chat
+        // wired to the collection even before its first message.
+        if (arcanaShare) {
+          try {
+            const newLastModified = await updateConversation(conversation.id, {
+              title: updatedConversation.title,
+              settings: updatedConversation.settings,
+              messages: updatedConversation.messages,
+              lastModified: conversation?.lastModified ?? 0,
+            });
+            if (newLastModified !== -1) {
+              lastModified.current[conversation.id] = newLastModified;
+            }
+          } catch (error) {
+            console.error("Failed to persist the Arcana share:", error);
+          }
+        }
         return;
       }
       // Sanity check: keep every stored message and only fill in the system

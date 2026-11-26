@@ -7,6 +7,8 @@ import { useToast } from "./useToast";
 import { createConversation, deleteConversation, ensureFolder, getFolder, newId, saveFileReady } from "../db";
 import { dataURLtoFile } from "../utils/attachments";
 import { selectUserSettings, importUserSettings } from "../Redux/reducers/userSettingsReducer";
+import { parseArcanaShareRef } from "../utils/arcanaShareLink";
+import { isBrandLocked } from "../config/brandPolicy";
 
 /**
  * `arcana_v2` and `remote_file_access` were the previous names of the
@@ -354,6 +356,22 @@ export function useImportConversation() {
       }
       // Replace arcana if exists
       if (arcana?.id) settings.arcana = arcana;
+
+      // A chat that was exported from a share link keeps its collection binding.
+      const arcanaShare = extractParameter(data, "arcana_share");
+      const arcanaShareRef = parseArcanaShareRef(
+        typeof arcanaShare === "string"
+          ? arcanaShare
+          : arcanaShare?.collection,
+      );
+      if (arcanaShareRef) {
+        settings.arcana_share = {
+          ...arcanaShareRef,
+          name: String(arcanaShare?.name || arcanaShareRef.name).trim(),
+        };
+        // The read tools need tools on, unless a brand fixes that switch.
+        if (!isBrandLocked("tools")) settings.enable_tools = true;
+      }
 
       // Determine folder assignment
       let folderId = topicId;

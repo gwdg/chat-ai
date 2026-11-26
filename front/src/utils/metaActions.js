@@ -1,5 +1,6 @@
 import { isBrandLocked } from "../config/brandPolicy.js";
 import { isFeatureEnabled } from "../config/deployment.js";
+import { parseArcanaShareRef } from "./arcanaShareLink";
 
 const ACTION_TYPES =
   "CREATE_CHAT|RENAME_CHAT|MOVE_CHAT|PIN_CHAT|PIN_TOPIC|PIN_WORKSPACE|PIN_AGENT|SET_SETTING|SET_CONVERSATION_SETTING|WORKSPACE_LINK|AGENT_ACTION|AGENT_SESSION|MCP_SERVER|ADD_MEMORY|UPDATE_MEMORY|DELETE_MEMORY|CLEAR_MEMORIES|E2EE_ASSIGN";
@@ -44,6 +45,7 @@ const SUPPORTED_CONVERSATION_SETTING_KEYS = new Set([
   "browser_storage",
   "workspace_write_access",
   "arcana_tools",
+  "arcana_share",
 ]);
 
 const LOCKED_CHAT_SETTING_KEYS = new Set([
@@ -85,6 +87,14 @@ function isValidConversationSetting(key, value) {
   }
   if (key === "memory_mode_override") {
     return value === "default" || [0, 1, 2].includes(Number(value));
+  }
+  if (key === "arcana_share") {
+    if (value === null || value === "") return true;
+    return Boolean(
+      parseArcanaShareRef(
+        typeof value === "string" ? value : value?.collection,
+      ),
+    );
   }
   return typeof value === "boolean";
 }

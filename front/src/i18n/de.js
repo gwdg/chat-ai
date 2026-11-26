@@ -713,6 +713,8 @@ export default {
         "Der Reiter Teilen listet alle Personen, die diese Arcana öffnen können, mit ihrer Rolle auf.",
       step3:
         "Eigentümer fügen eine Person über Benutzername oder E-Mail-Adresse hinzu und wählen Darf bearbeiten oder Nur lesen. Nur der Eigentümer kann Personen hinzufügen oder entfernen.",
+      step4:
+        "Der Chat-Link oben im Reiter Teilen öffnet einen neuen Chat, der diese Arcana bereits durchsucht und daraus liest. Teilen Sie den Link, nachdem Sie die Personen hinzugefügt haben, die ihn nutzen dürfen.",
     },
     diagram_renderers: {
       title: "Diagramme aus Codeblöcken rendern",
@@ -2480,6 +2482,13 @@ export default {
     search_hint: "Gib eine Suchanfrage ein, um diese Arcana zu durchsuchen.",
     result: "Treffer",
     tab_share: "Teilen",
+    share_link_title: "Chat-Link",
+    share_link_hint:
+      "Alle Personen, die diese Arcana öffnen können, starten mit diesem Link einen Chat, der sie durchsucht und daraus liest. Füge sie zuerst der Liste unten hinzu.",
+    share_link_copy: "Link kopieren",
+    share_link_copied: "Kopiert",
+    share_link_copy_failed: "Der Link konnte nicht kopiert werden.",
+    share_link_open: "Chat öffnen",
     share_hint:
       "Alle Personen in dieser Liste können diese Arcana mit der angezeigten Rolle öffnen. Teile sie über einen Benutzernamen oder eine E-Mail-Adresse.",
     share_owner_only:

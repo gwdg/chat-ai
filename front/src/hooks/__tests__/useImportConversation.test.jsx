@@ -133,4 +133,56 @@ describe("useImportConversation", () => {
     expect(params.settings.tools.browser_storage).toBe(true);
     expect(params.settings.tools.arcana_v2).toBeUndefined();
   });
+
+  it("restores the collection binding of a chat created from a share link", async () => {
+    const { result } = renderHook(() => useImportConversation());
+
+    await act(async () => {
+      await result.current(
+        {
+          title: "Papers",
+          arcana_share: { collection: "alice__papers", name: "Papers 2026" },
+        },
+        true,
+      );
+    });
+
+    const params = dbMocks.createConversation.mock.calls[0][0];
+    expect(params.settings.arcana_share).toEqual({
+      collection: "alice__papers",
+      owner: "alice",
+      name: "Papers 2026",
+    });
+    // The read tools are only offered while tools are enabled.
+    expect(params.settings.enable_tools).toBe(true);
+  });
+
+  it("accepts a bare collection reference and drops an unusable one", async () => {
+    const { result } = renderHook(() => useImportConversation());
+
+    await act(async () => {
+      await result.current(
+        { title: "Shared", arcana_share: "alice__papers" },
+        true,
+      );
+    });
+    expect(
+      dbMocks.createConversation.mock.calls[0][0].settings.arcana_share,
+    ).toEqual({
+      collection: "alice__papers",
+      owner: "alice",
+      name: "papers",
+    });
+
+    dbMocks.createConversation.mockClear();
+    await act(async () => {
+      await result.current(
+        { title: "Broken", arcana_share: { collection: "papers" } },
+        true,
+      );
+    });
+    expect(
+      dbMocks.createConversation.mock.calls[0][0].settings.arcana_share,
+    ).toBeUndefined();
+  });
 });
