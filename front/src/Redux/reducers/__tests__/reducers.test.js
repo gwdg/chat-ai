@@ -35,6 +35,10 @@ import userSettingsReducer, {
   setAdvancedMode,
   selectMcpToolPolicy,
   setMcpToolPolicy,
+  setFeedbackEnabled,
+  selectFeedbackEnabled,
+  setFeedbackSendTranscripts,
+  selectFeedbackSendTranscripts,
   addE2eeKey,
   updateE2eeKey,
   removeE2eeKey,
@@ -182,6 +186,22 @@ describe("user settings reducer", () => {
     expect(selectGlobalMcpServers({ user_settings: state })).toEqual([]);
   });
 
+  it("returns the same MCP server list for the same state", () => {
+    // react-redux warns when a selector returns a new reference for an
+    // unchanged state; the filtered list has to be memoized.
+    let state = init(userSettingsReducer);
+    state = userSettingsReducer(
+      state,
+      addMcpServer({ id: "mcp-1", name: "Files", url: "http://localhost:9000/mcp" }),
+    );
+    const first = selectGlobalMcpServers({ user_settings: state });
+    expect(selectGlobalMcpServers({ user_settings: state })).toBe(first);
+
+    const empty = init(userSettingsReducer);
+    const firstEmpty = selectGlobalMcpServers({ user_settings: empty });
+    expect(selectGlobalMcpServers({ user_settings: empty })).toBe(firstEmpty);
+  });
+
   it("imports only MCP servers that have an address", () => {
     let state = init(userSettingsReducer);
     state = userSettingsReducer(
@@ -303,8 +323,59 @@ describe("user settings reducer", () => {
     expect(selectMcpToolPolicy({ user_settings: {} })).toBe("ask");
   });
 
-  it("toggles diagram rendering preferences and imports them", () => {
+  it("lets an explicit feedback choice override the deployment module", () => {
+    vi.stubEnv("VITE_MODULE_FEEDBACK", "false");
     let state = init(userSettingsReducer);
+    expect(state.feedback_enabled).toBeNull();
+    // Unset follows the deployment, which has the module off here.
+    expect(selectFeedbackEnabled({ user_settings: state })).toBe(false);
+
+    state = userSettingsReducer(state, setFeedbackEnabled(true));
+    expect(state.feedback_enabled).toBe(true);
+    expect(selectFeedbackEnabled({ user_settings: state })).toBe(true);
+
+    state = userSettingsReducer(state, setFeedbackEnabled(false));
+    expect(selectFeedbackEnabled({ user_settings: state })).toBe(false);
+
+    // An import keeps a boolean and an explicit null; anything else is ignored.
+    state = userSettingsReducer(
+      state,
+      importUserSettings({ feedback_enabled: null }),
+    );
+    expect(state.feedback_enabled).toBeNull();
+    state = userSettingsReducer(
+      state,
+      importUserSettings({ feedback_enabled: "yes" }),
+    );
+    expect(state.feedback_enabled).toBeNull();
+    vi.unstubAllEnvs();
+  });
+
+  it("sends chat transcripts by default and can stop them", () => {
+    let state = init(userSettingsReducer);
+    expect(state.feedback_send_transcripts).toBe(true);
+    expect(selectFeedbackSendTranscripts({ user_settings: state })).toBe(true);
+
+    state = userSettingsReducer(state, setFeedbackSendTranscripts(false));
+    expect(selectFeedbackSendTranscripts({ user_settings: state })).toBe(false);
+
+    // An import keeps a boolean and ignores anything else.
+    state = userSettingsReducer(
+      state,
+      importUserSettings({ feedback_send_transcripts: "no" }),
+    );
+    expect(selectFeedbackSendTranscripts({ user_settings: state })).toBe(false);
+    state = userSettingsReducer(
+      state,
+      importUserSettings({ feedback_send_transcripts: true }),
+    );
+    expect(selectFeedbackSendTranscripts({ user_settings: state })).toBe(true);
+
+    // A profile stored before the setting existed follows the default (on).
+    expect(selectFeedbackSendTranscripts({ user_settings: {} })).toBe(true);
+  });
+
+  it("toggles diagram rendering preferences and imports them", () => {    let state = init(userSettingsReducer);
     expect(selectRenderGraphviz({ user_settings: state })).toBe(false);
     expect(selectRenderVega({ user_settings: state })).toBe(false);
     expect(selectRenderChartjs({ user_settings: state })).toBe(false);

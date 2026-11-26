@@ -10,6 +10,7 @@ import {
   resolveModuleValue,
 } from "../deployment";
 import minimal from "../deployments/minimal/index.json";
+import gaia from "../deployments/gaia/index.json";
 
 describe("deployment profile", () => {
   it("loads the default deployment", () => {
@@ -69,5 +70,21 @@ describe("minimal deployment", () => {
 
   it("still has a brand", () => {
     expect(minimal.brands.default).toBe("chat-ai");
+  });
+});
+
+describe("gaia deployment", () => {
+  it("enables the feedback module on top of the shared defaults", () => {
+    // Answer ratings and conversation analysis are a GAIA feature; every other
+    // deployment keeps the opt-in default (`resolveModuleValue` untouched).
+    expect(resolveModuleValue(gaia, "feedback", false)).toBe(true);
+    expect(resolveModuleValue({}, "feedback", false)).toBe(false);
+  });
+
+  it("switches memories off", () => {
+    // GAIA does not collect memories, so the Memories tab, the per-chat memory
+    // mode and the Meta chat's memory tools must not appear there.
+    expect(resolveFeature(gaia, "memories")).toBe(false);
+    expect(resolveFeature({}, "memories")).toBe(true);
   });
 });

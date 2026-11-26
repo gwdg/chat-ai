@@ -6,6 +6,7 @@ import { useSyncConversation } from "../hooks/useSyncConversation";
 import { useSendMessage } from "../hooks/useSendMessage";
 import { usePendingPrompt } from "../hooks/usePendingPrompt";
 import { useConversationSummaries } from "../hooks/useConversationSummaries";
+import { useFeedbackConversationSync } from "../hooks/useFeedbackConversationSync";
 import { useAgents } from "../agents/agentStore";
 import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
 import { useUpdateUserData } from "../hooks/useUpdateUserData";
@@ -111,6 +112,9 @@ export default function ChatPage() {
   });
 
   useConversationSummaries({ localState, conversationId });
+  // Sends the conversation for analysis after a finished turn, when the
+  // deployment's feedback module is on.
+  useFeedbackConversationSync(localState);
 
   useEffect(() => {
     const onPreview = (event: Event) => {
@@ -175,7 +179,12 @@ export default function ChatPage() {
         <div className="flex min-h-0 min-w-0 flex-1 gap-2">
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             {localState?.persona && (
-              <PersonaChatBanner persona={localState.persona} />
+              <PersonaChatBanner
+                persona={localState.persona}
+                localState={localState}
+                setLocalState={setLocalState}
+                sendMessage={sendMessage}
+              />
             )}
             <div className="min-h-0 flex-1">
               <Conversation

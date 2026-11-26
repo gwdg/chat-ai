@@ -15,6 +15,7 @@ import {
   selectTimeout,
   selectMcpToolPolicy,
 } from "../Redux/reducers/userSettingsReducer";
+import { isFeatureEnabled } from "../config/deployment";
 
 export function useSendMessage() {
   const dispatch = useDispatch();
@@ -43,6 +44,9 @@ export function useSendMessage() {
           ? Number(override)
           : memoryMode;
 
+    // A deployment or brand without the memories feature gets neither recall nor
+    // learning, even if a stored profile still carries a memory mode.
+    const memoriesEnabled = isFeatureEnabled("memories");
     const groupOverride = localState?.settings?.memory_group_override;
     const requestedGroup =
       groupOverride && groupOverride !== "default"
@@ -61,7 +65,7 @@ export function useSendMessage() {
       await sendMessage({
         localState,
         setLocalState,
-        memories: groupMemories,
+        memories: memoriesEnabled ? groupMemories : [],
         globalMcpServers,
         mcpToolPolicy,
         dispatch,
@@ -69,8 +73,8 @@ export function useSendMessage() {
         notifyError,
         notifySuccess,
         timeout,
-        memoryMode: effectiveMemoryMode,
-        memoryGroupId: effectiveMemoryGroup,
+        memoryMode: memoriesEnabled ? effectiveMemoryMode : 0,
+        memoryGroupId: memoriesEnabled ? effectiveMemoryGroup : "default",
         suggestUserPrompts,
         formSubmission,
         setTitleOnce,

@@ -81,10 +81,6 @@ async function* chatCompletions (
       params.arcana = conversation.settings.arcana;
     }
 
-    if (conversation.settings?.feedback) {
-      params.feedback = conversation.settings.feedback;
-    }
-
     // Define openai object to call backend
     const openai = createBackendClient(timeout);
 
@@ -112,8 +108,12 @@ async function* chatCompletions (
           throw err;
       }
       try {
+        // `stream_options.include_usage` makes the backend close the stream with a
+        // usage-only chunk that carries no choices. It must still be yielded, or
+        // the turn loses its token counts and every such chunk logs a warning.
+        const choice = chunk?.choices?.[0];
         if (!completed) {
-          answer += chunk.choices[0].delta?.content || ""
+          answer += choice?.delta?.content || ""
           // yield (chunk.choices[0].delta)
           yield chunk
         } else {
@@ -123,7 +123,7 @@ async function* chatCompletions (
             usage: chunk?.usage || null
           };
         }
-        if (chunk?.choices?.[0]?.finish_reason === 'stop') {
+        if (choice?.finish_reason === 'stop') {
           completed = true
         }
       }

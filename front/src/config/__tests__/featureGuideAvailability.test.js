@@ -9,6 +9,7 @@ const state = vi.hoisted(() => ({
   agents: true,
   arcanas: true,
   feedback: false,
+  receiver: false,
   speech: false,
   sync: false,
   features: {},
@@ -22,6 +23,14 @@ vi.mock("../../utils/modules.js", () => ({
   isFeedbackEnabled: () => state.feedback,
   isSpeechEnabled: () => state.speech,
   isSyncEnabled: () => state.sync,
+}));
+
+// The feedback controls exist only when the module is on *and* the deployment
+// has a receiver, so one flag is not enough to render the guide's targets.
+vi.mock("../../apis/feedback.js", () => ({
+  feedbackEndpoint: () => (state.receiver ? "http://receiver.test/feedback" : ""),
+  isFeedbackReportEnabled: () => state.receiver,
+  isChatFeedbackEnabled: () => state.feedback && state.receiver,
 }));
 
 vi.mock("../deployment.js", () => ({
@@ -46,6 +55,7 @@ const reset = () => {
   state.agents = true;
   state.arcanas = true;
   state.feedback = false;
+  state.receiver = false;
   state.speech = false;
   state.sync = false;
   state.features = {};
@@ -116,6 +126,10 @@ describe("feature guide availability", () => {
     state.feedback = true;
     state.speech = true;
     state.sync = true;
+    // The module alone is not enough: without a receiver the controls (and so
+    // the guide's targets) are not rendered.
+    expect(isFeatureGuideAvailable("feedback")).toBe(false);
+    state.receiver = true;
     expect(isFeatureGuideAvailable("feedback")).toBe(true);
     expect(isFeatureGuideAvailable("speech_output")).toBe(true);
     expect(isFeatureGuideAvailable("sync_setup")).toBe(true);

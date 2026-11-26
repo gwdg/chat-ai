@@ -9,6 +9,7 @@ import {
   FeedbackError,
   MAX_FEEDBACK_SCREENSHOTS,
   MAX_FEEDBACK_SCREENSHOT_BYTES,
+  feedbackConversationIdFromRoute,
   submitFeedbackReport,
 } from "../../apis/feedback";
 import { useToast } from "../../hooks/useToast";
@@ -55,8 +56,14 @@ export default function BugReportModal({ isOpen, onClose }) {
 
   const context = useMemo(() => {
     if (typeof window === "undefined") return {};
+    const route = window.location.pathname + window.location.search;
+    const conversationId = feedbackConversationIdFromRoute(route);
     return {
-      route: window.location.pathname + window.location.search,
+      route,
+      // A report filed inside a chat names that chat, so the receiver can file
+      // it with the chat's transcript and ratings instead of dropping it from
+      // the export as "no chat id".
+      ...(conversationId ? { conversation_id: conversationId } : {}),
       user_agent: window.navigator?.userAgent ?? "",
       app_version: packageJson.version,
     };
@@ -121,6 +128,7 @@ export default function BugReportModal({ isOpen, onClose }) {
         email: email.trim(),
         screenshots,
         context,
+        conversationId: context.conversation_id,
       });
       setSent(true);
       notifySuccess(t("bug_report.success"));

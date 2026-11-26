@@ -128,8 +128,9 @@ lint in your verification loop until that is fixed, and don't report it as passi
 `src/test/setup.js`). Put tests next to the code as `*.test.js|jsx|ts|tsx`. `back` has no suite
 either (`npm test` is still `exit 1`), only standalone files run with `node --test`: `test-bridge.mjs`
 (the bridge host protocol), `test-bridge-direct.mjs` (a direct agent end to end, with an opt-in live
-leg — `npm run test:bridge` / `test:bridge-direct`), `test-bridge-resources.mjs` (MCP resources) and
-`test-remote-files.mjs`. `.github/` contains only issue templates, so there is no
+leg — `npm run test:bridge` / `test:bridge-direct`), `test-bridge-resources.mjs` (MCP resources),
+`test-remote-files.mjs` and `test-feedback.mjs` (`npm run test:feedback`, the `/feedback` relay
+end to end against a dummy receiver). `.github/` contains only issue templates, so there is no
 CI. A passing build or unit test is not evidence that the full UI works; exercise changes in a
 browser when behaviour matters. **Include tests with new features:** add at least one focused
 `*.test.js|jsx|ts|tsx` covering the new behavior, plus regression coverage for bugs you fix.
@@ -293,11 +294,28 @@ restart. Read values via `import.meta.env.VITE_*`; they arrive as strings, hence
 `apis/feedback.js#feedbackEndpoint()` returns it, and `isFeedbackReportEnabled()` guards the
 footer's bug-report button and the `bug_report` feature guide's availability, so a deployment
 without a receiver shows no dead entry point. The browser posts GAIA's multipart shape (`payload`
-JSON plus up to three `screenshots`) to it; `back` `/feedback` forwards the body to
-`feedbackEndpoint` from `back.json` (with the caller's identity headers and an optional
-`feedbackToken`), because the receiver's address and token must not ship in the bundle. An unset
-`feedbackEndpoint` makes the route answer 501, which the dialog turns into a "copy the report"
-fallback.
+JSON plus up to three `screenshots`) to it. Two receivers exist, and the value names one of them:
+
+- **`back`** serves `/feedback` and forwards the body to `feedbackEndpoint` from `back.json` (with
+  the caller's identity headers and an optional `feedbackToken`), because the receiver's address and
+  token must not ship in the bundle. An unset `feedbackEndpoint` makes the route answer 501, which
+  the dialog turns into a "copy the report" fallback.
+- **The SAIA registry tunnel**, exactly like `saia-fs` (§4.31). `saia-feedback` registers a
+  connector and the registry proxies any path per service
+  (`/services/saia-feedback/<path>`), so **the engine has no feedback route**: nothing is added to
+  `chat_ai_ui_back.py` and nothing is written into the engine's database. A deployment forwards an
+  app-visible, same-origin path (`<backend>/saia-feedback`) to that tunnel and stamps
+  `x-auth-claim-uid` from the OIDC user it authenticated; `feedbackPath` then names that path plus
+  `/feedback`. A stack without the hop (the local test stack) sets `feedbackPath` to the tunnel
+  itself, e.g. `http://localhost:5000/services/saia-feedback/feedback`, carries `x-auth-claim-uid` in
+  `fakeAuthHeaders`, and relies on `saia-feedback`'s CORS default (loopback origins) — that direct
+  call is the only case where the browser names the registry.
+
+The receiver reads the caller as `x-auth-claim-uid` (falling back to `x-consumer-custom-id`), because
+`saia-feedback` — like `saia-fs` — reads no other identity header. Which arcana a report lands in is
+the receiver's decision, not the app's: `saia-feedback`'s `DEFAULT_ARCANA` accepts an `owner/arcana`
+ref (e.g. `gwdg/chat-ai`), files every submission into that team arcana, and creates the folder at
+startup.
 
 `userSettings` maps to `VITE_USER_SETTINGS` (JSON) and seeds the Redux `user_settings` store through
 `Redux/reducers/userSettingsReducer.jsx#getDefaultUserSettings()`, which reuses the validation of a
@@ -632,10 +650,14 @@ with a brief highlight. Its tabs are Profile, Usage (`UsageSettings.jsx` — the
 organization limits plus the sidebar switch), Chat, Advanced (`AdvancedModePreference` and
 `RenderingPreferences`, including the reasoning-streaming switch), Memories, Encryption and Data;
 every rendering setting lives in Advanced, never in Chat. Profile is itself
-`ProfileSettings.jsx` with two sections, **User** (`UserInfoContainer`) and **Institution**
-(`InstituteSection`, brand data that also renders while `/user` is loading), and the Institution
-section is absent for a brand that neither describes itself nor narrows anything. `get_user_settings`
-returns the module flags and global preferences.
+`ProfileSettings.jsx` with four sections: **User** (`UserInfoContainer`), **Institution**
+(`InstituteSection`, brand data that also renders while `/user` is loading), **Feedback**
+(the switch for `feedback_enabled` above the collected-feedback card, only while a receiver is
+configured) and **Consents** (`BrandConsentSettings`, the brand's `consentGate` switches). The
+Institution section is absent for a brand that neither describes itself nor narrows anything,
+Feedback without `feedbackPath`, and Consents for a brand without a `consentGate`; the consent
+switches are not in the Advanced tab.
+`get_user_settings` returns the module flags and global preferences.
 
 Tutorials and use cases start through the `start_tutorial` / `start_use_case` tools, which dispatch
 `chatai:start-feature-guide` / `chatai:start-use-case`, or through inline links
@@ -1299,6 +1321,13 @@ iframe with an opaque origin and a Strict/Relaxed switch at the top. Strict (the
 document's own CSS; relaxed adds `allow-scripts` so an interactive file behaves like an interactive
 HTML block. Both modes take the CSP from `utils/htmlPreview.js#buildHtmlCsp` — the same policy the
 fenced HTML block uses — and drop external references according to `html_load_external`.
+
+`autoHeight` (used by the course learning page embedded in a chat reply) instead sizes the frame to
+the document: the frame's opaque origin means the parent cannot read its size, so a reporter script
+appended after sanitization posts the height of the body's in-flow children up and the frame follows
+it. It cannot use `scrollHeight` (that never drops below the frame's own viewport, so a page would only
+grow) and it only works while scripts run, so `heightClass` stays the height until the first
+measurement and in strict mode.
 
 The tree selects a **set**: a plain click selects one row, Shift extends from the row clicked last
 (the DOM order of `[data-row-key]`), and Ctrl/Cmd toggles one row in or out of it. `selection` holds a
@@ -2125,18 +2154,55 @@ while editing:
   `config/brandPolicy.js` it may switch modules/features off (`restrictions.modules` /
   `.features`), fix or allowlist the models (`restrictions.models`) and forbid the four
   external capabilities (`restrictions.external`: `web_search`, `external_models`, `mcp`,
-  `external_references`). Only `false` / `"false"` / `null` is honoured, so a restriction
-  can only disable. `deployment.js` and `utils/modules.js` consult the brand, so
-  `isFeatureEnabled()` / `moduleValue()` return the effective value; enforcement lives in
+  `external_references`). It may also keep controls fixed (`restrictions.locks`:
+  `tools`, `chat_settings`, plus `model` implied by `models.fixed`) and hide the two
+  presentation-only controls (`restrictions.ui`: `model_selector`, `external_warning`);
+  only `true` locks, only `false` hides. A locked tools block is reset to the deployment
+  defaults in `getDefaultSettings`, a fixed model narrows the model list to one, and the
+  Meta chat drops `SET_CONVERSATION_SETTING` / `CREATE_CHAT` overrides for a locked key.
+  `config/branding/gaia/brand.json` is the worked example: it pins
+  `deepseek-v4.1-flash-1017`, locks GWDG Tools and the chat settings, and hides the model
+  control and the data-safety indicator. Only `false` / `"false"` / `null` is honoured, so
+  a restriction can only disable. `deployment.js` and `utils/modules.js` consult the brand,
+  so `isFeatureEnabled()` / `moduleValue()` return the effective value; enforcement lives in
   the request and UI paths (`useUpdateModelsData`, `getDefaultSettings`, `sendMessage`,
-  `agent/tools.ts`, `agent/mcp.ts`, `ToolsContainer`, `SidebarContent`, `ChatPreferences`,
-  `AgentPage`, `AddSourceModal`). `InstituteSection` in Profile shows the institute and
-  every narrowing, and `metaTools.js#buildSettingsLines` reports them to the Meta chat.
+  `agent/tools.ts`, `agent/mcp.ts`, `ToolsContainer`, `SettingsButton`, `SidebarContent`,
+  `ChatPreferences`, `AgentPage`, `AddSourceModal`, `WarningExternalModel`). `InstituteSection`
+  in Profile shows the institute and every narrowing, and `metaTools.js#buildSettingsLines`
+  reports them to the Meta chat.
   Brand objects are otherwise presentation only (`BrandLogo`, `BrandHeader`,
   `BrandDisclaimer`, `BrandChatWarning`, `AiServicesMenu`, `LogoContainer`, `useTabTitle`,
   `CollapsibleFooter`, the `brand-sidebar` surface). By exception a brand may own its own
   disclaimers (`disclaimer`, `chatDisclaimer`) and default system prompt (`systemPrompt`)
   — the admin approved these on 2026-11-19. Never let a brand value turn something on.
+- **A brand may ship its own UI and app-side chat tools from its folder.** This is the
+  narrow exception to "presentation only": `brand.json` sets `ui.<key>: true`, and
+  `config/branding/<folder>/features/<feature-key>/index.js` exports
+  `{ key, fences?, personaBanner?, chatTool? }`. `config/brandFeatures.js` globs those
+  folders, keeps only features the **merged** profile enables (`ui.<key> === true`, so
+  `extends` inherits flag and module together) and exposes `brandFence`,
+  `brandPersonaBanners`, `brandChatTool` and `brandFeatureFlag`. The gate uses the
+  module's declared `key`, not the folder name (`course-material` vs `course_material`).
+  `MarkdownRenderer` checks `brandFence(language)` before the built-in fences (and its
+  `pre()` bypass); `PersonaChatBanner` renders `brandPersonaBanners()`. A contributed
+  `chatTool` runs inside the app in a bounded function-tool loop on the plain chat path
+  (`utils/sendMessage.jsx`) and as a pi `AgentTool` in `agent/runAgent.ts`;
+  `utils/brandChatTools.js` returns nothing for a model without tool support, a
+  `speech` turn, or a request that goes to the tool gateway (`enable_tools`), which drops
+  function tools. A brand still cannot add a module, feature flag, route or setting; its
+  `features/` code is presentation plus app-side tools only. The GAIA course material
+  (`branding/gaia/features/course-material/`) is the worked example: one folder registers a
+  quiz card and a learning-page block (two fences) and both of their tools through
+  `combineTools`. They are GAIA files, never generic `components/` code, and both tool results
+  carry only ids: the quiz result must not include answer options, `correct` or
+  `explanation`, and the page result must not include the page's HTML. The quiz card keeps the
+  answer the user gave on the assistant message (`meta.quizAnswers[questionId]`, through the
+  `AssistantMessageContext` a fence reads), so it survives a reload and travels in the sync/backup
+  payload; the course page's practice quiz stays in memory. A reply streamed in the open tab has no
+  `id` until the store writes its row (and the next save can assign another one), so that context
+  identifies the message by `id` when it has one and by its position in `messages` otherwise
+  (`resolveMessageIndex`); keying it on `id` alone silently drops everything a fence stores for the
+  reply currently on screen.
 - **The brand's model/feature policy is read from module state.** `BrandProvider` is
   mounted in `main.jsx`; it calls `setCurrentBrand(brand)` during render and `App` calls
   `useBrand()` so a claim-resolved brand re-renders the tree. Non-React accessors read

@@ -14,8 +14,9 @@ import { isAgentsEnabled } from "../utils/modules";
  *
  * The lists come from the same live queries the sidebar uses, and empty
  * sections are dropped, so an entry never points at a page a module switched
- * off or at a link that leads nowhere. `chat-ai` has no course model, so the
- * "courses" section GAIA's own sitemap renders does not apply here.
+ * off or at a link that leads nowhere. Course pages live in another repository
+ * and are listed only inside the persona library, so this page does not
+ * enumerate them.
  */
 export default function SitemapPage() {
   const { t } = useTranslation();

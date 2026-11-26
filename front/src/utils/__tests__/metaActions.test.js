@@ -3,6 +3,7 @@ import {
   getMetaActionProposals,
   stripMetaActionMarkers,
 } from "../metaActions";
+import { getBrandProfile, setCurrentBrand } from "../../config/brands";
 
 describe("Meta chat action markers", () => {
   it("parses chat, topic, settings, MCP, and memory proposals", () => {
@@ -204,6 +205,18 @@ describe("Meta chat action markers", () => {
     });
   });
 
+  it("parses the whole-transcript feedback preference", () => {
+    const proposals = getMetaActionProposals(
+      [
+        '[[SET_SETTING:{"key":"feedback_send_transcripts","value":false}]]',
+        '[[SET_SETTING:{"key":"feedback_send_transcripts","value":"yes"}]]',
+      ].join("\n"),
+    );
+    expect(proposals).toEqual([
+      { type: "setting", key: "feedback_send_transcripts", value: false },
+    ]);
+  });
+
   it("accepts the reasoning streaming preference", () => {
     const proposals = getMetaActionProposals(
       '[[SET_SETTING:{"key":"collapse_reasoning_while_streaming","value":true}]]',
@@ -224,6 +237,23 @@ describe("Meta chat action markers", () => {
       '[[RENAME_CHAT:{"id":"","title":"No id"}]]',
     ].join("\n");
     expect(getMetaActionProposals(text)).toEqual([]);
+  });
+
+  it("drops conversation settings a brand has fixed", () => {
+    setCurrentBrand(getBrandProfile("gaia"));
+    try {
+      const proposals = getMetaActionProposals(
+        [
+          '[[SET_CONVERSATION_SETTING:{"target":"all","key":"temperature","value":0.7}]]',
+          '[[SET_CONVERSATION_SETTING:{"id":"c1","key":"browser_storage","value":true}]]',
+          '[[SET_CONVERSATION_SETTING:{"id":"c1","key":"model","value":"another-model"}]]',
+        ].join("\n"),
+      );
+      // The Meta chat must not become the way around a control the brand removed.
+      expect(proposals).toEqual([]);
+    } finally {
+      setCurrentBrand(null);
+    }
   });
 
   it("strips all action markers from rendered text", () => {

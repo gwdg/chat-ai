@@ -62,8 +62,11 @@ export default function ThemeToggle() {
     dispatch(setDarkMode());
   };
 
+  // The footer sits in the last grid row, flush with the bottom of the viewport.
+  // A downward menu (daisyUI's default) would open entirely below the screen, so
+  // the light/dark switch would look dead. Open upward instead.
   return (
-    <div className="dropdown dropdown-end" data-guide="theme-toggle">
+    <div className="dropdown dropdown-top dropdown-end" data-guide="theme-toggle">
       <div
         tabIndex={0}
         role="button"
@@ -82,7 +85,7 @@ export default function ThemeToggle() {
       </div>
       <ul
         tabIndex={0}
-        className="dropdown-content menu z-50 mt-2 w-44 rounded-box border border-base-300 bg-base-100 p-1 text-sm shadow-lg"
+        className="dropdown-content menu z-50 mb-2 w-44 rounded-box border border-base-300 bg-base-100 p-1 text-sm shadow-lg"
       >
         <li>
           <button

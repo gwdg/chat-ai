@@ -31,17 +31,17 @@ import {
   isAgentEnabled,
   isAgentsEnabled,
   isArcanasEnabled,
-  isFeedbackEnabled,
   isSpeechEnabled,
   isSyncEnabled,
   isToolsEnabled,
 } from "../utils/modules.js";
 import { isFeatureEnabled } from "./deployment.js";
-import { hasBrandInstitute } from "./brandPolicy.js";
+import { hasBrandInstitute, isBrandLocked, isBrandUiVisible } from "./brandPolicy.js";
 import { canInstallApp } from "../utils/installPrompt.js";
-import { isFeedbackReportEnabled } from "../apis/feedback.js";
+import { isFeedbackReportEnabled, isChatFeedbackEnabled } from "../apis/feedback.js";
 import { currentBrand } from "./brands.js";
 import { brandConsentGate } from "./consent.js";
+import { brandFeatureFlag } from "./brandFeatures.js";
 
 export const featureGuides = {
   workspace_overview: {
@@ -1067,6 +1067,67 @@ export const featureGuides = {
       },
     ],
   },
+  course_view: {
+    titleKey: "feature_guide.course_view.title",
+    prompt:
+      "Open the persona library with the Chat with Persona button in the sidebar, choose the Courses folder, and pick a course. A course page opens with two modes: Learn (skills browser, practice quiz, self-learning pages) and Review (the course's own lecturer pages plus coverage numbers). The course tutor chat starts from the same page.",
+    keywords: [
+      "course",
+      "courses",
+      "kurs",
+      "lernseite",
+      "quiz",
+      "üben",
+      "practice",
+      "c programming",
+      "c programmierung",
+    ],
+    steps: [
+      {
+        target: '[data-guide="import-persona"]',
+        textKey: "feature_guide.course_view.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="persona-courses"]',
+        textKey: "feature_guide.course_view.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="persona-course-badge"]',
+        textKey: "feature_guide.course_view.step3",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
+  course_quiz_chat: {
+    titleKey: "feature_guide.course_quiz_chat.title",
+    prompt:
+      "Open a course chat and click Ask for a quiz question in the course chat banner. The tutor calls its quiz tool and answers with one interactive quiz question from the course, which you answer and check right in the chat. The tutor decides which question to show; it can also offer one when you ask to practise a skill. Ask the same tutor to explain a skill and it embeds one of the course's learning pages (Lernseiten) in its reply, where you can read and interact with it without leaving the chat.",
+    keywords: [
+      "quiz",
+      "quizfrage",
+      "üben",
+      "ueben",
+      "practice question",
+      "learning page",
+      "lernseite",
+      "course chat",
+      "kurs chat",
+    ],
+    steps: [
+      {
+        target: '[data-guide="course-quiz-ask"]',
+        textKey: "feature_guide.course_quiz_chat.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="course-page-ask"]',
+        textKey: "feature_guide.course_quiz_chat.step2",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
   share_conversation: {
     titleKey: "feature_guide.share_conversation.title",
     prompt:
@@ -1313,7 +1374,7 @@ export const featureGuides = {
   brand_consent: {
     titleKey: "feature_guide.brand_consent.title",
     prompt:
-      "Review or change the voluntary consents of this service. Open user settings, choose the Advanced tab, and use the consent switches; the terms themselves are linked there.",
+      "Review or change the voluntary consents of this service. Open user settings, choose the Profile tab and its Consents section, and use the consent switches; the terms themselves are linked there.",
     keywords: [
       "consent",
       "consents",
@@ -1330,8 +1391,8 @@ export const featureGuides = {
         completeOnTargetClick: true,
       },
       {
-        target: '[data-guide="settings-tab-advanced"]',
-        prepare: openUserSettings,
+        target: '[data-guide="profile-subtab-consents"]',
+        prepare: () => selectProfileSection("consents"),
         textKey: "feature_guide.brand_consent.step2",
         completeOnTargetClick: true,
       },
@@ -1656,13 +1717,35 @@ export const featureGuides = {
     ],
   },
   feedback: {
-    titleKey: "feature_guide.feedback.title",    prompt:
-      "Rate an assistant message with the feedback buttons when the feedback module is enabled.",
-    keywords: ["feedback", "rate answer", "thumbs up", "thumbs down"],
+    titleKey: "feature_guide.feedback.title",
+    prompt:
+      "Rate an assistant message with the thumbs-up/down buttons; under Profile → Feedback, switch answer ratings and chat transcripts on or off, and review or delete everything this account sent to the feedback service. Chat transcripts are sent as only the new messages, appended to the stored chat.",
+    keywords: [
+      "feedback",
+      "rate answer",
+      "thumbs up",
+      "thumbs down",
+      "delete feedback",
+      "conversation analysis",
+      "chat transcript",
+      "delta",
+    ],
     steps: [
       {
         target: '[data-guide="feedback"]',
         textKey: "feature_guide.feedback.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="feedback-preference"]',
+        prepare: () => selectProfileSection("feedback"),
+        textKey: "feature_guide.feedback.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="profile-feedback-history"]',
+        prepare: () => selectProfileSection("feedback"),
+        textKey: "feature_guide.feedback.step3",
         completeOnTargetClick: true,
       },
     ],
@@ -1971,7 +2054,16 @@ export const featureGuides = {
 
 // The Tools panel is where every tool guide points. It exists for the tools
 // module, and agent mode renders the same panel with the agent's own toggles.
-const isToolPanelAvailable = () => isToolsEnabled() || isAgentEnabled();
+// A brand that locks GWDG Tools removes the panel entirely
+// (components/Prompt/ToolsButton.jsx#isBrandLocked), so no tool guide can run.
+const isToolPanelAvailable = () =>
+  !isBrandLocked("tools") && (isToolsEnabled() || isAgentEnabled());
+const modelIsSelectable = () =>
+  !isBrandLocked("model") && isBrandUiVisible("model_selector");
+// The chat settings panel (temperature, top_p, reasoning effort, memory mode,
+// the system prompt) is a single button; a brand that fixes those settings hides
+// it (components/Header/SettingsButton.jsx#isBrandLocked).
+const chatSettingsEditable = () => !isBrandLocked("chat_settings");
 const metaChatAvailable = () => isFeatureEnabled("meta_chat");
 
 // A guided tour highlights real elements. When a deployment switches a module or
@@ -2000,6 +2092,9 @@ export const FEATURE_GUIDE_AVAILABILITY = {
   session_workspaces: () => isAgentsEnabled(),
   agent_workspace_access: () => isAgentsEnabled(),
   pin_agent: () => isAgentsEnabled(),
+  select_model: modelIsSelectable,
+  conversation_settings: chatSettingsEditable,
+  share_conversation: chatSettingsEditable,
   tools_overview: () => isToolPanelAvailable(),
   web_search: () => isToolPanelAvailable(),
   image_generation: () => isToolPanelAvailable(),
@@ -2009,15 +2104,18 @@ export const FEATURE_GUIDE_AVAILABILITY = {
   arcana: () => isToolPanelAvailable() && isArcanasEnabled(),
   arcana_tools: () => isToolPanelAvailable() && isArcanasEnabled(),
   mcp_server: () => isFeatureEnabled("mcp_servers") && isToolPanelAvailable(),
-  feedback: () => isFeedbackEnabled(),
+  feedback: () => isChatFeedbackEnabled(),
   // The install button renders only while the browser offers an install prompt;
   // a tour whose target is missing would never start, so the guide follows it.
   pwa_install: () => canInstallApp(),
   bug_report: () => isFeedbackReportEnabled(),
   speech_output: () => isSpeechEnabled(),
   e2ee: () => isFeatureEnabled("e2ee"),
+  memories: () => isFeatureEnabled("memories"),
   advanced_mode: () => isAgentsEnabled() || isFeatureEnabled("mcp_servers"),
   sync_setup: () => isSyncEnabled(),
+  // The quiz card ships with the brand feature that contributes its tool.
+  course_quiz_chat: () => brandFeatureFlag("course_material"),
   // The consent section exists only for a brand that declares a consent gate.
   brand_consent: () => Boolean(brandConsentGate(currentBrand())),
   // The Institution screen renders only for a brand that describes itself or
@@ -2090,7 +2188,7 @@ export const FEATURE_CATEGORIES = {
     "close_chat",
   ],
   workspace: ["workspace_overview", "manage_chat_data", "pin_workspace", "pin_agent", "workspace_edit_storage", "workspace_clone", "workspace_upload", "workspace_multiselect", "arcana_filesystem", "workspace_saia_fs", "attach_from_workspace", "remote_agents", "agent_recovery", "close_group_sessions", "session_workspaces", "agent_workspace_access"],
-  personas: ["chat_with_persona"],
+  personas: ["chat_with_persona", "course_view", "course_quiz_chat"],
   settings: [
     "settings_overview",
     "institution",

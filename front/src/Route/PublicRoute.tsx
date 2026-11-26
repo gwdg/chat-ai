@@ -14,6 +14,7 @@ import AgentPage from "../Pages/AgentPage";
 import ToolFormDemoPage from "../Pages/ToolFormDemoPage";
 import BrandPage from "../Pages/BrandPage";
 import SitemapPage from "../Pages/SitemapPage";
+import CoursePage from "../Pages/CoursePage";
 import { isAgentsEnabled } from "../utils/modules";
 import { isFeatureEnabled } from "../config/deployment";
 
@@ -28,6 +29,7 @@ const PublicRoute = () => {
         element={<BrandPage page="accessibility" titleKey="accessibility.title" />}
       />
       <Route path="/sitemap" element={<SitemapPage />} />
+      <Route path="/course/:courseId" element={<CoursePage />} />
       {isFeatureEnabled("meta_chat") && (
         <Route path="/meta" element={<MetaChatPage />} />
       )}

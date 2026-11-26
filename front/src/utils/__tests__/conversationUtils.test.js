@@ -71,6 +71,24 @@ describe("conversation defaults", () => {
     expect(getDefaultSystemPrompt()).toBe("You are a helpful assistant.");
   });
 
+  it("fixes the model and the tools for a brand that locks them", () => {
+    setCurrentBrand(getBrandProfile("gaia"));
+    try {
+      const settings = getDefaultSettings({
+        enable_tools: true,
+        model: { id: "qwen3-30b-a3b-instruct-2507", name: "Qwen" },
+        tools: { web_search: true, image_generation: false },
+      });
+      expect(settings.model.id).toBe("deepseek-v4.1-flash-1017");
+      // The deployment's defaults replace a stored choice, not the user's.
+      expect(settings.enable_tools).toBe(false);
+      expect(settings.tools.web_search).toBe(false);
+      expect(settings.tools.image_generation).toBe(true);
+    } finally {
+      setCurrentBrand(null);
+    }
+  });
+
   it("uses the active brand's system prompt for a new conversation", () => {
     setCurrentBrand(getBrandProfile("mpg"));
     try {

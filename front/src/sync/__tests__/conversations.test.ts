@@ -173,6 +173,47 @@ describe("conversations namespace", () => {
     await deleteConversation(id);
   });
 
+  it("carries per-message metadata, so a pulled chat keeps its quiz answers", async () => {
+    const id = "sync-conversation-meta";
+    const quizAnswers = {
+      "question-1": { selection: [1], checked: true, text: "" },
+    };
+    await createConversation({ id, title: "Meta", settings, messages: [] });
+    await updateConversation(
+      id,
+      {
+        title: "Meta",
+        messages: [
+          {
+            id: "m1",
+            idx: 0,
+            role: "assistant",
+            content: [{ type: "text", text: "question" }],
+            createdAt: 1,
+            meta: { quizAnswers },
+          },
+        ],
+      },
+      true,
+    );
+
+    const namespace = createConversationsNamespace();
+    const record: any = (await namespace.list()).find((entry) => entry.id === id);
+    expect(record.payload.messages[0].meta).toEqual({ quizAnswers });
+
+    await deleteConversation(id);
+    await namespace.apply(remoteOf(record), {
+      now: Date.now(),
+      deviceId: "dev-b",
+      readAsset: assetReader(record),
+    });
+
+    const restored = await getConversation(id);
+    expect(restored?.messages[0].meta).toEqual({ quizAnswers });
+
+    await deleteConversation(id);
+  });
+
   it("leaves out a file whose bytes are missing instead of a placeholder", async () => {
     const id = "sync-conversation-missing-file";
     await createConversation({ id, title: "Missing", settings, messages: [] });

@@ -1,11 +1,15 @@
 
 import { memo, useEffect } from 'react'
 import { useSelector } from 'react-redux';
+import { Lock } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import ModelSelectorSimple from "./ModelSelectorSimple";
 import ModelSelectorExtended from "./ModelSelectorExtended";
 import { useModal } from '../../modals/ModalContext';
 import { selectUserSettings } from '../../Redux/reducers/userSettingsReducer';
 import { getDefaultChatAIModel } from '../../utils/conversationUtils';
+import { isBrandLocked, isBrandUiVisible } from '../../config/brandPolicy';
+import E2eeLock from '../Others/E2eeLock';
 import type { ModelInfo } from '../../types/models';
 
 function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader = false, listOnly = false, onSelected, selectedModel: selectedModelOverride, onChange}: {modelsData: [ModelInfo], localState: any, setLocalState: any, inHeader: boolean, listOnly?: boolean, onSelected?: () => void, selectedModel?: ModelInfo | null, onChange?: (model: ModelInfo) => void}) {
@@ -15,6 +19,7 @@ function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader =
   ModelSelectorSimple.
   */
   const { openModal } = useModal();
+  const { t } = useTranslation();
   const userSettings = useSelector(selectUserSettings);
 
   // When called with an explicit selectedModel/onChange (e.g. the settings
@@ -80,6 +85,33 @@ function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader =
       setModel(fallbackModel);
     }
   }, [currentModelId, modelsData, currentConversationId, userSettings]);
+
+  // A brand may leave the model control out entirely and set the model through
+  // the deployment defaults (GAIA). Nothing is left to show or choose.
+  if (!isBrandUiVisible("model_selector")) return null;
+
+  // A brand may pin the model (config/brandPolicy.js#isBrandLocked). The chip
+  // still names it, so the user knows what answers, but there is no list and no
+  // control: the model is the institution's choice.
+  if (isBrandLocked("model")) {
+    return (
+      <div
+        className="flex min-w-0 select-none items-center gap-1.5 rounded-xl border border-base-300 bg-base-100 px-2 py-1 text-sm text-base-content/80"
+        title={t("model_selector.locked")}
+        data-guide="model-locked"
+      >
+        <Lock
+          size={13}
+          className="flex-shrink-0 text-base-content/60"
+          aria-hidden="true"
+        />
+        <span className="truncate font-medium text-base-content">
+          {selectedModel?.name || selectedModel?.id}
+        </span>
+        <E2eeLock modelId={selectedModel?.id} size={13} />
+      </div>
+    );
+  }
 
   return (
     <>

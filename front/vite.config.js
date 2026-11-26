@@ -108,10 +108,12 @@ try {
       process.env["VITE_USERDATA_ENDPOINT"] = value;
       console.log("User data path:", value);
     } else if (key == "feedbackPath") {
-      // Where the footer's bug report form posts. Empty hides the entry point;
+      // Where the footer's bug report form posts. Empty hides the entry point.
       // `back` serves `/feedback` and forwards the body to `feedbackEndpoint`
-      // from back.json, so a deployment does not put a third-party URL (or its
-      // token) in the bundle.
+      // from back.json; a SAIA deployment points this at an app-visible path
+      // that its gateway forwards to the registry's `saia-feedback` tunnel,
+      // exactly like `saia-fs`. Either way a third-party URL (and its token)
+      // stays out of the bundle.
       process.env["VITE_FEEDBACK_ENDPOINT"] = String(value ?? "");
       console.log("Feedback path:", value || "none (bug report hidden)");
     } else if (key == "apiKey") {

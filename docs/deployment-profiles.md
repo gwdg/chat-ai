@@ -40,7 +40,7 @@ Non-goals:
 | Tier | Resolved | Decides | May not change |
 | --- | --- | --- | --- |
 | **Deployment profile** | Build time | Backend, models, features, layout, default brand, brand claim rules, legal copy | — |
-| **Brand profile** | Runtime, per user | Name, logo, favicon, colours, links, footer, copy, and *narrowing* restrictions (fixed/allowed models, modules/features off, no external communication) | Enabling anything the deployment disabled; layout, routes, adding models |
+| **Brand profile** | Runtime, per user | Name, logo, favicon, colours, links, footer, copy, and *narrowing* restrictions (fixed/allowed models, modules/features off, no external communication, fixed chat settings, hidden controls) | Enabling anything the deployment disabled; layout, routes, adding models |
 
 ```
 secrets/front-chat-ai.json ─┐
@@ -92,6 +92,20 @@ front/src/config/branding/
     mark.svg
     mark-dark.svg
     favicon.ico
+  gaia/
+    brand.json               also sets "ui": { "course_material": true }
+    features/
+      course-material/        UI + chat tools that only this brand ships
+        index.js              key, fences, personaBanner, chatTool
+        CourseQuizBlock.jsx   renders a ```gaia-quiz fence
+        CoursePageBlock.jsx   renders a ```gaia-page fence
+        CourseMaterialAsk.jsx hint row + ask buttons in the persona chat banner
+        courseMaterialText.js shared search helpers
+        courseQuizPrompt.js   quiz fence parse/selection, tool result text
+        coursePagePrompt.js   page fence parse/selection, tool result text
+        courseQuizTool.ts     the show_course_quiz function tool
+        coursePageTool.ts     the show_course_page function tool
+        combineTools.ts       merges both tools into the one chatTool
   restricted/
     brand.json               generic example of a restricted brand (JSON only)
 
@@ -109,6 +123,7 @@ front/src/config/deployment.js     build-time accessors (features, layout, rules
 front/src/config/brandConfig.js    deployment's brand selection (default, field, rules)
 front/src/config/brandPolicy.js    brand restrictions: model/module/feature/external policy
 front/src/config/brands.js         brand loader, lookup + claim rules
+front/src/config/brandFeatures.js  brand-owned UI and chat tools (features/<key>/index.js)
 front/src/config/BrandProvider.jsx brand context, document/title/favicon updates
 ```
 
@@ -171,7 +186,8 @@ rejected. `mode`, `port` and `apiKey` keep their current meaning.
     "mcp_servers": true,
     "e2ee": true,
     "tutorials": true,
-    "import_git": false
+    "import_git": false,
+    "memories": true
   },
 
   "models": {
@@ -201,7 +217,10 @@ rejected. `mode`, `port` and `apiKey` keep their current meaning.
 `features` is separate from `modules` on purpose: `modules` are the coarse product
 areas that already gate routes and code paths, `features` are the finer switches
 inside an area (`web_search` inside tools, `import_git` inside workspaces).
-Existing defaults are preserved per key; see section 9.
+Existing defaults are preserved per key; see section 9. A feature also removes
+the preferences that only serve it: `features.memories: false` (as the GAIA
+profile sets) hides the Memories tab, the per-chat memory mode and the Meta
+chat's memory tools, and forces recall/learning off.
 
 The deployment names the default brand and the claim rules; what a brand looks
 like lives in its own folder, `front/src/config/branding/<folder>/brand.json`
@@ -418,11 +437,19 @@ Rules:
   `models.allowed` keeps an allowlist (neither can add a model the deployment does
   not list); `modules` and `features` disable the names used by `utils/modules.js`
   and `config/deployment.js`; `external` disables `web_search`,
-  `external_models`, `mcp` and `external_references`. The block `notice` is
-  localized and explains the narrowing in the user's words.
+  `external_models`, `mcp` and `external_references`. `locks` keeps a control
+  fixed (`tools`, `chat_settings`, and `model` implied by `models.fixed`; **only
+  `true`** locks, so a sub-brand inherits a lock and can only unlock it with
+  `false`) and `ui` hides a presentation-only control (`model_selector`,
+  `external_warning`; **only `false`** hides, so the default is visible). A locked
+  tools block is reset to the deployment defaults in `getDefaultSettings`, a fixed
+  model narrows the model list to one, and the Meta chat drops
+  `SET_CONVERSATION_SETTING` / `CREATE_CHAT` overrides for a locked key. The block
+  `notice` is localized and explains the narrowing in the user's words.
 - The restrictions are read through `config/brandPolicy.js`
   (`brandDisablesModule`, `brandDisablesFeature`, `isBrandExternalAllowed`,
-  `applyBrandModelPolicy`, `brandRestrictionSummary`) from the accessor and request
+  `applyBrandModelPolicy`, `brandRestrictionSummary`, `isBrandLocked`,
+  `isBrandUiVisible`) from the accessor and request
   paths, so enforcement does not depend on a component remembering to hide
   something: the model selector's list, the tool rows and their request payload,
   MCP server resolution, the agent bridge's MCP relay, the HTML preview's
@@ -440,6 +467,43 @@ were migrated from the old build-time `branding/mpg-ohb/` folder). A deployment
 becomes the MPG look with `"brands": { "default": "mpg" }` in its profile; for a
 visit, `?brand=MPG` (or the aliases `mpg-ohb` / `ohb`) selects it. Chat AI and
 UGOE define none of the new surfaces, so they render exactly as before.
+
+### 5.1 Brand-owned UI and chat tools
+
+A brand may ship its own presentation and its own app-side chat tools, but only
+inside its folder. `brand.json` switches them on in a `ui` object, and the code
+lives in `branding/<folder>/features/<feature-key>/index.js`:
+
+```jsonc
+// brand.json
+{ "ui": { "course_material": true } }
+```
+
+```js
+// features/course-material/index.js
+export default {
+  key: "course_material",          // the `ui` flag, not necessarily the folder name
+  fences: { "gaia-quiz": CourseQuizBlock, "gaia-page": CoursePageBlock },
+  personaBanner: CourseMaterialAsk, // one row in PersonaChatBanner
+  chatTool: ({ persona }) => …,    // OpenAI function tools + their runner
+};
+```
+
+`config/brandFeatures.js` loads every such folder with `import.meta.glob`, keeps
+the ones the **merged** profile enables (`ui.<key> === true`, so an `extends`
+parent's flag and module are inherited together) and exposes `brandFence`,
+`brandPersonaBanners`, `brandChatTool` and `brandFeatureFlag`. The fence branch is
+checked in `MarkdownRenderer` before the built-in renderers; the banner row is
+rendered by `PersonaChatBanner`; and a contributed tool runs inside the app — on
+the plain chat path (`utils/sendMessage.jsx`, a bounded function-tool loop) and in
+the Browser agent (`agent/runAgent.ts`). A chat whose request goes to the tool
+gateway (`enable_tools`) cannot carry function tools, so `utils/brandChatTools.js`
+returns nothing there.
+
+This is deliberately narrower than a deployment: a brand still cannot add a
+module, a feature flag, a route or a setting, and nothing here may widen a
+restriction. The GAIA course-material feature is the worked example; it is switched
+on in `gaia/brand.json` and inherited by `gaia-tutor`.
 
 ## 6. Runtime behaviour
 
@@ -749,6 +813,7 @@ secrets, so inlining all of them is harmless and keeps `useBrand()` synchronous.
   reaches through: `brandRestrictions`, `brandDisablesModule`,
   `brandDisablesFeature`, `BRAND_EXTERNAL_KEYS`, `isBrandExternalAllowed`,
   `brandModelPolicy`, `brandFixedModel`, `applyBrandModelPolicy`,
+  `BRAND_LOCK_KEYS`, `isBrandLocked`, `BRAND_UI_KEYS`, `isBrandUiVisible`,
   `brandRestrictionSummary`, `hasBrandRestrictions`, `brandInstituteLinks` and
   `brandRestrictionLines`. `deployment.js` and `utils/modules.js` consult it, so
   `isFeatureEnabled()` / `moduleValue()` are the effective, narrowed values.
@@ -766,7 +831,12 @@ secrets, so inlining all of them is harmless and keeps `useBrand()` synchronous.
   `ChatPreferences` hides the external-reference switch and the reducer's
   `selectHtmlLoadExternal` forces `false`; `AgentPage`/`AgentWorkspaceButton`
   disable the MCP relay and injection; `AddSourceModal` hides the MCP source
-  kind. `metaTools.js#buildSettingsLines` reports the brand, its restrictions,
+  kind. With `restrictions.locks`, `ToolsButton`, `SettingsButton` and the model
+  selector (`ModelButton` / `ModelSelectorWrapper`) render nothing, and
+  `utils/metaActions.js#isConversationSettingLocked` drops the matching Meta-chat
+  proposals. With `restrictions.ui`, `ModelSelectorWrapper` and
+  `WarningExternalModel` render nothing. `metaTools.js#buildSettingsLines`
+  reports the brand, its restrictions,
   the fixed model and the blocked external capabilities in `get_user_settings`.
 - `front/src/config/branding/restricted/brand.json` is the generic, copyable
   example (`?brand=restricted`, aliases `example-restricted`/`locked-down`): it
@@ -774,6 +844,13 @@ secrets, so inlining all of them is harmless and keeps `useBrand()` synchronous.
   `arcanas`, `speech` and `sync` modules and the `workspaces`, `mcp_servers` and
   `import_git` features, and blocks all four external capabilities. It carries no
   images, so it also demonstrates that a brand folder can be `brand.json` alone.
+- `front/src/config/branding/gaia/brand.json` demonstrates the newer
+  restrictions on a real institution: it pins
+  `deepseek-v4.1-flash-1017` (`models.fixed`), locks GWDG Tools and the chat
+  settings (`locks`), and hides the model control and the data-safety indicator
+  (`ui`). `gaia-tutor` inherits all of them through `extends` and can opt out of
+  one key (`false` for a lock, `true` for a hidden control) without repeating the
+  rest.
 - `modals/UserSettings/ProfileSettings.jsx` splits the Profile tab into **User**
   (`UserInfoContainer`) and **Institution** (`InstituteSection`), like the Data
   tab's own strip: the buttons carry `data-guide="profile-subtab-<section>"` and

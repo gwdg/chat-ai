@@ -86,7 +86,12 @@ export default {
   feedback:{
     thumbsup:"The response is good.",
     thumbsdown: "The response is not so good.",
-    send: "Send a detailed feedback describing your observation."
+    send: "Send a detailed feedback describing your observation.",
+    data_notice: "Your rating and this conversation are sent to the server for analysis.",
+    comment_placeholder: "Describe what was wrong or what helped…",
+    save_and_send: "Save and send",
+    send_failed: "The feedback could not be sent: {{error}}",
+    unknown_error: "unknown error"
   },
   // Sidebar
   sidebar: {
@@ -336,6 +341,7 @@ export default {
     setting_on: "on",
     setting_off: "off",
     setting_device_default: "device default",
+    setting_deployment_default: "deployment default",
     unsorted_topic: "Unsorted",
     error: "Could not answer. Please try again.",
     no_model: "No default model is configured.",
@@ -797,6 +803,21 @@ export default {
       step3:
         "Click a persona to start a new chat with its title, model, and system prompt.",
     },
+    course_view: {
+      title: "Open a course",
+      step1:
+        "Click Chat with Persona in the sidebar to open the persona library.",
+      step2: "Choose the Courses folder on the left.",
+      step3:
+        "Click a course persona. The course page opens with the Learn and Review views.",
+    },
+    course_quiz_chat: {
+      title: "Practise inside the course chat",
+      step1:
+        "Click Ask for a quiz question in the course chat banner. The tutor answers with an interactive quiz question that you can answer right here.",
+      step2:
+        "Click Show a learning page in the banner. The tutor embeds one of the course's own learning pages in its reply, where you can read and interact with it without leaving the chat.",
+    },
     share_conversation: {
       title: "Share conversation settings",
       step1: "Open the conversation settings panel.",
@@ -943,14 +964,18 @@ export default {
     brand_consent: {
       title: "Review your consents",
       step1: "Open your user settings.",
-      step2: "Choose the Advanced tab.",
+      step2: "Choose the Profile tab, then its Consents section.",
       step3:
         "Change the voluntary consents here; the terms of use and privacy links sit below the switches.",
     },
     feedback: {
       title: "Send feedback",
       step1:
-        "Use the feedback buttons under an assistant message when the feedback module is enabled.",
+        "Use the feedback buttons under an assistant message to rate an answer. A changed conversation is also sent to the feedback service for analysis while chat transcripts are on.",
+      step2:
+        "Under Profile → Feedback you can switch answer ratings and chat transcripts on or off. Transcripts are sent as only the new messages, which the feedback service appends to the chat it already holds; switched off, no chat transcripts are sent.",
+      step3:
+        "The same section lists everything this account sent, and deletes it again.",
     },
     speech_output: {
       title: "Read answers aloud",
@@ -1438,7 +1463,7 @@ export default {
       },
       data: {
         label: "Data",
-        title: "Data and privacy",
+        title: "Data",
         description:
           "Manage local data, download an encrypted backup, and keep your devices in step with encrypted server synchronization.",
       },
@@ -1448,6 +1473,37 @@ export default {
         label: "Profile sections",
         user: "User",
         institution: "Institution",
+        feedback: "Feedback",
+        consents: "Consents",
+      },
+      feedback: {
+        label: "Feedback sent from this account",
+        description:
+          "See the ratings, reports and conversations this account sent to the feedback service, and delete them.",
+        open: "View collected feedback",
+        modal_title: "Collected feedback",
+        modal_intro:
+          "Everything this account sent to the feedback service, newest first. Only your own submissions are listed.",
+        loading: "Loading feedback…",
+        load_failed: "The feedback could not be loaded.",
+        retry: "Try again",
+        empty: "This account has not sent any feedback yet.",
+        count: "{{count}} entries",
+        kind_report: "Report",
+        kind_rating: "Rating",
+        type_bug: "Bug",
+        type_feedback: "Feedback",
+        type_accessibility: "Accessibility",
+        type_other: "Other",
+        rating_up: "Thumbs up",
+        rating_down: "Thumbs down",
+        delete_all: "Delete all feedback",
+        delete_confirm:
+          "Delete all {{count}} entries? Ratings, reports and the conversations sent for analysis are removed permanently.",
+        delete_confirm_action: "Delete permanently",
+        deleting: "Deleting…",
+        deleted: "Deleted {{count}} entries.",
+        delete_failed: "The feedback could not be deleted: {{error}}",
       },
     },
     account: {
@@ -1466,6 +1522,8 @@ export default {
         modules_label: "Disabled modules",
         features_label: "Disabled features",
         external_label: "Blocked external communication",
+        locks_label: "Fixed settings",
+        ui_label: "Hidden controls",
         modules: {
           tools: "Tools",
           feedback: "Feedback",
@@ -1489,6 +1547,15 @@ export default {
           external_models: "External models",
           mcp: "MCP servers",
           external_references: "External references in rendered content",
+        },
+        locks: {
+          model: "Model choice",
+          tools: "GWDG Tools",
+          chat_settings: "Chat settings",
+        },
+        ui: {
+          model_selector: "Model name",
+          external_warning: "Data-safety warning",
         },
       },
     },
@@ -1602,6 +1669,16 @@ export default {
           label: "Show message timestamps",
           description:
             "Display the date and time each message was sent below the message.",
+        },
+      },
+      feedback: {
+        label: "Send feedback to the operator",
+        description:
+          "Show thumbs up/down under each answer. Turning this off removes the rating buttons and stops chat transcripts as well.",
+        transcript: {
+          label: "Send chat transcripts",
+          description:
+            "Send the chat for analysis whenever it changes, as only the new messages, which the feedback service appends to the stored conversation. Turned off, no chat transcripts are sent.",
         },
       },
       submission: {
@@ -1963,6 +2040,112 @@ export default {
     startingChat: "Starting…",
     startError: "Could not load this persona. Please try again.",
   },
+  course: {
+    title: "Course",
+    badge: "Course",
+    open_course: "Open course",
+    open_named: "Open the course {{title}}",
+    banner_label: "Course chat",
+    loading: "Loading course…",
+    load_error: "The course could not be loaded.",
+    load_error_detail: "Details:",
+    not_a_course: "This persona is not a course.",
+    retry: "Retry",
+    chat_error: "The course chat could not be started.",
+    start_chat: "Start course chat",
+    starting_chat: "Starting…",
+    mode_label: "View",
+    mode_learn: "Learn",
+    mode_review: "Review",
+    tabs_label: "Course sections",
+    tab_skills: "Skills",
+    tab_quiz: "Quiz",
+    tab_lernseiten: "Learning pages",
+    tab_skills_review: "Skills (review)",
+    tab_quiz_review: "Quiz (review)",
+    stat_topics: "{{n}} topics",
+    stat_skills: "{{n}} skills",
+    stat_questions: "{{n}} questions",
+    stat_lernseiten: "{{n}} learning pages",
+    skills: {
+      search: "Search skills",
+      empty: "No skills found.",
+      questions: "{{n}} questions",
+      needs: "Needs: {{names}}",
+      lernseite: "Learning page",
+      open_lernseite: "Open learning page",
+      quiz: "Practise",
+      chat: "Ask",
+      chat_about: "Ask the course tutor about this skill",
+      chat_prompt:
+        "Explain the skill “{{name}}” from this course to me.\n\n{{description}}",
+    },
+    quiz: {
+      empty: "There are no questions for this filter.",
+      filter_label: "Skill:",
+      all_skills: "All skills",
+      draft: "Draft",
+      progress: "Question {{current}} of {{total}}",
+      question_label: "Answer",
+      sample_answer: "Sample answer",
+      open_note:
+        "Open questions are not graded automatically. Compare your answer with the sample answer.",
+      correct: "Correct.",
+      incorrect: "Not correct yet.",
+      explanation: "Explanation",
+      check: "Check",
+      show_solution: "Show solution",
+      reset: "Reset",
+      previous: "Previous",
+      next: "Next",
+      type_single: "Single answer",
+      type_multiple: "Multiple answers",
+      type_open: "Open question",
+    },
+    material_chat: {
+      hint: "The tutor can show a quiz question or a learning page from this course here in the chat.",
+    },
+    quiz_chat: {
+      button: "Ask for a quiz question",
+      prompt: "Please give me an example quiz question from this course to practise.",
+      block_error: "This quiz question could not be loaded.",
+      block_missing: "This question is no longer part of the course.",
+      block_loading: "Loading quiz question…",
+    },
+    page_chat: {
+      button: "Show a learning page",
+      prompt: "Please show me an example learning page from this course.",
+      block_loading: "Loading learning page…",
+      block_error: "This learning page could not be loaded.",
+      block_missing: "This learning page is no longer part of the course.",
+    },
+    lernseiten: {
+      title: "Learning pages",
+      description:
+        "Interactive explanations that build a skill step by step.",
+      empty: "This course has no learning pages yet.",
+      loading: "Loading learning page…",
+      load_error: "The learning page could not be loaded.",
+      belongs_to: "Belongs to: {{name}}",
+      unknown_skill: "No skill assigned",
+      close: "Close",
+      pick: "Pick a learning page above.",
+    },
+    review: {
+      description:
+        "The review view shows the solutions and the course coverage. It is meant for lecturers, not for practising.",
+      coverage: "Coverage",
+      skills_with_lernseite: "{{with}} of {{total}} skills have a learning page.",
+      questions_by_type:
+        "{{single}} single choice, {{multiple}} multiple choice, {{open}} open questions.",
+      drafts: "{{n}} questions are still marked as draft.",
+      no_explanations:
+        "No question has an explanation, so checking only shows correct/incorrect.",
+      missing: "This course has no review view yet.",
+      loading: "Loading review view…",
+      load_error: "The review view could not be loaded.",
+    },
+  },
   // Memory Modal
   memory: {
     userMemory: "User Memory",
@@ -2050,6 +2233,7 @@ export default {
   },
   model_selector: {
     change_model: "Change model",
+    locked: "The model is set by your institution",
     docs_hint_text: "Need help deciding which model fits best?",
     docs_hint_link: "Read the model overview.",
     scope_filter: "Filter models",

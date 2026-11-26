@@ -16,8 +16,8 @@ RUN npm install
 # Copy the rest of the application to the app directory
 COPY . .
 
-# Expose the port app runs on
-EXPOSE 7230
+# Expose the port app runs on (default 8081, see back/service.mjs)
+EXPOSE 8081
 
 # Run the application
 CMD [ "npm", "start"]

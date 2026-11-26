@@ -11,10 +11,13 @@ import {
   hasBrandInstitute,
   hasBrandRestrictions,
   isBrandExternalAllowed,
+  isBrandLocked,
+  isBrandUiVisible,
 } from "../brandPolicy";
 import {
   brandCss,
   getBrandProfile,
+  mergeBrand,
   setCurrentBrand,
 } from "../brands";
 import { isFeatureEnabled, moduleValue } from "../deployment";
@@ -54,6 +57,9 @@ describe("brand restrictions", () => {
       "mcp",
       "external_references",
     ]);
+    // A pinned model has nothing to choose, so its selector is locked too.
+    expect(summary.locks).toEqual(["model"]);
+    expect(summary.ui).toEqual([]);
     expect(hasBrandRestrictions(restricted())).toBe(true);
   });
 
@@ -65,6 +71,8 @@ describe("brand restrictions", () => {
       modules: [],
       features: [],
       external: [],
+      locks: [],
+      ui: [],
     });
     expect(brandRestrictionLines(brand)).toEqual([]);
     expect(applyBrandModelPolicy(MODELS, brand)).toBe(MODELS);
@@ -121,6 +129,62 @@ describe("brand restrictions", () => {
     expect(moduleValue("tools", false)).toBe(false);
     expect(brandDisablesModule("tools")).toBe(false);
     expect(brandDisablesFeature("workspaces")).toBe(false);
+  });
+
+  it("locks the settings a brand marks as fixed", () => {
+    const locked = {
+      restrictions: { locks: { tools: true, chat_settings: true } },
+    };
+    expect(isBrandLocked("tools", locked)).toBe(true);
+    expect(isBrandLocked("chat_settings", locked)).toBe(true);
+    // Not locked, and a value other than `true` never locks.
+    expect(isBrandLocked("model", locked)).toBe(false);
+    expect(isBrandLocked("tools", { restrictions: { locks: { tools: false } } })).toBe(
+      false,
+    );
+    // A pinned model is locked without naming it in `locks`.
+    expect(isBrandLocked("model", restricted())).toBe(true);
+    // The GAIA brand fixes the model, GWDG Tools and the chat settings.
+    expect(isBrandLocked("model", getBrandProfile("gaia"))).toBe(true);
+    expect(isBrandLocked("tools", getBrandProfile("gaia"))).toBe(true);
+    expect(isBrandLocked("chat_settings", getBrandProfile("gaia"))).toBe(true);
+    expect(brandRestrictionLines(getBrandProfile("gaia"))).toContain(
+      "settings locked: model, tools, chat_settings",
+    );
+  });
+
+  it("lets a brand hide controls without locking their values", () => {
+    const minimal = {
+      restrictions: { ui: { model_selector: false } },
+    };
+    expect(isBrandUiVisible("model_selector", minimal)).toBe(false);
+    expect(isBrandUiVisible("external_warning", minimal)).toBe(true);
+    // Only `false` hides anything, and the summary/line follow it.
+    expect(brandRestrictionSummary(minimal).ui).toEqual(["model_selector"]);
+    expect(brandRestrictionLines(minimal)).toContain(
+      "controls hidden: model_selector",
+    );
+    expect(hasBrandRestrictions(minimal)).toBe(true);
+    // GAIA removes the model control and the data-safety indicator.
+    const gaia = getBrandProfile("gaia");
+    expect(isBrandUiVisible("model_selector", gaia)).toBe(false);
+    expect(isBrandUiVisible("external_warning", gaia)).toBe(false);
+    // A sub-brand may bring one back; dropping it from the file would inherit
+    // the parent's `false`, so an explicit `true` is the opt-out.
+    const child = mergeBrand(gaia, { restrictions: { ui: { model_selector: true } } });
+    expect(isBrandUiVisible("model_selector", child)).toBe(true);
+    expect(isBrandUiVisible("external_warning", child)).toBe(false);
+  });
+
+  it("lets a sub-brand unlock one of its parent's settings", () => {
+    const child = {
+      extends: "gaia",
+      restrictions: { locks: { tools: false } },
+    };
+    // `extends` resolves through the loader, so mergeBrand is what a child gets.
+    const merged = mergeBrand(getBrandProfile("gaia"), child);
+    expect(isBrandLocked("tools", merged)).toBe(false);
+    expect(isBrandLocked("chat_settings", merged)).toBe(true);
   });
 
   it("reports external capabilities and institutional links", () => {

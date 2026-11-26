@@ -49,6 +49,7 @@ import { stripPersonaMarkers } from "../../../utils/personaCatalog";
 import { stripMetaActionMarkers } from "../../../utils/metaActions";
 import { detectJsonDiagram } from "../../../utils/diagramSpec";
 import { downloadHtml, renderedFilename } from "../../../utils/download";
+import { brandFence } from "../../../config/brandFeatures";
 
 // Markdown images load automatically, so keep them on the same origin when
 // external references are disabled. Plain links are not fetched until clicked.
@@ -208,6 +209,26 @@ const MarkdownLink = ({ href, children, plain = false }) => {
     );
   }
 
+  const courseMatch =
+    typeof href === "string" &&
+    href.match(/^\/course\/([a-z0-9][a-z0-9._-]*)$/i);
+  if (courseMatch) {
+    return (
+      <a
+        href={href}
+        data-guide="course-link"
+        className={linkClassName}
+        onClick={(event) => {
+          event.preventDefault();
+          navigate(href);
+        }}
+      >
+        {!plain && <GraduationCap size={12} aria-hidden="true" />}
+        {children}
+      </a>
+    );
+  }
+
   const personaMatch =
     typeof href === "string" && href.match(/^\/persona\/(.+\.json)$/i);
   if (personaMatch) {
@@ -271,6 +292,14 @@ export const rendererComponents = {
 
     const language = match ? match[1].toLowerCase() : null;
 
+    // A brand feature may own a fence language (the GAIA course material). The
+    // component renders from the conversation's own data, never from the model's
+    // text alone, so it is looked up before the built-in renderers.
+    const BrandFence = brandFence(language);
+    if (BrandFence) {
+      return <BrandFence source={content} language={language} />;
+    }
+
     if (language === "mermaid") {
       return <MermaidDiagram content={content} />;
     }
@@ -329,6 +358,9 @@ export const rendererComponents = {
       .exec(children?.props?.className || "")?.[1]
       ?.toLowerCase();
     if (["html", "latex", "tex", "typst", "typ"].includes(language)) {
+      return <>{children}</>;
+    }
+    if (brandFence(language)) {
       return <>{children}</>;
     }
     return <pre {...props}>{children}</pre>;
@@ -1070,7 +1102,7 @@ const MarkdownRenderer = memo(
           : {
               ...rendererComponents,
               code(props) {
-                const match = /language-(\w+)/.exec(props.className || "");
+                const match = /language-([\w.-]+)/.exec(props.className || "");
                 if (match && match[1] === "html") {
                   return (
                     <HtmlBlock

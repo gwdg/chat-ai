@@ -1,5 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useSelector } from "react-redux";
 import MarkdownRenderer from "./MarkdownRenderer";
+import {
+  AssistantMessageContext,
+  resolveMessageIndex,
+} from "./AssistantMessageContext";
 import FeatureGuideCard from "../../Others/FeatureGuideCard";
 import UseCaseGuideCard from "../../Others/UseCaseGuideCard";
 import Typing from "./Typing";
@@ -23,7 +28,16 @@ import { getFeatureGuideMarker } from "../../../config/featureGuides";
 import { getUseCaseMarker } from "../../../config/useCases";
 import { getPersonaMarkers } from "../../../utils/personaCatalog";
 import { getMetaActionProposals } from "../../../utils/metaActions";
-import { isFeedbackEnabled } from "../../../utils/modules";
+import {
+  enrichedFeedbackMessagesFromConversation,
+  feedbackTextOf,
+  isChatFeedbackEnabled,
+  submitFeedbackComment,
+  submitFeedbackRating,
+} from "../../../apis/feedback";
+import { selectFeedbackEnabled } from "../../../Redux/reducers/userSettingsReducer";
+import { useToast } from "../../../hooks/useToast";
+import { stripThinking } from "../../../utils/thinking";
 import { useBrand } from "../../../config/BrandProvider";
 import { localizeBrandValue, withBase } from "../../../config/brands";
 import { useTranslation } from "react-i18next";
@@ -40,6 +54,51 @@ export default React.memo(({ localState, setLocalState, message_index, modelsDat
   const textareaRefs = useRef([]);
   const message = localState.messages[message_index];
   const loading = message?.loading || false;
+  // The value a fence reads must stay stable while its own card updates the
+  // message: a changing context value would re-render the whole message (and
+  // parse its markdown again) on every quiz keystroke.
+  const latestLocalState = useRef(localState);
+  latestLocalState.current = localState;
+  // A streamed reply has no id until the store writes it, so the identity is
+  // the id when there is one and this position otherwise.
+  const assistantMessageId = message?.id ?? null;
+  const assistantMessageContext = useMemo(() => {
+    if (!message || typeof setLocalState !== "function") return null;
+    const locate = (messages) =>
+      resolveMessageIndex(messages, {
+        messageId: assistantMessageId,
+        fallbackIndex: message_index,
+      });
+    return {
+      messageId: assistantMessageId,
+      getMessage: () => {
+        const messages = latestLocalState.current?.messages || [];
+        const index = locate(messages);
+        return (index >= 0 && messages[index]) || null;
+      },
+      setMessageMeta: (patch) => {
+        setLocalState((previous) => {
+          const messages = Array.isArray(previous?.messages)
+            ? previous.messages
+            : [];
+          const index = locate(messages);
+          if (index < 0) return previous;
+          const current = messages[index];
+          const metaPatch =
+            typeof patch === "function" ? patch(current?.meta || {}) : patch;
+          if (!metaPatch || Object.keys(metaPatch).length === 0) {
+            return previous;
+          }
+          const nextMessages = [...messages];
+          nextMessages[index] = {
+            ...current,
+            meta: { ...(current?.meta || {}), ...metaPatch },
+          };
+          return { ...previous, messages: nextMessages };
+        });
+      },
+    };
+  }, [assistantMessageId, message_index, setLocalState]);
   const guideFeatureId = loading
     ? null
     : getFeatureGuideMarker(message?.content?.[0]?.text);
@@ -59,8 +118,10 @@ export default React.memo(({ localState, setLocalState, message_index, modelsDat
   const sendMessage = useSendMessage();
   const { forkConversation } = useForkConversation(localState);
   const { confirmAction } = useModal();
-  const feedbackModule = isFeedbackEnabled();
-  const { i18n } = useTranslation();
+  const feedbackEnabled = useSelector(selectFeedbackEnabled);
+  const feedbackModule = feedbackEnabled && isChatFeedbackEnabled();
+  const { notifyError } = useToast();
+  const { i18n, t } = useTranslation();
   const { brand } = useBrand();
   // The brand's AI marker (GAIA's "AI" label) beside every assistant message,
   // and the sentence appended to copied text. Both are brand data, so a brand
@@ -85,25 +146,84 @@ export default React.memo(({ localState, setLocalState, message_index, modelsDat
     }
   };
   
-  const sendFeedbackFunc = async (ratingInt, commentStr, expectedStr) => {
-    const feedback = {
-      rating: ratingInt,
-      comment: commentStr,
-      result: expectedStr,
-    };
-    const newMessagesWithFB = [...localState.messages];
-    newMessagesWithFB[message_index] = {
-      ...newMessagesWithFB[message_index],
-      feedback,
-    };
+  // Rates the answer, or updates its comment. The feedback is stored on the
+  // message and sent straight to the deployment's receiver, so rating never
+  // starts a model turn. Clearing a thumb only clears the stored rating; a
+  // comment saved without a thumb is filed as a report of its own.
+  const sendFeedbackFunc = async (
+    ratingInt,
+    commentStr,
+    expectedStr,
+    { submitComment = false } = {},
+  ) => {
+    const target = localState.messages[message_index];
+    if (!target) return;
+    const rated = ratingInt === 1 || ratingInt === -1;
+    const resultText =
+      (typeof expectedStr === "string" && expectedStr) ||
+      stripThinking(feedbackTextOf(target.content));
+    const feedback = {};
+    if (rated) feedback.rating = ratingInt;
+    if (typeof commentStr === "string" && commentStr.trim()) {
+      feedback.comment = commentStr;
+    }
+    if (resultText) feedback.result = resultText;
 
-    const newState = {
-      ...localState,
-      messages: newMessagesWithFB.slice(0, message_index + 1),
-    };
+    setLocalState((prev) => {
+      const messages = [...prev.messages];
+      const current = messages[message_index];
+      if (!current) return prev;
+      const { feedback: _previous, ...rest } = current;
+      messages[message_index] = Object.keys(feedback).length
+        ? { ...rest, feedback }
+        : rest;
+      return { ...prev, messages };
+    });
 
-    setLocalState({ ...localState, messages: newMessagesWithFB });
-    sendMessage({ localState: newState });
+    const ratedMessages = (
+      await enrichedFeedbackMessagesFromConversation(
+        localState.messages.slice(0, message_index + 1),
+      )
+    ).slice(-2);
+
+    if (!rated) {
+      // Only the comment box asks for this; a thumb that was clicked off must
+      // not send anything.
+      if (!submitComment || !feedback.comment) return;
+      try {
+        await submitFeedbackComment({
+          comment: feedback.comment,
+          messages: ratedMessages,
+          model: localState.settings?.model,
+          conversationId: localState.id,
+          title: localState.title,
+        });
+      } catch (error) {
+        notifyError(
+          t("feedback.send_failed", {
+            error: error?.message || t("feedback.unknown_error"),
+          }),
+        );
+      }
+      return;
+    }
+    try {
+      await submitFeedbackRating({
+        rating: ratingInt,
+        result: resultText,
+        comment: commentStr || "",
+        messages: ratedMessages,
+        model: localState.settings?.model,
+        conversationId: localState.id,
+        title: localState.title,
+      });
+    } catch (error) {
+      notifyError(
+        t("feedback.send_failed", {
+          error: error?.message || t("feedback.unknown_error"),
+        }),
+      );
+    }
   };
 
   const [feedbackMode, setFeedbackMode] = useState(false);  
@@ -171,7 +291,9 @@ export default React.memo(({ localState, setLocalState, message_index, modelsDat
   const handleSaveFB = () => {    
     const msg = localState.messages[message_index];
     setFeedbackMode(false);    
-    sendFeedbackFunc(msg.feedback?.rating, feedbackText, msg?.feedback?.result);
+    sendFeedbackFunc(msg.feedback?.rating, feedbackText, msg?.feedback?.result, {
+      submitComment: true,
+    });
   };
 
   // Function to handle resending a previous message
@@ -297,9 +419,8 @@ export default React.memo(({ localState, setLocalState, message_index, modelsDat
 
           {feedbackMode && (
             <div className="flex flex-col justify-between gap-1">
+              <div>{t("feedback.data_notice")}</div>
 
-              <div>WARNING: Your feedback will be sent to the server.</div>
-              
               <textarea
                 ref={feedbackBox}
                 value={feedbackText}
@@ -318,7 +439,7 @@ export default React.memo(({ localState, setLocalState, message_index, modelsDat
                   }
                 }}
                 className="p-2 outline-none rounded-sm w-full text-sm text-base-content bg-base-100 resize-y overflow-y-auto"
-                placeholder="Provide feedback..."
+                placeholder={t("feedback.comment_placeholder")}
                 style={{
                   minHeight: `${MIN_HEIGHT}px`,
                   maxHeight: `${MAX_HEIGHT}px`,
@@ -329,27 +450,31 @@ export default React.memo(({ localState, setLocalState, message_index, modelsDat
                   onClick={() => setFeedbackMode(false)}
                   className="text-sm text-base-content/70 px-2 py-1 rounded-full cursor-pointer"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </button>
                 <button
                   onClick={() => handleSaveFB()}
                   className="text-md text-primary border dark:text-accent rounded-full px-3 py-1 cursor-pointer"
                 >
-                  Save & Send FB
+                  {t("feedback.save_and_send")}
                 </button>
               </div>
             </div>
-          )}          
+          )}
           {/* Display message content */}
           {!editMode && !feedbackMode && (
             <div className="flex flex-col gap-4">
-              {isAgentTurn ? (
-                <AgentSteps agentMessages={message.meta.agent} isLoading={loading} renderMode={renderMode} />
-              ) : (
-                <MarkdownRenderer isLoading={loading} renderMode={renderMode}>
-                  {message.content[0]?.text}
-                </MarkdownRenderer>
-              )}
+              <AssistantMessageContext.Provider
+                value={assistantMessageContext}
+              >
+                {isAgentTurn ? (
+                  <AgentSteps agentMessages={message.meta.agent} isLoading={loading} renderMode={renderMode} />
+                ) : (
+                  <MarkdownRenderer isLoading={loading} renderMode={renderMode}>
+                    {message.content[0]?.text}
+                  </MarkdownRenderer>
+                )}
+              </AssistantMessageContext.Provider>
               {guideFeatureId && (
                 <FeatureGuideCard featureId={guideFeatureId} />
               )}
@@ -452,9 +577,8 @@ export default React.memo(({ localState, setLocalState, message_index, modelsDat
                 {feedbackModule && (
                   <FeedbackButtons
                     localState={localState}
-                    setLocalState={setLocalState}
                     message_index={message_index}
-                    setFeedbackMode={setFeedbackMode} 
+                    setFeedbackMode={setFeedbackMode}
                     sendFeedbackFunc={sendFeedbackFunc}
                   />
                 )}

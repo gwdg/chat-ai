@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Trans } from "react-i18next";
+import { useNavigate } from "react-router";
 import BaseModal from "../../../modals/BaseModal";
 import { useImportConversation } from "../../../hooks/useImportConversation";
 import i18n from "../../../i18n";
@@ -12,6 +13,7 @@ import {
   Folder,
   FolderOpen,
   Bot,
+  GraduationCap,
   Menu,
 } from "lucide-react";
 
@@ -36,6 +38,7 @@ export default function ImportPersonaModal({
 
   const { notifySuccess, notifyError } = useToast();
   const importConversation = useImportConversation();
+  const navigate = useNavigate();
 
   // Fetch root contents and organize into folders and files
   const fetchRootContents = async () => {
@@ -75,12 +78,18 @@ export default function ImportPersonaModal({
               const text = await resp.text();
               const cleaned = text.replace(/,(\s*[}$])/g, "$1");
               const parsed = JSON.parse(cleaned);
+              const course = parsed?.course && typeof parsed.course === "object";
               files.push({
                 ...item,
+                course,
+                courseId: course ? String(parsed.course.id || "").trim() : "",
                 title: parsed.title || item.name.replace(".json", ""),
-                subtitle:
-                  parsed.subtitle ||
-                  `Configuration • ${formatFileSize(item.size)}`,
+                subtitle: course
+                  ? `${i18n.t("course.badge")} • ${
+                      parsed.subtitle || parsed.title || item.name
+                    }`
+                  : parsed.subtitle ||
+                    `Configuration • ${formatFileSize(item.size)}`,
               });
             } else {
               files.push({
@@ -140,12 +149,18 @@ export default function ImportPersonaModal({
               const text = await resp.text();
               const cleaned = text.replace(/,(\s*[}$])/g, "$1");
               const parsed = JSON.parse(cleaned);
+              const course = parsed?.course && typeof parsed.course === "object";
               files.push({
                 ...item,
+                course,
+                courseId: course ? String(parsed.course.id || "").trim() : "",
                 title: parsed.title || item.name.replace(".json", ""),
-                subtitle:
-                  parsed.subtitle ||
-                  `Configuration • ${formatFileSize(item.size)}`,
+                subtitle: course
+                  ? `${i18n.t("course.badge")} • ${
+                      parsed.subtitle || parsed.title || item.name
+                    }`
+                  : parsed.subtitle ||
+                    `Configuration • ${formatFileSize(item.size)}`,
               });
             } else {
               files.push({
@@ -232,6 +247,13 @@ export default function ImportPersonaModal({
       const cleaned = rawText.replace(/,(\s*[}$])/g, "$1");
       const parsed = JSON.parse(cleaned);
 
+      const courseId = String(parsed?.course?.id || file.courseId || "").trim();
+      if (courseId) {
+        onClose();
+        navigate(`/course/${courseId}`);
+        return;
+      }
+
       await importConversation(parsed, false, topicId, {
         persona: {
           title: parsed?.title || file.title,
@@ -307,18 +329,25 @@ export default function ImportPersonaModal({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
   };
 
-  const renderSidebarFile = (file) => (
-    <div
-      key={file.sha}
-      onClick={() => handleFileImport(file)}
-      className="flex items-center gap-2 px-3 py-1.5 hover:bg-base-200 cursor-pointer rounded transition-colors group"
-    >
-      <Bot className="w-4 h-4 text-success flex-shrink-0" />
-      <span className="text-xs text-base-content truncate flex-1">
-        {file.title || file.name.replace(".json", "")}
-      </span>
-    </div>
-  );
+  const renderSidebarFile = (file) => {
+    const Icon = file.course ? GraduationCap : Bot;
+    return (
+      <div
+        key={file.sha}
+        onClick={() => handleFileImport(file)}
+        className="flex items-center gap-2 px-3 py-1.5 hover:bg-base-200 cursor-pointer rounded transition-colors group"
+      >
+        <Icon
+          className={`w-4 h-4 flex-shrink-0 ${
+            file.course ? "text-accent" : "text-success"
+          }`}
+        />
+        <span className="text-xs text-base-content truncate flex-1">
+          {file.title || file.name.replace(".json", "")}
+        </span>
+      </div>
+    );
+  };
 
   const renderContentGrid = () => {
     if (loadingFolder) {
@@ -365,10 +394,22 @@ export default function ImportPersonaModal({
             onClick={() => handleFileImport(file)}
             className="flex flex-col items-center p-3 hover:bg-base-200 rounded-lg cursor-pointer transition-all hover:shadow-md group"
           >
-            <Bot className="w-10 h-10 mb-2 text-info group-hover:scale-110 transition-transform" />
+            {file.course ? (
+              <GraduationCap className="w-10 h-10 mb-2 text-accent group-hover:scale-110 transition-transform" />
+            ) : (
+              <Bot className="w-10 h-10 mb-2 text-info group-hover:scale-110 transition-transform" />
+            )}
             <p className="text-xs font-medium text-base-content text-center line-clamp-2">
               {file.title}
             </p>
+            {file.course && (
+              <span
+                data-guide="persona-course-badge"
+                className="badge badge-accent badge-outline badge-sm mt-1"
+              >
+                {i18n.t("course.badge")}
+              </span>
+            )}
             <p className="text-xs text-base-content/70 mt-1 text-center line-clamp-1">
               {file.subtitle}
             </p>
@@ -434,6 +475,11 @@ export default function ImportPersonaModal({
                   <div
                     key={folder.sha}
                     onClick={() => handleFolderClick(folder)}
+                    data-guide={
+                      folder.name.toLowerCase() === "courses"
+                        ? "persona-courses"
+                        : undefined
+                    }
                     className={`flex items-center gap-2 px-3 py-1.5 rounded cursor-pointer transition-colors ${
                       selectedPath === folder.path
                         ? "bg-info/10 text-info"

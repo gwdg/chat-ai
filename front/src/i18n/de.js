@@ -84,9 +84,14 @@ export default {
     upgrade_chat_ai: "Chat AI aktualisieren",
   },
   feedback:{
-    thumbsup:"The response is good.",
-    thumbsdown: "The response is not so good.",
-    send: "Send a detailed feedback describing your observation."
+    thumbsup:"Die Antwort ist gut.",
+    thumbsdown: "Die Antwort ist nicht so gut.",
+    send: "Ausführliches Feedback zu Ihrer Beobachtung senden.",
+    data_notice: "Ihre Bewertung und dieser Chat werden zur Auswertung an den Server gesendet.",
+    comment_placeholder: "Beschreiben Sie, was falsch war oder geholfen hat…",
+    save_and_send: "Speichern und senden",
+    send_failed: "Das Feedback konnte nicht gesendet werden: {{error}}",
+    unknown_error: "unbekannter Fehler"
   },
   // Sidebar
   sidebar: {
@@ -343,6 +348,7 @@ export default {
     setting_on: "an",
     setting_off: "aus",
     setting_device_default: "Gerätestandard",
+    setting_deployment_default: "Bereitstellungsstandard",
     unsorted_topic: "Nicht zugeordnet",
     error: "Antwort fehlgeschlagen. Bitte versuchen Sie es erneut.",
     no_model: "Kein Standardmodell konfiguriert.",
@@ -812,6 +818,22 @@ export default {
       step3:
         "Klicken Sie auf eine Persona, um einen neuen Chat mit Titel, Modell und Systemprompt zu starten.",
     },
+    course_view: {
+      title: "Einen Kurs öffnen",
+      step1:
+        "Klicken Sie in der Seitenleiste auf „Mit Persona chatten“, um die Persona-Bibliothek zu öffnen.",
+      step2:
+        "Wählen Sie links den Ordner „Courses“ (Kurse).",
+      step3:
+        "Klicken Sie auf eine Kurs-Persona. Die Kursseite öffnet sich mit den Ansichten Lernen und Prüfen.",
+    },
+    course_quiz_chat: {
+      title: "Im Kurs-Chat üben",
+      step1:
+        "Klicken Sie im Kurs-Chat-Banner auf „Nach einer Quizfrage fragen“. Der Tutor antwortet mit einer interaktiven Quizfrage, die Sie direkt hier beantworten können.",
+      step2:
+        "Klicken Sie im Banner auf „Lernseite anzeigen“. Der Tutor bettet eine Lernseite des Kurses direkt in seine Antwort ein, wo Sie sie lesen und bedienen können.",
+    },
     share_conversation: {
       title: "Unterhaltungseinstellungen teilen",
       step1: "Öffnen Sie die Unterhaltungseinstellungen.",
@@ -959,14 +981,18 @@ export default {
     brand_consent: {
       title: "Einwilligungen prüfen",
       step1: "Öffnen Sie Ihre Benutzereinstellungen.",
-      step2: "Wählen Sie den Reiter Erweitert.",
+      step2: "Wählen Sie den Reiter Profil und dort den Bereich Einwilligungen.",
       step3:
         "Ändern Sie hier die freiwilligen Einwilligungen; die Links zu Nutzungsbedingungen und Datenschutz stehen unter den Schaltern.",
     },
     feedback: {
       title: "Feedback senden",
       step1:
-        "Verwenden Sie die Feedback-Schaltflächen unter einer Assistenten-Nachricht, wenn das Feedback-Modul aktiviert ist.",
+        "Bewerten Sie eine Antwort mit den Feedback-Schaltflächen unter einer Assistenten-Nachricht. Ein geänderter Chat wird bei aktivierten Chatverläufen zusätzlich zur Auswertung an den Feedback-Dienst gesendet.",
+      step2:
+        "Unter Profil → Feedback können Sie Antwort-Bewertungen und Chatverläufe ein- oder ausschalten. Chatverläufe werden als nur die neuen Nachrichten gesendet, die der Feedback-Dienst an den bereits gespeicherten Chat anhängt; ausgeschaltet werden keine Chatverläufe gesendet.",
+      step3:
+        "Derselbe Bereich listet alles, was dieses Konto gesendet hat, und löscht es wieder.",
     },
     speech_output: {
       title: "Antworten vorlesen lassen",
@@ -1455,7 +1481,7 @@ export default {
       },
       data: {
         label: "Daten",
-        title: "Daten und Datenschutz",
+        title: "Daten",
         description:
           "Verwalten Sie lokale Daten, laden Sie eine verschlüsselte Sicherung herunter und halten Sie Ihre Geräte mit verschlüsselter Serversynchronisierung aktuell.",
       },
@@ -1465,6 +1491,37 @@ export default {
         label: "Profilbereiche",
         user: "Benutzer",
         institution: "Einrichtung",
+        feedback: "Feedback",
+        consents: "Einwilligungen",
+      },
+      feedback: {
+        label: "Feedback dieses Kontos",
+        description:
+          "Sehen Sie die Bewertungen, Berichte und Chats, die dieses Konto an den Feedback-Dienst gesendet hat, und löschen Sie sie.",
+        open: "Gesammeltes Feedback ansehen",
+        modal_title: "Gesammeltes Feedback",
+        modal_intro:
+          "Alles, was dieses Konto an den Feedback-Dienst gesendet hat, neueste zuerst. Es werden nur Ihre eigenen Einsendungen aufgelistet.",
+        loading: "Feedback wird geladen…",
+        load_failed: "Das Feedback konnte nicht geladen werden.",
+        retry: "Erneut versuchen",
+        empty: "Dieses Konto hat noch kein Feedback gesendet.",
+        count: "{{count}} Einträge",
+        kind_report: "Bericht",
+        kind_rating: "Bewertung",
+        type_bug: "Fehler",
+        type_feedback: "Rückmeldung",
+        type_accessibility: "Barrierefreiheit",
+        type_other: "Sonstiges",
+        rating_up: "Daumen hoch",
+        rating_down: "Daumen runter",
+        delete_all: "Alles Feedback löschen",
+        delete_confirm:
+          "Alle {{count}} Einträge löschen? Bewertungen, Berichte und die zur Auswertung gesendeten Chats werden dauerhaft entfernt.",
+        delete_confirm_action: "Dauerhaft löschen",
+        deleting: "Wird gelöscht…",
+        deleted: "{{count}} Einträge gelöscht.",
+        delete_failed: "Das Feedback konnte nicht gelöscht werden: {{error}}",
       },
     },
     account: {
@@ -1483,6 +1540,8 @@ export default {
         modules_label: "Deaktivierte Module",
         features_label: "Deaktivierte Funktionen",
         external_label: "Blockierte externe Kommunikation",
+        locks_label: "Fest vorgegebene Einstellungen",
+        ui_label: "Ausgeblendete Bedienelemente",
         modules: {
           tools: "Werkzeuge",
           feedback: "Feedback",
@@ -1506,6 +1565,15 @@ export default {
           external_models: "Externe Modelle",
           mcp: "MCP-Server",
           external_references: "Externe Verweise in gerenderten Inhalten",
+        },
+        locks: {
+          model: "Modellauswahl",
+          tools: "GWDG-Werkzeuge",
+          chat_settings: "Chat-Einstellungen",
+        },
+        ui: {
+          model_selector: "Modellname",
+          external_warning: "Datenschutz-Hinweis",
         },
       },
     },
@@ -1623,6 +1691,16 @@ export default {
           label: "Zeitstempel für Nachrichten anzeigen",
           description:
             "Zeigt Datum und Uhrzeit unter jeder Nachricht an, zu der sie gesendet wurde.",
+        },
+      },
+      feedback: {
+        label: "Feedback an den Betrieb senden",
+        description:
+          "Zeigt unter jeder Antwort Daumen hoch/runter. Wenn Sie dies ausschalten, verschwinden die Bewertungsschaltflächen und es werden auch keine Chatverläufe mehr gesendet.",
+        transcript: {
+          label: "Chatverläufe senden",
+          description:
+            "Sendet den Chat bei jeder Änderung zur Auswertung, und zwar nur die neuen Nachrichten, die der Feedback-Dienst an den gespeicherten Chat anhängt. Ausgeschaltet werden keine Chatverläufe gesendet.",
         },
       },
       submission: {
@@ -1984,6 +2062,112 @@ export default {
     startingChat: "Wird gestartet…",
     startError: "Diese Persona konnte nicht geladen werden. Bitte versuchen Sie es erneut.",
   },
+  course: {
+    title: "Kurs",
+    badge: "Kurs",
+    open_course: "Kurs öffnen",
+    open_named: "Kurs {{title}} öffnen",
+    banner_label: "Kurs-Chat",
+    loading: "Kurs wird geladen…",
+    load_error: "Der Kurs konnte nicht geladen werden.",
+    load_error_detail: "Details:",
+    not_a_course: "Diese Persona ist kein Kurs.",
+    retry: "Erneut versuchen",
+    chat_error: "Der Kurs-Chat konnte nicht gestartet werden.",
+    start_chat: "Kurs-Chat starten",
+    starting_chat: "Wird gestartet…",
+    mode_label: "Ansicht",
+    mode_learn: "Lernen",
+    mode_review: "Prüfen",
+    tabs_label: "Kursbereiche",
+    tab_skills: "Skills",
+    tab_quiz: "Quiz",
+    tab_lernseiten: "Lernseiten",
+    tab_skills_review: "Skills (Prüfansicht)",
+    tab_quiz_review: "Quiz (Prüfansicht)",
+    stat_topics: "{{n}} Themen",
+    stat_skills: "{{n}} Skills",
+    stat_questions: "{{n}} Fragen",
+    stat_lernseiten: "{{n}} Lernseiten",
+    skills: {
+      search: "Skills durchsuchen",
+      empty: "Keine Skills gefunden.",
+      questions: "{{n}} Fragen",
+      needs: "Braucht: {{names}}",
+      lernseite: "Lernseite",
+      open_lernseite: "Lernseite öffnen",
+      quiz: "Üben",
+      chat: "Fragen",
+      chat_about: "Den Kurs-Tutor zu diesem Skill fragen",
+      chat_prompt:
+        "Erkläre mir den Skill „{{name}}“ aus diesem Kurs.\n\n{{description}}",
+    },
+    quiz: {
+      empty: "Für diesen Filter sind keine Fragen vorhanden.",
+      filter_label: "Skill:",
+      all_skills: "Alle Skills",
+      draft: "Entwurf",
+      progress: "Frage {{current}} von {{total}}",
+      question_label: "Antwort",
+      sample_answer: "Musterantwort",
+      open_note:
+        "Offene Fragen werden nicht automatisch bewertet. Vergleichen Sie Ihre Antwort mit der Musterantwort.",
+      correct: "Richtig.",
+      incorrect: "Noch nicht richtig.",
+      explanation: "Erklärung",
+      check: "Prüfen",
+      show_solution: "Lösung zeigen",
+      reset: "Zurücksetzen",
+      previous: "Zurück",
+      next: "Weiter",
+      type_single: "Eine Antwort",
+      type_multiple: "Mehrere Antworten",
+      type_open: "Offene Frage",
+    },
+    material_chat: {
+      hint: "Der Tutor kann dir hier im Chat eine Quizfrage oder eine Lernseite aus diesem Kurs zeigen.",
+    },
+    quiz_chat: {
+      button: "Nach einer Quizfrage fragen",
+      prompt: "Gib mir bitte eine Beispiel-Quizfrage aus diesem Kurs zum Üben.",
+      block_error: "Diese Quizfrage konnte nicht geladen werden.",
+      block_missing: "Diese Frage gehört nicht mehr zum Kurs.",
+      block_loading: "Quizfrage wird geladen…",
+    },
+    page_chat: {
+      button: "Lernseite anzeigen",
+      prompt: "Zeig mir bitte eine Beispiel-Lernseite aus diesem Kurs.",
+      block_loading: "Lernseite wird geladen…",
+      block_error: "Diese Lernseite konnte nicht geladen werden.",
+      block_missing: "Diese Lernseite gehört nicht mehr zum Kurs.",
+    },
+    lernseiten: {
+      title: "Lernseiten",
+      description:
+        "Interaktive Erklärungen, die einen Skill Schritt für Schritt aufbauen.",
+      empty: "Für diesen Kurs sind noch keine Lernseiten hinterlegt.",
+      loading: "Lernseite wird geladen…",
+      load_error: "Die Lernseite konnte nicht geladen werden.",
+      belongs_to: "Gehört zu: {{name}}",
+      unknown_skill: "Kein Skill zugeordnet",
+      close: "Schließen",
+      pick: "Wählen Sie oben eine Lernseite aus.",
+    },
+    review: {
+      description:
+        "Die Prüfansicht zeigt die Lösungen und die Abdeckung des Kurses. Sie ist für Lehrende gedacht, nicht zum Üben.",
+      coverage: "Abdeckung",
+      skills_with_lernseite: "{{with}} von {{total}} Skills haben eine Lernseite.",
+      questions_by_type:
+        "{{single}} Einzelwahl, {{multiple}} Mehrfachwahl, {{open}} offene Fragen.",
+      drafts: "{{n}} Fragen sind noch als Entwurf markiert.",
+      no_explanations:
+        "Keine Frage hat eine Erklärung; nach dem Prüfen erscheint nur richtig/falsch.",
+      missing: "Für diesen Kurs ist keine Prüfansicht hinterlegt.",
+      loading: "Prüfansicht wird geladen…",
+      load_error: "Die Prüfansicht konnte nicht geladen werden.",
+    },
+  },
   // Memory Modal
   memory: {
     userMemory: "Erinnerungen",
@@ -2070,6 +2254,7 @@ export default {
   },
   model_selector: {
     change_model: "Modell wechseln",
+    locked: "Das Modell wird von Ihrer Einrichtung vorgegeben",
     docs_hint_text: "Unsicher, welches Modell Sie wählen sollen?",
     docs_hint_link: "Lesen Sie die Modellübersicht.",
     scope_filter: "Modelle filtern",

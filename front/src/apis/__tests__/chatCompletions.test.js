@@ -61,4 +61,30 @@ describe("chatCompletions request shaping", () => {
 
     expect(create.mock.calls[0][0]["mcp-servers"]).toBeUndefined();
   });
+
+  it("passes a usage-only chunk through and keeps its token counts", async () => {
+    // `stream_options.include_usage` closes the stream with a chunk that has no
+    // choices. Dropping it lost the usage of every turn and logged a warning.
+    create.mockImplementation(async function* chunks() {
+      yield { choices: [{ delta: { content: "Hi" } }] };
+      yield { choices: [], usage: { total_tokens: 7 } };
+      yield { choices: [{ delta: {}, finish_reason: "stop" }] };
+      yield { choices: [], usage: { total_tokens: 11 } };
+    });
+
+    const iterator = chatCompletions(conversation({}), 5000, true);
+    const chunks = [];
+    let step = await iterator.next();
+    while (!step.done) {
+      chunks.push(step.value);
+      step = await iterator.next();
+    }
+
+    expect(chunks).toHaveLength(4);
+    expect(chunks[1]).toEqual({ choices: [], usage: { total_tokens: 7 } });
+    expect(step.value).toEqual({
+      answer: "Hi",
+      usage: { total_tokens: 11 },
+    });
+  });
 });

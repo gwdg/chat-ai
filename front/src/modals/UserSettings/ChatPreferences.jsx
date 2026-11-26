@@ -41,6 +41,7 @@ import {
 } from "../../Redux/reducers/userSettingsReducer";
 import { isToolsEnabled } from "../../utils/modules";
 import { isBrandExternalAllowed } from "../../config/brandPolicy";
+import { isFeatureEnabled } from "../../config/deployment";
 import { useModal } from "../ModalContext";
 import { useSendWithEnter } from "../../hooks/useSendWithEnter";
 import ProfilePreferenceSwitch from "./ProfilePreferenceSwitch";
@@ -100,6 +101,11 @@ export function MemoryPreference() {
   const { t } = useTranslation();
   const { openModal } = useModal();
   const memoryMode = useSelector(selectMemoryMode);
+
+  // A deployment or brand without the memories feature has no memory mode to
+  // choose and no account memories to manage.
+  if (!isFeatureEnabled("memories")) return null;
+
   const selectedMemoryOption =
     MEMORY_OPTIONS.find((option) => option.value === memoryMode) ??
     MEMORY_OPTIONS[0];
@@ -412,9 +418,9 @@ export function McpToolPolicyPreference() {
   const { t } = useTranslation();
   const policy = useSelector(selectMcpToolPolicy);
 
-  // The policy only concerns the MCP servers the user added; without the tools module
-  // there is no MCP UI at all.
-  if (!isToolsEnabled()) return null;
+  // The policy only concerns the MCP servers the user added; without the tools
+  // module or the MCP feature there is no MCP UI at all.
+  if (!isToolsEnabled() || !isFeatureEnabled("mcp_servers")) return null;
 
   const selectedOption =
     MCP_TOOL_POLICY_OPTIONS.find((option) => option.value === policy) ??

@@ -101,6 +101,9 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
   const activeBrand = currentBrand();
   const restrictions = brandRestrictionSummary(activeBrand);
   const restrictionLines = brandRestrictionLines(activeBrand);
+  // Without the memories feature the stored memory mode and groups are inert;
+  // reporting them would invite the model to propose a change that cannot apply.
+  const memoriesFeature = isFeatureEnabled("memories");
   const memoryMode =
     userSettings.memory_mode === 1
       ? "recall"
@@ -124,6 +127,16 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
       : userSettings.send_with_enter
         ? "Enter"
         : "Shift+Enter";
+  // `feedback_enabled` is tri-state: null follows the deployment's feedback
+  // module, an explicit boolean overrides it for this profile.
+  const feedbackEnabled =
+    typeof userSettings.feedback_enabled === "boolean"
+      ? userSettings.feedback_enabled
+      : isFeedbackEnabled();
+  const feedbackSource =
+    typeof userSettings.feedback_enabled === "boolean"
+      ? "user choice"
+      : "follows the deployment";
   const documentConversion =
     userSettings.document_conversion_mode === "browser"
       ? "browser only (local)"
@@ -151,9 +164,13 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
 
   return [
     `- Default model: ${modelName}`,
-    `- Memory mode: ${memoryMode}`,
-    `- Saved memories: ${userSettings.memories?.length ?? 0} (stored in this browser)`,
-    `- Memory groups: ${memoryGroupsSummary}`,
+    ...(memoriesFeature
+      ? [
+          `- Memory mode: ${memoryMode}`,
+          `- Saved memories: ${userSettings.memories?.length ?? 0} (stored in this browser)`,
+          `- Memory groups: ${memoryGroupsSummary}`,
+        ]
+      : ["- Memories: disabled in this deployment"]),
     `- Configured MCP servers: ${
       Array.isArray(userSettings.mcp_servers) && userSettings.mcp_servers.length
         ? userSettings.mcp_servers
@@ -165,7 +182,11 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
         : "none"
     }`,
     `- MCP tool calls in chats: ${userSettings.mcp_tool_policy ?? "ask"} (ask, always, or never; only the user's MCP servers are affected)`,
-    `- Default memory group: ${memoryGroupName(userSettings, userSettings.default_memory_group)} (id: ${userSettings.default_memory_group ?? "default"})`,
+    ...(memoriesFeature
+      ? [
+          `- Default memory group: ${memoryGroupName(userSettings, userSettings.default_memory_group)} (id: ${userSettings.default_memory_group ?? "default"})`,
+        ]
+      : []),
     `- Request timeout: ${Math.round((userSettings.timeout ?? 300000) / 1000)} seconds`,
     `- End-to-end encryption: ${e2eeKeys.length} key${e2eeKeys.length === 1 ? "" : "s"} configured; encrypted models: ${keyedModels.length ? keyedModels.join(", ") : "none"}`,
     `- Encrypted server synchronization (settings sync): ${userSettings.sync?.enabled === true ? "enabled" : "disabled"}; automatic sync: ${userSettings.sync?.auto !== false ? "on" : "off"}. The vault key and passphrase are never available to the Meta chat; creating or unlocking the copy happens in Data settings.`,
@@ -174,6 +195,7 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
     `- Conversation summaries: ${yesNo(userSettings.conversation_summaries)}`,
     `- Show message timestamps: ${yesNo(userSettings.show_timestamps)}`,
     `- Send message with: ${sendWithEnter}`,
+    `- Answer feedback and conversation analysis: ${feedbackEnabled ? "enabled" : "disabled"} (${feedbackSource}); ratings appear under answers while enabled, and a changed conversation is sent for analysis as ${feedbackEnabled && userSettings.feedback_send_transcripts !== false ? "only the new turns, which the service appends to the stored chat" : "nothing, because chat transcripts are switched off"}`,
     `- HTML rendering: ${userSettings.html_render_mode ?? "off"}`,
     `- Load external references: ${yesNo(userSettings.html_load_external)}`,
     `- HTML sanitization: ${userSettings.html_sanitization ?? "strict"}`,
@@ -249,7 +271,9 @@ export function buildConversationSettingsSummary(settings = {}) {
     `temperature ${settings.temperature ?? "default"}`,
     `top_p ${settings.top_p ?? "default"}`,
     `reasoning effort ${reasoning}`,
-    `memory mode override ${memoryOverride}`,
+    ...(isFeatureEnabled("memories")
+      ? [`memory mode override ${memoryOverride}`]
+      : []),
     `tools ${settings.enable_tools ? "enabled" : "disabled"}${
       settings.enable_tools && enabledTools.length
         ? ` (${enabledTools.join(", ")})`
@@ -304,6 +328,18 @@ function personaLines(personas) {
           `- id: ${persona.id}\n  title: ${persona.title}\n  category: ${persona.category || "uncategorized"}\n  description: ${persona.description || "(no description)"}`,
       )
       .join("\n") || "(no personas available)"
+  );
+}
+
+function courseLines(personas) {
+  const courses = personas.filter((persona) => persona.course?.id);
+  return (
+    courses
+      .map(
+        (persona) =>
+          `- id: ${persona.course.id}\n  title: ${persona.course.title || persona.title}\n  persona: ${persona.path}\n  description: ${persona.description || "(no description)"}\n  link: /course/${persona.course.id}`,
+      )
+      .join("\n") || "(no courses available)"
   );
 }
 
@@ -842,6 +878,16 @@ export const META_TOOL_DEFINITIONS = [
   tool("list_models", "List the models available in this deployment with their ids and names."),
   tool("list_personas", "List the recommended persona catalog with ids, titles, categories, and descriptions."),
   tool(
+    "list_courses",
+    "List the available courses (personas with learning material) with course ids, titles, and links. A course page holds its skills, a practice quiz, and self-learning pages.",
+  ),
+  tool(
+    "start_course",
+    "Open a course page by its course id.",
+    { id: { type: "string", description: "Course id" } },
+    ["id"],
+  ),
+  tool(
     "list_tutorials",
     "List the available feature guides and use cases, including their ids and purposes.",
   ),
@@ -868,12 +914,16 @@ const TUTORIAL_TOOL_NAMES = new Set([
   "start_use_case",
 ]);
 
-export const getMetaToolDefinitions = (tutorials = isFeatureEnabled("tutorials")) =>
-  tutorials
-    ? META_TOOL_DEFINITIONS
-    : META_TOOL_DEFINITIONS.filter(
-        (definition) => !TUTORIAL_TOOL_NAMES.has(definition.function.name),
-      );
+export const getMetaToolDefinitions = (
+  tutorials = isFeatureEnabled("tutorials"),
+  memories = isFeatureEnabled("memories"),
+) =>
+  META_TOOL_DEFINITIONS.filter((definition) => {
+    const { name } = definition.function;
+    if (!tutorials && TUTORIAL_TOOL_NAMES.has(name)) return false;
+    if (!memories && name === "list_memories") return false;
+    return true;
+  });
 
 export async function getAgentFileChanges({
   agents = [],
@@ -1290,6 +1340,9 @@ export function createMetaToolRunner({
       }
 
       case "list_memories": {
+        if (!isFeatureEnabled("memories")) {
+          return "Memories are disabled in this deployment.";
+        }
         const memoryGroups = memoryGroupsFor(userSettings);
         const groupLines = memoryGroups.map((group) => {
           const count = (memories || []).filter(
@@ -1694,6 +1747,26 @@ Sessions:\n${lines.join("\n") || "(no sessions)"}`;
       case "list_personas": {
         const personas = await loadPersonaCatalog().catch(() => []);
         return personaLines(personas);
+      }
+
+      case "list_courses": {
+        const personas = await loadPersonaCatalog().catch(() => []);
+        return courseLines(personas);
+      }
+
+      case "start_course": {
+        const id = String(args.id || "").trim();
+        const personas = await loadPersonaCatalog().catch(() => []);
+        const match = personas.find(
+          (persona) => String(persona.course?.id || "") === id,
+        );
+        if (!match) {
+          return "Course not found. Call list_courses for the available ids.";
+        }
+        window.dispatchEvent(
+          new CustomEvent("chatai:start-course", { detail: { courseId: id } }),
+        );
+        return `Opened the course ${match.course?.title || id}.`;
       }
 
       case "list_tutorials": {

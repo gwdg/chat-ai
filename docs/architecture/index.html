@@ -4334,9 +4334,11 @@ x-saia-bridge-depth: 2
           <h3>Brand · restriction</h3>
           <p>
             <code>restrictions.modules</code>, <code>.features</code>, <code>.models</code>
-            (<code>fixed</code> / <code>allowed</code>) and <code>.external</code> (web search, external
-            models, MCP, external references). Only <code>false</code>, <code>"false"</code> or
-            <code>null</code> is honoured, so the direction cannot flip.
+            (<code>fixed</code> / <code>allowed</code>), <code>.external</code> (web search, external
+            models, MCP, external references), <code>.locks</code> (tools, chat settings, a fixed model)
+            and <code>.ui</code> (model control, data-safety indicator). Only <code>false</code>,
+            <code>"false"</code> or <code>null</code> is honoured for the disabling keys, and only
+            <code>true</code> locks / <code>false</code> hides, so the direction cannot flip.
           </p>
         </div>
       </div>
@@ -4414,22 +4416,36 @@ x-saia-bridge-depth: 2
         <li>
           <b>Outbound features are deployment config, never a form without a sink.</b> The bug report
           dialog exists only while <code>feedbackPath</code> is set (<code>VITE_FEEDBACK_ENDPOINT</code>).
-          The browser posts the multipart report to <code>back</code>'s <code>/feedback</code>, which
-          forwards it to <code>feedbackEndpoint</code> from <code>back.json</code> with the caller's
-          identity and an optional token, so the receiver's address and secret never ship in the bundle.
+          The browser posts the multipart report either to <code>back</code>'s <code>/feedback</code>,
+          which forwards it to <code>feedbackEndpoint</code> from <code>back.json</code> with the
+          caller's identity and an optional token, or to the SAIA registry's service tunnel, which is
+          how a SAIA deployment reaches <code>saia-feedback</code>: the service registers a connector
+          and the registry proxies any path to it, so no engine route exists. A deployment forwards
+          an app-visible <code>&lt;backend&gt;/saia-feedback</code> to
+          <code>/services/saia-feedback/</code> and stamps <code>x-auth-claim-uid</code> from the
+          authenticated user; a stack without that hop points <code>feedbackPath</code> at the tunnel
+          itself and carries the header in <code>fakeAuthHeaders</code>. Either way the receiver's
+          address and secret never ship in the bundle, and the browser names the registry only for
+          that direct local case. The identity goes as <code>x-auth-claim-uid</code>, derived from
+          <code>oidc_claim_uid</code> when a gateway injects only that, because
+          <code>saia-feedback</code> reads no other user header. Which arcana a report lands in is the
+          receiver's decision, not the app's: <code>saia-feedback</code>'s <code>DEFAULT_ARCANA</code>
+          accepts an <code>owner/arcana</code> reference such as <code>gwdg/chat-ai</code> and files
+          every submission into that team inbox.
           The same rule covers the install button: it appears only while the browser's one-shot
           <code>beforeinstallprompt</code> event exists, so an installed app or an unsupporting browser
           shows no dead control.
         </li>
         <li>
           <b>A brand may narrow, never widen.</b> <code>config/brandPolicy.js</code> is the only path from
-          a brand into behaviour. It can switch modules and features off, fix or allowlist the models, and
-          forbid the four external capabilities - and that is all, because only a value that explicitly
-          disables something is read. A brand cannot enable a module the deployment turned off, add a model
-          the deployment does not list, or change a layout or a route. The guarantee survives because
-          <code>deployment.js</code> and <code>utils/modules.js</code> consult the brand, so
-          <code>isFeatureEnabled()</code> and <code>moduleValue()</code> already return the effective value;
-          enforcement then lives in the request and UI paths, not in a second checker.
+          a brand into behaviour. It can switch modules and features off, fix or allowlist the models,
+          forbid the four external capabilities, keep the model / GWDG Tools / chat settings fixed, and
+          hide the model control and the data-safety indicator - and that is all, because only a value
+          that explicitly disables something is read. A brand cannot enable a module the deployment turned
+          off, add a model the deployment does not list, or change a layout or a route. The guarantee
+          survives because <code>deployment.js</code> and <code>utils/modules.js</code> consult the brand,
+          so <code>isFeatureEnabled()</code> and <code>moduleValue()</code> already return the effective
+          value; enforcement then lives in the request and UI paths, not in a second checker.
         </li>
         <li>
           <b>The policy is read from module state.</b> <code>BrandProvider</code> calls
@@ -4448,7 +4464,22 @@ x-saia-bridge-depth: 2
         <li>
           <b>One deliberate content exception.</b> A brand may own its own disclaimers and its default
           system prompt; those are the institution's words, not a feature switch. Everything else it
-          carries is presentation, or the narrowing above.
+          carries is presentation, the narrowing above, or the feature folders below.
+        </li>
+        <li>
+          <b>A brand may ship its own UI and app-side tools - inside its folder.</b>
+          <code>brand.json</code> sets <code>ui.&lt;key&gt;: true</code>, and
+          <code>config/branding/&lt;folder&gt;/features/&lt;feature-key&gt;/index.js</code> exports
+          <code>{ key, fences?, personaBanner?, chatTool? }</code>. <code>config/brandFeatures.js</code>
+          globs those folders, keeps the ones the merged profile enables (an <code>extends</code> parent's
+          flag and module travel together) and hands out <code>brandFence</code>,
+          <code>brandPersonaBanners</code>, <code>brandChatTool</code> and
+          <code>brandFeatureFlag</code>. The renderer checks a brand fence before its built-in ones, the
+          persona banner renders the contributed row, and a contributed function tool runs inside the app:
+          in a bounded loop on the plain chat path and as a pi tool in the Browser agent. GAIA's course
+          material is the worked example: a quiz question and a learning page, each embedded by its
+          own fence. The code stays a brand file - not generic <code>components/</code>
+          code - and a brand still cannot add a module, a feature flag, a route or a setting.
         </li>
       </ol>
 
@@ -4507,8 +4538,8 @@ x-saia-bridge-depth: 2
           </tr>
           <tr>
             <td>Brand policy</td>
-            <td>Model policy, module/feature denials, the four external capabilities, the summary both the
-                Profile section and the Meta chat print.</td>
+            <td>Model policy, module/feature denials, the four external capabilities, fixed controls and
+                hidden UI controls, the summary both the Profile section and the Meta chat print.</td>
             <td><span class="mono">config/brandPolicy.js</span></td>
           </tr>
           <tr>
@@ -4529,14 +4560,21 @@ x-saia-bridge-depth: 2
           </tr>
           <tr>
             <td>Feedback relay</td>
-            <td>Multipart bug report, hidden until <code>feedbackPath</code> is set; <code>back</code>
-                forwards it with the caller's identity.</td>
+            <td>Multipart bug report, hidden until <code>feedbackPath</code> is set; <code>back</code> or
+                the deployment's forward to the registry's <code>saia-feedback</code> tunnel relays it
+                with the caller's identity.</td>
             <td><span class="mono">modals/Feedback/BugReportModal.jsx · apis/feedback.js · back/service.mjs</span></td>
           </tr>
           <tr>
             <td>Guide gating</td>
             <td>One predicate per gated tutorial and use case, checked by the validator.</td>
             <td><span class="mono">config/featureGuides.js · config/useCases.js</span></td>
+          </tr>
+          <tr>
+            <td>Brand features</td>
+            <td>A brand's own fence renderers, persona-banner row and app-side chat tools, gated by
+                <code>ui.&lt;key&gt;</code> in its <code>brand.json</code>.</td>
+            <td><span class="mono">config/brandFeatures.js · config/branding/&lt;folder&gt;/features/&lt;key&gt;/</span></td>
           </tr>
         </tbody>
       </table>
@@ -4558,6 +4596,11 @@ x-saia-bridge-depth: 2
             finished.</li>
         <li><b>A new gated guide gets an availability entry.</b> Otherwise a tour points at an element a
             deployment does not render.</li>
+        <li><b>A brand feature stays in its brand folder.</b> <code>features/&lt;key&gt;/index.js</code>
+            may contribute a fence renderer, a banner row and an app-side tool, and nothing else. The gate is the
+            merged profile's <code>ui.&lt;key&gt;</code>, read through <code>brandFeatures.js</code>; a
+            feature that needs a module, a route or a setting is a deployment feature, not a brand
+            feature.</li>
         <li><b>A brand page describes what is actually deployed.</b> The copy lives with the brand, but it
             is still the operator's claim; <code>/sitemap</code> reads the live data instead of a list
             someone has to maintain.</li>
@@ -4578,11 +4621,19 @@ x-saia-bridge-depth: 2
             carries the statement instead of the list enforcing it.</li>
         <li>Restrictions reach the request paths one by one: a new feature that talks to the outside world
             is only as gated as the code that consults <code>isBrandExternalAllowed()</code>.</li>
+        <li>Hidden controls are presentation only and equally per-call-site: a new surface that renders the
+            model control or the data-safety indicator must consult <code>isBrandUiVisible()</code>, and a
+            new way to set a conversation setting (a tool, an import, an agent) must honour
+            <code>isBrandLocked()</code> like the Meta chat's proposals do.</li>
         <li>Brand CSS cannot invent a token; the variable must exist in <code>THEME_TOKENS</code> or
             <code>SURFACE_TOKENS</code> first.</li>
         <li>Brand-owned pages cannot be validated against the code. An operator who copies another
             institution's About text onto a narrower deployment states features this site does not
             have.</li>
+        <li>A brand feature's tool needs a model that supports tools, and it is offered only on the plain
+            chat path or in the Browser agent - a request routed to the tool gateway
+            (<code>enable_tools</code>) drops function tools, so the feature stays quiet there instead of
+            promising a block the reply cannot produce.</li>
       </ul>
 
       <h2>Where to look</h2>
@@ -4590,6 +4641,9 @@ x-saia-bridge-depth: 2
         <li><span class="mono">docs/deployment-profiles.md</span> - the full design, including the schema</li>
         <li><span class="mono">front/src/config/deployment.js</span> - selection and fallback</li>
         <li><span class="mono">front/src/utils/modules.js</span> - the accessors</li>
+        <li><span class="mono">front/src/config/brandFeatures.js</span> - brand-owned fence renderers,
+            banner rows and chat tools; the GAIA course material lives in
+            <span class="mono">config/branding/gaia/features/course-material/</span></li>
         <li><span class="mono">front/src/config/brands.js</span> - resolution, theme and surface tokens</li>
         <li><span class="mono">front/src/config/brandPolicy.js</span> - what a brand may narrow, and the
             summary both readers use</li>
@@ -4599,7 +4653,8 @@ x-saia-bridge-depth: 2
         <li><span class="mono">front/src/config/branding/&lt;folder&gt;/*.md</span> - the brand's own About and
             accessibility copy</li>
         <li><span class="mono">front/src/modals/Feedback/BugReportModal.jsx</span> - the report form, and
-            <span class="mono">back/service.mjs#POST /feedback</span> for the hop</li>
+            <span class="mono">back/service.mjs#POST /feedback</span> or
+            <span class="mono">saia-engine …/server/chat_ai_ui_back.py#feedback</span> for the hop</li>
       </ul>
 
       <div class="callout info">
@@ -4615,7 +4670,7 @@ x-saia-bridge-depth: 2
       <p>
         Sources: the repository at <span class="mono">gwdg/chat-ai</span>, its developer notes and the
         feature documents under <span class="mono">docs/</span>. Facts are checked against the code on
-        23 November 2026; this page is a reading aid, not a specification.
+        25 November 2026; this page is a reading aid, not a specification.
       </p>
       <p>
         Not covered here on purpose: visual polish and sidebar work, tutorial copy, and internal

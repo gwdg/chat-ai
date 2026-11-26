@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_TTS_SAMPLE_RATE,
   encodeWav,
@@ -59,6 +59,20 @@ describe("speech helpers", () => {
       expect(
         resolveTtsConfig({ audio: { voice: "auto", language: "auto" } }, "en-US"),
       ).toEqual({ module: { model: null, voice: null }, model: null, voice: null, language: "en" });
+    }
+  });
+
+  it("accepts the bare browser literal a deployment profile returns", () => {
+    // deployments/gaia/index.json carries `"speech": "browser"`, which
+    // moduleValue() returns natively (no JSON quoting), so it must not reach
+    // JSON.parse() and disable speech with a console warning.
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      import.meta.env.VITE_MODULE_SPEECH = "browser";
+      expect(getSpeechModule()).toEqual({ model: null, voice: null });
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
     }
   });
 

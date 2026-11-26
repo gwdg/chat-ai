@@ -1,4 +1,4 @@
-import { fireEvent, render, within } from "@testing-library/react";
+import { act, fireEvent, render, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 // The preview reads the same HTML preferences as fenced HTML blocks.
@@ -24,8 +24,7 @@ const setup = ({ loadExternal = false, sanitization = "strict" } = {}) => {
   };
   const { container } = render(
     <SandboxedHtmlPreview content={DOCUMENT} title="preview" />
-  );
-  const frame = () => container.querySelector("iframe");
+  );  const frame = () => container.querySelector("iframe");
   const doc = () => frame().getAttribute("srcdoc") || "";
   const csp = () =>
     doc().match(
@@ -106,5 +105,120 @@ describe("SandboxedHtmlPreview", () => {
     expect(container.querySelector("iframe").getAttribute("srcdoc")).not.toMatch(
       /http-equiv\s*=\s*["']?refresh/i
     );
+  });
+
+  it("starts relaxed and hides the mode control for course material", () => {
+    settings = { html_load_external: false, html_sanitization: "strict" };
+    const { container } = render(
+      <SandboxedHtmlPreview
+        content={DOCUMENT}
+        title="course"
+        relaxedByDefault
+        showModeToggle={false}
+      />
+    );
+
+    expect(container.querySelector("iframe").getAttribute("sandbox")).toBe(
+      "allow-scripts"
+    );
+    expect(
+      within(container).queryByRole("button", { name: "Strict" })
+    ).toBeNull();
+    expect(
+      within(container).queryByRole("button", { name: "Relaxed" })
+    ).toBeNull();
+  });
+
+  it("takes the wrapper height from heightClass", () => {
+    settings = { html_load_external: false, html_sanitization: "relaxed" };
+    const { container } = render(
+      <SandboxedHtmlPreview content={DOCUMENT} title="course" heightClass="h-96" />
+    );
+
+    expect(container.firstChild.className).toContain("h-96");
+    expect(container.firstChild.className).not.toContain("min-h-[70vh]");
+  });
+
+  it("sizes an auto-height frame to the height its document reports", () => {
+    settings = { html_load_external: false, html_sanitization: "strict" };
+    const { container } = render(
+      <SandboxedHtmlPreview
+        content={DOCUMENT}
+        title="course"
+        relaxedByDefault
+        showModeToggle={false}
+        autoHeight
+        heightClass="h-[26rem]"
+      />
+    );
+    const frame = container.querySelector("iframe");
+
+    // The reporter runs inside the frame; the parent cannot read its size.
+    expect(frame.getAttribute("srcdoc")).toContain(
+      "chatai-html-preview-height"
+    );
+    // The wrapper no longer fixes the height; the frame does, after measuring.
+    expect(container.firstChild.className).not.toContain("h-[26rem]");
+    expect(frame.className).toContain("h-[26rem]");
+
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          data: { type: "chatai-html-preview-height", height: 1234 },
+          source: frame.contentWindow,
+        })
+      );
+    });
+
+    expect(frame.style.height).toBe("1234px");
+    expect(frame.className).not.toContain("h-[26rem]");
+  });
+
+  it("ignores height reports from anywhere but its own frame", () => {
+    settings = { html_load_external: false, html_sanitization: "strict" };
+    const { container } = render(
+      <SandboxedHtmlPreview
+        content={DOCUMENT}
+        title="course"
+        relaxedByDefault
+        showModeToggle={false}
+        autoHeight
+      />
+    );
+    const frame = container.querySelector("iframe");
+
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          data: { type: "chatai-html-preview-height", height: 1234 },
+          source: window,
+        })
+      );
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          data: { type: "chatai-html-preview-height", height: 1234 },
+        })
+      );
+    });
+
+    expect(frame.style.height).toBe("");
+  });
+
+  it("keeps a fixed height when scripts are off, because nothing can measure", () => {
+    settings = { html_load_external: false, html_sanitization: "strict" };
+    const { container } = render(
+      <SandboxedHtmlPreview
+        content={DOCUMENT}
+        title="course"
+        autoHeight
+        heightClass="h-96"
+      />
+    );
+    const frame = container.querySelector("iframe");
+
+    expect(frame.getAttribute("srcdoc")).not.toContain(
+      "chatai-html-preview-height"
+    );
+    expect(container.firstChild.className).toContain("h-96");
   });
 });

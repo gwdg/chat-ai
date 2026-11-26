@@ -74,6 +74,16 @@ export function getPersonaDownloadUrl(path) {
 
 const isUnderscoreSegment = (value) => String(value || "").startsWith("_");
 
+const COURSE_ASSET_PATTERN = /^courses\/[^/]+\/.+\.json$/i;
+
+/**
+ * JSON files below `courses/<id>/` belong to a course (skills, quiz), not to
+ * the persona library. Only `courses/<id>.json` is a persona.
+ */
+export function isCourseAssetPath(path) {
+  return COURSE_ASSET_PATTERN.test(String(path || ""));
+}
+
 /**
  * Whether a persona-library folder is hidden. Folders whose name starts with an
  * underscore are reserved for tests, drafts, and other non-persona content.
@@ -94,6 +104,15 @@ export function isIgnoredPersonaPath(path) {
 }
 
 function toPersonaEntry(path, data) {
+  const course =
+    data?.course && typeof data.course === "object"
+      ? {
+          id: String(data.course.id || titleFromPath(path)).trim(),
+          title:
+            String(data.course.title || data?.title || "").trim() ||
+            titleFromPath(path),
+        }
+      : null;
   return {
     id: path,
     path,
@@ -101,6 +120,7 @@ function toPersonaEntry(path, data) {
     description: String(data?.subtitle || data?.description || "").trim(),
     category: path.includes("/") ? path.split("/").slice(0, -1).join("/") : "",
     url: getPersonaDownloadUrl(path),
+    course: course?.id ? course : null,
   };
 }
 
@@ -160,6 +180,7 @@ export async function loadPersonaCatalog({ force = false } = {}) {
           item?.type === "blob" &&
           /\.json$/i.test(item.path || "") &&
           !String(item.path).startsWith(".github/") &&
+          !isCourseAssetPath(item.path) &&
           !isIgnoredPersonaPath(item.path),
       )
       .map((item) => item.path);

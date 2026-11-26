@@ -1,3 +1,6 @@
+import { isBrandLocked } from "../config/brandPolicy.js";
+import { isFeatureEnabled } from "../config/deployment.js";
+
 const ACTION_TYPES =
   "CREATE_CHAT|RENAME_CHAT|MOVE_CHAT|PIN_CHAT|PIN_TOPIC|PIN_WORKSPACE|PIN_AGENT|SET_SETTING|SET_CONVERSATION_SETTING|WORKSPACE_LINK|AGENT_ACTION|AGENT_SESSION|MCP_SERVER|ADD_MEMORY|UPDATE_MEMORY|DELETE_MEMORY|CLEAR_MEMORIES|E2EE_ASSIGN";
 const ACTION_SOURCE = `\\[\\[(${ACTION_TYPES}):\\s*(\\{[\\s\\S]*?\\})\\]\\]`;
@@ -22,6 +25,8 @@ const SUPPORTED_SETTING_KEYS = new Set([
   "conversation_summaries",
   "show_timestamps",
   "send_with_enter",
+  "feedback_enabled",
+  "feedback_send_transcripts",
   "mcp_tool_policy",
   "timeout",
   "sync_enabled",
@@ -40,6 +45,33 @@ const SUPPORTED_CONVERSATION_SETTING_KEYS = new Set([
   "workspace_write_access",
   "arcana_tools",
 ]);
+
+const LOCKED_CHAT_SETTING_KEYS = new Set([
+  "temperature",
+  "top_p",
+  "reasoning_effort",
+  "memory_mode_override",
+  "memory_group_override",
+]);
+const LOCKED_TOOL_SETTING_KEYS = new Set([
+  "enable_tools",
+  "enable_web_search",
+  "browser_storage",
+  "workspace_write_access",
+  "arcana_tools",
+]);
+
+/**
+ * A brand may fix the model, the chat settings or GWDG Tools. The Meta chat can
+ * propose per-conversation settings and create a chat with overrides, so it must
+ * not become the way around a control the brand removed from the interface.
+ */
+export const isConversationSettingLocked = (key) => {
+  if (key === "model") return isBrandLocked("model");
+  if (LOCKED_CHAT_SETTING_KEYS.has(key)) return isBrandLocked("chat_settings");
+  if (LOCKED_TOOL_SETTING_KEYS.has(key)) return isBrandLocked("tools");
+  return false;
+};
 
 function isValidConversationSetting(key, value) {
   if (key === "model") {
@@ -83,7 +115,7 @@ const CREATE_CHAT_SETTING_KEYS = new Set([
   "mcp_local_server_ids",
 ]);
 
-function normalizeCreateChat(payload) {
+function normalizeCreateChat(payload, memoriesEnabled = true) {
   const title = String(payload?.title || "").trim().slice(0, 200);
   const folderId =
     payload?.folderId === null || payload?.folder_id === null
@@ -140,12 +172,17 @@ function normalizeCreateChat(payload) {
         settings[key] = value;
       }
     } else if (key === "memory_mode_override") {
-      if (value === "default" || [0, 1, 2].includes(Number(value))) {
+      if (
+        memoriesEnabled &&
+        (value === "default" || [0, 1, 2].includes(Number(value)))
+      ) {
         settings[key] = value === "default" ? "default" : Number(value);
       }
     } else if (key === "memory_group_override") {
-      const group = String(value || "").trim();
-      if (group) settings.memory_group_override = group.slice(0, 120);
+      if (memoriesEnabled) {
+        const group = String(value || "").trim();
+        if (group) settings.memory_group_override = group.slice(0, 120);
+      }
     } else if (key === "enable_tools" || key === "enable_web_search") {
       if (typeof value === "boolean") settings[key] = value;
     } else if (key === "tools" && value && typeof value === "object" && !Array.isArray(value)) {
@@ -190,9 +227,10 @@ export function getMetaActionProposals(text) {
   const value = String(text || "");
   const pattern = new RegExp(ACTION_SOURCE, "gi");
   const proposals = new Map();
+  const memoriesEnabled = isFeatureEnabled("memories");
   let match;
 
-  if (new RegExp(BARE_CLEAR_SOURCE, "i").test(value)) {
+  if (memoriesEnabled && new RegExp(BARE_CLEAR_SOURCE, "i").test(value)) {
     proposals.set("memory:clear", { type: "clear_memories" });
   }
 
@@ -207,8 +245,18 @@ export function getMetaActionProposals(text) {
 
     const type = match[1].toUpperCase();
 
+    // Memory proposals are meaningless while the deployment has no memories.
+    if (
+      !memoriesEnabled &&
+      ["ADD_MEMORY", "UPDATE_MEMORY", "DELETE_MEMORY", "CLEAR_MEMORIES"].includes(
+        type,
+      )
+    ) {
+      continue;
+    }
+
     if (type === "CREATE_CHAT") {
-      const proposal = normalizeCreateChat(payload);
+      const proposal = normalizeCreateChat(payload, memoriesEnabled);
       if (proposal) {
         proposals.set(
           `create-chat:${proposal.title}:${proposal.folderId || proposal.folderName}:${proposal.messages.length}`,
@@ -221,6 +269,8 @@ export function getMetaActionProposals(text) {
     if (type === "SET_SETTING") {
       const key = String(payload.key || "").trim();
       if (!SUPPORTED_SETTING_KEYS.has(key)) continue;
+      if (key === "memory_mode" && !memoriesEnabled) continue;
+      if (key === "feedback_send_transcripts" && !isFeatureEnabled("feedback")) continue;
       if (
         key === "mcp_tool_policy" &&
         !["ask", "always", "never"].includes(payload.value)
@@ -228,7 +278,10 @@ export function getMetaActionProposals(text) {
         continue;
       }
       if (
-        (key === "sync_enabled" || key === "sync_auto") &&
+        (key === "sync_enabled" ||
+          key === "sync_auto" ||
+          key === "feedback_enabled" ||
+          key === "feedback_send_transcripts") &&
         typeof payload.value !== "boolean"
       ) {
         continue;
@@ -266,8 +319,12 @@ export function getMetaActionProposals(text) {
     if (type === "SET_CONVERSATION_SETTING") {
       const key = String(payload.key || "").trim();
       if (!SUPPORTED_CONVERSATION_SETTING_KEYS.has(key)) continue;
+      if (key === "memory_mode_override" && !memoriesEnabled) continue;
       if (!Object.prototype.hasOwnProperty.call(payload, "value")) continue;
       if (!isValidConversationSetting(key, payload.value)) continue;
+      // A locked setting keeps the deployment's value; the proposal is dropped
+      // rather than offered and then silently ignored.
+      if (isConversationSettingLocked(key)) continue;
 
       const targetAll =
         payload.target === "all" || payload.scope === "all" || payload.all === true;

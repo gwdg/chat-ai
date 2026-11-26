@@ -11,9 +11,9 @@ import {
 import { acceptBrandConsent } from "../../Redux/reducers/interfaceSettingsSlice";
 
 /**
- * Chat preferences → Advanced → Consents. Only rendered for a brand that
- * declares a `consentGate`; the purpose switches write a new acceptance record
- * immediately, keeping the gate's version and the original acceptance date.
+ * Profile → Consents. Only rendered for a brand that declares a `consentGate`;
+ * the purpose switches write a new acceptance record immediately, keeping the
+ * gate's version and the original acceptance date.
  */
 export default function BrandConsentSettings() {
   const dispatch = useDispatch();
@@ -41,7 +41,7 @@ export default function BrandConsentSettings() {
 
   return (
     <section
-      className="flex flex-col gap-2 border-t border-base-300 pt-5"
+      className="flex flex-col gap-2"
       data-guide="brand-consent-settings"
     >
       <h3 className="px-2 text-sm font-medium text-base-content">

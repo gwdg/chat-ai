@@ -9,8 +9,9 @@ import { loadFile, loadFileMeta, saveFile, updateConversation, updateConversatio
 import { getFileType, readFileAsBase64, readFileAsText } from "./attachments";
 import { isAgentEnabled, modelSupportsTools } from "../apis/agentEndpoints";
 import { resolveMcpServers } from "../agent/mcp";
-import { isArcanasEnabled, isChoicesEnabled, isFeedbackEnabled, isToolsEnabled } from "./modules";
+import { isArcanasEnabled, isChoicesEnabled, isToolsEnabled } from "./modules";
 import { isBrandExternalAllowed } from "../config/brandPolicy";
+import { brandChatToolsFor } from "./brandChatTools";
 import { confirmMcpNameChange } from "./mcpNameChange";
 import { BINARY_DOCUMENT_TYPES, modelSupportsFileType } from "./modelCapabilities";
 
@@ -338,7 +339,6 @@ const sendMessage = async ({
   const assistantIndex = localState.messages.length
 
   try {
-    const feedbackModule = isFeedbackEnabled();
     const toolsModule = isToolsEnabled();
     const choicesModule = isChoicesEnabled();
 
@@ -424,6 +424,23 @@ const sendMessage = async ({
       delete conversationForAPI.settings.tool_choice;
     }
 
+    // A brand feature may contribute app-side function tools (the GAIA course
+    // quiz, for example). They run below on the plain chat path, so a brand that
+    // keeps the Browser agent switched off still gets them, and a model without
+    // tool support gets none.
+    const brandTools =
+      !useBrowserAgent && !speechMode
+        ? brandChatToolsFor({
+            model: localState.settings.model,
+            settings: localState.settings,
+            persona: localState.persona,
+          })
+        : null;
+    if (brandTools) {
+      conversationForAPI.settings.function_tools = brandTools.definitions;
+      conversationForAPI.settings.tool_choice = "auto";
+    }
+
     // Legacy switch some gateways still read; never send it against a brand's policy.
     if (
       conversationForAPI.settings &&
@@ -479,24 +496,7 @@ const sendMessage = async ({
 
     // Ensure timeout value is within valid range
     const timeoutAPI = (timeout >= 5000 && timeout <= 900000) ? timeout : 300000;
-    
-    if(feedbackModule){
-      // add Feedback information
-      if (conversationForAPI.settings?.tools == undefined){
-        conversationForAPI.settings.tools = {
-            enabled: true
-          }
-      } else{
-        conversationForAPI.settings.tools.enabled = true;
-      }
-      let message = localState.messages[localState.messages.length - 1];
-      if (Array.isArray(message.content)) {
-        if (message?.feedback){
-            conversationForAPI.settings.feedback = message.feedback;
-        }
-      }
-    }
-    
+
     if(!setLocalState){   
       // send the message WITHOUT changing the UI with any response
       // TODO handle errors and print them to the user
@@ -540,98 +540,169 @@ const sendMessage = async ({
       let inThinking = false;
       let message_text = "";
       let capturedSpeechTranscript = "";
-      for await (const chunk of chatCompletions(conversationForAPI, timeoutAPI)) {
-        const delta = chunk?.choices[0]?.delta;
-        if (chunk?.usage) usage = chunk.usage;
-        // Check if reasoning exists
-        if (delta?.reasoning) {
-          process_block += delta.reasoning;
-        }
-        // Check if tool calls exist
-        if (Array.isArray(delta?.tool_calls) && delta.tool_calls.length > 0) {
-          try {
-            const name = delta.tool_calls[0]?.function?.name;
-            let arg = delta.tool_calls[0]?.function?.arguments;
-            if (typeof arg === "string") arg = JSON.parse(arg);
-            if (
-              speechMode &&
-              name === "audio_transcription.event" &&
-              arg?.event === "done" &&
-              typeof arg?.transcription === "string" &&
-              arg.transcription.trim()
-            ) {
-              const transcript = arg.transcription.trim();
-              capturedSpeechTranscript = transcript;
-              setLocalState((prev) => {
-                if (prev.id !== conversationId) return prev;
-                const userIndex = assistantIndex - 1;
-                const userMessage = prev.messages[userIndex];
-                if (!userMessage || userMessage.role !== "user") return prev;
-                const messages = [...prev.messages];
-                messages[userIndex] = {
-                  ...userMessage,
-                  meta: { ...(userMessage.meta || {}), speechTranscript: transcript },
-                };
-                return { ...prev, messages, flush: true };
-              });
-            }
-            const handled =
-              speechMode && name === "audio_transcription.event"
-                ? {}
-                : handleToolEvent(name, arg);
-            if (handled?.text) {
-              process_block += handled.text;
-            }
-            if (handled?.form) {
-              collectedForms.push({ type: "form", form: handled.form });
-            }
-          } catch (err) {
-            console.warn("Didn't understand: ", delta)
-          }
-        }
-        
-        // Attempt to receive file
-        let fileId = null;
-        if (delta?.audio) {
-          // Process audio output
-          try {
-            console.log("Receiving audio...");
-            const base64_data = delta.audio?.data;
-            const transcript = delta.audio?.transcript;
 
-            const format = delta.audio?.format || "wav";
-            const filename = delta.audio?.filename || `output.${format}`;
-            const mimeType = format === "mp3" ? "audio/mpeg" : `audio/${format}`;
-            fileId = await receiveFile(base64_data, mimeType, filename, conversationId, format);
-          } catch (err) {
-            console.error("Error receiving audio file:", err);
+      // A brand feature's function tools may need one or two more model calls in
+      // the same turn: the model asks for a tool, the app runs it, and the answer
+      // is appended for the continuation. The final text is one assistant message
+      // and the tool exchange itself is never stored in the conversation.
+      const maxRounds = brandTools ? 3 : 1;
+      let requestMessages = conversationForAPI.messages;
+
+      for (let round = 0; round < maxRounds; round++) {
+        const toolCalls = new Map();
+        let roundText = "";
+        for await (const chunk of chatCompletions(
+          { ...conversationForAPI, messages: requestMessages },
+          timeoutAPI,
+        )) {
+          // A usage-only chunk (common with `stream_options.include_usage`) has
+          // no choices, so index it defensively instead of failing the chunk.
+          const delta = chunk?.choices?.[0]?.delta;
+          if (chunk?.usage) usage = chunk.usage;
+          // Check if reasoning exists
+          if (delta?.reasoning) {
+            process_block += delta.reasoning;
           }
-        } else if (delta?.content && typeof delta.content !== String) {
-          // Attempt to save file
+          // A brand feature's own tools arrive as OpenAI function-call deltas and are
+          // accumulated, then run after the stream. Everything else uses the gateway's
+          // event tool calls below.
+          if (
+            brandTools &&
+            Array.isArray(delta?.tool_calls) &&
+            delta.tool_calls.length > 0
+          ) {
+            for (const call of delta.tool_calls) {
+              const index = call?.index ?? 0;
+              const entry = toolCalls.get(index) || {
+                id: call?.id || "",
+                name: "",
+                args: "",
+              };
+              if (call?.id) entry.id = call.id;
+              if (call?.function?.name) entry.name += call.function.name;
+              if (typeof call?.function?.arguments === "string") {
+                entry.args += call.function.arguments;
+              }
+              toolCalls.set(index, entry);
+            }
+          } else if (Array.isArray(delta?.tool_calls) && delta.tool_calls.length > 0) {
             try {
-              if (delta.content?.type === "image") {
-                // Process image input
-                console.log("Receiving image...");
-                const base64_dataURL = delta.content?.image_url;
-
-                // Extract base64 and mime type
-                const matches = base64_dataURL.match(/^data:(.+);base64,(.*)$/);
-                if (!matches) {
-                  throw new Error("Invalid base64 image data");
-                }
-
-                const mimeType = matches[1];
-                const base64Data = matches[2];
-                fileId = await receiveFile(base64Data, mimeType, "image_output", conversationId);
+              const name = delta.tool_calls[0]?.function?.name;
+              let arg = delta.tool_calls[0]?.function?.arguments;
+              if (typeof arg === "string") arg = JSON.parse(arg);
+              if (
+                speechMode &&
+                name === "audio_transcription.event" &&
+                arg?.event === "done" &&
+                typeof arg?.transcription === "string" &&
+                arg.transcription.trim()
+              ) {
+                const transcript = arg.transcription.trim();
+                capturedSpeechTranscript = transcript;
+                setLocalState((prev) => {
+                  if (prev.id !== conversationId) return prev;
+                  const userIndex = assistantIndex - 1;
+                  const userMessage = prev.messages[userIndex];
+                  if (!userMessage || userMessage.role !== "user") return prev;
+                  const messages = [...prev.messages];
+                  messages[userIndex] = {
+                    ...userMessage,
+                    meta: { ...(userMessage.meta || {}), speechTranscript: transcript },
+                  };
+                  return { ...prev, messages, flush: true };
+                });
+              }
+              const handled =
+                speechMode && name === "audio_transcription.event"
+                  ? {}
+                  : handleToolEvent(name, arg);
+              if (handled?.text) {
+                process_block += handled.text;
+              }
+              if (handled?.form) {
+                collectedForms.push({ type: "form", form: handled.form });
               }
             } catch (err) {
-              console.error("Error processing image chunk:", err);
-              continue;
+              console.warn("Didn't understand: ", delta)
             }
-        }
-        if (fileId) {
-          // Attach new file to model output
-          currentContent.push({"type": "file", "fileId": fileId})
+          }
+          
+          // Attempt to receive file
+          let fileId = null;
+          if (delta?.audio) {
+            // Process audio output
+            try {
+              console.log("Receiving audio...");
+              const base64_data = delta.audio?.data;
+              const transcript = delta.audio?.transcript;
+  
+              const format = delta.audio?.format || "wav";
+              const filename = delta.audio?.filename || `output.${format}`;
+              const mimeType = format === "mp3" ? "audio/mpeg" : `audio/${format}`;
+              fileId = await receiveFile(base64_data, mimeType, filename, conversationId, format);
+            } catch (err) {
+              console.error("Error receiving audio file:", err);
+            }
+          } else if (delta?.content && typeof delta.content !== String) {
+            // Attempt to save file
+              try {
+                if (delta.content?.type === "image") {
+                  // Process image input
+                  console.log("Receiving image...");
+                  const base64_dataURL = delta.content?.image_url;
+  
+                  // Extract base64 and mime type
+                  const matches = base64_dataURL.match(/^data:(.+);base64,(.*)$/);
+                  if (!matches) {
+                    throw new Error("Invalid base64 image data");
+                  }
+  
+                  const mimeType = matches[1];
+                  const base64Data = matches[2];
+                  fileId = await receiveFile(base64Data, mimeType, "image_output", conversationId);
+                }
+              } catch (err) {
+                console.error("Error processing image chunk:", err);
+                continue;
+              }
+          }
+          if (fileId) {
+            // Attach new file to model output
+            currentContent.push({"type": "file", "fileId": fileId})
+            setLocalState(prev => {
+              if (prev.id !== conversationId) {
+                return prev;
+              }
+              const messages = [...prev.messages];
+              if (!messages[assistantIndex]) return prev;
+              messages[assistantIndex] = {
+                ...messages[assistantIndex],
+                role: "assistant",
+                content: currentContent,
+                loading: true,
+              };
+              return { ...prev, messages, ignoreConflict: true };
+            });
+          }
+          if (process_block) {
+            if (!inThinking) {
+              message_text += "<think>";
+              inThinking = true;
+            }
+            message_text += process_block;
+            process_block = "";
+          }
+          if (delta?.content && typeof delta.content === "string") {
+            if (inThinking) {
+              message_text += "</think>";
+              inThinking = false;
+            }
+            // Process string input
+            message_text += delta.content;
+            roundText += delta.content;
+          }
+          // UI update
+          currentContent[0].text = message_text;
           setLocalState(prev => {
             if (prev.id !== conversationId) {
               return prev;
@@ -647,38 +718,62 @@ const sendMessage = async ({
             return { ...prev, messages, ignoreConflict: true };
           });
         }
-        if (process_block) {
-          if (!inThinking) {
-            message_text += "<think>";
-            inThinking = true;
+
+        // A brand feature's tool round: run the calls, append the exchange for the
+        // continuation, and stop after the last round. A short preamble the model
+        // wrote before the call stays in the visible answer; the tool exchange
+        // itself is never persisted.
+        if (brandTools && toolCalls.size > 0 && round < maxRounds - 1) {
+          const calls = [...toolCalls.entries()]
+            .sort((a, b) => a[0] - b[0])
+            .map(([index, value]) => ({
+              ...value,
+              id: value.id || `call_${round}_${index}`,
+            }))
+            .filter((call) => call.name);
+          if (calls.length > 0) {
+            const assistantMessage = {
+              role: "assistant",
+              content: roundText || null,
+              tool_calls: calls.map((call) => ({
+                id: call.id,
+                type: "function",
+                function: { name: call.name, arguments: call.args || "{}" },
+              })),
+            };
+            const toolMessages = [];
+            for (const call of calls) {
+              let args = {};
+              try {
+                args = call.args ? JSON.parse(call.args) : {};
+              } catch {
+                args = {};
+              }
+              let result;
+              try {
+                result = await brandTools.run(call.name, args);
+              } catch (error) {
+                result = `The tool failed: ${error?.message || error}`;
+              }
+              toolMessages.push({
+                role: "tool",
+                tool_call_id: call.id,
+                content:
+                  typeof result === "string" ? result : JSON.stringify(result),
+              });
+            }
+            requestMessages = [
+              ...requestMessages,
+              assistantMessage,
+              ...toolMessages,
+            ];
+            continue;
           }
-          message_text += process_block;
-          process_block = "";
         }
-        if (delta?.content && typeof delta.content === "string") {
-          if (inThinking) {
-            message_text += "</think>";
-            inThinking = false;
-          }
-          // Process string input
-          message_text += delta.content;
-        }
-        // UI update
-        currentContent[0].text = message_text;
-        setLocalState(prev => {
-          if (prev.id !== conversationId) {
-            return prev;
-          }
-          const messages = [...prev.messages];
-          if (!messages[assistantIndex]) return prev;
-          messages[assistantIndex] = {
-            ...messages[assistantIndex],
-            role: "assistant",
-            content: currentContent,
-            loading: true,
-          };
-          return { ...prev, messages, ignoreConflict: true };
-        });
+        // A round without a tool call ends the turn. Without this the loop sends
+        // the same request again and appends the answer a second time, which
+        // glued a repeated `gaia-quiz` fence into one broken code block.
+        break;
       }
       if (inThinking) {
         message_text += "</think>";
@@ -727,6 +822,7 @@ const sendMessage = async ({
         uiMessages: localState.messages,
         systemPrompt: systemPromptAPI,
         settings: { ...localState.settings, mcp_servers: effectiveMcpServers },
+        persona: localState.persona,
         mcpToolPolicy,
         onUpdate: showTurn,
         onMcpNameMismatch: handleMcpNameMismatch,

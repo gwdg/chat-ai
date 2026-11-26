@@ -1,12 +1,20 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { configureStore } from "@reduxjs/toolkit";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { x25519 } from "@noble/curves/ed25519.js";
 
 import userSettingsReducer from "../../../Redux/reducers/userSettingsReducer";
 import { b64e } from "../../../e2ee/protocol";
 import WarningExternalModel, { DataSafetyText } from "../WarningExternalModel";
+
+const brand = vi.hoisted(() => ({ externalWarningVisible: true }));
+
+vi.mock("../../../config/brandPolicy", async (importOriginal) => ({
+  ...(await importOriginal()),
+  isBrandUiVisible: (key) =>
+    key === "external_warning" ? brand.externalWarningVisible : true,
+}));
 
 const localState = (settings) => ({ settings });
 const publicKey = b64e(x25519.getPublicKey(x25519.utils.randomSecretKey()));
@@ -37,6 +45,26 @@ const renderSafety = (store, settings) =>
   );
 
 describe("data safety warning", () => {
+  beforeEach(() => {
+    brand.externalWarningVisible = true;
+  });
+
+  it("is removed for a brand that hides the indicator", () => {
+    brand.externalWarningVisible = false;
+    const { container } = renderSafety(makeStore(), {
+      model: { name: "External" },
+      tools: {},
+    });
+    expect(container).toBeEmptyDOMElement();
+    // The inline notice in the chat settings panel follows the same flag.
+    const text = render(
+      <DataSafetyText
+        localState={localState({ model: { name: "External" }, tools: {} })}
+        userData={{}}
+      />,
+    );
+    expect(text.container).toBeEmptyDOMElement();
+  });
   it("warns for external models", () => {
     render(
       <DataSafetyText

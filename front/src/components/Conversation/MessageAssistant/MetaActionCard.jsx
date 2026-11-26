@@ -56,6 +56,7 @@ import {
   useWorkspaceList,
 } from "../../../db/workspaceDb";
 import { getDefaultSettings } from "../../../utils/conversationUtils";
+import { isConversationSettingLocked } from "../../../utils/metaActions";
 import { useToast } from "../../../hooks/useToast";
 import {
   importUserSettings,
@@ -206,24 +207,38 @@ const buildCreateChatPayload = (
   };
   const overrides = action.settings || {};
 
-  if (overrides.model) {
+  if (overrides.model && !isConversationSettingLocked("model")) {
     const model = (modelsData || []).find(
       (item) => item.id === overrides.model || item.name === overrides.model,
     );
     if (!model) throw new Error("Model not found");
     settings.model = model;
   }
-  if (overrides.temperature !== undefined) {
+  if (
+    overrides.temperature !== undefined &&
+    !isConversationSettingLocked("temperature")
+  ) {
     settings.temperature = overrides.temperature;
   }
-  if (overrides.top_p !== undefined) settings.top_p = overrides.top_p;
-  if (overrides.reasoning_effort !== undefined) {
+  if (overrides.top_p !== undefined && !isConversationSettingLocked("top_p")) {
+    settings.top_p = overrides.top_p;
+  }
+  if (
+    overrides.reasoning_effort !== undefined &&
+    !isConversationSettingLocked("reasoning_effort")
+  ) {
     settings.reasoning_effort = overrides.reasoning_effort;
   }
-  if (overrides.memory_mode_override !== undefined) {
+  if (
+    overrides.memory_mode_override !== undefined &&
+    !isConversationSettingLocked("memory_mode_override")
+  ) {
     settings.memory_mode_override = overrides.memory_mode_override;
   }
-  if (overrides.memory_group_override !== undefined) {
+  if (
+    overrides.memory_group_override !== undefined &&
+    !isConversationSettingLocked("memory_group_override")
+  ) {
     const groups = new Set([
       "default",
       ...(userSettings.memory_groups || []).map((group) => group.id),
@@ -233,13 +248,19 @@ const buildCreateChatPayload = (
     }
     settings.memory_group_override = overrides.memory_group_override;
   }
-  if (overrides.enable_tools !== undefined) {
+  if (
+    overrides.enable_tools !== undefined &&
+    !isConversationSettingLocked("enable_tools")
+  ) {
     settings.enable_tools = overrides.enable_tools;
   }
-  if (overrides.enable_web_search !== undefined) {
+  if (
+    overrides.enable_web_search !== undefined &&
+    !isConversationSettingLocked("enable_web_search")
+  ) {
     settings.enable_web_search = overrides.enable_web_search;
   }
-  if (overrides.tools) {
+  if (overrides.tools && !isConversationSettingLocked("enable_tools")) {
     settings.tools = { ...settings.tools, ...overrides.tools };
   }
 
@@ -249,7 +270,10 @@ const buildCreateChatPayload = (
       .filter((server) => typeof server?.url === "string")
       .map((server) => server.id),
   );
-  if (Array.isArray(overrides.mcp_local_server_ids)) {
+  if (
+    Array.isArray(overrides.mcp_local_server_ids) &&
+    !isConversationSettingLocked("enable_tools")
+  ) {
     settings.mcp_local_server_ids = overrides.mcp_local_server_ids.filter(
       (id) => localIds.has(id),
     );
@@ -362,6 +386,9 @@ export default function MetaActionCard({
     conversation_summaries: "user_settings.chat_preferences.summaries.label",
     show_timestamps: "user_settings.chat_preferences.messages.timestamps.label",
     send_with_enter: "user_settings.chat_preferences.submission.label",
+    feedback_enabled: "user_settings.chat_preferences.feedback.label",
+    feedback_send_transcripts:
+      "user_settings.chat_preferences.feedback.transcript.label",
     html_render_mode: "user_settings.chat_preferences.html_render.label",
     html_load_external:
       "user_settings.chat_preferences.html_render.external_references.label",
@@ -423,6 +450,9 @@ export default function MetaActionCard({
       return t(`user_settings.chat_preferences.submission.options.${name}.label`, {
         defaultValue: String(value),
       });
+    }
+    if (key === "feedback_enabled" && (value === null || value === undefined)) {
+      return t("meta_chat.setting_deployment_default");
     }
     if (key === "mcp_tool_policy") {
       return t(

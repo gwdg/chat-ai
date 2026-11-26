@@ -5,7 +5,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const { chatCompletions } = vi.hoisted(() => ({ chatCompletions: vi.fn() }));
 vi.mock("../../apis/chatCompletions", () => ({ chatCompletions }));
 
+// A brand tool reads its data from the course catalog; the quiz tool must not
+// hit the network in a unit test.
+const { ensureCourse } = vi.hoisted(() => ({ ensureCourse: vi.fn() }));
+vi.mock("../courseCatalog", () => ({ ensureCourse }));
+
 import sendMessage from "../sendMessage";
+import { getBrandProfile, setCurrentBrand } from "../../config/brands";
+import { clearBrandFeatureCache } from "../../config/brandFeatures";
 
 const originalToolsModule = import.meta.env.VITE_MODULE_TOOLS;
 
@@ -88,5 +95,137 @@ describe("sendMessage module gates", () => {
       { type: "web_search" },
       { type: "audio_transcription" },
     ]);
+  });
+
+  it("attaches a brand feature's function tools on the plain chat path", async () => {
+    // The GAIA brand switches the agent module off, which is exactly the case the
+    // app-side tool loop covers: the request must carry both course-material tools.
+    setCurrentBrand(getBrandProfile("gaia"));
+    clearBrandFeatureCache();
+    try {
+      await run({
+        ...localState({ model: { id: "some-tool-model" } }),
+        persona: { courseId: "c-programmierung" },
+      });
+
+      const conversation = chatCompletions.mock.calls[0][0];
+      expect(conversation.settings.tool_choice).toBe("auto");
+      expect(
+        conversation.settings.function_tools.map(
+          (definition) => definition.function.name,
+        ),
+      ).toEqual(["show_course_quiz", "show_course_page"]);
+    } finally {
+      setCurrentBrand(null);
+      clearBrandFeatureCache();
+    }
+  });
+
+  it("adds no brand tool when the persona is not a course", async () => {
+    setCurrentBrand(getBrandProfile("gaia"));
+    clearBrandFeatureCache();
+    try {
+      await run({ ...localState(), persona: { title: "Not a course" } });
+
+      const conversation = chatCompletions.mock.calls[0][0];
+      expect(conversation.settings.function_tools).toBeUndefined();
+      expect(conversation.settings.tool_choice).toBeUndefined();
+    } finally {
+      setCurrentBrand(null);
+      clearBrandFeatureCache();
+    }
+  });
+});
+
+describe("brand tool rounds", () => {
+  const fence = ['```gaia-quiz', '{"course":"c-programmierung","id":"q-1"}', "```"].join("\n");
+
+  const course = {
+    id: "c-programmierung",
+    title: "C-Programmierung",
+    questions: [
+      {
+        id: "q-1",
+        type: "single_choice",
+        question: "Welche Antwort stimmt?",
+        answers: ["falsch", "richtig"],
+        correct: [1],
+        skills: [],
+        tags: [],
+        status: "draft",
+        explanation: "",
+      },
+    ],
+    skillsDoc: { skills: [] },
+  };
+
+  // Drives the whole turn, so it needs a real state updater: the loop only runs
+  // when setLocalState exists.
+  const runWithState = async (state) => {
+    let current = state;
+    await sendMessage({
+      localState: state,
+      setLocalState: (updater) => {
+        current = typeof updater === "function" ? updater(current) : updater;
+      },
+      memories: [],
+      openModal: vi.fn(),
+      notifyError: vi.fn(),
+      notifySuccess: vi.fn(),
+      dispatch: vi.fn(),
+      timeout: 30000,
+    });
+    return current;
+  };
+
+  beforeEach(() => {
+    ensureCourse.mockReset();
+    ensureCourse.mockResolvedValue(course);
+  });
+
+  it("stops after the round without a tool call instead of answering twice", async () => {
+    setCurrentBrand(getBrandProfile("gaia"));
+    clearBrandFeatureCache();
+    try {
+      let round = 0;
+      chatCompletions.mockImplementation(async function* rounds() {
+        round += 1;
+        if (round === 1) {
+          yield {
+            choices: [
+              {
+                delta: {
+                  tool_calls: [
+                    {
+                      index: 0,
+                      id: "call-1",
+                      function: { name: "show_course_quiz", arguments: "{}" },
+                    },
+                  ],
+                },
+              },
+            ],
+          };
+          return;
+        }
+        yield { choices: [{ delta: { content: fence } }] };
+        // A usage-only chunk has no choices; it must not abort the turn.
+        yield { choices: [], usage: { total_tokens: 12 } };
+      });
+
+      const state = await runWithState({
+        ...localState({ model: { id: "some-tool-model" } }),
+        persona: { courseId: "c-programmierung" },
+      });
+
+      // Regression: a second answer round used to be requested as well, which
+      // glued a repeated fence into one broken code block.
+      expect(chatCompletions).toHaveBeenCalledTimes(2);
+      const assistant = state.messages.find((message) => message.role === "assistant");
+      expect(assistant.content[0].text).toBe(fence);
+    } finally {
+      setCurrentBrand(null);
+      clearBrandFeatureCache();
+    }
   });
 });

@@ -25,6 +25,16 @@ vi.mock("../../../utils/modules", async (importOriginal) => ({
 vi.mock("../DefaultModelSelector", () => ({
   default: () => <div data-testid="default-model-selector" />,
 }));
+// GAIA switches the memories feature off; this profile stands in for it so the
+// tab list can be checked against a deployment that narrowed it.
+vi.mock("../../../config/deployment", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    isFeatureEnabled: (name) =>
+      name === "memories" ? false : actual.isFeatureEnabled(name),
+  };
+});
 
 const makeStore = () =>
   configureStore({
@@ -108,6 +118,18 @@ describe("User settings tabs", () => {
     expect(
       screen.getByRole("button", { name: "Advanced" }),
     ).toBeInTheDocument();
+  });
+
+  it("drops the Memories tab when the deployment disables memories", () => {
+    renderTab("memories");
+
+    expect(
+      screen.queryByRole("button", { name: "Memories" }),
+    ).not.toBeInTheDocument();
+    // The requested tab falls back to Profile rather than rendering nothing.
+    expect(
+      screen.getByRole("button", { name: "Profile" }),
+    ).toHaveAttribute("aria-pressed", "true");
   });
 
   it("renders Advanced mode and the rendering switches together in the advanced tab", () => {

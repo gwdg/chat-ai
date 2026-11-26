@@ -26,8 +26,13 @@ function walk(dir) {
   });
 }
 
+const configDir = path.join(srcDir, "config") + path.sep;
+// Brand folders live under `src/config` but hold their own UI components, so a
+// brand's `data-guide` targets must count like any other source file.
+const brandingDir = path.join(srcDir, "config", "branding") + path.sep;
+
 const sourceText = walk(srcDir)
-  .filter((file) => !file.startsWith(path.join(srcDir, "config") + path.sep))
+  .filter((file) => !file.startsWith(configDir) || file.startsWith(brandingDir))
   .map((file) => fs.readFileSync(file, "utf8"))
   .join("\n");
 
@@ -58,6 +63,7 @@ const hasDynamicAttachmentCards = sourceText.includes(
 const hasDynamicMessageCitations = sourceText.includes(
   'data-guide={isMessage ? "message-citation" : undefined}',
 );
+const hasDynamicPersonaCourses = sourceText.includes('? "persona-courses"');
 
 function getKey(object, key) {
   return key.split(".").reduce((value, part) => value?.[part], object);
@@ -85,7 +91,8 @@ function checkTarget(target, featureId, label, errors) {
         !(value.startsWith("profile-subtab-") && hasDynamicProfileSubtabs) &&
         !(value.startsWith("meta-tab-") && hasDynamicMetaTabs) &&
         !(value === "attachment-card" && hasDynamicAttachmentCards) &&
-        !(value === "message-citation" && hasDynamicMessageCitations)
+        !(value === "message-citation" && hasDynamicMessageCitations) &&
+        !(value === "persona-courses" && hasDynamicPersonaCourses)
       ) {
         errors.push(`${featureId}: ${label} targets missing data-guide="${value}"`);
       }

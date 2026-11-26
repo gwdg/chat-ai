@@ -29,8 +29,11 @@ import {
 import DataSettings from "./DataSettings";
 import UsageSettings from "./UsageSettings";
 import EncryptionSettings from "./EncryptionSettings";
-import BrandConsentSettings from "./BrandConsentSettings";
-import { isChoicesEnabled, isToolsEnabled } from "../../utils/modules";
+import {
+  isAgentsEnabled,
+  isChoicesEnabled,
+  isToolsEnabled,
+} from "../../utils/modules";
 import { isFeatureEnabled } from "../../config/deployment";
 
 const PROFILE_TABS = [
@@ -86,7 +89,19 @@ const PROFILE_TABS = [
 ];
 
 const DATA_SUBSECTIONS = new Set(["manage", "backup", "sync"]);
-const PROFILE_SUBSECTIONS = new Set(["user", "institution"]);
+const PROFILE_SUBSECTIONS = new Set([
+  "user",
+  "institution",
+  "feedback",
+  "consents",
+]);
+
+// A tab that only holds one feature's preferences disappears with that feature,
+// so a deployment or brand never shows a control whose module is switched off.
+const TAB_FEATURES = {
+  memories: "memories",
+  encryption: "e2ee",
+};
 
 /**
  * `"data"` opens the Data tab; `"data/backup"` also picks a section. The Profile
@@ -119,9 +134,13 @@ export default function UserSettingsModal({
 }) {
   const { t } = useTranslation();
   const choicesModule = isChoicesEnabled();
-  const availableTabs = PROFILE_TABS.filter(
-    (tab) => tab.id !== "encryption" || isFeatureEnabled("e2ee"),
-  );
+  // Advanced mode only toggles the sidebar's Agents and MCP Servers sections.
+  const advancedModeUseful =
+    isAgentsEnabled() || isFeatureEnabled("mcp_servers");
+  const availableTabs = PROFILE_TABS.filter((tab) => {
+    const feature = TAB_FEATURES[tab.id];
+    return !feature || isFeatureEnabled(feature);
+  });
   const resolveTab = (tab) =>
     availableTabs.some((entry) => entry.id === tab) ? tab : "profile";
   const initialSelection = parseInitialTab(initialTab);
@@ -163,18 +182,27 @@ export default function UserSettingsModal({
     }
 
     if (activeTab === "advanced") {
+      const mcpPolicyUseful =
+        isToolsEnabled() && isFeatureEnabled("mcp_servers");
+      const renderingFollowsSomething = advancedModeUseful || mcpPolicyUseful;
       return (
         <div className="flex flex-col gap-5">
-          <AdvancedModePreference />
-          {isToolsEnabled() && (
+          {advancedModeUseful && <AdvancedModePreference />}
+          {mcpPolicyUseful && (
             <div className="border-t border-base-300 pt-5">
               <McpToolPolicyPreference />
             </div>
           )}
-          <div className="border-t border-base-300 pt-5" data-guide="rendering-preference">
+          <div
+            className={
+              renderingFollowsSomething
+                ? "border-t border-base-300 pt-5"
+                : undefined
+            }
+            data-guide="rendering-preference"
+          >
             <RenderingPreferences />
           </div>
-          <BrandConsentSettings />
         </div>
       );
     }

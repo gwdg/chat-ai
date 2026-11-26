@@ -4,6 +4,7 @@ import { currentBrand, localizeBrandValue } from "../config/brands";
 import {
   brandFixedModel,
   isBrandExternalAllowed,
+  isBrandLocked,
 } from "../config/brandPolicy";
 import { processContentItems } from "./sendMessage";
 import packageJson from "../../package.json";
@@ -85,22 +86,34 @@ export const getDefaultSettings = (userSettings = {}) => {
       delete mergedSettings.tools.remote_file_access;
     }
   }
-  applyBrandRestrictionsToDefaults(mergedSettings);
+  applyBrandRestrictionsToDefaults(mergedSettings, {
+    enable_tools: envSettings?.enable_tools ?? defaultSettings.enable_tools,
+    tools: { ...defaultSettings.tools, ...(envSettings?.tools ?? {}) },
+  });
   return mergedSettings ;
 };
 
 /**
- * A brand may fix the model and switch off options that talk to third parties.
- * This is the default for new conversations; existing ones are narrowed again at
- * send time (utils/sendMessage.jsx, agent/tools.ts, agent/mcp.ts).
+ * A brand may fix the model, lock the tools and switch off options that talk to
+ * third parties. This is the default for new conversations; existing ones are
+ * narrowed again at send time (utils/sendMessage.jsx, agent/tools.ts,
+ * agent/mcp.ts).
  */
-const applyBrandRestrictionsToDefaults = (settings) => {
+const applyBrandRestrictionsToDefaults = (settings, deploymentDefaults = {}) => {
   const fixedModel = brandFixedModel();
   // Unknown capabilities are safer than the previous model's: the model selector
   // replaces this stub with the real entry from `/models` once it loads, and a
   // stale name would show the wrong model until then.
   if (fixedModel && settings.model?.id !== fixedModel) {
     settings.model = { id: fixedModel, name: fixedModel, input: [], output: [] };
+  }
+  // Locked GWDG Tools: the deployment decides which tools a chat offers, so a
+  // stored or imported preference cannot turn one on behind the institution.
+  if (isBrandLocked("tools")) {
+    settings.enable_tools = Boolean(deploymentDefaults.enable_tools);
+    if (deploymentDefaults.tools) {
+      settings.tools = { ...deploymentDefaults.tools };
+    }
   }
   if (!isBrandExternalAllowed("web_search")) {
     settings.enable_web_search = false;

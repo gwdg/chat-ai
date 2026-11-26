@@ -1,7 +1,8 @@
 // userMemorySlice.js
-import { createSlice } from "@reduxjs/toolkit";
+import { createSelector, createSlice } from "@reduxjs/toolkit";
 
 import { isBrandExternalAllowed } from "../../config/brandPolicy";
+import { isFeedbackEnabled } from "../../utils/modules";
 
 // Every key the store understands, with the built-in defaults. `getDefaultUserSettings()`
 // layers the deployment's `userSettings` from front.json on top of this.
@@ -38,6 +39,13 @@ function baseInitialState() {
     // End-to-end encryption: published model public keys, and model → key bindings.
     e2ee_keys: [],
     e2ee_models: {},
+    // null = follow the deployment: the feedback module is on, so answers can be
+    // rated and a changed conversation is sent for analysis. An explicit boolean
+    // lets the user switch it off (or back on) without changing the deployment.
+    feedback_enabled: null,
+    // true (default) sends the chat for analysis whenever it changes; false
+    // stops sending chat transcripts while ratings keep working.
+    feedback_send_transcripts: true,
     // Encrypted copy on the user's SAIA filesystem. `enabled` is opt-in and the
     // Data tab explains the encryption before it is switched on; `auto` runs a
     // pass every five minutes while the vault is unlocked in this tab.
@@ -211,6 +219,13 @@ function importUserSettingsState(state, incoming) {
   }
   if (typeof incoming.send_with_enter === "boolean" || incoming.send_with_enter === null) {
     state.send_with_enter = incoming.send_with_enter;
+  }
+  // null is meaningful here ("follow the deployment"), so it is accepted too.
+  if (typeof incoming.feedback_enabled === "boolean" || incoming.feedback_enabled === null) {
+    state.feedback_enabled = incoming.feedback_enabled;
+  }
+  if (typeof incoming.feedback_send_transcripts === "boolean") {
+    state.feedback_send_transcripts = incoming.feedback_send_transcripts;
   }
   if (MCP_TOOL_POLICIES.includes(incoming.mcp_tool_policy)) {
     state.mcp_tool_policy = incoming.mcp_tool_policy;
@@ -479,6 +494,14 @@ const userSettingsSlice = createSlice({
       state.send_with_enter = Boolean(action.payload);
     },
 
+    setFeedbackEnabled: (state, action) => {
+      state.feedback_enabled = Boolean(action.payload);
+    },
+
+    setFeedbackSendTranscripts: (state, action) => {
+      state.feedback_send_transcripts = Boolean(action.payload);
+    },
+
     setMcpToolPolicy: (state, action) => {
       const policy = action.payload;
       if (MCP_TOOL_POLICIES.includes(policy)) state.mcp_tool_policy = policy;
@@ -632,15 +655,27 @@ export const {
   setConversationSummaries, setShowTimestamps,
   setAdvancedMode,
   setSendWithEnter, setMcpToolPolicy, importUserSettings,
+  setFeedbackEnabled,
+  setFeedbackSendTranscripts,
   setSyncEnabled, setSyncAuto
 } = userSettingsSlice.actions;
 
 // Selectors
 export const selectAllMemories = (state) => state.user_settings.memories;
-export const selectGlobalMcpServers = (state) =>
-  (state.user_settings.mcp_servers ?? []).filter(
-    (server) => server && typeof server.url === "string" && server.url.trim(),
-  );
+// `.filter()` allocates, so memoize: react-redux compares the result by
+// reference and otherwise warns about a selector that "returned a different
+// result when called with the same parameters". The input is the stored array
+// itself, so the empty fallback has to be a stable constant as well.
+const NO_MCP_SERVERS = [];
+const selectStoredMcpServers = (state) =>
+  state.user_settings.mcp_servers ?? NO_MCP_SERVERS;
+export const selectGlobalMcpServers = createSelector(
+  [selectStoredMcpServers],
+  (servers) =>
+    servers.filter(
+      (server) => server && typeof server.url === "string" && server.url.trim(),
+    ),
+);
 export const selectMemoryGroups = (state) =>
   state.user_settings.memory_groups ?? [];
 export const selectDefaultMemoryGroup = (state) =>
@@ -697,6 +732,16 @@ export const selectAdvancedMode = (state) =>
 // null means "use the device default", resolved in the prompt component.
 export const selectSendWithEnter = (state) =>
   state.user_settings.send_with_enter ?? null;
+// Feedback on answers and conversation analysis: an explicit choice wins, and the
+// unset default follows the deployment's feedback module.
+export const selectFeedbackEnabled = (state) => {
+  const value = state.user_settings.feedback_enabled;
+  return typeof value === "boolean" ? value : isFeedbackEnabled();
+};
+// Whether a changed chat is sent for analysis. Sent as a delta: only the turns
+// added since the last submission, which the receiver appends.
+export const selectFeedbackSendTranscripts = (state) =>
+  state.user_settings.feedback_send_transcripts !== false;
 // Whether chat turns may call tools of the user's MCP servers: "ask" (default), "always", "never".
 export const selectMcpToolPolicy = (state) => {
   const policy = state.user_settings.mcp_tool_policy;

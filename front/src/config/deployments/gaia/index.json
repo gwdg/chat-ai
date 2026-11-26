@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "modules": {
     "tools": true,
-    "feedback": false,
+    "feedback": true,
     "choices": false,
     "agent": true,
     "agents": true,
@@ -16,7 +16,8 @@
     "mcp_servers": true,
     "e2ee": false,
     "tutorials": true,
-    "import_git": false
+    "import_git": false,
+    "memories": false
   },
   "brands": {
     "default": "gaia",
