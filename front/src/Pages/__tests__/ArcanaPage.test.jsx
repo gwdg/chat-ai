@@ -62,8 +62,11 @@ vi.mock("../../components/Footer/CollapsibleFooter", () => ({
   default: () => null,
 }));
 vi.mock("../../components/Arcana/ArcanaChatPanel", () => ({
-  default: ({ collection }) => (
-    <div data-testid="arcana-chat">{collection.name}</div>
+  default: ({ collection, actions, fileCount }) => (
+    <div data-testid="arcana-chat" data-file-count={fileCount ?? ""}>
+      {collection.name}
+      {actions}
+    </div>
   ),
 }));
 vi.mock("../../components/Arcana/ArcanaEditorPanel", () => ({
@@ -116,9 +119,22 @@ describe("ArcanaPage", () => {
 
     expect(screen.getByTestId("arcana-chat")).toBeInTheDocument();
     expect(screen.getByTestId("arcana-editor")).toBeInTheDocument();
-    expect(
-      toggle(),
-    ).toHaveAttribute("aria-pressed", "true");
+    expect(toggle()).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("wears one head panel, not a page bar above the chat", () => {
+    window.localStorage.setItem("chatai.arcana.editor-open", "true");
+    render(<ArcanaPage />);
+
+    // The page-kind bar is gone; the Meta chat has no such row either.
+    expect(screen.queryByTestId("arcana-page-header")).not.toBeInTheDocument();
+    // Its controls live in the chat's head panel instead.
+    expect(screen.getByTestId("arcana-chat")).toContainElement(toggle());
+    // The count stays off until the editor has read the collection.
+    expect(screen.getByTestId("arcana-chat")).toHaveAttribute(
+      "data-file-count",
+      "",
+    );
   });
 
   it("collapses and reopens the editor from the header and the panel", () => {

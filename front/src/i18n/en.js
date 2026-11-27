@@ -2499,7 +2499,6 @@ export default {
     share_group: "Group",
     page_kind: "Arcana",
     page_file_count: "{{count}} file(s)",
-    page_unknown_title: "Arcana",
     page_missing_title: "This Arcana is not available",
     page_missing_body:
       "It may have been deleted, or the list of your Arcanas could not be loaded.",
@@ -2510,7 +2509,6 @@ export default {
     page_editor_resize: "Resize the Arcana panel",
   },
   arcana_chat: {
-    title: "Chat about {{name}}",
     subtitle:
       "This chat reads the Arcana through SAIA and asks before it changes anything. It is not saved to your chat list.",
     reset: "New chat",

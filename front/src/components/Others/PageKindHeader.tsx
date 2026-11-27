@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import { withAlpha } from "../Sidebar/topicColors";
 
-export type PageKind = "topic" | "workspace" | "arcana";
+export type PageKind = "topic" | "workspace";
 
 const ICON_TILE =
   "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl";

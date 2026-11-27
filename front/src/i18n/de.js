@@ -2523,7 +2523,6 @@ export default {
     share_group: "Gruppe",
     page_kind: "Arcana",
     page_file_count: "{{count}} Datei(en)",
-    page_unknown_title: "Arcana",
     page_missing_title: "Diese Arcana ist nicht verfügbar",
     page_missing_body:
       "Vielleicht wurde sie gelöscht, oder die Liste deiner Arcanas konnte nicht geladen werden.",
@@ -2534,7 +2533,6 @@ export default {
     page_editor_resize: "Arcana-Bereich breiter oder schmaler ziehen",
   },
   arcana_chat: {
-    title: "Chat zu {{name}}",
     subtitle:
       "Dieser Chat liest die Arcana über SAIA und fragt nach, bevor er etwas ändert. Er wird nicht in deiner Chatliste gespeichert.",
     reset: "Neuer Chat",

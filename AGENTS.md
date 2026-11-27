@@ -2808,7 +2808,13 @@ can read: the Arcana tool's `settings.arcana.id` and every share, deduplicated b
 row badged "Arcana tool" / "Read-only tools", with an inline description input on share rows and a
 remove control. Below the list is the add form (`owner/arcana` + short description, `data-guide`
 `arcana-add-id` / `arcana-add-description`), which appends to `arcana_shares` and forces
-`enable_tools` unless `isBrandLocked("tools")`. Removing or editing a row materializes the merged list
+`enable_tools` unless `isBrandLocked("tools")`. **The list and the add form do not depend on the
+gateway Arcana switch** (`settings.tools.arcana`): in agent mode that switch is off by default, while
+`runAgent` registers the read tools from `arcana_shares` whenever the model supports tools, so the
+form stays available with the switch off and `ToolsContainer` drops its "turn this tool on" hint
+while the list is editable (`canEditShares` in `ArcanaContainer.jsx`, `arcanaSharesEditable` in
+`ToolsContainer.jsx`; both need the agent module and a tool-capable, non-external model). Removing or
+editing a row materializes the merged list
 into `arcana_shares` and deletes `arcana_share`, so the aliases do not drift apart. The add form
 refuses anything `parseArcanaShareRef` cannot read and a collection already in the chat.
 `ToolsContainer` always renders it for the Arcana detail and adds the
@@ -2845,10 +2851,19 @@ surface; the sidebar row only links to it. The route param is the URL-encoded **
 `workspace/arcanas.ts#arcanaPagePath` builds the URL and `arcanaDisplayName` is the readable name.
 
 **Layout follows the Meta chat, not a split screen.** The middle column is the ordinary chat shell:
-`ArcanaChatPanel` renders a banner naming the collection and then `Conversation`, whose workspace and
-tools buttons are hidden and whose prompt uses `arcana_chat.prompt_placeholder`. Files, tags, search
-and sharing live in `ArcanaEditorPanel` on the right (`components/Arcana/`), which renders
-`ArcanaManager` with `framed={false}` so the panel is the card and there is no dialog any more.
+`ArcanaChatPanel` renders the page's **only** head panel — modelled on `MetaChatPage`'s banner, one
+card as wide as the conversation column (`mx-auto mb-2 … md:max-w-[85vw] xl:max-w-[1300px]`, no
+stray `gap-2` on its parent) — and then `Conversation`, whose workspace and tools buttons are
+hidden and whose prompt uses `arcana_chat.prompt_placeholder`. There is no `PageKindHeader` on this
+page: two stacked titles ("test" over "Chat about test") said the same thing twice, and the bar was
+full-width while the banner sat in the reading column. The head panel carries the collection name,
+`· Arcana · N file(s)` (file count `null` until the editor has read the collection, so it never
+claims "0 files"), `arcana_chat.subtitle`, the `New chat` reset and a page-supplied `actions` node —
+the editor toggle (`data-guide="arcana-editor-toggle"`). Below `lg` the head panel scrolls away with
+the chat column, so the editor's own chevron (`onClose`) is the way back from an open panel.
+Files, tags, search and sharing live in `ArcanaEditorPanel` on the right (`components/Arcana/`),
+which renders `ArcanaManager` with `framed={false}` so the panel is the card and there is no dialog
+any more.
 The panel's width (`chatai.arcana.editor-width`, drag on its left edge, 320–1024 px) and open state
 (`chatai.arcana.editor-open`, default from the viewport) are per browser; below `lg` an open panel
 replaces the chat instead of squeezing it. Sidebar menu entries navigate with `?tab=search`/`?tab=share`

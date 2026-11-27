@@ -3466,8 +3466,12 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
       <ol class="steps">
         <li>
           <b>The page is a chat; the editor is a panel.</b> The middle column is the ordinary chat
-          shell for this one collection: a banner names it, then <code>Conversation</code> with the
-          usual prompt box, tools and settings buttons hidden. The files, tags, search and sharing
+          shell for this one collection: one head panel, exactly like the Meta chat's banner, then
+          <code>Conversation</code> with the usual prompt box, tools and settings buttons hidden.
+          That banner is the page's only header - it is as wide as the prompt column, names the
+          collection with its file count, says what the chat does, and holds the
+          <code>New chat</code> reset and the editor toggle, so no second page bar repeats the title
+          above it. The files, tags, search and sharing
           live in <code>ArcanaEditorPanel</code> on the right, which renders
           <code>ArcanaManager</code> with <code>framed={false}</code> so the panel is the card. The
           panel is resizable and remembers its width (<code>chatai.arcana.editor-width</code>); its

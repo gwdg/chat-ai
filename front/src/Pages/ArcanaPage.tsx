@@ -2,14 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import { useNavigate, useParams, useSearchParams, useLocation } from "react-router";
-import { Catalog } from "@carbon/icons-react";
 import { Loader2, PanelRightClose, PanelRightOpen } from "lucide-react";
 
 import AnnouncementBar from "../components/Header/AnnouncementBar";
 import Header from "../components/Header/Header";
 import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
 import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
-import PageKindHeader from "../components/Others/PageKindHeader";
 import ArcanaChatPanel from "../components/Arcana/ArcanaChatPanel";
 import ArcanaEditorPanel from "../components/Arcana/ArcanaEditorPanel";
 import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
@@ -87,7 +85,7 @@ export default function ArcanaPage() {
   const focusUpload = searchParams.get("upload") === "1";
 
   const [editorOpen, setEditorOpen] = useState(readEditorOpen);
-  const [files, setFiles] = useState<RagFile[]>([]);
+  const [files, setFiles] = useState<RagFile[] | null>(null);
   const [draftState, setDraftState] = useState(() =>
     getDefaultConversation(userSettings, null),
   );
@@ -118,7 +116,31 @@ export default function ArcanaPage() {
     (loaded || error) &&
     !loading;
 
-  const countLabel = t("arcanas.page_file_count", { count: files.length });
+  /**
+   * The editor toggle rides in the chat's head panel: the page has no bar of
+   * its own, exactly like the Meta chat, where the banner is the only header.
+   */
+  const editorToggle = (
+    <button
+      type="button"
+      onClick={() => setEditorOpen((open) => !open)}
+      data-guide="arcana-editor-toggle"
+      className={`btn btn-xs gap-1 ${editorOpen ? "btn-neutral" : "btn-ghost"}`}
+      aria-pressed={editorOpen}
+      title={
+        editorOpen
+          ? t("arcanas.page_editor_hide")
+          : t("arcanas.page_editor_show")
+      }
+    >
+      {editorOpen ? (
+        <PanelRightClose size={14} />
+      ) : (
+        <PanelRightOpen size={14} />
+      )}
+      <span className="hidden sm:inline">{t("arcanas.page_editor")}</span>
+    </button>
+  );
 
   return (
     <div className="grid h-dvh grid-rows-[auto_1fr]">
@@ -152,42 +174,6 @@ export default function ArcanaPage() {
         />
 
         <main className="relative flex min-h-0 min-w-0 flex-col overflow-hidden">
-          <PageKindHeader
-            kind="arcana"
-            title={collection?.name ?? t("arcanas.page_unknown_title")}
-            kindLabel={t("arcanas.page_kind")}
-            countLabel={countLabel}
-            icon={<Catalog size={20} />}
-            iconColor="#009EE0"
-            iconLabel={t("arcanas.page_kind")}
-            iconExpanded={false}
-            iconTestId="arcana-page-icon"
-            trailing={
-              collection && (
-                <button
-                  type="button"
-                  onClick={() => setEditorOpen((open) => !open)}
-                  data-guide="arcana-editor-toggle"
-                  className={`btn btn-sm gap-1.5 ${editorOpen ? "btn-neutral" : "btn-ghost"}`}
-                  aria-pressed={editorOpen}
-                  title={
-                    editorOpen
-                      ? t("arcanas.page_editor_hide")
-                      : t("arcanas.page_editor_show")
-                  }
-                >
-                  {editorOpen ? (
-                    <PanelRightClose size={16} />
-                  ) : (
-                    <PanelRightOpen size={16} />
-                  )}
-                  <span className="hidden sm:inline">
-                    {t("arcanas.page_editor")}
-                  </span>
-                </button>
-              )
-            }
-          />
 
           {notReady ? (
             <div className="flex flex-1 items-center justify-center gap-2 text-sm text-base-content/60">
@@ -211,7 +197,7 @@ export default function ArcanaPage() {
               </button>
             </div>
           ) : collection ? (
-            <div className="flex min-h-0 flex-1 gap-2 px-2 pb-2">
+            <div className="flex min-h-0 flex-1 gap-2 px-2 pb-2 pt-2">
               <div
                 className={`min-h-0 min-w-0 flex-1 flex-col ${
                   editorOpen ? "hidden lg:flex" : "flex"
@@ -222,6 +208,8 @@ export default function ArcanaPage() {
                   collection={collection}
                   modelsData={modelsData}
                   userData={userData}
+                  fileCount={files?.length ?? null}
+                  actions={editorToggle}
                 />
               </div>
               {editorOpen && (
