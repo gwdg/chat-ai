@@ -4,13 +4,16 @@ import Attachment from "../Attachment";
 import { loadFile } from "../../../db";
 import { captureDownloads } from "../../../test/downloads";
 
-const { notifyError, toggleFilePreview } = vi.hoisted(() => ({
+const { notifyError, toggleFilePreview, meta } = vi.hoisted(() => ({
   notifyError: vi.fn(),
   toggleFilePreview: vi.fn(),
+  meta: { value: null },
 }));
 
+const PDF_META = { name: "document.pdf", type: "application/pdf", size: 1024 };
+
 vi.mock("../../../db", () => ({
-  useFileMeta: () => ({ name: "document.pdf", type: "application/pdf", size: 1024 }),
+  useFileMeta: () => meta.value,
   useFileBase64: () => null,
   loadFile: vi.fn(),
   saveFile: vi.fn(),
@@ -56,6 +59,10 @@ const localState = {
     },
   ],
 };
+
+beforeEach(() => {
+  meta.value = PDF_META;
+});
 
 describe("Attachment preview", () => {
   it("opens the docked preview panel instead of a modal", () => {
@@ -142,6 +149,34 @@ describe("Attachment download", () => {
     await waitFor(() => expect(notifyError).toHaveBeenCalled());
     expect(downloads.blobs).toEqual([]);
     expect(downloads.links()).toEqual([]);
+  });
+
+  it("offers the markdown a conversion produced before the message is sent", async () => {
+    // Processing replaces the document with `<name>.md`; the card is then a plain
+    // attachment in the prompt, where it used to have Remove only.
+    meta.value = { name: "document.pdf.md", type: "text/markdown", size: 14 };
+    const bytes = new TextEncoder().encode("# Title\n\nBody");
+    vi.mocked(loadFile).mockResolvedValue(
+      new File([bytes], "document.pdf.md", { type: "text/markdown" }),
+    );
+
+    render(
+      <Attachment
+        localState={localState}
+        setLocalState={vi.fn()}
+        attachment={{ fileId: "file" }}
+        index={0}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Remove file" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Download file" }));
+
+    await waitFor(() => expect(downloads.blobs).toHaveLength(1));
+    // Compared by content: TextEncoder and the jsdom download path return typed
+    // arrays from different realms, which `toEqual` refuses.
+    expect(Array.from(await downloads.bytes())).toEqual(Array.from(bytes));
+    expect(downloads.links()[0].download).toBe("document.pdf.md");
   });
 });
 

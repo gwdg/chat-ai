@@ -338,9 +338,11 @@ export default function Attachment({
             >
               {displayInfo.icon}
             </div>
-            <div className="min-w-0 flex-grow pr-6">
+            <div className="min-w-0 flex-grow">
               <p
-                className="font-medium text-xs text-base-content leading-tight mb-1 truncate"
+                className={`font-medium text-xs text-base-content leading-tight mb-1 truncate ${
+                  inHistory || inAssistant ? "pr-6" : "pr-16"
+                }`}
                 title={file.name}
               >
                 {file.name}
@@ -364,17 +366,19 @@ export default function Attachment({
                 >
                   {badge}
                 </span>
-                {/* Download button - positioned at card corner */}
-                {(inHistory || inAssistant) && (
-                  <button
-                    className="btn btn-ghost btn-xs btn-circle absolute top-1 right-1 bg-base-100/30 hover:bg-base-100/90"
-                    onClick={handleDownload}
-                    aria-label={t("file_preview.download_aria")}
-                    title={t("file_preview.download_aria")}
-                  >
-                    <Download size={16} className="opacity-70 hover:opacity-100 transition-opacity" />
-                  </button>
-                )}
+                {/* Download - also in the prompt, so the markdown a conversion produced can
+                    be read and kept before the message is sent. It sits left of Remove
+                    while that button is shown. */}
+                <button
+                  className={`btn btn-ghost btn-xs btn-circle absolute top-1 ${
+                    inHistory || inAssistant ? "right-1" : "right-9"
+                  } bg-base-100/30 hover:bg-base-100/90`}
+                  onClick={handleDownload}
+                  aria-label={t("file_preview.download_aria")}
+                  title={t("file_preview.download_aria")}
+                >
+                  <Download size={16} className="opacity-70 hover:opacity-100 transition-opacity" />
+                </button>
                 {/* Remove button - positioned at card corner */}
                 {!inHistory && (
                   <button
