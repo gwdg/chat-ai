@@ -10,6 +10,7 @@ import { getFileType, readFileAsBase64, readFileAsText } from "./attachments";
 import { isAgentEnabled, modelSupportsTools } from "../apis/agentEndpoints";
 import { resolveMcpServers } from "../agent/mcp";
 import { isArcanasEnabled, isChoicesEnabled, isToolsEnabled } from "./modules";
+import { appendArcanaDocumentMarkers } from "./arcanaDocuments";
 import { isBrandExternalAllowed } from "../config/brandPolicy";
 import { brandChatToolsFor } from "./brandChatTools";
 import { confirmMcpNameChange } from "./mcpNameChange";
@@ -832,7 +833,15 @@ const sendMessage = async ({
       if (result.error && !result.text) throw new Error(result.error);
       if (result.error) notifyError(result.error);
       return {
-        answer: [{ type: "text", text: result.text }, ...result.files],
+        // The source cards are appended here, by the app, so the model's own text
+        // can never produce one and a stored answer keeps them.
+        answer: [
+          {
+            type: "text",
+            text: appendArcanaDocumentMarkers(result.text, result.documents),
+          },
+          ...result.files,
+        ],
         usage: result.usage,
         agent: result.agentMessages,
       };

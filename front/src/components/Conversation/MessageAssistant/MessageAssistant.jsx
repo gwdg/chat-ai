@@ -19,6 +19,7 @@ import MetaBox from "./MetaBox";
 import PersonaCard from "../../Others/PersonaCard";
 import MetaActionCard from "./MetaActionCard";
 import ArcanaActionCard from "./ArcanaActionCard";
+import ArcanaDocumentCard from "./ArcanaDocumentCard";
 import FeedbackButtons from "./FeedbackButtons";
 import ForkButton from "./ForkButton";
 import SpeakButton from "./SpeakButton";
@@ -30,6 +31,8 @@ import { getUseCaseMarker } from "../../../config/useCases";
 import { getPersonaMarkers } from "../../../utils/personaCatalog";
 import { getMetaActionProposals } from "../../../utils/metaActions";
 import { getArcanaActionProposals } from "../../../utils/arcanaActions";
+import { getArcanaDocuments } from "../../../utils/arcanaDocuments";
+import { arcanaSharesFromSettings } from "../../../utils/arcanaShareLink";
 import {
   enrichedFeedbackMessagesFromConversation,
   feedbackTextOf,
@@ -127,6 +130,28 @@ export default React.memo(({ localState, setLocalState, message_index, modelsDat
           arcanaCollection,
         )
       : [];
+  // Source cards belong to the chat's own collection list (the Arcana page) or
+  // to the normal chat's bindings. A marker naming any other collection is
+  // ignored, so a replayed answer cannot open a document this chat lacks.
+  const arcanaShareCollections = useMemo(
+    () =>
+      arcanaSharesFromSettings(localState?.settings).map(
+        (share) => share.collection,
+      ),
+    [localState?.settings],
+  );
+  const arcanaDocuments =
+    loading
+      ? []
+      : arcanaCollection
+        ? getArcanaDocuments(message?.content?.[0]?.text, arcanaCollection)
+        : arcanaShareCollections.length
+          ? getArcanaDocuments(
+              message?.content?.[0]?.text,
+              null,
+              arcanaShareCollections,
+            )
+          : [];
   const [renderMode, setRenderMode] = useState("Default");
   // Define render modes with better styling
   const renderModes = ["Default", "Markdown", "Plaintext"];
@@ -516,6 +541,9 @@ export default React.memo(({ localState, setLocalState, message_index, modelsDat
                   setLocalState={setLocalState}
                   message_index={message_index}
                 />
+              )}
+              {arcanaDocuments.length > 0 && (
+                <ArcanaDocumentCard documents={arcanaDocuments} />
               )}
               {/* Attachments Section */}
               {Array.isArray(message?.content) && message?.content.length > 1 && (

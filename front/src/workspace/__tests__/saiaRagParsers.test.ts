@@ -21,6 +21,31 @@ describe("parseSearchResults", () => {
     ]);
   });
 
+  it("reads the page of a converted document's chunk", () => {
+    const results = parseSearchResults(
+      "[report.pdf p.7 score=0.512]\npassage\n\n[notes.md score=0.400]\ntext",
+      "chunks",
+    );
+    expect(results).toEqual([
+      { filename: "report.pdf", page: 7, score: 0.512, text: "passage" },
+      { filename: "notes.md", score: 0.4, text: "text" },
+    ]);
+    // A plain text file has no page, so the field is absent rather than 0.
+    expect(results[1]).not.toHaveProperty("page");
+  });
+
+  it("does not mistake a 'p.' in the file name for a page", () => {
+    const [result] = parseSearchResults(
+      "[chapter p.4.pdf score=0.5]\npassage",
+      "chunks",
+    );
+    expect(result).toEqual({
+      filename: "chapter p.4.pdf",
+      score: 0.5,
+      text: "passage",
+    });
+  });
+
   it("splits previews into numbered hits with their snippet", () => {
     const results = parseSearchResults(
       "1. notes.md (score=0.870)\n# hi\n\n2. paper.pdf (score=0.310)\n%PDF",

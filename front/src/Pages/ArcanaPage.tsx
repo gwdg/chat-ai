@@ -10,6 +10,7 @@ import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
 import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
 import ArcanaChatPanel from "../components/Arcana/ArcanaChatPanel";
 import ArcanaEditorPanel from "../components/Arcana/ArcanaEditorPanel";
+import ChatFilePreviewPanel from "../components/Conversation/ChatFilePreviewPanel";
 import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
 import { useUpdateUserData } from "../hooks/useUpdateUserData";
 import {
@@ -263,6 +264,7 @@ export default function ArcanaPage() {
                   onClose={() => setEditorOpen(false)}
                 />
               )}
+              <ChatFilePreviewPanel />
             </div>
           ) : null}
         </main>

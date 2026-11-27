@@ -40,6 +40,9 @@ const staticGuideValues = new Set(
   [
     ...sourceText.matchAll(/data-guide="([^"]+)"/g),
     ...sourceText.matchAll(/dataGuide="([^"]+)"/g),
+    // The shared approval card renders the accept button, so the target is a
+    // prop of the card (`acceptGuide`) rather than an attribute of its caller.
+    ...sourceText.matchAll(/acceptGuide="([^"]+)"/g),
   ].map((match) => match[1]),
 );
 const hasDynamicTools = sourceText.includes(

@@ -1,12 +1,18 @@
 // Read-only chat tools for the Arcana collections a conversation can read.
 //
 // A chat owns a list of bindings (`settings.arcana_shares`, plus the single
-// `settings.arcana_share` an access link writes), and the model gets four tools:
+// `settings.arcana_share` an access link writes), and the model gets five tools:
 // `list_arcanas` to see what is available and what each collection is for, then
-// `search_arcana`, `list_arcana_documents` and `read_arcana_document`, which
-// take a `collection` argument. The argument is validated against this chat's
-// list, so a prompt cannot point a tool at a collection the chat was never given;
-// every call is still authorised by the service's ACL. Nothing here writes.
+// `search_arcana`, `list_arcana_documents`, `read_arcana_document` and
+// `retrieve_document`, which take a `collection` argument. The argument is
+// validated against this chat's list, so a prompt cannot point a tool at a
+// collection the chat was never given; every call is still authorised by the
+// service's ACL. Nothing here writes.
+//
+// `retrieve_document` is the source card: it reads the page a passage came from
+// plus the page after it, and `getDocuments()` hands the app what it captured, so
+// the answer can show the excerpt and open the document at that page. The tool
+// itself never returns a marker — the app writes those.
 //
 // The client is created lazily on the first tool call, shared by the tools of
 // one turn, and closed when the turn ends. A service that forgot the MCP session
@@ -22,8 +28,18 @@ import {
 } from "../apis/saiaRag";
 import { fromBase64 } from "../workspace/bytes";
 import { isStaleMcpSessionError } from "../workspace/providers/mcpSession";
-import { isTextFileName } from "../workspace/providers/saiaRag";
+import {
+  isTextFileName,
+  parseSearchResults,
+} from "../workspace/providers/saiaRag";
 import { formatBytes } from "../utils/formatBytes";
+import {
+  MAX_ARCANA_DOCUMENT_PAGES,
+  arcanaDocumentKey,
+  normalizeArcanaDocument,
+  splitDocumentPages,
+  type ArcanaDocument,
+} from "../utils/arcanaDocuments";
 import {
   arcanaRefId,
   parseArcanaShareRef,
@@ -71,6 +87,8 @@ function tool(
 
 export interface ArcanaChatTools {
   tools: AgentTool<any>[];
+  /** Every page cited in this turn, deduplicated. */
+  getDocuments: () => ArcanaDocument[];
   /** Close the MCP client; safe to call more than once. */
   close: () => void;
 }
@@ -168,6 +186,74 @@ export function createArcanaChatTools(refs: ArcanaShareRef[]): ArcanaChatTools {
       return `A collection is required. Call list_arcanas, then pass one of:\n${collectionList(refs)}`;
     }
     return `"${String(value ?? "").trim()}" is not one of this chat's Arcana collections. Call list_arcanas for the available ones.`;
+  };
+
+  /**
+   * The pages this turn quotes. A citation is read-only, so it is kept as soon as
+   * the tool reads it; a repeated call replaces the stored excerpt.
+   */
+  const documents: ArcanaDocument[] = [];
+  const addDocument = (value: {
+    collection: string;
+    filename: string;
+    page?: number;
+    pages: number;
+    excerpt: string;
+  }): ArcanaDocument | null => {
+    const document = normalizeArcanaDocument(value);
+    if (!document) return null;
+    const key = arcanaDocumentKey(document);
+    const existing = documents.find(
+      (entry) => arcanaDocumentKey(entry) === key,
+    );
+    if (existing) {
+      Object.assign(existing, document);
+      return existing;
+    }
+    documents.push(document);
+    return document;
+  };
+
+  /**
+   * The file's metadata, from one listing. `markdown` decides whether the text
+   * shown to the model is the indexed Markdown (`get_file`) or the stored bytes.
+   */
+  const findFile = async (collection: string, name: string) => {
+    const payload = parseJson(
+      await call("list_files", { collection }),
+    );
+    const files = Array.isArray(payload?.files) ? payload.files : [];
+    return (
+      files.find((row: any) => String(row?.name ?? "") === name) ?? null
+    );
+  };
+
+  /** The page a search hit reports for `filename`, when the service names one. */
+  const bestPage = async (
+    collection: string,
+    filename: string,
+    query: string,
+  ): Promise<number | undefined> => {
+    const answer = await call("search_chunks", {
+      collection,
+      query,
+      count: MAX_SEARCH_COUNT,
+    });
+    return parseSearchResults(answer, "chunks").find(
+      (hit) => hit.filename === filename && hit.page,
+    )?.page;
+  };
+
+  const textOf = async (collection: string, filename: string) => {
+    const answer = await call("read_file_base64", {
+      collection,
+      filename,
+    });
+    const payload = parseJson(answer);
+    if (typeof payload?.content_base64 !== "string") return null;
+    return new TextDecoder("utf-8", { fatal: false }).decode(
+      fromBase64(payload.content_base64),
+    );
   };
 
   const tools = [
@@ -276,7 +362,105 @@ export function createArcanaChatTools(refs: ArcanaShareRef[]): ArcanaChatTools {
         return text(content ? `# ${name}\n\n${content}` : `# ${name}\n\n(empty file)`);
       },
     ),
+    tool(
+      "retrieve_document",
+      `Show the page a passage came from. Returns that page and the page after it and adds a source card under your answer that opens the document at that page. Pass the p.N of a search result; without a page, pass the user's question as query and the best page of that file is used. Use it whenever you quote from a document.`,
+      Type.Object({
+        filename: Type.String({
+          description:
+            "Exact file name, from a search result or list_arcana_documents",
+        }),
+        page: Type.Optional(
+          Type.Integer({
+            minimum: 1,
+            description: "Page to show, usually the p.N of a search result",
+          }),
+        ),
+        query: Type.Optional(
+          Type.String({
+            description:
+              "The question, used to find the best page when no page is given",
+          }),
+        ),
+        collection: collectionArgument,
+      }),
+      async ({ filename, page, query, collection }) => {
+        const name = String(filename ?? "").trim();
+        if (!name) return text("A file name is required.");
+        const ref = collectionRequired(collection);
+        if (typeof ref === "string") return text(ref);
+        const file = await findFile(ref.collection, name);
+        if (!file) {
+          return text(
+            `"${name}" is not in "${ref.name}". Use list_arcana_documents for the exact file name.`,
+          );
+        }
+        let wanted = Math.floor(Number(page));
+        if (!(Number.isFinite(wanted) && wanted >= 1)) {
+          const question = String(query ?? "").trim();
+          wanted = question
+            ? ((await bestPage(ref.collection, name, question)) ?? 1)
+            : 1;
+        }
+
+        let excerpt: string | null;
+        if (file.markdown === true) {
+          excerpt = await call("get_file", {
+            collection: ref.collection,
+            filename: `${name}@${wanted}-${wanted + 1}`,
+          });
+        } else if (isTextFileName(name)) {
+          excerpt = await textOf(ref.collection, name);
+        } else {
+          return text(
+            `"${name}" is a binary file, so it has no text pages to quote. Use search_arcana and report the passage instead.`,
+          );
+        }
+        if (!excerpt?.trim()) {
+          return text(
+            `"${name}" has no readable text on page ${wanted}. Use search_arcana to find a passage that was indexed.`,
+          );
+        }
+
+        // The excerpt decides the page: a converted document always carries
+        // `[Page N]: #`, a plain text file never does.
+        const blocks = splitDocumentPages(excerpt).filter(
+          (block) => block.page !== null,
+        );
+        const shownPage =
+          file.markdown === true && blocks.length
+            ? (blocks[0].page as number)
+            : undefined;
+        const shownPages = Math.min(
+          blocks.length || 1,
+          MAX_ARCANA_DOCUMENT_PAGES,
+        );
+        const document = addDocument({
+          collection: ref.collection,
+          filename: name,
+          ...(shownPage ? { page: shownPage } : {}),
+          pages: shownPages,
+          excerpt,
+        });
+        const where = shownPage
+          ? ` page ${shownPage}${
+              shownPages > 1 ? `-${shownPage + shownPages - 1}` : ""
+            }`
+          : "";
+        const body =
+          excerpt.length > MAX_DOCUMENT_CHARS
+            ? `${excerpt.slice(0, MAX_DOCUMENT_CHARS)}\n\n[truncated; the page is longer]`
+            : excerpt;
+        return text(
+          `${name}${where}${
+            document ? " (shown as a source card under your answer)" : ""
+          }:\n\n${body}${
+            shownPage ? `\n\nCite "${name}", page ${shownPage}, in your answer.` : ""
+          }`,
+        );
+      },
+    ),
   ];
 
-  return { tools, close: reset };
+  return { tools, getDocuments: () => [...documents], close: reset };
 }

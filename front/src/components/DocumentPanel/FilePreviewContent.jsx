@@ -150,6 +150,8 @@ export default function FilePreviewContent({
   url,
   text,
   data,
+  /** The page to open at (a cited document); only the PDF viewer can jump. */
+  page,
   loading = false,
   error,
   onOpenPath,
@@ -175,13 +177,19 @@ export default function FilePreviewContent({
   useEffect(() => {
     setLoadError(null);
     resetZoom();
-  }, [resetKey, url, resetZoom]);
+  }, [resetKey, url, page, resetZoom]);
 
   const fileType = getFileType({ type: mime, name });
   const isHtml =
     mime?.startsWith("text/html") === true || /\.(html?|xhtml)$/i.test(name);
   const hasText = typeof text === "string";
   const hasUrl = Boolean(url);
+  // The browser's PDF viewer honours a `#page=N` fragment. Appending it keeps a
+  // fragment the caller already set (a viewer option) instead of replacing it.
+  const pdfUrl =
+    fileType === "pdf" && page && url
+      ? `${url}${url.includes("#") ? "&" : "#"}page=${page}`
+      : url;
 
   if (loading) return <LoadingBox />;
   // Nothing is read, opened or downloaded for a file that is too large: the notice
@@ -303,7 +311,12 @@ export default function FilePreviewContent({
               </p>
             </div>
           )}
-          <div className="mb-2 flex shrink-0 items-center justify-end px-1">
+          <div className="mb-2 flex shrink-0 items-center justify-end gap-2 px-1">
+            {page ? (
+              <p className="mr-auto text-xs text-base-content/60">
+                {t("file_preview.pdf_page", { page })}
+              </p>
+            ) : null}
             <ZoomControls
               zoom={zoom}
               onZoomIn={zoomIn}
@@ -325,7 +338,7 @@ export default function FilePreviewContent({
               }}
             >
               <iframe
-                src={url}
+                src={pdfUrl}
                 className="h-full w-full rounded"
                 title={name}
                 onError={mediaFailed(t("file_preview.pdf_failed"))}

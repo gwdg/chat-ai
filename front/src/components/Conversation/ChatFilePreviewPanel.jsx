@@ -11,12 +11,17 @@ import { downloadBlob } from "../../utils/download";
 // The docked preview of a conversation file. Pages render it as a sibling of their
 // content column, exactly like the workspace and agent file panels, and both use the
 // same `FilePreviewPanel` so a file looks the same wherever it is opened.
+//
+// A stored chat attachment arrives as a file id; an Arcana source card hands over an
+// already-read `entry` with `url` or `text`, because its bytes live in saia-rag and
+// never reach IndexedDB.
 export default function ChatFilePreviewPanel() {
   const { t } = useTranslation();
   const { notifyError } = useToast();
   const { preview, closeFilePreview, hosts } = useFilePreview();
+  const external = Boolean(preview?.entry);
   const filePreview = useConversationFilePreview(
-    preview?.fileId,
+    external ? undefined : preview?.fileId,
     preview?.name,
   );
 
@@ -27,6 +32,19 @@ export default function ChatFilePreviewPanel() {
   // stands down so the same click does not open two previews. It stays mounted, so
   // leaving the page still closes the preview.
   if (!preview || hosts > 0) return null;
+
+  const shown = external
+    ? {
+        entry: preview.entry ?? {},
+        url: preview.url,
+        text: preview.text,
+        data: preview.data,
+        page: preview.page,
+        loading: preview.loading === true,
+        error: preview.error,
+        loaded: true,
+      }
+    : { ...filePreview, page: preview.page };
 
   const handleDownload = async () => {
     try {
@@ -44,13 +62,13 @@ export default function ChatFilePreviewPanel() {
 
   return (
     <FilePreviewPanel
-      preview={filePreview}
+      preview={shown}
       onClose={closeFilePreview}
-      onDownload={handleDownload}
+      onDownload={external ? undefined : handleDownload}
       downloadLabel={t("file_preview.download_aria")}
-      downloadDisabled={!filePreview.loaded}
-      showPdfHint
-      resetKey={preview.fileId}
+      downloadDisabled={external ? false : !filePreview.loaded}
+      showPdfHint={!external}
+      resetKey={preview.key ?? preview.fileId}
     />
   );
 }

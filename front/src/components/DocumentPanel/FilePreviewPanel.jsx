@@ -118,6 +118,7 @@ export default function FilePreviewPanel({
           url={preview.url}
           text={preview.text}
           data={preview.data}
+          page={preview.page}
           loading={preview.loading}
           error={errorText}
           onOpenPath={preview.onOpenPath}

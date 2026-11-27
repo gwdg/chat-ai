@@ -19,6 +19,23 @@ vi.mock("../../apis/saiaRag", () => ({
 
 vi.mock("../../workspace/providers/saiaRag", () => ({
   isTextFileName: (name: string) => /\.[a-z0-9]+$/i.test(name) && !/\.pdf$/i.test(name),
+  // The real parser accepts the optional `p.N` a page-aware service reports.
+  parseSearchResults: (value: string) =>
+    String(value)
+      .split(/\n{2,}(?=\[)/)
+      .map((block) => {
+        const match = block.match(
+          /^\[(.*?)(?: p\.(\d+))? score=([\d.]+)\]\s*\n?([\s\S]*)$/,
+        );
+        if (!match) return { filename: "", text: block.trim() };
+        return {
+          filename: match[1],
+          ...(match[2] ? { page: Number(match[2]) } : {}),
+          score: Number(match[3]),
+          text: match[4].trim(),
+        };
+      })
+      .filter((row: any) => row.text),
 }));
 
 import { createArcanaChatTools } from "../arcanaChatTools";
@@ -55,6 +72,7 @@ describe("Arcana chat tools", () => {
       "search_arcana",
       "list_arcana_documents",
       "read_arcana_document",
+      "retrieve_document",
     ]);
   });
 
@@ -235,6 +253,174 @@ describe("Arcana chat tools", () => {
       filename: " ",
     });
     expect(result.content[0].text).toBe("A file name is required.");
+  });
+
+  it("quotes the hit page and the one after it, and records the source", async () => {
+    mocks.callTool.mockImplementation(async ({ name, arguments: args }: any) => {
+      if (name === "list_files") {
+        return answer(
+          JSON.stringify({
+            files: [{ name: "report.pdf", size: 10, status: "indexed", chunks: 4, markdown: true }],
+          }),
+        );
+      }
+      if (name === "get_file") {
+        return answer(
+          "[Page 7]: #\n\nWater is wet.\n\n[Page 8]: #\n\nStill wet.",
+        );
+      }
+      throw new Error(`unexpected tool ${name}`);
+    });
+
+    const { tools, getDocuments } = createArcanaChatTools([ref]);
+    const result = await toolNamed(tools, "retrieve_document").execute("id", {
+      filename: "report.pdf",
+      page: 7,
+    });
+
+    expect(mocks.callTool).toHaveBeenCalledWith({
+      name: "get_file",
+      arguments: { collection: "alice/papers", filename: "report.pdf@7-8" },
+    });
+    expect(result.content[0].text).toContain("report.pdf page 7-8");
+    expect(result.content[0].text).toContain('Cite "report.pdf", page 7');
+    expect(getDocuments()).toEqual([
+      {
+        collection: "alice/papers",
+        filename: "report.pdf",
+        page: 7,
+        pages: 2,
+        excerpt: "[Page 7]: #\n\nWater is wet.\n\n[Page 8]: #\n\nStill wet.",
+      },
+    ]);
+  });
+
+  it("finds the page through a search when none is given", async () => {
+    mocks.callTool.mockImplementation(async ({ name }: any) => {
+      if (name === "list_files") {
+        return answer(
+          JSON.stringify({
+            files: [{ name: "report.pdf", status: "indexed", chunks: 4, markdown: true }],
+          }),
+        );
+      }
+      if (name === "search_chunks") {
+        return answer("[report.pdf p.9 score=0.8]\n\nThe passage.\n\n[other.pdf p.2 score=0.4]\n\nElsewhere.");
+      }
+      if (name === "get_file") {
+        return answer("[Page 9]: #\n\nThe passage.");
+      }
+      throw new Error(`unexpected tool ${name}`);
+    });
+
+    const { tools, getDocuments } = createArcanaChatTools([ref]);
+    const result = await toolNamed(tools, "retrieve_document").execute("id", {
+      filename: "report.pdf",
+      query: "what does the report say",
+    });
+
+    expect(mocks.callTool).toHaveBeenCalledWith({
+      name: "search_chunks",
+      arguments: {
+        collection: "alice/papers",
+        query: "what does the report say",
+        count: 20,
+      },
+    });
+    expect(mocks.callTool).toHaveBeenCalledWith({
+      name: "get_file",
+      arguments: { collection: "alice/papers", filename: "report.pdf@9-10" },
+    });
+    expect(result.content[0].text).toContain("page 9");
+    expect(getDocuments()[0]).toMatchObject({ page: 9, pages: 1 });
+  });
+
+  it("quotes a plain text file without a page", async () => {
+    mocks.callTool.mockImplementation(async ({ name }: any) => {
+      if (name === "list_files") {
+        return answer(
+          JSON.stringify({
+            files: [{ name: "notes.md", status: "indexed", chunks: 1, markdown: false }],
+          }),
+        );
+      }
+      if (name === "read_file_base64") {
+        return answer(
+          JSON.stringify({
+            content_base64: Buffer.from("# Notes\n\nHello", "utf8").toString("base64"),
+          }),
+        );
+      }
+      throw new Error(`unexpected tool ${name}`);
+    });
+
+    const { tools, getDocuments } = createArcanaChatTools([ref]);
+    const result = await toolNamed(tools, "retrieve_document").execute("id", {
+      filename: "notes.md",
+    });
+
+    expect(mocks.callTool).not.toHaveBeenCalledWith(
+      expect.objectContaining({ name: "get_file" }),
+    );
+    expect(result.content[0].text).toContain("# Notes");
+    expect(getDocuments()).toEqual([
+      {
+        collection: "alice/papers",
+        filename: "notes.md",
+        pages: 1,
+        excerpt: "# Notes\n\nHello",
+      },
+    ]);
+  });
+
+  it("refuses a binary document instead of inventing pages", async () => {
+    mocks.callTool.mockResolvedValue(
+      answer(
+        JSON.stringify({
+          files: [{ name: "scan.pdf", status: "stored", chunks: 0, markdown: false }],
+        }),
+      ),
+    );
+    const { tools, getDocuments } = createArcanaChatTools([ref]);
+    const result = await toolNamed(tools, "retrieve_document").execute("id", {
+      filename: "scan.pdf",
+    });
+    expect(result.content[0].text).toContain("binary file");
+    expect(getDocuments()).toEqual([]);
+  });
+
+  it("names the files when a citation names an unknown one", async () => {
+    mocks.callTool.mockResolvedValue(
+      answer(JSON.stringify({ files: [{ name: "a.md", status: "indexed", markdown: false }] })),
+    );
+    const { tools } = createArcanaChatTools([ref]);
+    const result = await toolNamed(tools, "retrieve_document").execute("id", {
+      filename: "missing.pdf",
+    });
+    expect(result.content[0].text).toBe(
+      '"missing.pdf" is not in "papers". Use list_arcana_documents for the exact file name.',
+    );
+  });
+
+  it("lists a cited page once", async () => {
+    mocks.callTool.mockImplementation(async ({ name }: any) => {
+      if (name === "list_files") {
+        return answer(
+          JSON.stringify({
+            files: [{ name: "report.pdf", status: "indexed", chunks: 4, markdown: true }],
+          }),
+        );
+      }
+      return answer("[Page 3]: #\n\nA page.");
+    });
+    const { tools, getDocuments } = createArcanaChatTools([ref]);
+    for (const page of [3, 3]) {
+      await toolNamed(tools, "retrieve_document").execute("id", {
+        filename: "report.pdf",
+        page,
+      });
+    }
+    expect(getDocuments()).toHaveLength(1);
   });
 
   it("surfaces a service error", async () => {

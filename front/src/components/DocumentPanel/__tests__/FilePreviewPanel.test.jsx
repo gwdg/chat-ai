@@ -138,6 +138,33 @@ describe("FilePreviewPanel", () => {
     clicked.mockRestore();
   });
 
+  it("opens a cited PDF at the cited page", () => {
+    renderPanel({
+      entry: { name: "paper.pdf", mime: "application/pdf" },
+      url: "blob:paper",
+      page: 7,
+    });
+
+    expect(screen.getByTitle("paper.pdf")).toHaveAttribute(
+      "src",
+      "blob:paper#page=7",
+    );
+    expect(screen.getByText("Opened at page 7")).toBeInTheDocument();
+  });
+
+  it("keeps a fragment the caller set and appends the page", () => {
+    renderPanel({
+      entry: { name: "paper.pdf", mime: "application/pdf" },
+      url: "blob:paper#zoom=page-fit",
+      page: 3,
+    });
+
+    expect(screen.getByTitle("paper.pdf")).toHaveAttribute(
+      "src",
+      "blob:paper#zoom=page-fit&page=3",
+    );
+  });
+
   it("zooms a PDF preview and resets it", () => {
     renderPanel({
       entry: { name: "paper.pdf", mime: "application/pdf" },

@@ -14,6 +14,12 @@ import {
   normalizeArcanaAction,
 } from "./arcanaActions";
 import {
+  MAX_ARCANA_DOCUMENT_PAGES,
+  arcanaDocumentKey,
+  normalizeArcanaDocument,
+  splitDocumentPages,
+} from "./arcanaDocuments";
+import {
   arcanasProvider,
   arcanaFailureReason,
   classifyArcanaFiles,
@@ -74,6 +80,23 @@ const READ_TOOLS = [
       },
     },
     ["query"],
+  ),
+  tool(
+    "retrieve_document",
+    "Show the page a passage came from. Returns that page and the page after it and adds a source card under your answer that opens the document at that page. Pass the p.N of a search hit; omit the page (and pass the user's question as query) to let the search pick the best page of that file. Use it whenever you quote from a document.",
+    {
+      filename: { type: "string", description: "Exact file name" },
+      page: {
+        type: "number",
+        description: "Page to show, usually the page of a search hit",
+      },
+      query: {
+        type: "string",
+        description:
+          "The question to find the best page for, used when no page is given",
+      },
+    },
+    ["filename"],
   ),
   tool(
     "get_index_status",
@@ -149,7 +172,9 @@ export function buildArcanaChatSystemPrompt(collection) {
   const canWrite = Boolean(collection?.can_write);
   return `You are the Arcana assistant for the SAIA document collection "${name}" (role: ${role}). You help the user inspect, change, test and share this one collection. The collection is fixed: never claim to work on another Arcana.
 
-The collection's contents are not embedded in this prompt. Use the tools for every current value: list_files, read_file, search, get_index_status and list_members. The data can change between turns, so call the tool again instead of assuming an earlier answer still applies. Never invent a file name, chunk count, tag, search hit or member. If a tool returns nothing useful, say so plainly.
+The collection's contents are not embedded in this prompt. Use the tools for every current value: list_files, read_file, search, retrieve_document, get_index_status and list_members. The data can change between turns, so call the tool again instead of assuming an earlier answer still applies. Never invent a file name, chunk count, tag, search hit or member. If a tool returns nothing useful, say so plainly.
+
+When you quote a passage from a file, call retrieve_document with that file and the page a search hit reported (p.N). It returns that page and the next one and shows the user a source card that opens the document at the page, so cite the file and page in your answer instead of only pasting the text.
 
 ${
   canWrite
@@ -280,6 +305,12 @@ export function createArcanaChatToolRunner({ collection, attachments = [] }) {
   const display = ragCollectionDisplayName(collection);
   const provider = arcanasProvider();
   const proposals = [];
+  /**
+   * The pages the answer quotes. Unlike a proposal, a citation is read-only, so
+   * it is collected as soon as the tool reads it; the app turns each one into a
+   * source card and the model gets the text as the tool result.
+   */
+  const documents = [];
 
   const listFiles = () =>
     provider.listFiles(display, { includeTags: true }).then((files) =>
@@ -319,6 +350,39 @@ export function createArcanaChatToolRunner({ collection, attachments = [] }) {
 
   const proposed = (what) =>
     `Proposed: ${what}. Nothing has been written yet. Tell the user to accept it in the approval card below your answer, then stop; do not call this tool again for the same change.`;
+
+  /**
+   * Record one cited page range. A repeated call replaces the stored excerpt
+   * (the file may have changed) instead of adding a second card row.
+   */
+  const addDocument = (value) => {
+    const document = normalizeArcanaDocument({
+      ...value,
+      collection: collection.collection,
+    });
+    if (!document) return null;
+    const key = arcanaDocumentKey(document);
+    const existing = documents.find(
+      (entry) => arcanaDocumentKey(entry) === key,
+    );
+    if (existing) {
+      Object.assign(existing, document);
+      return existing;
+    }
+    documents.push(document);
+    return document;
+  };
+
+  /** The page a hit for `query` reports for `filename`, if the service names one. */
+  const bestPage = async (filename, query) => {
+    const { results } = await provider.search(
+      display,
+      query,
+      "chunks",
+      MAX_SEARCH_COUNT,
+    );
+    return results.find((result) => result.filename === filename)?.page;
+  };
 
   const run = async (name, args = {}) => {
     switch (name) {
@@ -362,6 +426,56 @@ export function createArcanaChatToolRunner({ collection, attachments = [] }) {
           count,
         );
         return describeSearch(query, mode, count, results, raw);
+      }
+
+      case "retrieve_document": {
+        const files = await listFiles();
+        const file = findFile(files, args.filename);
+        if (!file) {
+          return `No file named "${args.filename}". Files: ${
+            files.map((entry) => entry.name).join(", ") || "(none)"
+          }`;
+        }
+        if (!file.markdown && !isTextFileName(file.name)) {
+          return `${file.name} is a binary file, so it has no text pages to quote. Use search and report the hit instead.`;
+        }
+        let page = Math.floor(Number(args.page));
+        if (!(Number.isFinite(page) && page >= 1)) {
+          const query = String(args.query ?? "").trim();
+          page = query ? await bestPage(file.name, query) : undefined;
+        }
+        // A plain text file has no page markers: its whole text is the excerpt,
+        // and the card opens the file itself.
+        const excerpt =
+          file.markdown && page
+            ? await provider.readDocumentExcerpt(display, file.name, page)
+            : file.markdown
+              ? await provider.readDocumentExcerpt(display, file.name, 1)
+              : (await readFileText(provider, display, file)).text;
+        if (excerpt === null || !excerpt.trim()) {
+          return `"${file.name}" has no readable text${page ? ` on page ${page}` : ""}. Use search to find a passage that was indexed.`;
+        }
+        const blocks = splitDocumentPages(excerpt).filter(
+          (block) => block.page !== null,
+        );
+        const document = addDocument({
+          collection: collection.collection,
+          filename: file.name,
+          // The excerpt itself decides the page: a converted document always
+          // writes `[Page N]: #`, and a plain text file never does.
+          page: blocks.length ? blocks[0].page : undefined,
+          pages: Math.min(blocks.length || 1, MAX_ARCANA_DOCUMENT_PAGES),
+          excerpt,
+        });
+        const shownPage = blocks.length ? blocks[0].page : undefined;
+        const shownPages = Math.min(
+          blocks.length || 1,
+          MAX_ARCANA_DOCUMENT_PAGES,
+        );
+        const where = shownPage
+          ? ` page ${shownPage}${shownPages > 1 ? `-${shownPage + shownPages - 1}` : ""}`
+          : "";
+        return `${file.name}${where} (shown as a source card under your answer):\n${truncate(excerpt, MAX_READ_CHARS)}${document ? `\n\nCite "${file.name}"${shownPage ? `, page ${shownPage}` : ""} in your answer.` : ""}`;
       }
 
       case "get_index_status":
@@ -489,6 +603,10 @@ export function createArcanaChatToolRunner({ collection, attachments = [] }) {
     run,
     takeProposals() {
       return proposals.splice(0, proposals.length);
+    },
+    /** Every citation captured in this turn, deduplicated. */
+    getDocuments() {
+      return [...documents];
     },
   };
 }

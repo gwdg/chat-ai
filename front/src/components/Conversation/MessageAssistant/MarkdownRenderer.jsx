@@ -48,6 +48,7 @@ import {
 import { stripPersonaMarkers } from "../../../utils/personaCatalog";
 import { stripMetaActionMarkers } from "../../../utils/metaActions";
 import { stripArcanaActionMarkers } from "../../../utils/arcanaActions";
+import { stripArcanaDocumentMarkers } from "../../../utils/arcanaDocuments";
 import { detectJsonDiagram } from "../../../utils/diagramSpec";
 import { downloadHtml, renderedFilename } from "../../../utils/download";
 import { brandFence } from "../../../config/brandFeatures";
@@ -981,8 +982,10 @@ export const SafeMarkdown = ({
 
 const stripGuideMarkers = (content) => {
   if (typeof content !== "string") return content;
-  return stripArcanaActionMarkers(
-    stripMetaActionMarkers(stripPersonaMarkers(content)),
+  return stripArcanaDocumentMarkers(
+    stripArcanaActionMarkers(
+      stripMetaActionMarkers(stripPersonaMarkers(content)),
+    ),
   )
     .replace(/\[\[GUIDE:[a-zA-Z0-9_-]+\]\]/gi, "")
     .replace(/\[\[USE_CASE:[a-zA-Z0-9_-]+\]\]/gi, "")

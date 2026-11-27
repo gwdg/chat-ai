@@ -3674,22 +3674,39 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           representation is left behind.
         </li>
         <li>
-          <b>Four read-only tools, scoped to the chat's list.</b> <code>agent/arcanaChatTools.ts</code>
+          <b>Five read-only tools, scoped to the chat's list.</b> <code>agent/arcanaChatTools.ts</code>
           offers <code>list_arcanas</code>, which returns every collection with its description,
           then <code>search_arcana</code> (<code>search_chunks</code>),
-          <code>list_arcana_documents</code> (<code>list_files</code>) and
-          <code>read_arcana_document</code> (<code>read_file_base64</code>, text files only). The
-          three read tools take a <code>collection</code> argument that is resolved against this
-          chat's list (both <code>owner/name</code> and the storage name are accepted), so a prompt
-          cannot aim them at a collection the chat was never given; with one collection the argument
-          may be omitted. Nothing in the tool set writes. Arcana Tools also registers a
-          <code>list_arcanas</code>; when a chat has bindings the chat-scoped one replaces it, because
-          two tools with the same name would break the request. GWDG Tools &rarr; <b>Arcana Tools</b>
-          lists every collection the chat is wired to (deduplicated by reference), says whether each
-          comes from the read-only tools, and removes the binding; the list stays visible while the
-          tool switch is off. The older <b>Arcana</b> row is marked <b>Legacy</b>: it sends one
-          collection id with the request and lets the server run the retrieval, so only that single
-          field lives there.
+          <code>list_arcana_documents</code> (<code>list_files</code>),
+          <code>read_arcana_document</code> (<code>read_file_base64</code>, text files only) and
+          <code>retrieve_document</code>. The four reading tools take a <code>collection</code>
+          argument that is resolved against this chat's list (both <code>owner/name</code> and the
+          storage name are accepted), so a prompt cannot aim them at a collection the chat was never
+          given; with one collection the argument may be omitted. Nothing in the tool set writes.
+          Arcana Tools also registers a <code>list_arcanas</code>; when a chat has bindings the
+          chat-scoped one replaces it, because two tools with the same name would break the request.
+          GWDG Tools &rarr; <b>Arcana Tools</b> lists every collection the chat is wired to
+          (deduplicated by reference), says whether each comes from the read-only tools, and removes
+          the binding; the list stays visible while the tool switch is off. The older <b>Arcana</b>
+          row is marked <b>Legacy</b>: it sends one collection id with the request and lets the
+          server run the retrieval, so only that single field lives there.
+        </li>
+        <li>
+          <b>A citation is a page, and the page opens.</b> <code>retrieve_document</code> takes a
+          <code>filename</code>, an optional <code>page</code> and an optional <code>query</code>
+          (a search finds the best page of that file) and reads the hit page plus the one after it
+          with <code>get_file</code>'s range (<code>filename@7-8</code>); a plain text file has no
+          page, so it is quoted whole. The tool records
+          <code>{collection, filename, page?, pages, excerpt}</code>, the app - never the model -
+          appends it as an <code>[[ARCANA_DOCUMENT:&lt;base64&gt;]]</code> marker exactly as it does
+          for the approval card, and <code>ArcanaDocumentCard</code> renders it under the answer as
+          a <b>Sources</b> section: the cited page range, the passage per page, and a click that
+          opens the <b>original</b> bytes (not the indexed Markdown) in the docked preview at that
+          page. A PDF's URL gets <code>#page=N</code>; a text file opens as text. The page is read
+          from the excerpt's own <code>[Page N]: #</code> markers, so the card and the document
+          cannot disagree, and a binary file without indexed text produces no card. The chat page
+          filters a normal chat's cards to the collections in its <code>arcana_shares</code>, so a
+          marker cannot name a collection the chat was not given.
         </li>
         <li>
           <b>The link grants nothing.</b> The service resolves
@@ -3761,7 +3778,7 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
             <td>Arcana chat</td>
             <td>The middle column: a banner naming the collection, the ephemeral thread, its
                 <code>sessionStorage</code> store, the send loop that appends each captured proposal
-                as an invisible marker, and the approval card that is the only thing that writes.</td>
+                and each cited page as an invisible marker, and the two cards below the answer.</td>
             <td><span class="mono">front/src/components/Arcana/ArcanaChatPanel.tsx</span>,
                 <span class="mono">hooks/useArcanaChatSend.js</span>,
                 <span class="mono">utils/arcanaChat.js</span>,
@@ -3787,10 +3804,20 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           </tr>
           <tr>
             <td>Chat tools</td>
-            <td><code>list_arcanas</code> plus the three read-only tools, each read tool resolving its
-                <code>collection</code> argument against the chat's list; one lazily opened MCP client
-                per turn, one reconnect on a lost session.</td>
+            <td><code>list_arcanas</code> plus the four read-only tools, each read tool resolving its
+                <code>collection</code> argument against the chat's list, and
+                <code>retrieve_document</code> recording the quoted pages for the source card; one
+                lazily opened MCP client per turn, one reconnect on a lost session.</td>
             <td><span class="mono">front/src/agent/arcanaChatTools.ts</span></td>
+          </tr>
+          <tr>
+            <td>Source card</td>
+            <td>The marker module (build, validate, strip, split pages), the card under the answer,
+                and the preview that reads the <b>original</b> bytes and opens the docked panel at
+                the cited page.</td>
+            <td><span class="mono">front/src/utils/arcanaDocuments.ts</span>,
+                <span class="mono">front/src/components/Conversation/MessageAssistant/ArcanaDocumentCard.jsx</span>,
+                <span class="mono">front/src/utils/arcanaDocumentPreview.js</span></td>
           </tr>
           <tr>
             <td>Provider</td>
@@ -3854,9 +3881,20 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
             the member list, and the collection reference is fixed in the setting so the tools cannot
             be aimed elsewhere.</li>
         <li><b>A normal chat's Arcana tools are read-only.</b> They wrap <code>search_chunks</code>,
-            <code>list_files</code> and <code>read_file_base64</code> only; upload, tag, index and
-            member changes stay in the editor panel, and the page chat below reaches them only
-            through its approval card.</li>
+            <code>list_files</code>, <code>read_file_base64</code> and <code>get_file</code> only;
+            upload, tag, index and member changes stay in the editor panel, and the page chat below
+            reaches them only through its approval card.</li>
+        <li><b>A citation names a page the excerpt actually holds.</b> <code>retrieve_document</code>
+            reads the hit page plus the next one through <code>get_file</code>'s range, and the card
+            takes the page from the returned <code>[Page N]: #</code> markers - never from the model's
+            claim - so the label and the document cannot disagree. A plain text file has no page and
+            is quoted whole. The preview reads the original bytes, so a converted PDF opens as the
+            PDF at <code>#page=N</code> rather than as its indexed Markdown.</li>
+        <li><b>The marker is app-written and filtered.</b> The model cannot produce a
+            <code>[[ARCANA_DOCUMENT:…]]</code> marker that survives: the app writes them from the
+            turn's recorded documents, the chat page strips them before the next turn and
+            <code>MarkdownRenderer</code> hides them, and a normal chat shows only cards whose
+            collection is in its <code>arcana_shares</code>.</li>
         <li><b>The page chat never reaches the conversation store.</b> Its thread is
             <code>sessionStorage</code> under the collection reference and its attachments use a
             per-collection file id, so nothing here can appear in the chat list, an export, a backup
@@ -3881,6 +3919,8 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
             shows the raw answer, but loses the per-hit fields.</li>
         <li><code>list_files(include_tags)</code> exists only on services that also have
             <code>set_file_tags</code>; the per-file fallback costs one call per file.</li>
+        <li>A cited passage is capped (6000 characters), because the marker travels inside the message
+            text; a card shows the hit page plus the one after it, not the surrounding chapter.</li>
         <li>The share link needs a tool-supporting model and the browser agent workflow. A model
             without tool support opens the chat with the binding stored but no tools, so the
             collection is not reachable there.</li>
@@ -3928,8 +3968,13 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
         <li><span class="mono">front/src/utils/arcanaShareLink.ts</span> - the
             <code>?arcana=&lt;owner&gt;/&lt;name&gt;</code> reference (and its
             <code>?arcana_share=</code> alias), its link and its stored binding</li>
-        <li><span class="mono">front/src/agent/arcanaChatTools.ts</span> - the three read-only chat
+        <li><span class="mono">front/src/agent/arcanaChatTools.ts</span> - the four read-only chat
             tools and their MCP client, wired in <span class="mono">agent/runAgent.ts</span></li>
+        <li><span class="mono">front/src/utils/arcanaDocuments.ts</span>,
+            <span class="mono">utils/arcanaDocumentPreview.js</span> and
+            <span class="mono">components/Conversation/MessageAssistant/ArcanaDocumentCard.jsx</span> -
+            the citation marker, the Sources card and the preview that opens the original file at the
+            cited page</li>
         <li><span class="mono">front/src/workspace/providers/saiaRag.ts</span> - the tool calls and
             the text parsers</li>
         <li><span class="mono">saia/saia-rag-cli/src/saia_rag/mcp_server.py</span> - the MCP tools

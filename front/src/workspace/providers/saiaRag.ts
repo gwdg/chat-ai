@@ -199,6 +199,8 @@ export type RagSearchMode = "chunks" | "documents" | "previews";
 export type RagSearchResult = {
   filename: string;
   score?: number;
+  /** The page the passage starts on; absent for a plain text file. */
+  page?: number;
   text: string;
 };
 
@@ -384,12 +386,17 @@ export const parseSearchResults = (
     return text
       .split(/\n{2,}(?=\[)/)
       .map((block) => {
-        const match = block.match(/^\[(.*?) score=([\d.]+)\]\s*\n?([\s\S]*)$/);
+        // `[paper.pdf p.7 score=0.512]` for a page of a converted document,
+        // `[notes.md score=0.512]` for a plain text file.
+        const match = block.match(
+          /^\[(.*?)(?: p\.(\d+))? score=([\d.]+)\]\s*\n?([\s\S]*)$/,
+        );
         if (!match) return { filename: "", text: block.trim() };
         return {
           filename: match[1],
-          score: Number(match[2]),
-          text: match[3].trim(),
+          ...(match[2] ? { page: Number(match[2]) } : {}),
+          score: Number(match[3]),
+          text: match[4].trim(),
         };
       })
       .filter((result) => result.text);
@@ -953,6 +960,64 @@ export class SaiaRagProvider implements FileProvider {
       blob: new Blob([fromBase64(payload.content_base64)], {
         type: mimeForName(file.name),
       }),
+    };
+  }
+
+  /**
+   * The text of the page a hit came from, plus the page after it.
+   *
+   * `get_file` takes page ranges as `<file>@<from>-<to>` and slices on the
+   * docling `[Page N]: #` markers; a text file without markers comes back whole,
+   * which is why a caller only passes a page it got from a search hit.
+   */
+  async readDocumentExcerpt(
+    display: string,
+    filename: string,
+    page?: number,
+  ): Promise<string> {
+    const collection = await this.resolveCollection(display);
+    const wanted = Math.floor(Number(page));
+    const range =
+      Number.isFinite(wanted) && wanted >= 1
+        ? `@${wanted}-${wanted + 1}`
+        : "";
+    const text = await this.call(GET_FILE_TOOL, {
+      collection: collection.collection,
+      filename: `${filename}${range}`,
+    });
+    return String(text ?? "");
+  }
+
+  /**
+   * A file's original bytes, whatever the service indexed from it.
+   *
+   * `downloadFile` answers a converted document with its indexed Markdown,
+   * because that is what a download wants. A page citation wants the other
+   * thing: the uploaded PDF, so the preview can be opened at the page.
+   */
+  async readOriginalFile(
+    display: string,
+    file: RagFile,
+  ): Promise<{ name: string; mime: string; size: number; blob: Blob }> {
+    const collection = await this.resolveCollection(display);
+    const text = await this.call(READ_BASE64_TOOL, {
+      collection: collection.collection,
+      filename: file.name,
+    });
+    const payload = parseJson(text);
+    if (!payload || typeof payload.content_base64 !== "string") {
+      throw new WorkspaceError(
+        "PROVIDER_ERROR",
+        "saia-rag answered unreadable JSON",
+      );
+    }
+    const bytes = fromBase64(payload.content_base64);
+    const mime = mimeForName(file.name);
+    return {
+      name: file.name,
+      mime,
+      size: bytes.byteLength,
+      blob: new Blob([bytes], { type: mime }),
     };
   }
 

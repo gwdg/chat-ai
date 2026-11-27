@@ -10,11 +10,17 @@ import {
   serializeArcanaAction,
   stripArcanaActionMarkers,
 } from "../../utils/arcanaActions";
+import {
+  getArcanaDocuments,
+  serializeArcanaDocument,
+  stripArcanaDocumentMarkers,
+} from "../../utils/arcanaDocuments";
 
 const mocks = vi.hoisted(() => ({
   runner: {
     run: vi.fn(),
     takeProposals: vi.fn(),
+    getDocuments: vi.fn(),
   },
 }));
 
@@ -123,6 +129,7 @@ describe("useArcanaChatSend", () => {
           previousTags: ["alpha"],
         },
       ]);
+    mocks.runner.getDocuments.mockReset().mockReturnValue([]);
   });
 
   it("appends one approval marker and keeps it out of the model's history", async () => {
@@ -211,6 +218,31 @@ describe("useArcanaChatSend", () => {
     expect(stripArcanaActionMarkers(text)).toBe("Done.");
   });
 
+  it("appends a source card for each cited page", async () => {
+    mocks.runner.takeProposals.mockReturnValue([]);
+    const cited = {
+      collection: collection.collection,
+      filename: "report.pdf",
+      page: 7,
+      pages: 2,
+      excerpt: "[Page 7]: #\n\nPassage.",
+    };
+    mocks.runner.getDocuments.mockReturnValue([cited]);
+    vi.mocked(chatCompletions).mockImplementationOnce(textRound("Fetched."));
+
+    const state = makeState();
+    const setter = makeSetter(state);
+    const { result } = renderHook(() => useArcanaChatSend(collection));
+
+    await act(async () => {
+      await result.current({ localState: state, setLocalState: setter.setLocalState });
+    });
+
+    const text = setter.getState().messages.at(-2).content[0].text;
+    expect(getArcanaDocuments(text, collection.collection)).toEqual([cited]);
+    expect(stripArcanaDocumentMarkers(text)).toBe("Fetched.");
+  });
+
   it("feeds the next turn a history without the markers", async () => {
     mocks.runner.takeProposals.mockReturnValue([]);
     vi.mocked(chatCompletions).mockImplementationOnce(textRound("Hello."));
@@ -222,7 +254,15 @@ describe("useArcanaChatSend", () => {
         content: [
           {
             type: "text",
-            text: 'Edited.\n\n[[ARCANA_ACTION:does-not-matter]]',
+            text: `Edited.\n\n[[ARCANA_ACTION:does-not-matter]]\n\n${serializeArcanaDocument(
+              {
+                collection: collection.collection,
+                filename: "report.pdf",
+                page: 7,
+                pages: 2,
+                excerpt: "[Page 7]: #\n\nPassage.",
+              },
+            )}`,
           },
         ],
       },

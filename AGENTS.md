@@ -2989,20 +2989,25 @@ deletes `arcana_share`, so the aliases do not drift apart. The add form refuses 
 `parseArcanaShareRef` cannot read and a collection already in the chat. The list is the
 `<ul data-guide="tools-arcana-list">`.
 
-`agent/arcanaChatTools.ts#createArcanaChatTools(refs)` adds four read-only tools:
+`agent/arcanaChatTools.ts#createArcanaChatTools(refs)` adds five read-only tools:
 `list_arcanas` (every collection with its description), then `search_arcana` (`search_chunks`),
-`list_arcana_documents` (`list_files`) and `read_arcana_document` (`read_file_base64`, text files
-only). The three read tools take a `collection` argument, resolved against this chat's list
-(`owner/name` or the storage name); a value outside it is refused, and with one binding the argument
-may be omitted. **Arcana Tools also registers a `list_arcanas`** (`agent/tools.ts`, backed by the
-legacy `/arcana-tools/arcanas`): the chat-scoped tool replaces it whenever the chat has bindings,
-because two tools with the same name break the request. The MCP client is opened lazily on the first
-call, shared by the tools of one turn, closed in `runAgent`'s `finally`, and reconnected once when
-`isStaleMcpSessionError` matches (same repair as the workspace provider). The tools are registered
-only when `modelSupportsTools`, `isArcanasEnabled()` **and** `storageAccessEnabled` (they are data
-access, like the workspace tools); `runAgent` also appends a short prompt naming the collections with
-their descriptions. A model without tool support gets the plain chat path with the bindings stored but
-no access.
+`list_arcana_documents` (`list_files`), `read_arcana_document` (`read_file_base64`, text files only)
+and `retrieve_document`. The four reading tools take a `collection` argument, resolved against this
+chat's list (`owner/name` or the storage name); a value outside it is refused, and with one binding
+the argument may be omitted. `retrieve_document` quotes the page a passage came from plus the page
+after it (`get_file` with `filename@N-N+1` for a converted document, the stored text for a plain text
+file, `search_chunks` to find the page when none is given) and records it through `getDocuments()`,
+which `runAgent` returns as `TurnUpdate.documents`; `sendMessage` appends the app-written
+`[[ARCANA_DOCUMENT:<base64>]]` markers to the answer and `ArcanaDocumentCard` renders them as a
+Sources section. A rejected or binary file answer produces no card. **Arcana Tools also registers a
+`list_arcanas`** (`agent/tools.ts`, backed by the legacy `/arcana-tools/arcanas`): the chat-scoped
+tool replaces it whenever the chat has bindings, because two tools with the same name break the
+request. The MCP client is opened lazily on the first call, shared by the tools of one turn, closed
+in `runAgent`'s `finally`, and reconnected once when `isStaleMcpSessionError` matches (same repair as
+the workspace provider). The tools are registered only when `modelSupportsTools`, `isArcanasEnabled()`
+**and** `storageAccessEnabled` (they are data access, like the workspace tools); `runAgent` also
+appends a short prompt naming the collections with their descriptions. A model without tool support
+gets the plain chat path with the bindings stored but no access.
 
 The Meta chat reads the list through `get_user_settings`/`buildConversationSettingsSummary` and
 proposes it with `SET_CONVERSATION_SETTING` `key: "arcana_shares"` (`value` is an array of collection
@@ -3081,8 +3086,23 @@ overwritten plain text file goes back to its text, a new file is removed, and a 
 re-written. Indexing is never revertible, and neither is anything whose original bytes were not
 readable (a converted document's indexed Markdown is not its upload, and the restore text is capped).
 A failed item does not stop the batch, the successful ones stay applied, and Accept can be retried
-because a repeated apply is idempotent. This is separate from the four read-only chat tools of §4.36,
+because a repeated apply is idempotent. This is separate from the five read-only chat tools of §4.36,
 which read a normal chat's `arcana_shares` list.
+
+**A quoted passage becomes a source card, and the card opens the page.** `utils/arcanaChat.js#retrieve_document`
+(and the same tool in `agent/arcanaChatTools.ts`) reads the cited page plus the next one and records
+`{collection, filename, page?, pages, excerpt}`. The app appends it as an `[[ARCANA_DOCUMENT:<base64>]]`
+marker — `utils/arcanaDocuments.ts` builds, validates and strips it, and the marker names the
+**reference** (`owner/name`), never the display segment. `hooks/useArcanaChatSend.js` composes it into
+the assistant text and strips both marker kinds from the history it sends back;
+`MessageAssistant` parses it only for an `arcana-chat:` thread, and for a normal chat only when the
+marker's collection is in `arcanaSharesFromSettings(settings)`. `ArcanaDocumentCard`
+(`data-guide="arcana-documents"`) lists the excerpt page by page and, on click, dynamically imports
+`utils/arcanaDocumentPreview.js`, which reads the **original** bytes through `readOriginalFile`
+(not the indexed Markdown) and opens `FilePreviewContext`. A text-like file opens as `text`; anything
+else is an object URL released with `release`, and `FilePreviewContent` appends `#page=N` to a PDF's
+URL. `ArcanaPage` mounts `ChatFilePreviewPanel`, which accepts that pre-read `entry`/`url`/`text` as
+well as a stored chat file id, so the same panel shows both.
 
 **A file's Markdown is editable in the panel, and a save reindexes in place.** `ArcanaManager`
 shows Edit (`data-guide="arcana-edit-markdown"`) next to Download when `collection.can_write`, the

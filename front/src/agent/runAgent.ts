@@ -23,6 +23,8 @@ import { beginMcpConfirmationSession } from "./mcpConfirmation";
 import { createTools } from "./tools";
 import { createArcanaChatTools } from "./arcanaChatTools";
 import { arcanaRefId, arcanaSharesFromSettings } from "../utils/arcanaShareLink";
+import type { ArcanaDocument } from "../utils/arcanaDocuments";
+import { stripArcanaDocumentMarkers } from "../utils/arcanaDocuments";
 import { isArcanasEnabled } from "../utils/modules";
 import { createConnectedAgentTools, type ConnectedAgentContext } from "./connectedAgentTools";
 import { createWorkspaceTools, type WorkspaceFileAccess, type WorkspaceToolContext } from "./workspaceTools";
@@ -55,7 +57,7 @@ const arcanaSharesPrompt = (
         ? `"${arcanaRefId(share)}" (${share.collection}) — ${share.description}`
         : `"${arcanaRefId(share)}" (${share.collection})`,
     )
-    .join(", ")}. Call list_arcanas to see them with their descriptions, then pass the wanted collection to search_arcana, list_arcana_documents or read_arcana_document. Base answers about a collection on those results, and say so when they contain nothing relevant.`;
+    .join(", ")}. Call list_arcanas to see them with their descriptions, then pass the wanted collection to search_arcana, list_arcana_documents, read_arcana_document or retrieve_document. When you quote a passage, call retrieve_document with the file and the page the search hit reported (p.N): it returns that page and the next one and shows the user a source card that opens the document at the page. Base answers about a collection on those results, and say so when they contain nothing relevant.`;
 
 type ModelSpec = { id: string; name?: string; input?: string[] };
 
@@ -66,6 +68,8 @@ export interface TurnUpdate {
   text: string;
   /** Files the agent wrote, as UI content items. */
   files: { type: "file"; fileId: string }[];
+  /** Arcana pages this turn cited, for the source cards under the answer. */
+  documents: ArcanaDocument[];
 }
 
 export interface TurnResult extends TurnUpdate {
@@ -247,7 +251,7 @@ async function toAgentMessages(
         out.push(...message.meta.agent);
         continue;
       }
-      const answer = stripThink(text);
+      const answer = stripThink(String(stripArcanaDocumentMarkers(text) ?? ""));
       if (!answer) continue;
       out.push({
         role: "assistant",
@@ -585,7 +589,12 @@ export async function runAgentTurn({
     let streaming: AgentMessage | undefined;
     const snapshot = (): TurnUpdate => {
       const agentMessages = streaming ? [...done, streaming] : [...done];
-      return { agentMessages, text: agentText(agentMessages), files: written.items() };
+      return {
+        agentMessages,
+        text: agentText(agentMessages),
+        files: written.items(),
+        documents: arcanaChatTools?.getDocuments() ?? [],
+      };
     };
 
     // Arguments of each tool call, by id, to name the images its result carries after the path.

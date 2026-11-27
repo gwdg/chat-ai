@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
     listFiles: vi.fn(),
     tryListFiles: vi.fn(),
     downloadFile: vi.fn(),
+    readDocumentExcerpt: vi.fn(),
     search: vi.fn(),
     listMembers: vi.fn(),
     uploadFile: vi.fn(),
@@ -87,6 +88,9 @@ beforeEach(() => {
     name: "a.md",
     blob: new Blob(["# a"]),
   });
+  mocks.provider.readDocumentExcerpt.mockResolvedValue(
+    "[Page 3]: #\n\nThird page.\n\n[Page 4]: #\n\nFourth page.",
+  );
   mocks.provider.indexCollection.mockResolvedValue("job-1");
 });
 
@@ -99,6 +103,7 @@ describe("arcana chat tools", () => {
       "list_files",
       "read_file",
       "search",
+      "retrieve_document",
       "get_index_status",
       "list_members",
     ]);
@@ -313,5 +318,81 @@ describe("arcana chat tools", () => {
       runner.run("delete_file", { filename: "a.md" }),
     ).rejects.toThrow("read-only");
     expect(runner.takeProposals()).toEqual([]);
+  });
+
+  it("quotes a converted document's page and records the source", async () => {
+    const runner = createArcanaChatToolRunner({ collection });
+    const answer = await runner.run("retrieve_document", {
+      filename: "report.pdf",
+      page: 3,
+    });
+
+    // The page-chat tools call the provider by display segment and the marker
+    // carries the reference, which is the identity the chat page compares.
+    expect(mocks.provider.readDocumentExcerpt).toHaveBeenCalledWith(
+      "Test",
+      "report.pdf",
+      3,
+    );
+    expect(answer).toContain("page 3-4");
+    expect(answer).toContain("source card");
+    expect(runner.getDocuments()).toEqual([
+      {
+        collection: "tester/test",
+        filename: "report.pdf",
+        page: 3,
+        pages: 2,
+        excerpt: "[Page 3]: #\n\nThird page.\n\n[Page 4]: #\n\nFourth page.",
+      },
+    ]);
+    // A citation is a read: it never becomes an approval card.
+    expect(runner.takeProposals()).toEqual([]);
+    expect(mocks.provider.write).not.toHaveBeenCalled();
+  });
+
+  it("does not invent a page for a plain text file", async () => {
+    const runner = createArcanaChatToolRunner({ collection });
+    const answer = await runner.run("retrieve_document", { filename: "a.md" });
+
+    expect(mocks.provider.readDocumentExcerpt).not.toHaveBeenCalled();
+    expect(answer).toContain("# a");
+    expect(runner.getDocuments()).toEqual([
+      {
+        collection: "tester/test",
+        filename: "a.md",
+        pages: 1,
+        excerpt: "# a",
+      },
+    ]);
+  });
+
+  it("reports a missing file instead of quoting another one", async () => {
+    const runner = createArcanaChatToolRunner({ collection });
+    const answer = await runner.run("retrieve_document", {
+      filename: "missing.pdf",
+      page: 2,
+    });
+    expect(answer).toContain('No file named "missing.pdf"');
+    expect(runner.getDocuments()).toEqual([]);
+  });
+
+  it("refuses a binary file that has no text to quote", async () => {
+    mocks.provider.listFiles.mockResolvedValue([
+      ...rows,
+      { name: "scan.pdf", status: "stored", chunks: 0, tags: [], markdown: false },
+    ]);
+    const runner = createArcanaChatToolRunner({ collection });
+    const answer = await runner.run("retrieve_document", {
+      filename: "scan.pdf",
+    });
+    expect(answer).toContain("binary file");
+    expect(runner.getDocuments()).toEqual([]);
+  });
+
+  it("lists a cited page once", async () => {
+    const runner = createArcanaChatToolRunner({ collection });
+    await runner.run("retrieve_document", { filename: "report.pdf", page: 3 });
+    await runner.run("retrieve_document", { filename: "report.pdf", page: 3 });
+    expect(runner.getDocuments()).toHaveLength(1);
   });
 });

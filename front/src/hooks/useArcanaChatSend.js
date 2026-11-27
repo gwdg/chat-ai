@@ -17,6 +17,10 @@ import {
   arcanaActionKey,
   stripArcanaActionMarkers,
 } from "../utils/arcanaActions";
+import {
+  appendArcanaDocumentMarkers,
+  stripArcanaDocumentMarkers,
+} from "../utils/arcanaDocuments";
 import { loadFile } from "../db";
 import {
   selectTimeout,
@@ -109,7 +113,9 @@ export function useArcanaChatSend(collection) {
         )
         .map((message) => ({
           role: message.role,
-          content: stripArcanaActionMarkers(extractMessageText(message)).trim(),
+          content: stripArcanaDocumentMarkers(
+            stripArcanaActionMarkers(extractMessageText(message)),
+          ).trim(),
         }))
         .filter((message) => message.content.length > 0);
 
@@ -175,9 +181,12 @@ export function useArcanaChatSend(collection) {
       let errorMeta = null;
 
       // The helper drops any marker-shaped text the model wrote itself, so only
-      // a proposal this app captured can reach the approval card.
+      // a proposal or citation this app captured can reach its card.
       const composed = () =>
-        appendArcanaActionMarkers(accumulated.trim(), proposals).trim();
+        appendArcanaDocumentMarkers(
+          appendArcanaActionMarkers(accumulated.trim(), proposals).trim(),
+          runner.getDocuments(),
+        ).trim();
 
       const updateAssistant = () =>
         setLocalState((prev) => {

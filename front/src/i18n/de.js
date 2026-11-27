@@ -2639,6 +2639,12 @@ export default {
     action_error: "Die Änderung konnte nicht angewendet werden: {{reason}}",
     action_partial:
       "{{applied}} von {{total}} Änderungen wurden angewendet. {{reason}}",
+    sources: "Quellen",
+    source_page: "Seite {{page}}",
+    source_pages: "Seiten {{from}}–{{to}}",
+    source_text: "Textdatei",
+    source_open: "Das Dokument auf dieser Seite öffnen",
+    source_failed: "Das Dokument konnte nicht geöffnet werden: {{reason}}",
   },
   mcp: {
     section_title: "MCP-Server",
@@ -3573,6 +3579,7 @@ export default {
     pdf_mobile_title: "Die PDF-Vorschau ist auf Mobilgeräten nicht verfügbar",
     pdf_mobile_hint: "Bitte nutzen Sie einen Desktop-Browser für die PDF-Vorschau",
     pdf_original_title: "Vorschau des Original-PDFs",
+    pdf_page: "Geöffnet auf Seite {{page}}",
     pdf_original_hint: "Dieses PDF wurde noch nicht verarbeitet. Klicken Sie auf \"Verarbeiten\", um den Text zu extrahieren.",
     pdf_missing_title: "PDF-Inhalt nicht verfügbar",
     pdf_missing_hint: "Die Daten des Original-PDFs sind für die Vorschau nicht verfügbar",
