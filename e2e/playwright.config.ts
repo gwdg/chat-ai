@@ -29,6 +29,26 @@ const GATED_APP_URL =
 const GATED_APP_PORT = new URL(GATED_APP_URL).port || "8094";
 const GATED_SPEC = /tutorial-catalog-gated\.spec\.ts/;
 
+/**
+ * The Arcana tags scenario needs a saia-rag service the browser can reach, and
+ * the app derives it from `backendPath` alone (`<backend>/mcp/saia-rag`), which
+ * is compiled in at Vite startup. So it gets its own app instance on 8095
+ * pointed at `scripts/mock-saia-rag.mjs` on 8096; `/models`, `/user` and
+ * `/chat/completions` stay mocked, so no model or service is needed.
+ *
+ * It belongs to the deterministic matrix, so it runs by default. `E2E_RAG=0`
+ * drops it (and its two servers) for a shorter run.
+ */
+const RAG_DISABLED = ["0", "false", "no"].includes(
+  (process.env.E2E_RAG ?? "").toLowerCase(),
+);
+const RAG_APP_URL = process.env.E2E_RAG_APP_URL ?? "http://127.0.0.1:8095";
+const RAG_APP_PORT = new URL(RAG_APP_URL).port || "8095";
+// The fixture hard-codes this port as the app's `backendPath`, so it is not a
+// knob: moving it needs both the fixture and the mock to agree.
+const RAG_MOCK_URL = "http://127.0.0.1:8096";
+const RAG_SPEC = /arcana-tags\.spec\.ts/;
+
 /** Opt-in integration scenario against a local `opencode serve` instance. */
 const OPENCODE_ENABLED = process.env.E2E_OPENCODE === "1";
 const OPENCODE_URL = (process.env.E2E_OPENCODE_URL ?? "http://127.0.0.1:4096").replace(/\/$/, "");
@@ -162,6 +182,19 @@ const GATED_ENABLED =
   !OPENCODE_ENABLED &&
   (!USE_EXTERNAL_APP || Boolean(process.env.E2E_GATED_APP_URL));
 
+/**
+ * The Arcana scenario belongs to the mocked matrix. An app you already run
+ * (`E2E_APP_URL`) was not built from `fixtures/front.e2e-rag.json`, so the
+ * scenario is dropped there unless its own URL is given explicitly.
+ */
+const RAG_ENABLED =
+  !RAG_DISABLED &&
+  !REAL_MODEL_ENABLED &&
+  !SAIA_FS_ENABLED &&
+  !OPENCODE_ENABLED &&
+  (!USE_EXTERNAL_APP || Boolean(process.env.E2E_RAG_APP_URL));
+const START_RAG_APP = RAG_ENABLED && !process.env.E2E_RAG_APP_URL;
+
 const webServer: any[] = [];
 if (!USE_EXTERNAL_APP && !REAL_MODEL_ENABLED && !SAIA_FS_ENABLED) {
   webServer.push({
@@ -179,6 +212,27 @@ if (GATED_ENABLED && !process.env.E2E_GATED_APP_URL) {
     command: `CONFIG_LOCATION=../e2e/fixtures/front.e2e-gated.json npm run dev -- --port ${GATED_APP_PORT} --strictPort`,
     cwd: "../front",
     url: GATED_APP_URL,
+    reuseExistingServer: !process.env.CI,
+    timeout: 180_000,
+  });
+}
+if (RAG_ENABLED) {
+  // The service the app probes at `<backendPath>/mcp/saia-rag`: one collection
+  // with tagged files, answering MCP over plain JSON.
+  webServer.push({
+    command: "node scripts/mock-saia-rag.mjs",
+    url: `${RAG_MOCK_URL}/mcp/saia-rag/health`,
+    reuseExistingServer: false,
+    timeout: 60_000,
+  });
+}
+if (START_RAG_APP) {
+  // Same upstreams, but `backendPath` points at the mock saia-rag, which is
+  // compiled into the bundle.
+  webServer.push({
+    command: `CONFIG_LOCATION=../e2e/fixtures/front.e2e-rag.json npm run dev -- --port ${RAG_APP_PORT} --strictPort`,
+    cwd: "../front",
+    url: RAG_APP_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
   });
@@ -257,7 +311,7 @@ const chrome = { browserName: "chromium", channel: "chrome" } as const;
 const deviceProjects: Project[] = [
   {
     name: "chrome-desktop",
-    testIgnore: [OPENCODE_SPEC, REAL_SPEC, SAIA_FS_SPEC, GATED_SPEC],
+    testIgnore: [OPENCODE_SPEC, REAL_SPEC, SAIA_FS_SPEC, GATED_SPEC, RAG_SPEC],
     use: {
       ...devices["Desktop Chrome"],
       ...chrome,
@@ -266,19 +320,19 @@ const deviceProjects: Project[] = [
   },
   {
     name: "chrome-tablet",
-    testIgnore: [OPENCODE_SPEC, REAL_SPEC, SAIA_FS_SPEC, GATED_SPEC],
+    testIgnore: [OPENCODE_SPEC, REAL_SPEC, SAIA_FS_SPEC, GATED_SPEC, RAG_SPEC],
     // 1194 x 834: below the app's 1280 px desktop breakpoint, so it keeps the
     // tablet layout (rail sidebar, drawer-free content) while still being wide.
     use: { ...devices["iPad Pro 11 landscape"], ...chrome },
   },
   {
     name: "chrome-phone",
-    testIgnore: [OPENCODE_SPEC, REAL_SPEC, SAIA_FS_SPEC, GATED_SPEC],
+    testIgnore: [OPENCODE_SPEC, REAL_SPEC, SAIA_FS_SPEC, GATED_SPEC, RAG_SPEC],
     use: { ...devices["Pixel 7"], ...chrome },
   },
   {
     name: "firefox-desktop",
-    testIgnore: [OPENCODE_SPEC, REAL_SPEC, SAIA_FS_SPEC, GATED_SPEC],
+    testIgnore: [OPENCODE_SPEC, REAL_SPEC, SAIA_FS_SPEC, GATED_SPEC, RAG_SPEC],
     // Same desktop class as chrome-desktop: 1280 x 720 squeezes the Meta chat
     // prompt row far enough that the model chip covers the send button.
     use: {
@@ -298,7 +352,7 @@ const realApp = { baseURL: REAL_APP_URL, mockUpstream: false } as const;
 const realDeviceProjects: Project[] = [
   {
     name: "chrome-desktop",
-    testIgnore: [GATED_SPEC],
+    testIgnore: [GATED_SPEC, RAG_SPEC],
     use: {
       ...devices["Desktop Chrome"],
       ...chrome,
@@ -308,17 +362,17 @@ const realDeviceProjects: Project[] = [
   },
   {
     name: "chrome-tablet",
-    testIgnore: [GATED_SPEC],
+    testIgnore: [GATED_SPEC, RAG_SPEC],
     use: { ...devices["iPad Pro 11 landscape"], ...chrome, ...realApp },
   },
   {
     name: "chrome-phone",
-    testIgnore: [GATED_SPEC],
+    testIgnore: [GATED_SPEC, RAG_SPEC],
     use: { ...devices["Pixel 7"], ...chrome, ...realApp },
   },
   {
     name: "firefox-desktop",
-    testIgnore: [GATED_SPEC],
+    testIgnore: [GATED_SPEC, RAG_SPEC],
     use: {
       ...devices["Desktop Firefox"],
       ...realApp,
@@ -343,6 +397,21 @@ if (GATED_ENABLED) {
       ...devices["Desktop Chrome"],
       ...chrome,
       baseURL: GATED_APP_URL,
+      viewport: { width: 1440, height: 900 },
+    },
+  });
+}
+
+if (RAG_ENABLED) {
+  // One desktop run: the scenario drives the Arcana page and a chat turn, not
+  // device-specific layout. The panel it opens is the desktop right-hand one.
+  projects.push({
+    name: "arcana-tags",
+    testMatch: RAG_SPEC,
+    use: {
+      ...devices["Desktop Chrome"],
+      ...chrome,
+      baseURL: RAG_APP_URL,
       viewport: { width: 1440, height: 900 },
     },
   });
@@ -383,7 +452,7 @@ if (OPENCODE_ENABLED) {
 if (!REAL_MODEL_ENABLED && !OPENCODE_ENABLED && process.env.E2E_WEBKIT === "1") {
   projects.push({
     name: "webkit-desktop",
-    testIgnore: [OPENCODE_SPEC, REAL_SPEC, SAIA_FS_SPEC, GATED_SPEC],
+    testIgnore: [OPENCODE_SPEC, REAL_SPEC, SAIA_FS_SPEC, GATED_SPEC, RAG_SPEC],
     use: { ...devices["Desktop Safari"] },
   });
 }

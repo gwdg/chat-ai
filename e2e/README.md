@@ -25,6 +25,7 @@ Each user scenario is its own readable file in `tests/`, so it can be run alone:
 | `tutorial-catalog-gated.spec.ts` | the same check on the lean build (project `tutorial-gated`) |
 | `tutorial-backup-restore.spec.ts` | walk the restore guide into Data → Encrypted backup |
 | `workspace-create.spec.ts` | create a workspace and open its file browser |
+| `arcana-tags.spec.ts` | filter an Arcana's files and a chat's retrieval by tag, against a mock saia-rag |
 | `sidebar-scroll.spec.ts` | keep the sidebar list position when a topic or workspace page opens |
 | `chat-file-upload.spec.ts` | attach a text file and send it with a prompt |
 | `chat-html-rendering.spec.ts` | render a fenced HTML block in a sandboxed iframe |
@@ -75,6 +76,19 @@ startup.
 `npm run serve:e2e` starts the same two instances plus a small mock upstream
 (`scripts/mock-upstream.mjs`, port 8091) outside Playwright, so the app can be opened and clicked
 through by hand; `--default` or `--gated` starts only one of them.
+
+`tests/arcana-tags.spec.ts` needs an Arcana service the browser can reach, and the app derives it
+from `backendPath` alone (`<backendPath>/mcp/saia-rag`, `AGENTS.md` §4.31) — a value that is
+compiled in at Vite startup. So the suite starts a third instance from
+`fixtures/front.e2e-rag.json` on port 8095, pointed at `scripts/mock-saia-rag.mjs` on 8096: a
+deterministic stand-in that answers the availability probe, MCP over plain JSON, and one
+`demo/papers` collection whose files carry the tags `finance` and `hr`. It belongs to the mocked
+matrix, so `npm run test:e2e` runs it; `E2E_RAG=0` drops it (and its two servers) for a shorter run,
+`E2E_RAG_APP_URL` points the project at an app you started yourself, and `E2E_RAG_MOCK_URL` tells
+the spec where the mock's call log (`GET /__calls`) is. The ports are fixed in the fixture and the
+config (app 8095, mock 8096) because the app's `backendPath` is compiled in. The project is
+desktop-only: it drives the Arcana page and a chat turn, not device-specific layout. Run it alone
+with `npm run test:arcana`.
 
 ### Run
 
