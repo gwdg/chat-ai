@@ -2974,7 +2974,13 @@ through `parseArcanaShareRef`, is appended to `arcanaSharesFromSettings(conversa
 the collection is not already there (the stored shape is `{collection, name, description?}`), sets
 `enable_tools = true` unless `isBrandLocked("tools")`, names a chat still called `Untitled Chat`
 after the collection, strips the query parameter and persists through `updateConversation` with the
-`lastModified` it read (handling `-1` by leaving the ref alone). The two parameters of the older
+`lastModified` it read (handling `-1` by leaving the ref alone). It also switches
+`settings.tools.arcana_tools` on, so GWDG Tools shows the tool the chat already reads from as enabled
+instead of only the legacy gateway switch `tools.arcana`, which defaults to on and is inert without
+an `arcana.id`; that legacy switch is switched off as well only when the chat carries no
+`settings.arcana.id`, so a link never detaches a gateway Arcana an existing chat was configured with.
+The rest of the chat's `tools` object is kept, and both switches are left alone when a brand locks
+tools (`isBrandLocked("tools")`). The two parameters of the older
 link are still read: `?arcana=` and `?arcana_share=` keep the previous behaviour and write
 `settings.arcana.id` (the readable id) plus the single `arcana_share` binding, which
 `arcanaSharesFromSettings` merges into the list; a bare `?arcana=papers` only fills the legacy tool's

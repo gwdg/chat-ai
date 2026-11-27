@@ -48,6 +48,20 @@ vi.mock("../useImportConversation", () => ({
   useImportConversation: () => vi.fn(),
 }));
 
+// Only the tools lock is steered here: it decides whether a link may switch
+// tools. Everything else in the module (the brand's fixed model, the external
+// capabilities) stays the real implementation.
+const brandMocks = vi.hoisted(() => ({ toolsLocked: false }));
+
+vi.mock("../../config/brandPolicy", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    isBrandLocked: (key) =>
+      key === "tools" ? brandMocks.toolsLocked : actual.isBrandLocked(key),
+  };
+});
+
 const conversationId = "550e8400-e29b-41d4-a716-446655440000";
 
 function makeConversation(messages) {
@@ -78,6 +92,7 @@ function lastState(setLocalState) {
 describe("useSyncConversation hydration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    brandMocks.toolsLocked = false;
   });
 
   it("keeps a stored user message instead of replacing it with defaults", async () => {
@@ -145,6 +160,7 @@ describe("useSyncConversation Arcana share links", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     routerMocks.params = [];
+    brandMocks.toolsLocked = false;
   });
 
   it("still wires an older arcana link through the single binding", async () => {
@@ -201,6 +217,11 @@ describe("useSyncConversation Arcana share links", () => {
     expect(state.settings.arcana).toBeUndefined();
     expect(state.settings.arcana_share).toBeUndefined();
     expect(state.settings.enable_tools).toBe(true);
+    // The link also switches the matching tool on, so GWDG Tools agrees with
+    // the list the chat already reads from, and stops showing the legacy
+    // gateway switch (on by default, but inert without an Arcana id).
+    expect(state.settings.tools.arcana_tools).toBe(true);
+    expect(state.settings.tools.arcana).toBe(false);
     expect(state.title).toBe("papers");
 
     await waitFor(() => expect(dbMocks.updateConversation).toHaveBeenCalled());
@@ -208,7 +229,44 @@ describe("useSyncConversation Arcana share links", () => {
     expect(payload.settings.arcana_shares).toEqual([
       { collection: "alice/papers", name: "papers" },
     ]);
+    expect(payload.settings.tools.arcana_tools).toBe(true);
+    expect(payload.settings.tools.arcana).toBe(false);
     expect(payload.lastModified).toBe(123);
+  });
+
+  it("keeps the switches a chat already carries for its own collection", async () => {
+    routerMocks.params = [["arcana-tools", "alice/papers"]];
+    const conversation = makeConversation([]);
+    conversation.settings = {
+      arcana: { id: "bob/notes" },
+      tools: { web_search: true, arcana: true, arcana_tools: false },
+    };
+    const setLocalState = renderSync(conversation);
+
+    await waitFor(() => expect(setLocalState).toHaveBeenCalled());
+
+    const tools = lastState(setLocalState).settings.tools;
+    // The gateway Arcana the chat already uses stays on: a link must not
+    // detach a path the chat was configured with.
+    expect(tools.arcana).toBe(true);
+    expect(tools.arcana_tools).toBe(true);
+    // The rest of the tool set is kept, not replaced.
+    expect(tools.web_search).toBe(true);
+  });
+
+  it("leaves the tool switches alone when a brand locks them", async () => {
+    brandMocks.toolsLocked = true;
+    routerMocks.params = [["arcana-tools", "alice/papers"]];
+    const conversation = makeConversation([]);
+    const setLocalState = renderSync(conversation);
+
+    await waitFor(() => expect(setLocalState).toHaveBeenCalled());
+
+    const state = lastState(setLocalState);
+    expect(state.settings.tools).toBeUndefined();
+    // The deployment's tools stay the deployment's, including the master switch.
+    expect(state.settings.enable_tools).toBeUndefined();
+    expect(state.settings.arcana_shares).toHaveLength(1);
   });
 
   it("adds to the collections the chat already carries", async () => {

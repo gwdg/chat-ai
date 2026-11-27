@@ -3672,6 +3672,11 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           chat page strips the query parameter, enables tools (unless a brand fixes that switch),
           names an untouched <code>Untitled Chat</code> after the collection and persists the
           binding through <code>updateConversation</code> with the <code>lastModified</code> it read.
+          It also switches <code>tools.arcana_tools</code> on, so GWDG Tools shows the tool the chat
+          reads from as enabled; the legacy gateway switch <code>tools.arcana</code> (on by default,
+          inert without an <code>arcana.id</code>) is switched off only when the chat has no
+          <code>arcana.id</code>, so a link never detaches a path an existing chat uses. A brand that
+          locks tools leaves both alone.
           A chat owns a <b>list</b> of collections: <code>settings.arcana_shares</code> holds the
           ones the user adds (each with its <code>owner/name</code> reference), and the single
           <code>settings.arcana_share</code> an older link writes is merged into the same list.

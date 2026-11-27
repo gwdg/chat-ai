@@ -449,6 +449,18 @@ export function useSyncConversation({
             name: ref.name,
             ...(ref.description ? { description: ref.description } : {}),
           }));
+          // The link names the app's own Arcana Tools, so GWDG Tools shows that
+          // tool switched on; otherwise the row stays off while the chat already
+          // reads the collection, and only the legacy gateway switch (on by
+          // default, but inert without an Arcana id) looks enabled. A chat that
+          // already carries an Arcana id keeps that path switched on as it is.
+          if (!isBrandLocked("tools")) {
+            extraSettings.tools = {
+              ...(conversation.settings?.tools || {}),
+              arcana_tools: true,
+              ...(conversation.settings?.arcana?.id ? {} : { arcana: false }),
+            };
+          }
         } else if (arcanaShare) {
           // The legacy Arcana tool's field takes the readable Arcana ID, which
           // names the same collection as the storage name the tools take.
