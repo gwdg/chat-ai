@@ -3730,7 +3730,12 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           a <code>collection</code>
           argument that is resolved against this chat's list (both <code>owner/name</code> and the
           storage name are accepted), so a prompt cannot aim them at a collection the chat was never
-          given; with one collection the argument may be omitted. Nothing in the tool set writes.
+          given; with one collection the argument may be omitted. <code>search_arcana</code> and
+          <code>list_arcana_documents</code> take an optional <code>tags</code> filter, which the
+          service applies as an AND over the files carrying every named tag; the filter and the
+          listing's <code>include_tags</code> are sent only when the advertised tool schema has the
+          argument, so a service older than the tag tools says filtering is unavailable instead of
+          rejecting the call. Nothing in the tool set writes.
           Arcana Tools also registers a <code>list_arcanas</code>; when a chat has bindings the
           chat-scoped one replaces it, because two tools with the same name would break the request.
           GWDG Tools &rarr; <b>Arcana Tools</b> lists every collection the chat is wired to
@@ -3861,7 +3866,9 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
             <td><code>list_arcanas</code>, <code>arcana_details</code> plus the four read-only tools,
                 each read tool resolving its
                 <code>collection</code> argument against the chat's list, and
-                <code>retrieve_document</code> recording the quoted pages for the source card; one
+                <code>retrieve_document</code> recording the quoted pages for the source card; an
+                optional <code>tags</code> filter on <code>search_arcana</code> and
+                <code>list_arcana_documents</code>, sent only where the tool advertises it; one
                 lazily opened MCP client per turn, one reconnect on a lost session.</td>
             <td><span class="mono">front/src/agent/arcanaChatTools.ts</span></td>
           </tr>
@@ -4027,7 +4034,9 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
             <code>?arcana=</code> and <code>?arcana_share=</code> aliases), its link and its stored
             binding</li>
         <li><span class="mono">front/src/agent/arcanaChatTools.ts</span> - the six read-only chat
-            tools and their MCP client, wired in <span class="mono">agent/runAgent.ts</span></li>
+            tools and their MCP client, wired in <span class="mono">agent/runAgent.ts</span>, and
+            <span class="mono">front/src/utils/tags.ts</span> for the <code>tags</code> filter a
+            model may pass to them</li>
         <li><span class="mono">front/src/utils/arcanaDocuments.ts</span>,
             <span class="mono">utils/arcanaDocumentPreview.js</span> and
             <span class="mono">components/Conversation/MessageAssistant/ArcanaDocumentCard.jsx</span> -

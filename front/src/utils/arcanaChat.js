@@ -8,6 +8,7 @@
 // assistant's answer. The tool result is what the model sees, so it is told
 // plainly that nothing was written and that the user has to accept.
 import { formatBytes } from "./formatBytes";
+import { normalizeTagList } from "./tags";
 import {
   MAX_ARCANA_RESTORE_BYTES,
   arcanaActionKey,
@@ -65,7 +66,7 @@ const READ_TOOLS = [
   ),
   tool(
     "search",
-    "Search inside the Arcana and return matching passages with their file name. Use this to test whether the collection answers a question.",
+    "Search inside the Arcana and return matching passages with their file name. Use this to test whether the collection answers a question. Pass tags to search only the files carrying all of them.",
     {
       query: { type: "string", description: "Text to look for" },
       mode: {
@@ -77,6 +78,12 @@ const READ_TOOLS = [
       count: {
         type: "number",
         description: `How many results, 1-${MAX_SEARCH_COUNT}`,
+      },
+      tags: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          "Only search files carrying all of these tags. Optional; omit it to search the whole Arcana.",
       },
     },
     ["query"],
@@ -182,7 +189,7 @@ ${
     : `This collection is read-only for the user, so no write tools are available. Explain that the owner has to change files or access instead of offering an upload.`
 }
 
-Search is how the user tests the collection: run the query they ask for and report which file each hit came from. Plain text is searchable once indexed; PDFs, Office documents and images are converted through docling first, which is why a file can be stored but not searchable yet. A converted file offers its indexed Markdown for download, while the collection keeps the original upload. The service indexes an upload in the background, so a new file may sit at "stored" for a while.
+Search is how the user tests the collection: run the query they ask for and report which file each hit came from. list_files names each file's tags, and a search takes optional tags to look only in the files carrying all of them, not just one. Plain text is searchable once indexed; PDFs, Office documents and images are converted through docling first, which is why a file can be stored but not searchable yet. A converted file offers its indexed Markdown for download, while the collection keeps the original upload. The service indexes an upload in the background, so a new file may sit at "stored" for a while.
 
 Answer in the same language as the user's question. Be concise and concrete.`;
 }
@@ -419,11 +426,16 @@ export function createArcanaChatToolRunner({ collection, attachments = [] }) {
               : DEFAULT_SEARCH_COUNT,
           ),
         );
+        const tags = normalizeTagList(args.tags);
+        if (tags.length && !provider.supportsTool("set_file_tags")) {
+          return "This Arcana service cannot filter a search by tags, so nothing was searched. Run the search again without tags and tell the user tag filtering is unavailable there.";
+        }
         const { results, raw } = await provider.search(
           display,
           query,
           mode,
           count,
+          tags,
         );
         return describeSearch(query, mode, count, results, raw);
       }

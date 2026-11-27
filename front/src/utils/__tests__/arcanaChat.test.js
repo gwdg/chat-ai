@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
     downloadFile: vi.fn(),
     readDocumentExcerpt: vi.fn(),
     search: vi.fn(),
+    supportsTool: vi.fn(),
     listMembers: vi.fn(),
     uploadFile: vi.fn(),
     write: vi.fn(),
@@ -83,6 +84,7 @@ beforeEach(() => {
   for (const fn of Object.values(mocks.provider)) fn.mockReset();
   mocks.provider.listFiles.mockResolvedValue(rows);
   mocks.provider.search.mockResolvedValue({ results: [], raw: "" });
+  mocks.provider.supportsTool.mockReturnValue(true);
   mocks.provider.listMembers.mockResolvedValue([]);
   mocks.provider.downloadFile.mockResolvedValue({
     name: "a.md",
@@ -394,5 +396,50 @@ describe("arcana chat tools", () => {
     await runner.run("retrieve_document", { filename: "report.pdf", page: 3 });
     await runner.run("retrieve_document", { filename: "report.pdf", page: 3 });
     expect(runner.getDocuments()).toHaveLength(1);
+  });
+
+  it("searches with the tags the model named", async () => {
+    mocks.provider.search.mockResolvedValue({
+      results: [{ filename: "a.md", text: "Alpha passage", score: 0.9 }],
+      raw: "",
+    });
+    const runner = createArcanaChatToolRunner({ collection });
+    const answer = await runner.run("search", {
+      query: " alpha ",
+      tags: [" alpha ", "Beta", "alpha"],
+    });
+
+    expect(mocks.provider.search).toHaveBeenCalledWith(
+      "Test",
+      "alpha",
+      "previews",
+      5,
+      ["alpha", "Beta"],
+    );
+    expect(answer).toContain("Alpha passage");
+  });
+
+  it("sends no tags when the model gives none", async () => {
+    const runner = createArcanaChatToolRunner({ collection });
+    await runner.run("search", { query: "alpha" });
+    expect(mocks.provider.search).toHaveBeenCalledWith(
+      "Test",
+      "alpha",
+      "previews",
+      5,
+      [],
+    );
+  });
+
+  it("refuses a tag filter the service does not offer", async () => {
+    mocks.provider.supportsTool.mockReturnValue(false);
+    const runner = createArcanaChatToolRunner({ collection });
+    const answer = await runner.run("search", {
+      query: "alpha",
+      tags: ["beta"],
+    });
+
+    expect(answer).toContain("cannot filter a search by tags");
+    expect(mocks.provider.search).not.toHaveBeenCalled();
   });
 });

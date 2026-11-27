@@ -34,6 +34,7 @@ import {
   parseSearchResults,
 } from "../workspace/providers/saiaRag";
 import { formatBytes } from "../utils/formatBytes";
+import { normalizeTagList } from "../utils/tags";
 import {
   MAX_ARCANA_DOCUMENT_PAGES,
   arcanaDocumentKey,
@@ -162,6 +163,47 @@ export function createArcanaChatTools(refs: ArcanaShareRef[]): ArcanaChatTools {
       return invoke(name, args);
     }
   };
+
+  /**
+   * The arguments each advertised tool takes, from one `listTools` per turn.
+   *
+   * Tag filtering and `include_tags` are optional parts of a tool's schema, and
+   * a service older than the tag tools rejects an argument it does not know. So
+   * the extra fields go out only where the schema has them; a listing that
+   * fails leaves the map empty, and a requested tag filter is then reported as
+   * unsupported instead of being sent and failing the whole call.
+   */
+  let toolArguments: Map<string, Set<string>> | null = null;
+  const advertisedArguments = async (): Promise<Map<string, Set<string>>> => {
+    if (toolArguments) return toolArguments;
+    const rows = new Map<string, Set<string>>();
+    try {
+      const connection = await connect();
+      if (typeof connection?.listTools === "function") {
+        const listing = await connection.listTools();
+        for (const entry of Array.isArray(listing?.tools) ? listing.tools : []) {
+          const name = String(entry?.name ?? "").trim();
+          if (!name) continue;
+          const properties = entry?.inputSchema?.properties;
+          rows.set(
+            name,
+            new Set(
+              properties && typeof properties === "object"
+                ? Object.keys(properties)
+                : [],
+            ),
+          );
+        }
+      }
+    } catch {
+      // A listing failure must not stop the tool call itself.
+    }
+    toolArguments = rows;
+    return rows;
+  };
+
+  const acceptsArgument = async (name: string, argument: string) =>
+    (await advertisedArguments()).get(name)?.has(argument) === true;
 
   /**
    * Resolve the `collection` argument against this chat's list. Both spellings
@@ -355,10 +397,16 @@ export function createArcanaChatTools(refs: ArcanaShareRef[]): ArcanaChatTools {
     ),
     tool(
       "search_arcana",
-      `Search one of this chat's Arcana collections and return the most relevant text passages with their source file and score. Use it for questions about a collection's content; call list_arcanas first when there is more than one.`,
+      `Search one of this chat's Arcana collections and return the most relevant text passages with their source file and score. Use it for questions about a collection's content; call list_arcanas first when there is more than one. Pass tags to search only the files carrying all of them (list_arcana_documents shows each file's tags).`,
       Type.Object({
         query: Type.String({ description: "What to look for" }),
         collection: collectionArgument,
+        tags: Type.Optional(
+          Type.Array(Type.String(), {
+            description:
+              "Only search files carrying all of these tags. Optional; omit it to search the whole collection.",
+          }),
+        ),
         count: Type.Optional(
           Type.Integer({
             minimum: 1,
@@ -367,34 +415,69 @@ export function createArcanaChatTools(refs: ArcanaShareRef[]): ArcanaChatTools {
           }),
         ),
       }),
-      async ({ query, collection, count }) => {
+      async ({ query, collection, count, tags }) => {
         const value = String(query ?? "").trim();
         if (!value) return text("A query is required.");
         const ref = collectionRequired(collection);
         if (typeof ref === "string") return text(ref);
-        const answer = await call("search_chunks", {
+        const wanted = normalizeTagList(tags);
+        const args: Record<string, unknown> = {
           collection: ref.collection,
           query: value,
           count: clamp(count, DEFAULT_SEARCH_COUNT, MAX_SEARCH_COUNT),
-        });
+        };
+        if (wanted.length) {
+          if (!(await acceptsArgument("search_chunks", "tags"))) {
+            return text(
+              "This Arcana service cannot filter a search by tags, so nothing was searched. Run the search again without tags and tell the user tag filtering is unavailable there.",
+            );
+          }
+          args.tags = wanted;
+        }
+        const answer = await call("search_chunks", args);
         return text(answer || "No results found.");
       },
     ),
     tool(
       "list_arcana_documents",
-      `List the files stored in one of this chat's Arcana collections, with their size and indexing status. Use it to see what a collection contains before reading a file; call list_arcanas first when there is more than one.`,
-      Type.Object({ collection: collectionArgument }),
-      async ({ collection }) => {
+      `List the files stored in one of this chat's Arcana collections, with their size, indexing status and tags. Use it to see what a collection contains before reading a file; call list_arcanas first when there is more than one. Pass tags to list only the files carrying all of them.`,
+      Type.Object({
+        collection: collectionArgument,
+        tags: Type.Optional(
+          Type.Array(Type.String(), {
+            description:
+              "Only list files carrying all of these tags. Optional; omit it to list the whole collection.",
+          }),
+        ),
+      }),
+      async ({ collection, tags }) => {
         const ref = collectionRequired(collection);
         if (typeof ref === "string") return text(ref);
-        const answer = await call("list_files", {
-          collection: ref.collection,
-        });
+        const wanted = normalizeTagList(tags);
+        const args: Record<string, unknown> = { collection: ref.collection };
+        if (wanted.length) {
+          if (!(await acceptsArgument("list_files", "tags"))) {
+            return text(
+              "This Arcana service cannot filter a file list by tags, so nothing was listed. Call it again without tags and tell the user tag filtering is unavailable there.",
+            );
+          }
+          args.tags = wanted;
+        }
+        // `include_tags` shipped after `list_files` itself, so only a service
+        // that advertises it gets asked for the tags.
+        if (await acceptsArgument("list_files", "include_tags")) {
+          args.include_tags = true;
+        }
+        const answer = await call("list_files", args);
         const payload = parseJson(answer);
         const files = Array.isArray(payload?.files) ? payload.files : null;
         if (!files) return text(answer || "The collection has no files.");
         if (files.length === 0) {
-          return text(`The collection "${ref.name}" has no files.`);
+          return text(
+            wanted.length
+              ? `No files in "${ref.name}" carry all of these tags: ${wanted.join(", ")}.`
+              : `The collection "${ref.name}" has no files.`,
+          );
         }
         const lines = files.map((file: any) => {
           const name = String(file?.name ?? "unnamed");
@@ -405,9 +488,16 @@ export function createArcanaChatTools(refs: ArcanaShareRef[]): ArcanaChatTools {
             typeof file?.chunks === "number" && file.chunks > 0
               ? `, ${file.chunks} chunks`
               : "";
-          return `- ${name} (${size}, ${status}${chunks})`;
+          const tagsOfFile = Array.isArray(file?.tags)
+            ? file.tags.map((tag: unknown) => String(tag ?? "").trim()).filter(Boolean)
+            : [];
+          const tagText = tagsOfFile.length
+            ? `, tags: ${tagsOfFile.join(", ")}`
+            : "";
+          return `- ${name} (${size}, ${status}${chunks}${tagText})`;
         });
-        return text(`Files in "${ref.name}":\n${lines.join("\n")}`);
+        const scope = wanted.length ? ` tagged with ${wanted.join(", ")}` : "";
+        return text(`Files in "${ref.name}"${scope}:\n${lines.join("\n")}`);
       },
     ),
     tool(

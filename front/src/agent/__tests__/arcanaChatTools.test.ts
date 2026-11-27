@@ -323,6 +323,125 @@ describe("Arcana chat tools", () => {
     expect(result.content[0].text).toBe('The collection "papers" has no files.');
   });
 
+  // A service older than the tag tools rejects an argument its schema does not
+  // have, so the extra fields are only sent where the tool advertises them.
+  const advertise = (schemas: Record<string, string[]>) => {
+    const listTools = vi.fn(async () => ({
+      tools: Object.entries(schemas).map(([name, args]) => ({
+        name,
+        inputSchema: {
+          type: "object",
+          properties: Object.fromEntries(args.map((arg) => [arg, {}])),
+        },
+      })),
+    }));
+    mocks.open.mockResolvedValue({ callTool: mocks.callTool, listTools });
+    return listTools;
+  };
+
+  it("filters a search by the tags the service takes", async () => {
+    advertise({ search_chunks: ["collection", "query", "count", "tags"] });
+    mocks.callTool.mockResolvedValue(answer("passages"));
+    const { tools } = createArcanaChatTools([ref]);
+
+    await toolNamed(tools, "search_arcana").execute("id", {
+      query: " water ",
+      tags: ["alpha", " alpha ", "beta"],
+    });
+
+    expect(mocks.callTool).toHaveBeenCalledWith({
+      name: "search_chunks",
+      arguments: {
+        collection: "alice/papers",
+        query: "water",
+        count: 5,
+        tags: ["alpha", "beta"],
+      },
+    });
+  });
+
+  it("refuses a tag filter the service does not advertise", async () => {
+    advertise({ search_chunks: ["collection", "query", "count"] });
+    const { tools } = createArcanaChatTools([ref]);
+    const result = await toolNamed(tools, "search_arcana").execute("id", {
+      query: "water",
+      tags: ["alpha"],
+    });
+
+    expect(result.content[0].text).toContain("cannot filter a search by tags");
+    expect(mocks.callTool).not.toHaveBeenCalled();
+  });
+
+  it("lists only the tagged files and shows their tags", async () => {
+    advertise({ list_files: ["collection", "tags", "include_tags"] });
+    mocks.callTool.mockResolvedValue(
+      answer(
+        JSON.stringify({
+          files: [
+            { name: "a.md", size: 10, status: "indexed", chunks: 1, tags: ["alpha", "beta"] },
+          ],
+        }),
+      ),
+    );
+    const { tools } = createArcanaChatTools([ref]);
+    const result = await toolNamed(tools, "list_arcana_documents").execute("id", {
+      tags: "alpha, beta",
+    });
+
+    expect(mocks.callTool).toHaveBeenCalledWith({
+      name: "list_files",
+      arguments: {
+        collection: "alice/papers",
+        tags: ["alpha", "beta"],
+        include_tags: true,
+      },
+    });
+    expect(result.content[0].text).toContain(
+      'Files in "papers" tagged with alpha, beta:',
+    );
+    expect(result.content[0].text).toContain(
+      "- a.md (10 B, indexed, 1 chunks, tags: alpha, beta)",
+    );
+  });
+
+  it("asks for the tags on a plain file list", async () => {
+    advertise({ list_files: ["collection", "include_tags"] });
+    mocks.callTool.mockResolvedValue(answer(JSON.stringify({ files: [] })));
+    const { tools } = createArcanaChatTools([ref]);
+
+    await toolNamed(tools, "list_arcana_documents").execute("id", {});
+
+    expect(mocks.callTool).toHaveBeenCalledWith({
+      name: "list_files",
+      arguments: { collection: "alice/papers", include_tags: true },
+    });
+  });
+
+  it("says so when no file carries every tag", async () => {
+    advertise({ list_files: ["collection", "tags", "include_tags"] });
+    mocks.callTool.mockResolvedValue(answer(JSON.stringify({ files: [] })));
+    const { tools } = createArcanaChatTools([ref]);
+
+    const result = await toolNamed(tools, "list_arcana_documents").execute("id", {
+      tags: ["alpha"],
+    });
+
+    expect(result.content[0].text).toBe(
+      'No files in "papers" carry all of these tags: alpha.',
+    );
+  });
+
+  it("reads the advertised tools once per turn", async () => {
+    const listTools = advertise({ list_files: ["collection"] });
+    mocks.callTool.mockResolvedValue(answer(JSON.stringify({ files: [] })));
+    const { tools } = createArcanaChatTools([ref]);
+
+    await toolNamed(tools, "list_arcana_documents").execute("id", {});
+    await toolNamed(tools, "search_arcana").execute("id", { query: "x" });
+
+    expect(listTools).toHaveBeenCalledTimes(1);
+  });
+
   it("decodes a text document", async () => {
     mocks.callTool.mockResolvedValue(
       answer(

@@ -3042,7 +3042,13 @@ to guess what a chat-local binding once said), then `search_arcana` (`search_chu
 `list_arcana_documents` (`list_files`), `read_arcana_document` (`read_file_base64`, text files only)
 and `retrieve_document`. The four reading tools and `arcana_details` take a `collection` argument,
 resolved against this chat's list (`owner/name` or the storage name); a value outside it is refused,
-and with one binding the argument may be omitted. `retrieve_document` quotes the page a passage came
+and with one binding the argument may be omitted. `search_arcana` and `list_arcana_documents` also
+take an optional `tags` list, which the service applies as an AND over the files carrying every named
+tag (`utils/tags.ts#normalizeTagList` trims, deduplicates case-insensitively and also accepts one
+comma-separated string). Both that filter and `list_files`' `include_tags` go out only when the
+advertised tool schema has the argument (one `listTools` per turn), so a service older than the tag
+tools answers that filtering is unavailable instead of rejecting an argument it does not know.
+`retrieve_document` quotes the page a passage came
 from plus the page
 after it (`get_file` with `filename@N-N+1` for a converted document, the stored text for a plain text
 file, `search_chunks` to find the page when none is given) and records it through `getDocuments()`,
@@ -3112,7 +3118,9 @@ files table under the id `arcana-chat:<storage>`, so nothing reaches the sidebar
 or the sync archive and no Dexie version was needed. `utils/arcanaChat.js` offers
 `list_files`, `read_file`, `search`, `get_index_status` and `list_members`, plus
 `upload_attachment`, `write_text_file`, `delete_file`, `start_index` and `set_file_tags` only while
-the collection has `can_write`. Reads run immediately, and the runner throws rather than proposing
+the collection has `can_write`. `search` takes the same optional `tags` the chat tools take, and
+refuses one when the service does not advertise `set_file_tags` instead of sending a filter it would
+reject. Reads run immediately, and the runner throws rather than proposing
 for a read-only collection.
 
 The write tools do not write. Each one validates the request, captures what undoing it would need

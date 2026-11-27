@@ -9,6 +9,7 @@ import {
   saiaRagMcpUrl,
 } from "../../apis/saiaRag";
 import { mimeForName } from "../../utils/mime";
+import { normalizeTagList } from "../../utils/tags";
 import { defaultCapabilities } from "../capabilities";
 import {
   arrayParts,
@@ -882,7 +883,8 @@ export class SaiaRagProvider implements FileProvider {
     const args: Record<string, unknown> = {
       collection: collection.collection,
     };
-    if (options.tags?.length) args.tags = options.tags;
+    const wanted = normalizeTagList(options.tags);
+    if (wanted.length) args.tags = wanted;
     // `include_tags` shipped with `set_file_tags`, so its presence tells us the
     // service can answer tags in this one call. An older service gets them per
     // file below, which is slower but keeps the UI usable.
@@ -1197,7 +1199,8 @@ export class SaiaRagProvider implements FileProvider {
       query,
       count,
     };
-    if (tags.length) args.tags = tags;
+    const wanted = normalizeTagList(tags);
+    if (wanted.length) args.tags = wanted;
     const text = await this.call(tool, args);
     return { results: parseSearchResults(text, mode), raw: text };
   }
