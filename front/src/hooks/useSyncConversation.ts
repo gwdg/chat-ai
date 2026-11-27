@@ -7,7 +7,7 @@ import type { HydratedConversation } from "../db/dbTypes";
 
 import { selectLastConversation } from "../Redux/reducers/lastConversationSlice.jsx";
 
-import { createConversation, getConversationMeta, getLastModifiedConversationMeta } from "../db/index";
+import { createConversation, getConversationMeta, getLastModifiedConversationMeta, updateConversationMeta } from "../db/index";
 
 import { validate as validateUUID, version as versionUUID } from "uuid";
 import { useModal } from "../modals/ModalContext";
@@ -229,6 +229,10 @@ export function useSyncConversation({
   const saveInFlight = useRef(false);
   const needsRetry = useRef(false);
   const performSaveRef = useRef<(() => Promise<void>) | null>(null);
+  // The message list this hook last hydrated or saved. A save that returns -1
+  // while the messages are still exactly these has only metadata to write, so
+  // it can be merged instead of overwriting or losing it.
+  const savedBaselineRef = useRef<Record<string, any[]>>({});
   const importDisclaimerDecisions = useRef(new Map<string, any>());
 
   // Effect 1: Try to load conversation on mount
@@ -501,6 +505,9 @@ export function useSyncConversation({
     }
     if(!initialized) {
       if (localState?.id === conversationId) {
+        // Every later save compares against this snapshot: until a message is
+        // added or changed, the only thing a save can carry is metadata.
+        savedBaselineRef.current[localState.id] = localState.messages;
         setInitialized(true); // Initialized for next change
       }
       return;
@@ -537,11 +544,17 @@ export function useSyncConversation({
       // which bump lastModified on their own. A content save must not repeat the
       // folderId it loaded: after a move that would put the chat back.
       delete snapshot.folderId;
-      let ignoreConflict = false;
-      if (snapshot?.ignoreConflict) {
-        ignoreConflict = true;
-        delete snapshot.ignoreConflict;
-      }
+      // Streaming updates mark their save as conflict-tolerant: the assistant
+      // message is still arriving, so a stale `lastModified` (another tab, a
+      // force-save, a sync pull) is expected and the next chunk saves again.
+      // Nothing removes the flag from React state afterwards, so it must stop
+      // counting once the message is no longer loading; otherwise it hides a
+      // later tool/settings conflict and that change is dropped with no dialog
+      // and no error, reappearing as the stored value after a reload.
+      const streaming = Array.isArray(snapshot.messages)
+        && snapshot.messages.some((message: any) => message?.loading);
+      const ignoreConflict = Boolean(snapshot?.ignoreConflict) && streaming;
+      delete snapshot.ignoreConflict;
       if (snapshot?.flush) {
         delete snapshot.flush;
       }
@@ -566,6 +579,41 @@ export function useSyncConversation({
 
         if (newLastModified === -1) { // Conflict or missing conversation
           needsRetry.current = false;
+          // The messages are exactly the ones this hook last hydrated or saved,
+          // so the save carries only the chat's settings (a tool switch, a model,
+          // a temperature). Another tab's or a sync pull's write bumped
+          // `lastModified`; dropping the change silently is what made a toggle
+          // look forgotten after a reload, and a full conflict dialog is not
+          // needed either. Write just the metadata, which does not touch the
+          // other write's messages or `lastModified`, then adopt that token so
+          // the next save compares against it.
+          const messagesUnchanged =
+            savedBaselineRef.current[currentConversation] === snapshot.messages;
+          if (messagesUnchanged) {
+            try {
+              // A missing row (deleted chat) is not a settings conflict: leave
+              // it to the conflict dialog instead of writing nothing.
+              const meta = await getConversationMeta(currentConversation);
+              if (meta) {
+                await updateConversationMeta(currentConversation, {
+                  ...(snapshot.title !== undefined ? { title: snapshot.title } : {}),
+                  ...(snapshot.settings !== undefined ? { settings: snapshot.settings } : {}),
+                });
+                lastModified.current[currentConversation] = meta.lastModified;
+                if (pendingSaveRequested) {
+                  needsRetry.current = false;
+                  setTimeout(performSave, 0);
+                } else {
+                  console.log("Conversation settings auto-saved");
+                  setUnsavedChanges(false);
+                }
+                return;
+              }
+            } catch (error) {
+              console.error("Failed to merge conversation settings", error);
+              setUnsavedChanges(true);
+            }
+          }
           if (!ignoreConflict) {
             console.log("Conflict for conversation ", currentConversation);
             openModal("conversationConflict", { localState: snapshot, setLocalState, setUnsavedChanges });
@@ -575,6 +623,7 @@ export function useSyncConversation({
 
         // Save successful
         lastModified.current[currentConversation] = newLastModified;
+        savedBaselineRef.current[currentConversation] = snapshot.messages;
 
         if (pendingSaveRequested) {
           needsRetry.current = false;

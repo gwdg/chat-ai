@@ -235,6 +235,16 @@ IndexedDB. Writes go through `updateConversation(id, data)` in `db/index.ts`, wh
 
 So: thread the `lastModified` you read through to the write, and handle `-1`.
 
+`useSyncConversation` does not treat every `-1` alike. `sendMessage` tags its streaming updates with
+`ignoreConflict`, and the hook honours that only while an assistant message still carries `loading`:
+nothing deletes the flag from React state, so an ungated read would keep swallowing conflicts for the
+rest of the session and a later tool/settings change would vanish with no dialog and no error (it
+came back as the stored value after a reload). When a `-1` arrives and the message list is still the
+one this hook last hydrated or saved (`savedBaselineRef`), only metadata changed, so the hook writes
+`title`/`settings` through `updateConversationMeta` — which does not bump `lastModified` — and adopts
+the row's token. That keeps a per-chat setting such as a GWDG Tools toggle from being lost to another
+tab's write, while a change that includes messages still opens the conflict dialog.
+
 Topic moves are the one write that runs outside that save bookkeeping:
 `assignConversationToFolder` bumps `lastModified` and dispatches `chatai:conversation-moved`
 (`utils/conversationEvents.js`); `useSyncConversation` adopts the returned value and the new
