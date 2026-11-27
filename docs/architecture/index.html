@@ -3694,11 +3694,15 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           <code>reader</code> for a signed-in caller who is neither owner nor member. An explicit row
           still outranks it and it never grants write. <code>list_collections</code> reports it as
           <code>public</code>; the provider exposes <code>supportsPublicRead()</code> and
-          <code>setPublicRead()</code>, which invalidates the short collection list. A service
-          without the <code>set_public_read</code> tool leaves the switch disabled with that reason
-          and the link hidden, so only the member list applies &mdash; the same rule the service
-          then enforces. The chat link is deliberately gated on the switch: a recipient outside the
-          member list has no other way in.
+          <code>setPublicRead()</code>, which invalidates the short collection list. The flag is read
+          from that row on every access instead of once per service process, because the registry
+          load-balances between instances and a marker switched off in one of them has to reach the
+          others. A service without the <code>set_public_read</code> tool leaves the switch disabled
+          with that reason and the link hidden, so only the member list applies &mdash; the same rule
+          the service then enforces. The chat link is deliberately gated on the switch: a recipient
+          outside the member list has no other way in. The refresh after a toggle is forced
+          (<code>refreshArcanas({ fresh: true })</code>), because a list read that started before the
+          write still carries the old flag and would otherwise paint the switch and the link back on.
         </li>
         <li>
           <b>What a collection is for belongs to the collection.</b> The service keeps it in a

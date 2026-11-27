@@ -759,8 +759,9 @@ export default function ArcanaManager({
       if (!aliveRef.current) return;
       setPublicRead(next);
       // The list carries the flag, so the page header, the sidebar and this
-      // row must not keep the old value.
-      void refreshArcanas();
+      // row must not keep the old value. A read that started before the write
+      // still holds the old one and must not overwrite it.
+      void refreshArcanas({ fresh: true });
       notifySuccess(
         t(
           next
@@ -798,7 +799,9 @@ export default function ArcanaManager({
       if (!aliveRef.current) return;
       setDescription(kept);
       setDescriptionEditing(false);
-      void refreshArcanas();
+      // Same as the public switch: the read that ran before the save still has
+      // the old text.
+      void refreshArcanas({ fresh: true });
       notifySuccess(t("arcanas.description_saved"));
     } catch (reason) {
       if (!aliveRef.current) return;

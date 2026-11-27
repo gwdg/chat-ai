@@ -2966,8 +2966,13 @@ stays hidden, and nothing else changes. The Share tab (`data-guide="arcana-share
 switch to the owner, a badge to a reader of a public collection, and renders the chat link only once
 the switch is on; `SaiaRagProvider.supportsPublicRead()` / `setPublicRead()` are the two provider
 calls (`setPublicRead` invalidates the 60 s collection list), and a successful toggle also refreshes
-`workspace/arcanas.ts` so the sidebar row and page header carry the new value. Read-only callers get
-no switch, because the service refuses it anyway.
+`workspace/arcanas.ts` so the sidebar row and page header carry the new value. That refresh is
+`refreshArcanas({ fresh: true })`: a list read that started before the write still answers with the
+old flag, and adopting it would paint the switch — and the link — back on after the owner turned it
+off. The same call bumps a generation so the abandoned read's answer is dropped. `ACLService.public_read`
+reads the row on every access rather than caching it per instance, because the registry
+load-balances between several service processes and a marker switched off in one of them must reach
+the others. Read-only callers get no switch, because the service refuses it anyway.
 
 `hooks/useSyncConversation.ts` applies the link when it hydrates a chat: `?arcana-tools=` goes
 through `parseArcanaShareRef`, is appended to `arcanaSharesFromSettings(conversation.settings)` when

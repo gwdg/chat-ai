@@ -115,6 +115,13 @@ const snapshot = () => state;
 
 let inflight: Promise<RagCollection[]> | null = null;
 let statusGeneration = 0;
+/**
+ * Bumped when a caller abandons an in-flight read.
+ *
+ * A read can only be dropped while it is still running, so the number it was
+ * started with is what tells its answer apart from the current state.
+ */
+let listGeneration = 0;
 
 /**
  * Read every collection's file list to classify its index.
@@ -165,21 +172,37 @@ export function updateArcanaStatus(
  * Read the collection list. Concurrent callers share one request, and a
  * failure keeps the rows that were already known: a service that blinks must
  * not empty the section.
+ *
+ * `fresh` starts a new read even while one is running and drops that older
+ * answer. Every write (public read, description) uses it: a list read that
+ * started before the write carries the value the write replaced, so adopting
+ * it would paint the old flag — and the old chat link — back.
  */
-export function refreshArcanas(): Promise<RagCollection[]> {
+export function refreshArcanas({
+  fresh = false,
+}: { fresh?: boolean } = {}): Promise<RagCollection[]> {
+  if (fresh) {
+    listGeneration += 1;
+    inflight = null;
+  }
   if (inflight) return inflight;
+  const generation = listGeneration;
   setState({ loading: true, error: null });
-  inflight = (async () => {
+  const request = (async () => {
     try {
       const provider = arcanasProvider();
       // An explicit read (after a create, or the retry button) must not be
       // answered from the provider's short cache.
       provider.invalidateCollections();
       const collections = await provider.listCollections();
+      // An older read answered after this one replaced it: its list is the one
+      // the write (or the newer read) already superseded.
+      if (generation !== listGeneration) return state.collections;
       setState({ collections, loaded: true, loading: false, error: null });
       loadStatuses(collections);
       return collections;
     } catch (error) {
+      if (generation !== listGeneration) return state.collections;
       setState({
         loading: false,
         error: error instanceof Error ? error.message : String(error),
@@ -187,17 +210,17 @@ export function refreshArcanas(): Promise<RagCollection[]> {
       // The cached rows stay; only an error banner is added.
       return state.collections;
     } finally {
-      inflight = null;
+      if (inflight === request) inflight = null;
     }
   })();
-  return inflight;
+  inflight = request;
+  return request;
 }
 
 /** Force the next `useArcanas` to load again (after a service came back). */
 export function retryArcanas(): void {
-  inflight = null;
   setState({ loaded: false });
-  void refreshArcanas();
+  void refreshArcanas({ fresh: true });
 }
 
 /**
