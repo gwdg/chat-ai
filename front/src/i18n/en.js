@@ -487,7 +487,7 @@ export default {
     workspace_upload: {
       title: "Upload files into a workspace",
       step1: "Open a workspace, pick the Files tab on the right and choose Add file; the browser asks for a file from this computer.",
-      step2: "The uploaded file appears in the folder you are viewing.",
+      step2: "The uploaded file appears in the folder you are viewing. You can also drag files from your computer onto a folder row or onto the list to upload them there.",
     },
     workspace_multiselect: {
       title: "Remove a file from a workspace",
@@ -2821,6 +2821,10 @@ export default {
     add_file: "Add file",
     upload_success: "Uploaded {{count}} file(s)",
     upload_not_supported: "This source does not support uploads.",
+    uploading_files: "Uploading files…",
+    uploading_name: "Uploading {{name}}…",
+    uploading_progress: "Uploading {{name}} · {{percent}} %",
+    drop_files_hint: "Drop files to upload them here.",
     create_in: "Create in {{path}}",
     folder_name_placeholder: "Folder name",
     file_name_placeholder: "File name",

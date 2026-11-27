@@ -1261,6 +1261,15 @@ move, and journals progress in `workspace_transfers`. Arcana quota is read throu
 `/arcana-tools/arcanas/:name/quota` proxy; local and MCP quota is shown as `—` because browsers cannot
 read disk free space.
 
+The same tree accepts a drag that carries `Files`, which comes from the computer rather than from the
+tree: that is an upload, not a move. It writes into the folder row (or the list background, meaning
+the workspace root) it is dropped on, through `workspace/upload.ts#uploadLocalFiles` and the provider's
+own `write`, so a mounted `saia-rag`/Arcana collection takes files directly and reports chunk progress
+in the pane. A folder that cannot write (read-only mount, a provider without `write`) consumes the drop
+instead of letting it fall through to the workspace root, so a file never lands somewhere the user did
+not aim at. The picker (`Add file`) and the drop share that one function, so the conflict rule
+(`overwrite: false`) and the refresh are identical.
+
 The file browser's Upload file action writes files from the computer into the folder currently
 shown (workspace root or the selected source) through `workspace/upload.ts`; it is disabled for
 read-only sources and mounts. Entries can be downloaded, renamed through the shared create-entry

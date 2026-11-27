@@ -375,6 +375,123 @@ describe("WorkspaceStorageTree", () => {
     expect(within(rootRow).getByText("/")).toBeInTheDocument();
   });
 
+  it("uploads files dropped on the list into the workspace root", async () => {
+    h.listWorkspaceRoot.mockResolvedValue([entry("/Docs", "dir")]);
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" />);
+    await screen.findByText("Docs");
+
+    const file = new File(["hello"], "notes.txt", { type: "text/plain" });
+    const list = document.querySelector('[data-guide="workspace-files"]');
+    fireEvent.dragOver(list, {
+      dataTransfer: { types: ["Files"], dropEffect: "none" },
+    });
+    fireEvent.drop(list, {
+      dataTransfer: { types: ["Files"], files: [file] },
+    });
+
+    await waitFor(() => expect(h.upload).toHaveBeenCalledTimes(1));
+    const [provider, directory, files] = h.upload.mock.calls[0];
+    expect(provider).toBe(h.rootProvider);
+    expect(directory).toBe("/");
+    expect(files).toEqual([file]);
+  });
+
+  it("uploads files dropped on a folder row into that folder", async () => {
+    h.listWorkspaceRoot.mockImplementation(async ({ path }) => {
+      if (path === "/") return [entry("/Docs", "dir")];
+      return [];
+    });
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" />);
+    await screen.findByText("Docs");
+
+    const file = new File(["x"], "readme.md", { type: "text/markdown" });
+    fireEvent.dragOver(rowFor("Docs"), {
+      dataTransfer: { types: ["Files"], dropEffect: "none" },
+    });
+    fireEvent.drop(rowFor("Docs"), {
+      dataTransfer: { types: ["Files"], files: [file] },
+    });
+
+    await waitFor(() => expect(h.upload).toHaveBeenCalledTimes(1));
+    expect(h.upload.mock.calls[0][1]).toBe("/Docs");
+    expect(h.upload.mock.calls[0][2]).toEqual([file]);
+    // Only the folder's children are refreshed, not the whole tree.
+    await waitFor(() =>
+      expect(h.listWorkspaceRoot).toHaveBeenCalledWith(
+        expect.objectContaining({ path: "/Docs" }),
+      ),
+    );
+  });
+
+  it("uploads files dropped on a mounted collection into that source", async () => {
+    const provider = {
+      sourceId: "rag-1",
+      status: "connected",
+      capabilities: { read: true, write: true },
+      connect: vi.fn(async () => {}),
+      list: vi.fn(async () => ({ entries: [] })),
+    };
+    h.sources = [
+      { id: "rag-1", kind: "saia-rag", label: "Arcana", readOnly: false },
+    ];
+    const mount = { ...mountRow, sourceId: "rag-1", sourcePath: "/recipes" };
+    h.mounts = [mount];
+    h.providers = new Map([["rag-1", provider]]);
+    h.listWorkspaceRoot.mockResolvedValue([
+      entry("/recipes", "dir", { local: false, mount }),
+    ]);
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" />);
+    await screen.findByText("recipes");
+
+    const file = new File(["x"], "paper.pdf", { type: "application/pdf" });
+    fireEvent.drop(rowFor("recipes"), {
+      dataTransfer: { types: ["Files"], files: [file] },
+    });
+
+    await waitFor(() => expect(h.upload).toHaveBeenCalledTimes(1));
+    expect(h.upload.mock.calls[0][0]).toBe(provider);
+    expect(h.upload.mock.calls[0][1]).toBe("/recipes");
+  });
+
+  it("refuses files dropped on a read-only folder instead of the root", async () => {
+    const readOnlyMount = { ...mountRow, readOnly: true };
+    h.sources = [
+      { id: "dev-1", kind: "local", label: "Phone", readOnly: false },
+    ];
+    h.mounts = [readOnlyMount];
+    h.providers = new Map([
+      [
+        "dev-1",
+        {
+          status: "connected",
+          capabilities: { read: true, write: true },
+          connect: vi.fn(async () => {}),
+          list: vi.fn(async () => ({ entries: [] })),
+        },
+      ],
+    ]);
+    h.listWorkspaceRoot.mockResolvedValue([
+      entry("/Phone", "dir", { local: false, mount: readOnlyMount }),
+    ]);
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" />);
+    await screen.findByText("Phone");
+
+    fireEvent.drop(rowFor("Phone"), {
+      dataTransfer: {
+        types: ["Files"],
+        files: [new File(["x"], "a.txt")],
+      },
+    });
+
+    // The event was consumed by the row, so it never reached the list behind it,
+    // which would have uploaded into the workspace root.
+    expect(h.upload).not.toHaveBeenCalled();
+  });
+
   it("pills only rows that come from a source", async () => {
     h.sources = [{ id: "dev-1", kind: "local", label: "Phone", readOnly: false }];
     h.mounts = [mountRow];

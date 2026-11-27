@@ -497,7 +497,7 @@ export default {
     workspace_upload: {
       title: "Dateien in einen Arbeitsbereich hochladen",
       step1: "Öffnen Sie einen Arbeitsbereich, wählen Sie rechts den Reiter Dateien und dort Datei hinzufügen; der Browser fragt nach einer Datei von diesem Computer.",
-      step2: "Die hochgeladene Datei erscheint in dem Ordner, den Sie gerade ansehen.",
+      step2: "Die hochgeladene Datei erscheint in dem Ordner, den Sie gerade ansehen. Sie können Dateien von Ihrem Computer auch direkt auf eine Ordnerzeile oder in die Liste ziehen, um sie dort hochzuladen.",
     },
     workspace_multiselect: {
       title: "Eine Datei aus einem Arbeitsbereich entfernen",
@@ -2850,6 +2850,10 @@ export default {
     add_file: "Datei hinzufügen",
     upload_success: "{{count}} Datei(en) hochgeladen",
     upload_not_supported: "Diese Quelle unterstützt keine Uploads.",
+    uploading_files: "Dateien werden hochgeladen…",
+    uploading_name: "Lädt hoch: {{name}}…",
+    uploading_progress: "Lädt hoch: {{name}} · {{percent}} %",
+    drop_files_hint: "Dateien hier ablegen, um sie hochzuladen.",
     create_in: "In {{path}} erstellen",
     folder_name_placeholder: "Ordnername",
     file_name_placeholder: "Dateiname",

@@ -234,7 +234,11 @@ function StorageRow({ node, depth, api }) {
         onDragLeave={
           isDir ? (event) => api.onDragLeaveNode?.(node, event) : undefined
         }
-        onDrop={isDir ? (event) => api.onDropNode?.(node, event) : undefined}
+        onDrop={
+          isDir
+            ? (event) => api.onDropNode?.(node, event, reload)
+            : undefined
+        }
         className={`group flex items-center gap-1 rounded pr-1 text-[11px] ${
           isSelected ? "bg-accent/10" : "hover:bg-base-200/70"
         } ${
@@ -304,7 +308,7 @@ function StorageRow({ node, depth, api }) {
         <div
           onDragOver={(event) => api.onDragOverNode?.(node, event)}
           onDragLeave={(event) => api.onDragLeaveNode?.(node, event)}
-          onDrop={(event) => api.onDropNode?.(node, event)}
+          onDrop={(event) => api.onDropNode?.(node, event, reload)}
         >
           {loading && (
             <div
@@ -375,6 +379,9 @@ export default function WorkspaceStorageTree({
   const [rootRevision, setRootRevision] = useState(0);
   const [actionError, setActionError] = useState("");
   const [uploading, setUploading] = useState(false);
+  // The file being written right now: named before the first byte moves, and
+  // with a percentage once its provider reports accepted bytes.
+  const [uploadPart, setUploadPart] = useState(null);
   // A file manager selects more than one row: a shift-click picks a range, Ctrl
   // or Cmd toggles single rows. `selection` holds one entry per selected row —
   // everything a button needs about it — and `selected` is the single-row read
@@ -659,6 +666,49 @@ export default function WorkspaceStorageTree({
     ? { provider: rootProvider, dir: "/", displayDir: "/" }
     : null;
 
+  // --- drag and drop: files from the computer -------------------------------
+  // A drag that carries `Files` comes from the OS, not from this tree, and is
+  // an upload: it lands in the folder it is dropped on (or the workspace root)
+  // and needs a provider that can write, exactly like the toolbar's Add file.
+  const isFileDrag = (event) => {
+    const types = event.dataTransfer?.types;
+    return types ? Array.from(types).includes("Files") : false;
+  };
+  const droppedFiles = (event) =>
+    Array.from(event.dataTransfer?.files ?? []);
+
+  const uploadDestination = (node, reload) => {
+    if (!node) {
+      if (rootProvider?.capabilities?.write !== true) return null;
+      return {
+        provider: rootProvider,
+        dir: "/",
+        displayDir: "/",
+        reload: loadRoot,
+      };
+    }
+    const drop = dropTargetForNode(node);
+    if (!drop || drop.provider.capabilities?.write !== true) return null;
+    return {
+      provider: drop.provider,
+      dir: drop.dir,
+      displayDir: drop.displayDir,
+      // The row knows how to re-list itself; the revision bump behind it keeps
+      // the root and every other open folder in step.
+      reload: async () => {
+        await reload?.();
+        bumpRevision();
+      },
+    };
+  };
+
+  const acceptFileDrag = (destination, event, key) => {
+    if (!destination) return;
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+    setDropKey(key);
+  };
+
   const isNoopDrop = (from, entry, target) =>
     from.sourceId === target.provider.sourceId &&
     joinPath(target.dir, entry.name) === normalizePath(entry.path);
@@ -882,6 +932,18 @@ export default function WorkspaceStorageTree({
     );
 
   const dragOverNode = (node, event) => {
+    if (isFileDrag(event)) {
+      // A file row is not a folder to put a file into, so the drop falls through
+      // to the list behind it (the workspace root). A folder that cannot take
+      // files blocks it instead: silently redirecting the drop to the root would
+      // put the file somewhere the user did not aim at.
+      if (node?.entry?.kind !== "dir") return;
+      const destination = uploadDestination(node);
+      event.stopPropagation();
+      if (!destination) return;
+      acceptFileDrag(destination, event, nodeKey(node));
+      return;
+    }
     if (!dragging) return;
     const target = dropTargetForNode(node);
     if (!target) return;
@@ -906,7 +968,18 @@ export default function WorkspaceStorageTree({
     setDropKey((current) => (current === nodeKey(node) ? null : current));
   };
 
-  const dropOnNode = (node, event) => {
+  const dropOnNode = (node, event, reload) => {
+    if (isFileDrag(event)) {
+      if (node?.entry?.kind !== "dir") return;
+      event.preventDefault();
+      event.stopPropagation();
+      setDropKey(null);
+      const files = droppedFiles(event);
+      if (files.length > 0) {
+        void runUpload(uploadDestination(node, reload), files);
+      }
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
     const target = dropTargetForNode(node);
@@ -915,6 +988,12 @@ export default function WorkspaceStorageTree({
   };
 
   const dragOverRoot = (event) => {
+    if (isFileDrag(event)) {
+      const destination = uploadDestination(null);
+      if (!destination) return;
+      acceptFileDrag(destination, event, ROOT_DROP_KEY);
+      return;
+    }
     if (!dragging || !rootDropTarget) return;
     const accepts = dragging.items.some(
       (item) => !isNoopDrop(item.provider, item.entry, rootDropTarget),
@@ -931,6 +1010,13 @@ export default function WorkspaceStorageTree({
   };
 
   const dropOnRoot = (event) => {
+    if (isFileDrag(event)) {
+      event.preventDefault();
+      setDropKey(null);
+      const files = droppedFiles(event);
+      if (files.length > 0) void runUpload(uploadDestination(null), files);
+      return;
+    }
     if (!dragging) return;
     event.preventDefault();
     dropDragged(rootDropTarget);
@@ -1464,28 +1550,60 @@ export default function WorkspaceStorageTree({
     openFileRef.current = openFile;
   }, [openFile]);
 
-  const uploadFiles = async (event) => {
-    const files = Array.from(event.target.files || []);
-    event.target.value = "";
-    const provider = targetProvider();
-    if (!provider || files.length === 0) return;
+  // Both ways in — the Add file picker and files dropped from the computer —
+  // write through the same function, so progress, the conflict rule and the
+  // refresh behave identically.
+  const runUpload = async (destination, files) => {
+    if (!destination?.provider || files.length === 0 || uploading) return;
     setUploading(true);
     setActionError("");
+    // The first file is named before its bytes are read, so the pane moves on
+    // the click even when the provider reports no progress of its own.
+    if (files[0]) {
+      setUploadPart({ name: files[0].name, sent: 0, total: files[0].size });
+    }
+    const failed = new Set();
     try {
-      await provider.connect();
+      await destination.provider.connect();
       await uploadLocalFiles(
-        provider,
-        target.sourcePath,
+        destination.provider,
+        destination.dir,
         files,
-        (file, reason) => setActionError(`${file.name}: ${errorMessage(reason)}`),
+        (file, reason) => {
+          failed.add(file.name);
+          setActionError(`${file.name}: ${errorMessage(reason)}`);
+        },
+        {
+          onProgress: (file, sent, total) =>
+            setUploadPart({ name: file.name, sent, total }),
+        },
       );
-      for (const file of files) markFile(joinPath(target.path, file.name), "create");
-      await target.reload?.();
+      for (const file of files) {
+        if (failed.has(file.name)) continue;
+        markFile(joinPath(destination.displayDir, file.name), "create");
+      }
+      await destination.reload?.();
     } catch (reason) {
       setActionError(errorMessage(reason));
     } finally {
       setUploading(false);
+      setUploadPart(null);
     }
+  };
+
+  const uploadFiles = async (event) => {
+    const files = Array.from(event.target.files || []);
+    event.target.value = "";
+    if (files.length === 0) return;
+    await runUpload(
+      {
+        provider: targetProvider(),
+        dir: target.sourcePath,
+        displayDir: target.path,
+        reload: target.reload,
+      },
+      files,
+    );
   };
 
   const createEntry = (kind) => {
@@ -1703,11 +1821,30 @@ export default function WorkspaceStorageTree({
             {t("workspace.downloading")}
           </div>
         )}
+        {uploading && (
+          <div
+            data-guide="workspace-uploading"
+            className="truncate px-3 py-1 text-[10px] text-base-content/60"
+            title={uploadPart?.name}
+          >
+            {uploadPart
+              ? uploadPart.total > 0
+                ? t("workspace.uploading_progress", {
+                    name: uploadPart.name,
+                    percent: Math.min(
+                      100,
+                      Math.round((uploadPart.sent / uploadPart.total) * 100),
+                    ),
+                  })
+                : t("workspace.uploading_name", { name: uploadPart.name })
+              : t("workspace.uploading_files")}
+          </div>
+        )}
         <div
           ref={listRef}
           data-guide="workspace-files"
           className={`min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-1 py-1 ${
-            dragging && dropKey === ROOT_DROP_KEY
+            dropKey === ROOT_DROP_KEY
               ? "ring-1 ring-inset ring-primary"
               : ""
           }`}
@@ -1742,7 +1879,7 @@ export default function WorkspaceStorageTree({
               onDragLeave={rootRowDragLeave}
               onDrop={rootRowDrop}
               className={`flex cursor-pointer items-center gap-1 rounded px-1 text-[11px] ${
-                dragging && dropKey === ROOT_DROP_KEY
+                dropKey === ROOT_DROP_KEY
                   ? "bg-accent/15 ring-1 ring-inset ring-primary"
                   : "hover:bg-base-200/70"
               }`}
@@ -1776,6 +1913,11 @@ export default function WorkspaceStorageTree({
             <div className="flex flex-col items-center gap-2 px-3 py-6 text-center text-[11px] text-base-content/60">
               <Folder size={20} className="text-base-content/30" />
               <p>{t("workspace.root_empty_hint")}</p>
+              {rootProvider?.capabilities?.write === true && (
+                <p className="text-base-content/45">
+                  {t("workspace.drop_files_hint")}
+                </p>
+              )}
             </div>
           )}
         </div>

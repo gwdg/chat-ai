@@ -1,72 +1,88 @@
 import { describe, expect, it, vi } from "vitest";
+
 import { uploadLocalFiles } from "../upload";
-import type { FileProvider } from "../providers/types";
 
-const providerWith = (write: (...args: any[]) => Promise<unknown>) =>
-  ({ write } as unknown as FileProvider);
+const fileOf = (text: string, name: string) =>
+  new File([text], name, { type: "text/plain" });
 
-const readStream = async (stream: ReadableStream<Uint8Array>) => {
+const bytesOf = async (stream) => {
   const reader = stream.getReader();
-  const chunks: Uint8Array[] = [];
+  const parts = [];
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
-    if (value) chunks.push(value);
+    parts.push(...value);
   }
-  return new Uint8Array(chunks.flatMap((chunk) => [...chunk]));
+  return new Uint8Array(parts);
+};
+
+const providerOf = () => {
+  const writes: Array<{ path: string; bytes: Uint8Array }> = [];
+  const write = vi.fn(async (path, stream, opts) => {
+    // Remember what crosses the boundary: a provider gets the file's bytes,
+    // not a descriptor.
+    const bytes = await bytesOf(stream);
+    writes.push({ path, bytes });
+    opts.onProgress?.(bytes.length, bytes.length);
+    return { path, name: path.split("/").pop(), kind: "file" };
+  });
+  return { writes, write };
 };
 
 describe("uploadLocalFiles", () => {
-  it("writes every file into the current directory", async () => {
-    const write = vi.fn(async () => ({}));
-    const files = [
-      new File([new Uint8Array([1, 2])], "a.txt"),
-      new File([new Uint8Array([3])], "b.txt"),
-    ];
+  it("writes each file into the folder and reports bytes before the request", async () => {
+    const provider = providerOf();
+    const progress = [];
+    const file = fileOf("hello", "notes.txt");
 
-    const uploaded = await uploadLocalFiles(providerWith(write), "/docs", files);
+    const stored = await uploadLocalFiles(provider, "/Docs", [file], undefined, {
+      onProgress: (reported, sent, total) =>
+        progress.push([reported.name, sent, total]),
+    });
 
-    expect(uploaded).toBe(2);
-    expect(write).toHaveBeenNthCalledWith(
-      1,
-      "/docs/a.txt",
-      expect.any(ReadableStream),
-      { size: 2, overwrite: false },
-    );
-    expect(write).toHaveBeenNthCalledWith(
-      2,
-      "/docs/b.txt",
-      expect.any(ReadableStream),
-      { size: 1, overwrite: false },
-    );
-
-    const [path, stream] = write.mock.calls[0];
-    expect(path).toBe("/docs/a.txt");
-    expect([...(await readStream(stream))]).toEqual([1, 2]);
+    expect(stored).toBe(1);
+    expect(provider.write).toHaveBeenCalledTimes(1);
+    const [path, , opts] = provider.write.mock.calls[0];
+    expect(path).toBe("/Docs/notes.txt");
+    expect(opts.size).toBe(5);
+    expect(opts.overwrite).toBe(false);
+    expect(new TextDecoder().decode(provider.writes[0].bytes)).toBe("hello");
+    // Zero before the bytes are written, then the provider's own report: the
+    // label names the file immediately instead of waiting for the write.
+    expect(progress).toEqual([
+      ["notes.txt", 0, 5],
+      ["notes.txt", 5, 5],
+    ]);
   });
 
-  it("keeps uploading after a failed file and reports it", async () => {
-    const write = vi
-      .fn()
-      .mockResolvedValueOnce({})
-      .mockRejectedValueOnce(new Error("exists"))
-      .mockResolvedValueOnce({});
-    const onError = vi.fn();
-    const files = [
-      new File(["a"], "a.txt"),
-      new File(["b"], "b.txt"),
-      new File(["c"], "c.txt"),
-    ];
+  it("counts a failed file as an error and still uploads the rest", async () => {
+    const provider = providerOf();
+    provider.write.mockImplementationOnce(async () => {
+      throw new Error("conflict");
+    });
+    const failures = [];
+    const good = fileOf("b", "b.txt");
 
-    const uploaded = await uploadLocalFiles(
-      providerWith(write),
+    const stored = await uploadLocalFiles(
+      provider,
       "/",
-      files,
-      onError,
+      [fileOf("a", "a.txt"), good],
+      (file, error) => failures.push([file.name, error.message]),
     );
 
-    expect(uploaded).toBe(2);
-    expect(onError).toHaveBeenCalledTimes(1);
-    expect(onError.mock.calls[0][0].name).toBe("b.txt");
+    expect(stored).toBe(1);
+    expect(failures).toEqual([["a.txt", "conflict"]]);
+    expect(provider.write).toHaveBeenCalledTimes(2);
+    expect(provider.write.mock.calls[1][0]).toBe("/b.txt");
+  });
+
+  it("passes an explicit overwrite through to the provider", async () => {
+    const provider = providerOf();
+
+    await uploadLocalFiles(provider, "/", [fileOf("x", "x.txt")], undefined, {
+      overwrite: true,
+    });
+
+    expect(provider.write.mock.calls[0][2].overwrite).toBe(true);
   });
 });
