@@ -3831,7 +3831,10 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
         <li><b>The reference is the address.</b> A tool call names a collection by
             <code>owner/name</code> (the service also accepts the older
             <code>&lt;owner&gt;__&lt;name&gt;</code>), whatever the row shows; only browser paths keep
-            the slash-free segment.</li>
+            the slash-free segment. An approval marker and the chat's own thread id carry the same
+            reference, and <code>arcanaActionApply</code> derives the display segment only for the
+            provider's calls and paths - a marker that named the display segment was filtered out as
+            belonging to another collection, which is why the card never appeared.</li>
         <li><b>Tags replace, never merge, when the service can.</b> A user who removes a tag must see
             it gone.</li>
         <li><b>Index what the pipeline can read, name what it cannot.</b> A stored binary that docling

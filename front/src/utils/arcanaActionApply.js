@@ -8,6 +8,7 @@
 import { loadFile } from "../db";
 import {
   ARCANA_FILES_CHANGED_EVENT,
+  arcanaDisplayName,
   arcanasProvider,
 } from "../workspace/arcanas";
 import { arcanaActionKey } from "./arcanaActions";
@@ -46,8 +47,24 @@ const removeIfPresent = async (provider, collection, filename) => {
   await provider.removeFile(collection, filename);
 };
 
+/**
+ * The collection's display segment, from the reference a proposal carries.
+ *
+ * A proposal names its collection as `owner/name` (the identity the page, the
+ * thread id and the card use), but every provider call and browser path takes
+ * the display segment: `name` for an own collection, `owner__name` for a shared
+ * one. The provider caches the list, so finding the row costs no request.
+ */
+const displayOf = async (provider, reference) => {
+  const collections = await provider.listCollections();
+  const row = (Array.isArray(collections) ? collections : []).find(
+    (entry) => entry.collection === reference,
+  );
+  return row ? arcanaDisplayName(row) : reference;
+};
+
 const applyOne = async (provider, action) => {
-  const collection = action.collection;
+  const collection = await displayOf(provider, action.collection);
 
   switch (action.op) {
     case "upload_attachment": {
@@ -85,7 +102,7 @@ const applyOne = async (provider, action) => {
 };
 
 const revertOne = async (provider, action) => {
-  const collection = action.collection;
+  const collection = await displayOf(provider, action.collection);
 
   switch (action.op) {
     case "upload_attachment":

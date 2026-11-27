@@ -7,6 +7,7 @@ import {
 
 const mocks = vi.hoisted(() => ({
   provider: {
+    listCollections: vi.fn(),
     listFiles: vi.fn(),
     uploadFile: vi.fn(),
     write: vi.fn(),
@@ -24,9 +25,14 @@ vi.mock("../../db", () => ({
 vi.mock("../../workspace/arcanas", () => ({
   arcanasProvider: () => mocks.provider,
   ARCANA_FILES_CHANGED_EVENT: "chatai:arcana-files-changed",
+  arcanaDisplayName: (entry) =>
+    entry.shared ? `${entry.owner}__${entry.name}` : entry.name,
 }));
 
-const collection = "tester__test";
+// The proposal names the collection's reference; the provider takes the
+// display segment (`name`, or `owner__name` for a shared collection).
+const collection = "tester/test";
+const display = "test";
 
 const base = { collection };
 
@@ -35,6 +41,9 @@ const file = new File(["body"], "note.md", { type: "text/markdown" });
 beforeEach(() => {
   for (const fn of Object.values(mocks.provider)) fn.mockReset();
   mocks.loadFile.mockReset().mockResolvedValue(file);
+  mocks.provider.listCollections.mockResolvedValue([
+    { name: display, collection, owner: "tester", shared: false },
+  ]);
   mocks.provider.listFiles.mockResolvedValue([
     { name: "old.md" },
     { name: "new.md" },
@@ -57,7 +66,7 @@ describe("applyArcanaActions", () => {
     ]);
 
     expect(mocks.loadFile).toHaveBeenCalledWith("f1");
-    expect(mocks.provider.uploadFile).toHaveBeenCalledWith(collection, file);
+    expect(mocks.provider.uploadFile).toHaveBeenCalledWith(display, file);
     expect(result.failures).toEqual([]);
   });
 
@@ -82,12 +91,12 @@ describe("applyArcanaActions", () => {
 
     expect(mocks.provider.write).toHaveBeenCalledTimes(1);
     const [path, , options] = mocks.provider.write.mock.calls[0];
-    expect(path).toBe(`/${collection}/note.md`);
+    expect(path).toBe(`/${display}/note.md`);
     expect(options.overwrite).toBe(true);
-    expect(mocks.provider.removeFile).toHaveBeenCalledWith(collection, "old.md");
-    expect(mocks.provider.indexCollection).toHaveBeenCalledWith(collection);
+    expect(mocks.provider.removeFile).toHaveBeenCalledWith(display, "old.md");
+    expect(mocks.provider.indexCollection).toHaveBeenCalledWith(display);
     expect(mocks.provider.setFileTags).toHaveBeenCalledWith(
-      collection,
+      display,
       "a.md",
       ["beta"],
     );
@@ -145,6 +154,35 @@ describe("applyArcanaActions", () => {
     expect(listener.mock.calls[0][0].detail.collection).toBe(collection);
     window.removeEventListener("chatai:arcana-files-changed", listener);
   });
+
+  it("addresses a shared collection by its display segment", async () => {
+    // The proposal's reference is `bob/papers`; the provider's calls and paths
+    // take the storage segment, and the announcement keeps the reference the
+    // manager compares with its own collection.
+    mocks.provider.listCollections.mockResolvedValue([
+      { name: "papers", collection: "bob/papers", owner: "bob", shared: true },
+    ]);
+    const listener = vi.fn();
+    window.addEventListener("chatai:arcana-files-changed", listener);
+
+    await applyArcanaActions([
+      {
+        collection: "bob/papers",
+        op: "set_file_tags",
+        filename: "a.md",
+        tags: ["beta"],
+        previousTags: [],
+      },
+    ]);
+
+    expect(mocks.provider.setFileTags).toHaveBeenCalledWith(
+      "bob__papers",
+      "a.md",
+      ["beta"],
+    );
+    expect(listener.mock.calls[0][0].detail.collection).toBe("bob/papers");
+    window.removeEventListener("chatai:arcana-files-changed", listener);
+  });
 });
 
 describe("revertArcanaActions", () => {
@@ -160,7 +198,7 @@ describe("revertArcanaActions", () => {
     ]);
 
     expect(mocks.provider.setFileTags).toHaveBeenCalledWith(
-      collection,
+      display,
       "a.md",
       ["alpha"],
     );
@@ -187,9 +225,9 @@ describe("revertArcanaActions", () => {
     ]);
 
     const paths = mocks.provider.write.mock.calls.map(([path]) => path);
-    expect(paths).toEqual([`/${collection}/restored.md`]);
+    expect(paths).toEqual([`/${display}/restored.md`]);
     expect(mocks.provider.removeFile).toHaveBeenCalledWith(
-      collection,
+      display,
       "new.md",
     );
   });
@@ -250,7 +288,7 @@ describe("revertArcanaActions", () => {
 
     expect(mocks.provider.removeFile).toHaveBeenCalledTimes(1);
     expect(mocks.provider.removeFile).toHaveBeenCalledWith(
-      collection,
+      display,
       "new.md",
     );
   });

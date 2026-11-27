@@ -301,7 +301,14 @@ export function createArcanaChatToolRunner({ collection, attachments = [] }) {
   };
 
   const propose = (value) => {
-    const action = normalizeArcanaAction({ ...value, collection: display });
+    // A proposal carries the collection's reference (`owner/name`), which is the
+    // identity the page URL, the thread id and the approval card use. The
+    // display segment below is only what the provider's calls and paths take; a
+    // marker naming the display segment would never match the chat's own id.
+    const action = normalizeArcanaAction({
+      ...value,
+      collection: collection.collection,
+    });
     if (!action) throw new Error("That change could not be proposed.");
     const key = arcanaActionKey(action);
     if (!proposals.some((entry) => arcanaActionKey(entry) === key)) {

@@ -3061,6 +3061,12 @@ action marker — the **app** writes it, so it costs no tokens and cannot be spe
 model. `MessageAssistant` parses it only when the thread id starts with `arcana-chat:` (so a marker
 in an ordinary chat does nothing), `MarkdownRenderer` strips it from the transcript, and the raw text
 in `sessionStorage` keeps it, which is how a stored card can still be reverted after a reload.
+**A marker names its collection by the reference (`owner/name`), never by the display segment** — the
+thread id carries the same reference, which is what `getArcanaActionProposals` compares, and a
+proposal that named the display segment (`name`, `owner__name`) was silently filtered out, so the
+card never appeared. `arcanaActionApply` resolves the display segment through
+`arcanasProvider().listCollections()` before touching the provider (whose calls and paths take it) and
+announces the reference, which is what `ArcanaManager` compares with its own `collection.collection`.
 `components/Conversation/MessageAssistant/ArcanaActionCard.jsx` renders the card through the shared
 `ApprovalCard` chrome (§4.16's `MetaActionCard` uses the same component), lists one row per proposal
 and records `meta.actionDecision` (`accepted` / `rejected`).

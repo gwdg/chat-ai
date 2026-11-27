@@ -33,7 +33,10 @@ vi.mock("../../workspace/arcanas", () => ({
 vi.mock("../../workspace/providers/saiaRag", () => ({
   isTextFileName: (name) => /\.(md|txt)$/i.test(name),
   markdownFileName: (name) => `${name.replace(/\.[^.]+$/, "")}.md`,
-  ragCollectionDisplayName: (collection) => collection.collection,
+  // The real rule: an own collection uses its name, a shared one its storage
+  // segment. A proposal names neither; it carries the reference below.
+  ragCollectionDisplayName: (collection) =>
+    collection.shared ? `${collection.owner}__${collection.name}` : collection.name,
 }));
 
 const {
@@ -41,10 +44,13 @@ const {
   createArcanaChatToolRunner,
   getArcanaChatToolDefinitions,
 } = await import("../arcanaChat");
+const { appendArcanaActionMarkers, getArcanaActionProposals } = await import(
+  "../arcanaActions"
+);
 
 const collection = {
   name: "Test",
-  collection: "tester__test",
+  collection: "tester/test",
   owner: "tester",
   role: "owner",
   can_write: true,
@@ -141,7 +147,7 @@ describe("arcana chat tools", () => {
     expect(runner.takeProposals()).toEqual([
       {
         op: "write_text_file",
-        collection: "tester__test",
+        collection: "tester/test",
         filename: "note.md",
         content: "hello",
         size: 5,
@@ -151,6 +157,34 @@ describe("arcana chat tools", () => {
     ]);
     // The list is reset, so a repeated call is proposed once.
     expect(runner.takeProposals()).toEqual([]);
+  });
+
+  it("marks a proposal with the reference the chat page checks", async () => {
+    const runner = createArcanaChatToolRunner({ collection });
+    await runner.run("set_file_tags", {
+      filename: "a.md",
+      tags: ["Wasser", "Schuhe"],
+    });
+
+    // The provider's calls take the display segment...
+    expect(mocks.provider.listFiles).toHaveBeenCalledWith("Test", {
+      includeTags: true,
+    });
+
+    // ...while the marker names the reference, which is what the chat's id
+    // carries and the page compares before rendering the approval card.
+    const text = appendArcanaActionMarkers(
+      "Vorgeschlagen.",
+      runner.takeProposals(),
+    );
+    const actions = getArcanaActionProposals(text, collection.collection);
+    expect(actions).toHaveLength(1);
+    expect(actions[0]).toMatchObject({
+      op: "set_file_tags",
+      collection: "tester/test",
+      filename: "a.md",
+      tags: ["Wasser", "Schuhe"],
+    });
   });
 
   it("captures the text an overwrite would have to restore", async () => {
@@ -232,7 +266,7 @@ describe("arcana chat tools", () => {
     expect(runner.takeProposals()).toEqual([
       {
         op: "upload_attachment",
-        collection: "tester__test",
+        collection: "tester/test",
         filename: "notes.md",
         fileId: "f1",
         size: 4,
@@ -259,7 +293,7 @@ describe("arcana chat tools", () => {
 
     expect(mocks.provider.indexCollection).not.toHaveBeenCalled();
     expect(runner.takeProposals()).toEqual([
-      { op: "start_index", collection: "tester__test" },
+      { op: "start_index", collection: "tester/test" },
     ]);
   });
 
