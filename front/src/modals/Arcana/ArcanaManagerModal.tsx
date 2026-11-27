@@ -90,11 +90,14 @@ export default function ArcanaManagerModal({
   const [uploadCount, setUploadCount] = useState<{ sent: number; total: number } | null>(
     null,
   );
-  // Bytes of the file that is being sent right now. `uploadCount` only moves
-  // between files, so a large document would sit at "0/1" while its chunks go.
-  const [uploadPart, setUploadPart] = useState<{ sent: number; total: number } | null>(
-    null,
-  );
+  // The file that is being sent right now and the bytes the service accepted.
+  // `uploadCount` only moves between files, so a large document would sit at
+  // "0/1" while its chunks go.
+  const [uploadPart, setUploadPart] = useState<{
+    name: string;
+    sent: number;
+    total: number;
+  } | null>(null);
 
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<RagSearchMode>("previews");
@@ -265,15 +268,28 @@ export default function ArcanaManagerModal({
     let stored = 0;
     setUploadCount({ sent, total: picked.length });
     for (const file of picked) {
-      if (aliveRef.current) setUploadPart(null);
+      const textPath = !canIndex && isTextFileName(file.name);
+      // Shown before the request leaves, so the label moves on the same frame
+      // as the click instead of sitting on the file counter until the first
+      // chunk has been read, encoded and accepted. The legacy text upload has
+      // no chunk to report, so it keeps the plain file counter.
+      if (aliveRef.current) {
+        setUploadPart(
+          textPath ? null : { name: file.name, sent: 0, total: file.size },
+        );
+      }
       try {
-        if (!canIndex && isTextFileName(file.name)) {
+        if (textPath) {
           // An older service only indexes through the text upload path.
           await provider.uploadTextFile(display, file.name, await file.text());
         } else {
           await provider.uploadFile(display, file, (partSent, partTotal) => {
             if (aliveRef.current) {
-              setUploadPart({ sent: partSent, total: partTotal });
+              setUploadPart({
+                name: file.name,
+                sent: partSent,
+                total: partTotal || file.size,
+              });
             }
           });
         }
@@ -620,7 +636,11 @@ export default function ArcanaManagerModal({
                 className="btn btn-primary btn-xs gap-1"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={Boolean(busy) || !collection.can_write}
-                title={t("arcanas.upload")}
+                title={
+                  busy === "upload" && uploadPart
+                    ? t("arcanas.uploading_name", { name: uploadPart.name })
+                    : t("arcanas.upload")
+                }
               >
                 <Upload size={14} />
                 {busy === "upload" && uploadCount

@@ -70,10 +70,17 @@ const SEARCH_DOCUMENTS_TOOL = "search_documents";
 const SEARCH_PREVIEW_TOOL = "search_preview";
 
 /**
- * Raw bytes per chunk. Base64 and the JSON envelope make this ~1.4 MiB on the
- * wire, below the service's 4 MiB request-body limit even with headers.
+ * Raw bytes per upload chunk. Base64 and the JSON envelope make this ~2.8 MiB
+ * on the wire, still below the service's 4 MiB request-body limit, and half the
+ * round trips a 1 MiB chunk would need for a large PDF.
  */
-const CHUNK_BYTES = 1024 * 1024;
+const CHUNK_BYTES = 2 * 1024 * 1024;
+
+/**
+ * The chunk size to fall back to when a deployment's proxy rejects a body far
+ * below the service's own limit (`413 Request body too large`).
+ */
+const MIN_CHUNK_BYTES = 256 * 1024;
 
 /**
  * How long one tool call may stay unanswered.
@@ -193,6 +200,18 @@ const isCallTimeout = (error: unknown): boolean => {
   return /-32001|request timed out|timed out/i.test(message);
 };
 
+/**
+ * A deployment proxy can cap a request body below the service's own 4 MiB and
+ * answer `413 Request body too large`. Such a request never reached the tool, so
+ * nothing was staged and the same offset can be retried with a smaller piece.
+ */
+const isBodyTooLarge = (error: unknown): boolean => {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return /HTTP 413|request body too large|payload too large|entity too large/i.test(
+    message,
+  );
+};
+
 const explainConnect = (error: unknown, endpoint: string): string => {
   const message = error instanceof Error ? error.message : String(error);
   if (isAuthFailure(message)) {
@@ -298,6 +317,11 @@ export class SaiaRagProvider implements FileProvider {
 
   private client: any = null;
   private tools = new Set<string>();
+  /**
+   * The chunk size this deployment accepts. It only ever shrinks: a body a
+   * proxy rejected is not retried with the same size for the next file.
+   */
+  private chunkBytes = CHUNK_BYTES;
   private connectPromise: Promise<void> | null = null;
   private connectError: Error | null = null;
   /** display path segment -> collection, refreshed by `listCollections`. */
@@ -903,7 +927,11 @@ export class SaiaRagProvider implements FileProvider {
   async write(
     path: string,
     data: ReadableStream<Uint8Array>,
-    opts: { size?: number; overwrite: boolean },
+    opts: {
+      size?: number;
+      overwrite: boolean;
+      onProgress?: (sent: number, total: number) => void;
+    },
   ): Promise<WorkspaceFileEntry> {
     const parts = this.parts(path);
     if (parts.length !== 2) {
@@ -917,10 +945,16 @@ export class SaiaRagProvider implements FileProvider {
         "You have read-only access to this collection",
       );
     }
-    const exists = await this.fileExists(collection, name);
-    if (exists && !opts.overwrite) {
-      throw new WorkspaceError("CONFLICT", normalizePath(path));
+    // `overwrite` is the caller's decision already; checking first costs a
+    // whole `list_files` round trip per file, which is the pause between the
+    // click and the first progress the user sees.
+    if (!opts.overwrite) {
+      const exists = await this.fileExists(collection, name);
+      if (exists) throw new WorkspaceError("CONFLICT", normalizePath(path));
     }
+    // Zero before the first byte leaves, so the dialog shows its progress line
+    // immediately instead of looking dead while the first chunk is encoded.
+    opts.onProgress?.(0, opts.size ?? 0);
     let size: number;
     if (this.has(WRITE_CHUNK_TOOL)) {
       size = await this.uploadChunked(
@@ -938,6 +972,7 @@ export class SaiaRagProvider implements FileProvider {
         content_base64: toBase64(bytes),
       });
       size = bytes.byteLength;
+      opts.onProgress?.(size, opts.size ?? size);
     }
     return {
       sourceId: this.sourceId,
@@ -992,7 +1027,7 @@ export class SaiaRagProvider implements FileProvider {
   }
 
   /**
-   * Store one file through `upload_file_chunk`, 1 MiB at a time.
+   * Store one file through `upload_file_chunk`, one chunk at a time.
    *
    * The queue is drained in place rather than re-concatenated per chunk, so a
    * stream that arrives as one huge buffer still costs linear work. An empty
@@ -1053,18 +1088,38 @@ export class SaiaRagProvider implements FileProvider {
       // ahead of the stored bytes hides exactly the stall it exists to show.
       onProgress?.(offset, total ?? 0);
     };
+    /**
+     * A rejected body stored nothing, so the bytes go back into the queue and
+     * the same offset is tried again as a smaller piece. Returns false when the
+     * floor is reached, which leaves the error to the caller.
+     */
+    const retrySmaller = (chunk: Uint8Array, error: unknown): boolean => {
+      if (!isBodyTooLarge(error) || this.chunkBytes <= MIN_CHUNK_BYTES) {
+        return false;
+      }
+      queue.unshift(chunk);
+      queued += chunk.length;
+      this.chunkBytes = Math.max(
+        MIN_CHUNK_BYTES,
+        Math.floor(this.chunkBytes / 2),
+      );
+      return true;
+    };
 
     for (;;) {
       let done = false;
-      while (queued < CHUNK_BYTES && !done) done = await fill();
-      if (queued >= CHUNK_BYTES) {
-        await send(take(CHUNK_BYTES), false);
-        continue;
+      while (queued < this.chunkBytes && !done) done = await fill();
+      const full = queued >= this.chunkBytes;
+      const chunk = take(full ? this.chunkBytes : queued);
+      try {
+        await send(chunk, !full);
+      } catch (error) {
+        if (retrySmaller(chunk, error)) continue;
+        throw error;
       }
-      // Nothing left: the tail is always sent, possibly empty, so a size that
-      // is an exact multiple of the chunk size (or zero) finishes too.
-      await send(take(queued), true);
-      return offset;
+      // A full chunk means more may follow. The tail always ends the upload,
+      // even when it is empty.
+      if (!full) return offset;
     }
   }
 

@@ -2445,6 +2445,7 @@ export default {
     upload: "Hochladen",
     uploading: "Lädt hoch {{sent}}/{{total}}",
     uploading_progress: "Lädt hoch {{sent}}/{{total}} · {{percent}} %",
+    uploading_name: "Lädt hoch: {{name}}",
     upload_done: "{{count}} Datei(en) gespeichert.",
     read_only_hint:
       "Du hast nur Lesezugriff auf diese Arcana, daher können Dateien nicht geändert werden.",

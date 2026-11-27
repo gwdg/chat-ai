@@ -22,6 +22,8 @@ const rag = vi.hoisted(() => ({
   connectCalls: 0,
   staleSessionFailures: 0,
   callError: null as Error | null,
+  /** Raw bytes a chunk may carry; a larger one answers 413 like a proxy would. */
+  chunkLimit: null as number | null,
 }));
 
 const json = (value: unknown) => ({
@@ -166,8 +168,8 @@ vi.mock("@modelcontextprotocol/sdk/client/index.js", () => ({
           }
           files.set(
             filename,
-            Uint8Array.from(atob(String(request.arguments.content_base64)), (c) =>
-              c.charCodeAt(0),
+            Uint8Array.from(
+              Buffer.from(String(request.arguments.content_base64), "base64"),
             ),
           );
           return text(`Stored ${filename}`);
@@ -179,9 +181,13 @@ vi.mock("@modelcontextprotocol/sdk/client/index.js", () => ({
           const offset = Number(request.arguments.offset);
           const last = Boolean(request.arguments.last);
           const chunk = Uint8Array.from(
-            atob(String(request.arguments.chunk_base64)),
-            (c) => c.charCodeAt(0),
+            Buffer.from(String(request.arguments.chunk_base64), "base64"),
           );
+          if (rag.chunkLimit !== null && chunk.length > rag.chunkLimit) {
+            throw new Error(
+              "Streamable HTTP error: Error POSTing to endpoint (HTTP 413): Request body too large",
+            );
+          }
           const staged = rag.staged.get(key) ?? new Uint8Array(0);
           if (offset !== staged.length) {
             return failure(
@@ -323,6 +329,7 @@ describe("SaiaRagProvider", () => {
     rag.connectCalls = 0;
     rag.staleSessionFailures = 0;
     rag.callError = null;
+    rag.chunkLimit = null;
   });
 
   const provider = () => new SaiaRagProvider("rag-1", "http://localhost:9000/mcp");
@@ -397,9 +404,9 @@ describe("SaiaRagProvider", () => {
     );
   });
 
-  it("sends a file in 1 MiB chunks instead of one oversized request", async () => {
+  it("sends a file in bounded chunks instead of one oversized request", async () => {
     const ragProvider = provider();
-    const size = 2 * 1024 * 1024 + 512 * 1024;
+    const size = 4 * 1024 * 1024 + 512 * 1024;
     const data = new Uint8Array(size);
     for (let i = 0; i < size; i += 1) data[i] = i % 251;
 
@@ -417,8 +424,8 @@ describe("SaiaRagProvider", () => {
     );
     expect(chunks.map((call) => call.args.offset)).toEqual([
       0,
-      1024 * 1024,
       2 * 1024 * 1024,
+      4 * 1024 * 1024,
     ]);
     expect(chunks.map((call) => call.args.last)).toEqual([false, false, true]);
     expect(chunks.map((call) => call.args.filename)).toEqual([
@@ -442,11 +449,78 @@ describe("SaiaRagProvider", () => {
       onProgress: (sent, total) => progress.push([sent, total]),
     });
 
-    // Only accepted chunks count, so a stalled upload cannot look complete.
+    // Zero on the first frame, then only accepted chunks: a stalled upload
+    // cannot look complete, and the label moves as soon as it is clicked.
     expect(progress).toEqual([
-      [1024 * 1024, size],
+      [0, size],
       [2 * 1024 * 1024, size],
       [size, size],
+    ]);
+  });
+
+  it("does not list the collection before an overwriting write", async () => {
+    const ragProvider = provider();
+
+    // The upload replaces the file anyway, so the pre-flight existence check
+    // only costs a round trip (and, on a big collection, a big listing) before
+    // the first byte is sent.
+    await ragProvider.write("/recipes/notes.md", streamOf("new"), {
+      overwrite: true,
+    });
+
+    expect(rag.calls.some((call) => call.name === "list_files")).toBe(false);
+  });
+
+  it("refuses a write the caller did not mark as overwriting", async () => {
+    const ragProvider = provider();
+
+    const failure = await ragProvider
+      .write("/recipes/notes.md", streamOf("new"), { overwrite: false })
+      .catch((error) => error);
+
+    expect(failure.code).toBe("CONFLICT");
+    expect(rag.calls.some((call) => call.name === "upload_file_chunk")).toBe(
+      false,
+    );
+  });
+
+  it("retries a chunk a proxy rejected with half the size", async () => {
+    // A deployment whose proxy caps the body below the service's own 4 MiB.
+    rag.chunkLimit = 1024 * 1024;
+    const ragProvider = provider();
+    const size = 3 * 1024 * 1024;
+    const data = new Uint8Array(size).fill(3);
+
+    await ragProvider.write("/recipes/big.pdf", streamOf(data), {
+      overwrite: true,
+      size,
+    });
+
+    const chunks = rag.calls.filter((call) => call.name === "upload_file_chunk");
+    // The refused attempt advanced nothing, so offset 0 is sent again as two
+    // 1 MiB pieces and the rest follows at that size.
+    expect(chunks.map((call) => call.args.offset)).toEqual([
+      0,
+      0,
+      1024 * 1024,
+      2 * 1024 * 1024,
+      3 * 1024 * 1024,
+    ]);
+    expect(rag.files.get("alice__recipes")!.get("big.pdf")).toEqual(data);
+
+    // The accepted size is remembered, so the next upload does not pay for the
+    // same rejected request.
+    rag.calls = [];
+    await ragProvider.write(
+      "/recipes/other.pdf",
+      streamOf(new Uint8Array(2 * 1024 * 1024)),
+      { overwrite: true },
+    );
+    const next = rag.calls.filter((call) => call.name === "upload_file_chunk");
+    expect(next.map((call) => call.args.offset)).toEqual([
+      0,
+      1024 * 1024,
+      2 * 1024 * 1024,
     ]);
   });
 
@@ -470,7 +544,7 @@ describe("SaiaRagProvider", () => {
 
   it("closes an exact multiple of the chunk size with an empty final chunk", async () => {
     const ragProvider = provider();
-    const data = new Uint8Array(1024 * 1024).fill(7);
+    const data = new Uint8Array(2 * 1024 * 1024).fill(7);
 
     await ragProvider.write("/recipes/exact.bin", streamOf(data), {
       overwrite: true,
@@ -479,7 +553,7 @@ describe("SaiaRagProvider", () => {
     const chunks = rag.calls.filter(
       (call) => call.name === "upload_file_chunk",
     );
-    expect(chunks.map((call) => call.args.offset)).toEqual([0, 1024 * 1024]);
+    expect(chunks.map((call) => call.args.offset)).toEqual([0, 2 * 1024 * 1024]);
     expect(chunks.map((call) => call.args.last)).toEqual([false, true]);
     expect(atob(String(chunks[1].args.chunk_base64))).toBe("");
     expect(rag.files.get("alice__recipes")!.get("exact.bin")).toEqual(data);

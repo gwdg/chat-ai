@@ -2422,6 +2422,7 @@ export default {
     upload: "Upload",
     uploading: "Uploading {{sent}}/{{total}}",
     uploading_progress: "Uploading {{sent}}/{{total}} · {{percent}} %",
+    uploading_name: "Uploading {{name}}",
     upload_done: "Stored {{count}} file(s).",
     read_only_hint:
       "You have read-only access to this Arcana, so files cannot be changed.",

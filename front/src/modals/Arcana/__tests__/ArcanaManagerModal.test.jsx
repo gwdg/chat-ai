@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import ArcanaManagerModal from "../ArcanaManagerModal";
@@ -275,12 +275,14 @@ describe("ArcanaManagerModal", () => {
     expect(screen.queryByTitle("arcanas.share_remove")).not.toBeInTheDocument();
   });
 
-  it("shows how far the file being uploaded has got", async () => {
-    // A large document is several tool calls; without the part counter the
-    // button sits at "0/1" for the whole upload and looks stuck.
+  it("shows the progress line immediately, before the first chunk", async () => {
+    // A large document is several tool calls. The label has to move on the
+    // click, otherwise the button looks dead until the first chunk is stored,
+    // and then it moves per chunk.
+    let report;
     let finish;
     mocks.uploadFile.mockImplementation((_display, _file, onProgress) => {
-      onProgress(512, 1024);
+      report = onProgress;
       return new Promise((resolve) => {
         finish = resolve;
       });
@@ -290,13 +292,26 @@ describe("ArcanaManagerModal", () => {
     );
     await screen.findByText("a.md");
 
-    const input = document.querySelector('input[type="file"]');
-    fireEvent.change(input, {
+    fireEvent.change(document.querySelector('input[type="file"]'), {
       target: {
         files: [new File(["payload"], "big.pdf", { type: "application/pdf" })],
       },
     });
 
+    // Nothing has been accepted yet: 0 % is the immediate feedback.
+    await waitFor(() =>
+      expect(mocks.t).toHaveBeenCalledWith("arcanas.uploading_progress", {
+        sent: 0,
+        total: 1,
+        percent: 0,
+      }),
+    );
+    // The tooltip names the file, so a multi-file drop says which one is busy.
+    expect(mocks.t).toHaveBeenCalledWith("arcanas.uploading_name", {
+      name: "big.pdf",
+    });
+
+    act(() => report(512, 1024));
     await waitFor(() =>
       expect(mocks.t).toHaveBeenCalledWith("arcanas.uploading_progress", {
         sent: 0,

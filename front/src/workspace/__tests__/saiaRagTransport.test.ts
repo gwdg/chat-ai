@@ -31,6 +31,8 @@ const COLLECTION = {
 type Call = { name: string; args: Record<string, unknown> };
 
 const calls: Call[] = [];
+/** Bytes per HTTP request body, to prove a chunk fits the service's 4 MiB cap. */
+const bodySizes: number[] = [];
 /** Staged bytes per `${collection}\0${filename}`, as `upload_file_chunk` keeps them. */
 const staged = new Map<string, Uint8Array>();
 const stored = new Map<string, Uint8Array>();
@@ -126,7 +128,9 @@ const createServer = () => {
         args: { collection, filename, offset, last },
       });
       const chunk = Uint8Array.from(Buffer.from(chunk_base64, "base64"));
-      if (chunk.byteLength > 1024 * 1024) {
+      // The service's transport caps the whole request body at 4 MiB, which is
+      // why the provider never packs more than ~2.8 MiB of base64 per call.
+      if (chunk.byteLength > 3 * 1024 * 1024) {
         throw new Error(`chunk is ${chunk.byteLength} bytes`);
       }
       const key = stageKey(collection, filename);
@@ -169,6 +173,7 @@ beforeEach(async () => {
     const chunks: Buffer[] = [];
     for await (const chunk of request) chunks.push(chunk as Buffer);
     const body = Buffer.concat(chunks).toString("utf8");
+    bodySizes.push(Buffer.byteLength(body));
     await transport.handleRequest(
       request,
       response,
@@ -185,6 +190,7 @@ afterEach(async () => {
   await new Promise<void>((resolve) => httpServer?.close(() => resolve()));
   httpServer = null;
   calls.length = 0;
+  bodySizes.length = 0;
   staged.clear();
   stored.clear();
 });
@@ -192,7 +198,7 @@ afterEach(async () => {
 describe("SaiaRagProvider over a real MCP transport", () => {
   it("uploads a file larger than one chunk and stores the exact bytes", async () => {
     const provider = new SaiaRagProvider("real-transport", baseUrl);
-    const bytes = new Uint8Array(2 * 1024 * 1024 + 12345);
+    const bytes = new Uint8Array(4 * 1024 * 1024 + 12345);
     for (let index = 0; index < bytes.length; index += 1) {
       bytes[index] = (index * 31 + 7) % 256;
     }
@@ -209,11 +215,14 @@ describe("SaiaRagProvider over a real MCP transport", () => {
     const chunks = calls.filter((call) => call.name === "upload_file_chunk");
     expect(chunks.map((call) => call.args.offset)).toEqual([
       0,
-      1024 * 1024,
       2 * 1024 * 1024,
+      4 * 1024 * 1024,
     ]);
     expect(chunks.map((call) => call.args.last)).toEqual([false, false, true]);
     expect(stored.get(stageKey("alice__demo", "notes.pdf"))).toEqual(bytes);
+    // Base64 and the JSON envelope still keep every request under the 4 MiB
+    // body limit the MCP server enforces.
+    expect(Math.max(...bodySizes)).toBeLessThan(4 * 1024 * 1024);
   }, 60_000);
 
   it("stores a single-chunk stream and reports its size", async () => {

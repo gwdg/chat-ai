@@ -2720,10 +2720,17 @@ only when a preview passes one, so chat messages are unaffected.
 **A stalled call must look stalled.** Every provider call goes through one `invoke` with an explicit
 `MCP_CALL_TIMEOUT_MS` (60 s, the SDK's own default), and a `-32001` timeout is translated into a
 `PROVIDER_ERROR` naming the tool and the timeout instead of the bare "Request timed out". Uploads
-report progress through `write`'s optional `onProgress(sent, total)` after each chunk the service
-accepted (`uploadFile` passes it on), which is what the manager's "Uploading {{sent}}/{{total}} ·
-{{percent}} %" line shows; a failed file is not counted in the "stored" toast. Both matter because
-the service answers nothing at all while `index_collection` holds the collection's write lock
+report progress through `write`'s optional `onProgress(sent, total)`: once at `0` before the first
+byte leaves, then after each chunk the service accepted (`uploadFile` passes the callback on, and the
+manager also sets `0 %` with the file name before it calls, so the button moves on the click and not
+after the first round trip). A failed file is not counted in the "stored" toast. Two things keep the
+upload itself quick: a `write` with `overwrite: true` skips the pre-flight `list_files` conflict check
+(a whole round trip and, on a big collection, a big listing), and chunks are 2 MiB, which halves the
+request count while staying under the service's 4 MiB body limit once base64 and JSON are added. When
+a deployment's proxy rejects that body anyway (`413 Request body too large`, which never reaches the
+tool, so nothing was staged), the provider halves its chunk size and retries the same offset, and it
+remembers the accepted size for the next file. All of this matters because the service answers
+nothing at all while `index_collection` holds the collection's write lock
 (`registry.write_lock` → `exclusive_lock`), so an upload started during indexing waits out the whole
 run.
 
