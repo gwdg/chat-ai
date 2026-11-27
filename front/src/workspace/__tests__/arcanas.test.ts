@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { classifyArcanaFiles } from "../arcanas";
+import { arcanaFailureReason, classifyArcanaFiles } from "../arcanas";
 import type { RagFile } from "../providers/saiaRag";
 
 const file = (status: string): RagFile => ({
@@ -51,5 +51,27 @@ describe("classifyArcanaFiles", () => {
     expect(classifyArcanaFiles([file("indexed"), file("stored")])).toBe(
       "partial",
     );
+  });
+});
+
+describe("arcanaFailureReason", () => {
+  it("returns the service's explanation without the Failed prefix", () => {
+    expect(
+      arcanaFailureReason(
+        "Failed: conversion: Unexpected status code 404 from http://localhost:10000/public/v1/documents/convert",
+      ),
+    ).toBe(
+      "conversion: Unexpected status code 404 from http://localhost:10000/public/v1/documents/convert",
+    );
+    expect(arcanaFailureReason("Failed: unsupported format")).toBe(
+      "unsupported format",
+    );
+  });
+
+  it("returns nothing for a file that is pending or indexed", () => {
+    expect(arcanaFailureReason("stored")).toBeNull();
+    expect(arcanaFailureReason("indexed")).toBeNull();
+    expect(arcanaFailureReason("Success")).toBeNull();
+    expect(arcanaFailureReason("")).toBeNull();
   });
 });

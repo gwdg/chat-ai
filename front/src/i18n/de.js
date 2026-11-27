@@ -2442,6 +2442,7 @@ export default {
       "Die Indexierung läuft noch. Große Dokumente brauchen länger; die Dateiliste aktualisiert sich weiter, solange dieser Dialog geöffnet ist.",
     index_done_failed:
       "Die Indexierung ist abgeschlossen, aber {{count}} Datei(en) konnten nicht indexiert werden. Der Status der Datei nennt den Grund.",
+    index_done_failed_one: "„{{name}}“ konnte nicht indexiert werden: {{reason}}",
     upload: "Hochladen",
     uploading: "Lädt hoch {{sent}}/{{total}}",
     uploading_progress: "Lädt hoch {{sent}}/{{total}} · {{percent}} %",

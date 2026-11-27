@@ -2419,6 +2419,7 @@ export default {
       "Still indexing. Large documents take longer; the file list keeps updating while this dialog is open.",
     index_done_failed:
       "Indexing finished, but {{count}} file(s) could not be indexed. The file's status shows the reason.",
+    index_done_failed_one: "“{{name}}” could not be indexed: {{reason}}",
     upload: "Upload",
     uploading: "Uploading {{sent}}/{{total}}",
     uploading_progress: "Uploading {{sent}}/{{total}} · {{percent}} %",

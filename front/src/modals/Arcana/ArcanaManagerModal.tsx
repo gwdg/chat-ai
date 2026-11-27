@@ -20,6 +20,7 @@ import { useToast } from "../../hooks/useToast";
 import {
   arcanasProvider,
   arcanaDisplayName,
+  arcanaFailureReason,
   classifyArcanaFiles,
   isArcanaIndexed,
   updateArcanaStatus,
@@ -351,9 +352,19 @@ export default function ArcanaManagerModal({
       }
       const failed = latest.filter(
         (file) => !isArcanaIndexed(file.status),
-      ).length;
-      if (failed > 0) {
-        notifyError(t("arcanas.index_done_failed", { count: failed }), {
+      );
+      if (failed.length === 1) {
+        // One file: name it and repeat the service's reason. The badge says
+        // only "Failed", so otherwise the click looks like it did nothing.
+        notifyError(
+          t("arcanas.index_done_failed_one", {
+            name: failed[0].name,
+            reason: arcanaFailureReason(failed[0].status) ?? failed[0].status,
+          }),
+          { autoClose: 8000 },
+        );
+      } else if (failed.length > 1) {
+        notifyError(t("arcanas.index_done_failed", { count: failed.length }), {
           autoClose: 6000,
         });
       } else {
@@ -782,6 +793,17 @@ export default function ArcanaManagerModal({
                                     {tag}
                                   </span>
                                 ))}
+                              </span>
+                            )}
+                            {arcanaFailureReason(file.status) && (
+                              // The badge says only "Failed"; the service's own
+                              // reason ("conversion: …") belongs in the row, not
+                              // in a tooltip nobody opens.
+                              <span
+                                className="basis-full min-w-0 truncate text-error"
+                                title={file.status}
+                              >
+                                {arcanaFailureReason(file.status)}
                               </span>
                             )}
                           </p>

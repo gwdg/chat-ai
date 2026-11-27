@@ -50,6 +50,10 @@ vi.mock("../../../workspace/arcanas", () => {
   return {
     arcanasProvider: () => provider,
     arcanaDisplayName: (collection) => collection.name,
+    arcanaFailureReason: (status) =>
+      status && status !== "stored" && /fail|error/i.test(status)
+        ? status.replace(/^failed:\s*/i, "").trim()
+        : null,
     classifyArcanaFiles: () => "current",
     isArcanaIndexed: (status) => status !== "stored" && !/fail|error/i.test(status),
     updateArcanaStatus: vi.fn(),
@@ -275,10 +279,76 @@ describe("ArcanaManagerModal", () => {
     expect(screen.queryByTitle("arcanas.share_remove")).not.toBeInTheDocument();
   });
 
+  it("shows why a file failed instead of only the badge", async () => {
+    const reason =
+      "conversion: Unexpected error during API request: Unexpected status code 404 from http://localhost:10000/public/v1/documents/convert";
+    mocks.listFiles.mockResolvedValue([
+      ...files,
+      {
+        name: "Wasserwerksschulung.pdf",
+        status: `Failed: ${reason}`,
+        chunks: 1,
+        tags: [],
+      },
+    ]);
+
+    render(
+      <ArcanaManagerModal
+        isOpen
+        onClose={() => {}}
+        collection={collection}
+      />,
+    );
+
+    await screen.findByText("Wasserwerksschulung.pdf");
+    // The badge stays short, but the row carries the service's own reason.
+    expect(screen.getByText("arcanas.status_failed")).toBeInTheDocument();
+    expect(screen.getByText(reason)).toBeInTheDocument();
+    expect(screen.getAllByTitle(`Failed: ${reason}`).length).toBeGreaterThan(0);
+  });
+
+  it("reports the reason when a single file fails to index", async () => {
+    const reason = "conversion: docling is unreachable";
+    mocks.listFiles
+      .mockResolvedValueOnce([
+        { name: "Wasserwerksschulung.pdf", status: "stored", chunks: 0, tags: [] },
+      ])
+      .mockResolvedValue([
+        {
+          name: "Wasserwerksschulung.pdf",
+          status: `Failed: ${reason}`,
+          chunks: 0,
+          tags: [],
+        },
+      ]);
+
+    render(
+      <ArcanaManagerModal
+        isOpen
+        onClose={() => {}}
+        collection={collection}
+      />,
+    );
+
+    await screen.findByText("Wasserwerksschulung.pdf");
+    fireEvent.click(screen.getByText("arcanas.index"));
+
+    // The dialog polls every 2.5 s, so this one waits for the real interval.
+    await waitFor(
+      () =>
+        expect(mocks.t).toHaveBeenCalledWith(
+          "arcanas.index_done_failed_one",
+          { name: "Wasserwerksschulung.pdf", reason },
+        ),
+      { timeout: 6000 },
+    );
+    expect(mocks.notifyError).toHaveBeenCalledWith(
+      "arcanas.index_done_failed_one",
+      { autoClose: 8000 },
+    );
+  });
+
   it("shows the progress line immediately, before the first chunk", async () => {
-    // A large document is several tool calls. The label has to move on the
-    // click, otherwise the button looks dead until the first chunk is stored,
-    // and then it moves per chunk.
     let report;
     let finish;
     mocks.uploadFile.mockImplementation((_display, _file, onProgress) => {

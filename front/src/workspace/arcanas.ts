@@ -56,6 +56,19 @@ export function isArcanaIndexed(status: string): boolean {
 }
 
 /**
+ * The service's own explanation for a failed file, or null.
+ *
+ * `list_files` stores the reason in `status` ("Failed: conversion: …"), so the
+ * badge can stay short while the row shows why the attempt failed. The prefix
+ * is dropped because the badge already says "Failed"; the rest is the service's
+ * wording and is not translated.
+ */
+export function arcanaFailureReason(status: string): string | null {
+  if (!status || status === "stored" || isArcanaIndexed(status)) return null;
+  return status.replace(/^failed:\s*/i, "").trim() || status;
+}
+
+/**
  * Classify a collection from its file rows.
  *
  * No files is `current`: there is nothing waiting to be indexed. All indexed is
