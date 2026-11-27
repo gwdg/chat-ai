@@ -467,7 +467,7 @@ export default function SidebarContent({
         {/* Conversations header, with the search field it reveals */}
         <div className="sticky top-0 z-20 bg-white dark:bg-bg_secondary_dark px-3 pt-3 pb-2 shadow-[0_2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.5)]">
           <div className="flex items-center justify-between gap-1 pb-3">
-            <NewChatButton topicId={localState?.folderId} variant={"sidebar"} onNewConversation={handleNewConversation} />
+            <NewChatButton variant={"sidebar"} onNewConversation={handleNewConversation} />
           <div className="flex items-center justify-between gap-1">
             <ImportPersonaButton topicId={localState?.folderId} variant={"sidebar"} />
             <ImportChatButton topicId={localState?.folderId} variant={"sidebar"} />
