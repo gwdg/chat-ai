@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { CircleHelp, Trash2 } from "lucide-react";
 import { useModal } from "../../modals/ModalContext";
-import { isAgentEnabled } from "../../apis/agentEndpoints";
+import { isAgentEnabled, modelSupportsTools } from "../../apis/agentEndpoints";
 import { isBrandLocked } from "../../config/brandPolicy";
 import {
   arcanaRefId,
@@ -56,6 +56,14 @@ const ArcanaContainer = ({ localState, setLocalState, configurable }) => {
     configurable === undefined
       ? toolsOn && !isExternalModel
       : !!configurable && !isExternalModel;
+  // The collection list is the chat's own setting, served by the browser
+  // agent's read tools (`agent/arcanaChatTools.ts`). Those do not depend on
+  // the gateway "Arcana" switch, which is off by default in agent mode, so the
+  // add form must stay available while that switch is off. It only needs a
+  // model that can run tools; without one there is nothing to read a
+  // collection with.
+  const canEditShares =
+    agentMode && !isExternalModel && modelSupportsTools(settings?.model);
 
   const toolId =
     typeof settings?.arcana?.id === "string" ? settings.arcana.id.trim() : "";
@@ -231,7 +239,7 @@ const ArcanaContainer = ({ localState, setLocalState, configurable }) => {
           </ul>
         </div>
       )}
-      {canConfigure && (
+      {canEditShares && (
         <div className="space-y-2" data-guide="arcana-add">
           <p className="text-xs font-medium text-base-content/60">
             {t("settings.arcana_add_title")}

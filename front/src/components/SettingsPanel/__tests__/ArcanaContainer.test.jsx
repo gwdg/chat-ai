@@ -2,17 +2,19 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ArcanaContainer from "../ArcanaContainer";
 
-const agentMocks = vi.hoisted(() => ({ agent: false }));
+const agentMocks = vi.hoisted(() => ({ agent: false, tools: true }));
 
 vi.mock("../../../modals/ModalContext", () => ({
   useModal: () => ({ openModal: vi.fn() }),
 }));
 vi.mock("../../../apis/agentEndpoints", () => ({
   isAgentEnabled: () => agentMocks.agent,
+  modelSupportsTools: () => agentMocks.tools,
 }));
 
 beforeEach(() => {
   agentMocks.agent = false;
+  agentMocks.tools = true;
 });
 
 const stateWith = (settings) => ({
@@ -168,6 +170,42 @@ describe("ArcanaContainer list of arcanas in use", () => {
 });
 
 describe("ArcanaContainer adding collections", () => {
+  // The browser agent is the default workflow; that is where the read tools
+  // and therefore the add form live.
+  beforeEach(() => {
+    agentMocks.agent = true;
+  });
+
+  it("keeps the add field while the Arcana tool is switched off", () => {
+    render(
+      <ArcanaContainer
+        localState={stateWith({})}
+        setLocalState={vi.fn()}
+        configurable={false}
+      />,
+    );
+
+    expect(
+      screen.getByPlaceholderText("owner/arcana, e.g. alice/papers"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add" })).toBeInTheDocument();
+  });
+
+  it("hides the add field for a model that cannot run tools", () => {
+    agentMocks.tools = false;
+    render(
+      <ArcanaContainer
+        localState={stateWith({})}
+        setLocalState={vi.fn()}
+        configurable
+      />,
+    );
+
+    expect(
+      screen.queryByPlaceholderText("owner/arcana, e.g. alice/papers"),
+    ).not.toBeInTheDocument();
+  });
+
   it("adds a typed owner/arcana with a description and turns tools on", () => {
     const localState = stateWith({ enable_tools: false, arcana: { id: "" } });
     const setLocalState = vi.fn((updater) => updater(localState));

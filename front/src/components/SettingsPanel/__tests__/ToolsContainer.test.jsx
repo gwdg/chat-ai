@@ -309,6 +309,27 @@ describe("ToolsContainer detail pages", () => {
     expect(screen.queryByPlaceholderText("Arcana id")).not.toBeInTheDocument();
   });
 
+  it("offers the collection add field in agent mode without turning Arcana on", () => {
+    agentMocks.agent = true;
+    render(
+      <ToolsContainer
+        localState={stateWith({ arcana: false })}
+        setLocalState={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Arcana settings" }));
+
+    // The chat's own read tools do not need the gateway switch.
+    expect(
+      screen.getByPlaceholderText("owner/arcana, e.g. alice/papers"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Turn this tool on to configure it."),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("Arcana id")).not.toBeInTheDocument();
+  });
+
   it("keeps the page honest while the master tools switch is off", () => {
     const localState = {
       settings: {

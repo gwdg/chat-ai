@@ -77,6 +77,13 @@ export default function ToolsContainer({ localState, setLocalState }) {
   const agentWithoutTools = agentMode && !modelSupportsTools(settings?.model);
   const bulkActionsDisabled = agentMode ? agentWithoutTools : isExternalModel;
   const arcanasEnabled = isArcanasEnabled();
+  // The chat's collection list is edited by ArcanaContainer through the
+  // browser agent's read tools, so it stays available while the gateway
+  // "Arcana" switch is off (see ArcanaContainer.jsx). Only when that list
+  // cannot be edited either does the "turn this tool on" hint explain the
+  // missing fields.
+  const arcanaSharesEditable =
+    agentMode && !agentWithoutTools && !isExternalModel;
 
   // One switch for every configured MCP server.
   const mcpEnabled = !!toolsState.mcp;
@@ -441,7 +448,8 @@ export default function ToolsContainer({ localState, setLocalState }) {
                   detailState.active && !detailState.disabled
                 }
               />
-              {!(detailState.active && !detailState.disabled) && (
+              {!(detailState.active && !detailState.disabled) &&
+                !arcanaSharesEditable && (
                 <p className="text-sm text-base-content/70">
                   {t("settings.tools_enable_to_configure")}
                 </p>
