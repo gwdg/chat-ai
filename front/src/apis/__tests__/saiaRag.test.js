@@ -92,6 +92,31 @@ describe("isSaiaRagAvailable", () => {
     await expect(isSaiaRagAvailable()).resolves.toBe(false);
   });
 
+  it("still counts a slow hop as available, well past five seconds", async () => {
+    // The registry can spend three of its 5 s connect timeouts on an instance's
+    // tunnels before the request reaches a service that answers instantly, so a
+    // five-second deadline reported a healthy service as absent (measured
+    // 11.9-15.0 s on the local stack).
+    vi.useFakeTimers();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise((resolve) => {
+            setTimeout(
+              () => resolve(new Response(JSON.stringify({ status: "alive" }), { status: 200 })),
+              15_000,
+            );
+          }),
+      ),
+    );
+
+    const pending = isSaiaRagAvailable();
+    await vi.advanceTimersByTimeAsync(15_000);
+
+    await expect(pending).resolves.toBe(true);
+  });
+
   it("gives up on a hanging engine after the timeout", async () => {
     vi.useFakeTimers();
     vi.stubGlobal(

@@ -33,10 +33,17 @@ export const saiaRagHealthUrl = () => `${saiaRagBaseUrl()}/health`;
 
 /**
  * How long the availability probe waits before it calls the service absent.
- * A running instance answers well inside this; a hanging one must not keep the
- * source list waiting.
+ *
+ * It has to outlast the engine's hop, not just the service: `/health` is served
+ * in microseconds, but the hop into the SAIA registry sometimes waits on the
+ * instance's tunnels and answers in exact multiples of the registry's 5 s
+ * connect timeout (measured 11.9, 15.0 and 15.0 s on the local stack, with the
+ * service healthy throughout). A shorter deadline therefore reported a working
+ * service as unavailable. An absent service is not the slow case: the registry
+ * answers 404/503 immediately when no instance is registered, so this deadline
+ * only ever bounds a stall.
  */
-export const SAIA_RAG_HEALTH_TIMEOUT_MS = 5000;
+export const SAIA_RAG_HEALTH_TIMEOUT_MS = 20000;
 
 /**
  * Ask whether this deployment can serve saia-rag to the current user.

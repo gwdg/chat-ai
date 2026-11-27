@@ -2837,10 +2837,17 @@ mounts, so `ensureArcanaFilesystemSource` stays but is no longer called by `crea
 
 **Availability is a probe, not a model row.** Like `saia-fs`, the service is not a chat model.
 `apis/saiaRag.js#isSaiaRagAvailable` calls `GET <base>/health` and accepts only HTTP 200 with
-`{"status":"alive"}`; every other answer is `unavailable` and the drive row is not created. The base
-is the deployment's `<backendPath>/mcp/saia-rag` (e.g. `<engine>/public/v1/mcp/saia-rag`) and
-nothing else configures it: the engine's generic `/v1/mcp/<service>` hop forwards the exchange to the
-registered service and passes the caller's identity header through (§4.31). The MCP endpoint is
+`{"status":"alive"}`; every other answer is `unavailable` and the drive row is not created. **The
+probe's deadline must outlast the hop, not the handler.** `/health` answers in microseconds, but the
+registry can answer in exact multiples of its 5 s connect timeout (measured 11.9, 15.0 and 15.0 s on
+the local stack with the service healthy), so the 5 s deadline it used to have reported a working
+service as absent and the drive card vanished. It is `SAIA_RAG_HEALTH_TIMEOUT_MS` (20 s), and
+`SAIA_FS_HEALTH_TIMEOUT_MS` is the same number for the same reason; an absent service is still fast,
+because the registry answers 404/503 immediately when no instance is registered, so the deadline only
+bounds a stall. The base is the deployment's `<backendPath>/mcp/saia-rag`
+(e.g. `<engine>/public/v1/mcp/saia-rag`) and nothing else configures it: the engine's generic
+`/v1/mcp/<service>` hop forwards the exchange to the registered service and passes the caller's
+identity header through (§4.31). The MCP endpoint is
 `<base>/mcp`. Do not reintroduce a service-address key: a stack that cannot reach the drive is
 missing the hop, and that belongs in the engine or gateway, not in `front.json`. The sidebar section
 does **not** fail closed the way the drive row does: `Sidebar/ArcanaList.tsx` stays visible for the

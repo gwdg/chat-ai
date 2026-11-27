@@ -33,10 +33,15 @@ export const saiaFsHealthUrl = () => `${saiaFsBaseUrl()}/health`;
 
 /**
  * How long the availability probe waits before it calls the service absent.
- * A running instance answers well inside this; a hanging one must not keep the
- * source list waiting.
+ *
+ * Same hop as the saia-rag probe and the same reason for the length: the
+ * registry can spend exact multiples of its 5 s connect timeout on an
+ * instance's tunnels before the request reaches a service whose handler answers
+ * in microseconds (measured 11.9-15.0 s for saia-rag on the local stack), so a
+ * shorter deadline reports a healthy service as unavailable. No instance
+ * registered is answered 404/503 immediately, so this only bounds a stall.
  */
-export const SAIA_FS_HEALTH_TIMEOUT_MS = 5000;
+export const SAIA_FS_HEALTH_TIMEOUT_MS = 20000;
 
 /**
  * Ask whether this deployment can serve saia-fs to the current user.

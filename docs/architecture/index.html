@@ -3049,8 +3049,8 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
         <tbody>
           <tr>
             <td>Endpoint and probe</td>
-            <td>Builds the base URL, MCP URL and health URL; the five-second, no-store liveness check
-                that never throws.</td>
+            <td>Builds the base URL, MCP URL and health URL; the no-store liveness check that never
+                throws</td>
             <td><span class="mono">front/src/apis/saiaFs.js</span></td>
           </tr>
           <tr>
@@ -3197,8 +3197,13 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
         <li>
           <b>Availability is a probe, not a catalogue entry.</b> <code>saia-rag</code> is not a chat
           model, so <code>/v1/models</code> cannot say whether a deployment offers it. The probe has a
-          five-second timeout and never throws: a 404, a 503, a timeout or a refused connection all
-          mean "no drive", which is the fail-closed answer the source list needs. The base is
+          20 s timeout and never throws: a 404, a 503, a timeout or a refused connection all
+          mean "no drive", which is the fail-closed answer the source list needs. The deadline is
+          longer than the handler needs because it also has to outlast the hop: the registry can
+          answer in exact multiples of its 5 s connect timeout (11.9, 15.0 and 15.0 s measured with a
+          healthy service), and a five-second deadline reported a working service as absent. An
+          absent service is still fast, since the registry answers 404/503 at once with no instance
+          registered. The base is
           <code>&lt;backend&gt;/mcp/saia-rag</code>, derived from <code>backendPath</code> and nothing
           else: the engine's generic <code>/v1/mcp/&lt;service&gt;</code> route forwards to the
           registered service and passes the caller's identity header through, so there is no service
@@ -3498,19 +3503,20 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           (<code>showAdvancedSidebarSections</code>), so a deployment or brand that switched the
           module off never shows a dead branch. The <code>saia-rag</code> health probe is not part
           of that decision: the same probe the workspace drive uses
-          (<code>GET &lt;base&gt;/health</code> with a five-second timeout, accepting only
+          (<code>GET &lt;base&gt;/health</code> with a 20 s timeout, accepting only
           <code>{"status":"alive"}</code>) leaves the section visible while it is
           <code>checking</code> or <code>unavailable</code> - the body says "Loading Arcanas" or
           "Not connected to the Arcana service", the New Arcana button is disabled, and no
           <code>list_collections</code> request is sent. Only <code>available</code> reads the list,
           so a deployment without the service still lets the user see that the feature exists.
           <code>useSaiaRagAccessWithReload</code> adds the way back: the Reload control beside that
-          line resets the shared status to <code>checking</code> and forces a new five-second probe.
+          line resets the shared status to <code>checking</code> and forces a new probe.
           Every mounted surface reads that one status (a module store, like the collection list), so
           a page and its own sidebar do not each fire a probe, and a confirmed answer is reused for
           a minute - the probe crosses the engine's hop into the SAIA registry, which sometimes
-          answers in seconds instead of milliseconds. A failure is never reused, and an answer that
-          arrives after a reload is ignored. The collection page
+          answers in seconds instead of milliseconds, which is why the deadline is 20 s and not 5.
+          A failure is never reused, and an answer that arrives after a reload is ignored. The
+          collection page
           (<code>/arcana/&lt;collection&gt;</code>) renders the same state as a card with Reload and
           Back to chat; it no longer leaves the chat column empty while the probe is unresolved.
         </li>
@@ -3524,7 +3530,8 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           attempts before an instance answers. The service's own connector logs the other side of it,
           the registry accepting a tunnel and closing it before any request, while the registry
           reinstalls its upstream connection. The front end cannot see which instance served a
-          request, so it only avoids asking more often than it must.
+          request, so it only avoids asking more often than it must and gives the hop 20 s before it
+          calls the service absent.
         </li>
         <li>
           <b>It sits above MCP Servers, not inside it.</b> The order is Workspaces, Arcanas, Agents,
