@@ -39,6 +39,7 @@ const getDefaultState = () => {
       count_announcement: 0,
       show_usage_in_sidebar: true,
       collapsed_topics: [],
+      topic_sort: "created",
     },
     // Conditionally preserve memories
     user_settings: {
