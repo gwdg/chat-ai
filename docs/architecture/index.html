@@ -3461,7 +3461,7 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
         <div class="flow-legend">
           <span><i class="swatch green"></i> holds collections and files</span>
           <span><i class="swatch grey"></i> caches and routes</span>
-          <span>A probe that does not answer keeps the section, with a "not connected" line and no rows.</span>
+          <span>A probe that does not answer keeps the section, with a "not connected" line, a Reload control and no rows.</span>
         </div>
       </div>
 
@@ -3500,8 +3500,13 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           <code>checking</code> or <code>unavailable</code> - the body says "Loading Arcanas" or
           "Not connected to the Arcana service", the New Arcana button is disabled, and no
           <code>list_collections</code> request is sent. Only <code>available</code> reads the list,
-          so a deployment without the service still lets the user see that the feature exists and a
-          later mount retries the probe.
+          so a deployment without the service still lets the user see that the feature exists.
+          <code>useSaiaRagAccessWithReload</code> adds the way back: the Reload control beside that
+          line resets the hook to <code>checking</code> and re-runs the five-second probe, and it
+          announces the request on a window event so the sidebar and an open collection page
+          re-probe together instead of one of them staying "not connected". The collection page
+          (<code>/arcana/&lt;collection&gt;</code>) renders the same state as a card with Reload and
+          Back to chat; it no longer leaves the chat column empty while the probe is unresolved.
         </li>
         <li>
           <b>It sits above MCP Servers, not inside it.</b> The order is Workspaces, Arcanas, Agents,
@@ -3816,7 +3821,9 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
             decide whether it is rendered at all. A probe that is not <code>available</code> keeps the
             header with a "not connected" line (or the loading line while <code>checking</code>),
             disables New Arcana and sends no <code>list_collections</code>; only <code>available</code>
-            fills the rows.</li>
+            fills the rows. That state is never a dead end: the line carries a Reload control, which
+            re-runs the probe for every mounted caller at once, so a service that starts later does
+            not need a browser reload.</li>
         <li><b>Arcanas is not an MCP feature.</b> Its module flag and rendering are independent
             of the MCP Servers block.</li>
         <li><b>One handshake per page.</b> The provider and the list stay module state; a component

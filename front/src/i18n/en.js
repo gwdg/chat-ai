@@ -2469,6 +2469,7 @@ export default {
     loading: "Loading Arcanas…",
     unavailable: "Not connected to the Arcana service.",
     retry: "Retry",
+    reload: "Reload",
     options: "Arcana options",
     open_files: "Files and search",
     add_files: "Add files",
@@ -2583,6 +2584,8 @@ export default {
     page_missing_title: "This Arcana is not available",
     page_missing_body:
       "It may have been deleted, or the list of your Arcanas could not be loaded.",
+    page_unavailable_body:
+      "The service did not answer. It may still be starting, or this deployment may not offer Arcanas yet — reload to ask again.",
     page_back_to_chat: "Back to chat",
     page_editor: "Files and settings",
     page_editor_show: "Show files and settings",

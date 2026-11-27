@@ -18,10 +18,14 @@ const mocks = vi.hoisted(() => ({
   loading: false,
   loaded: true,
   error: null,
+  access: "available",
+  navigate: vi.fn(),
+  reload: vi.fn(),
+  arcanasEnabled: [],
 }));
 
 vi.mock("react-router", () => ({
-  useNavigate: () => vi.fn(),
+  useNavigate: () => mocks.navigate,
   // The route still resolves a link from before the form changed.
   useParams: () => ({ collection: "tester__papers" }),
   useSearchParams: () => [mocks.searchParams],
@@ -38,19 +42,27 @@ vi.mock("../../hooks/useUpdateUserData", () => ({
   useUpdateUserData: () => ({}),
 }));
 vi.mock("../../hooks/useSaiaRagAccess", () => ({
+  SAIA_RAG_CHECKING: "checking",
   SAIA_RAG_AVAILABLE: "available",
-  useSaiaRagAccess: () => "available",
+  SAIA_RAG_UNAVAILABLE: "unavailable",
+  useSaiaRagAccessWithReload: () => ({
+    access: mocks.access,
+    reload: mocks.reload,
+  }),
 }));
 vi.mock("../../utils/conversationUtils", () => ({
   getDefaultConversation: () => ({ id: "draft", settings: {}, messages: [] }),
 }));
 vi.mock("../../workspace/arcanas", () => ({
-  useArcanas: () => ({
-    collections: mocks.collections,
-    loading: mocks.loading,
-    loaded: mocks.loaded,
-    error: mocks.error,
-  }),
+  useArcanas: (enabled = true) => {
+    mocks.arcanasEnabled.push(enabled);
+    return {
+      collections: mocks.collections,
+      loading: mocks.loading,
+      loaded: mocks.loaded,
+      error: mocks.error,
+    };
+  },
 }));
 vi.mock("../../components/Sidebar/SidebarWrapper", () => ({
   default: () => <div data-testid="sidebar" />,
@@ -111,9 +123,40 @@ beforeEach(() => {
   mocks.loading = false;
   mocks.loaded = true;
   mocks.error = null;
+  mocks.access = "available";
+  mocks.navigate.mockReset();
+  mocks.reload.mockReset();
+  mocks.arcanasEnabled = [];
 });
 
 describe("ArcanaPage", () => {
+  it("waits for the service probe instead of rendering an empty column", () => {
+    mocks.access = "checking";
+    render(<ArcanaPage />);
+
+    expect(screen.getByText("Loading Arcanas…")).toBeInTheDocument();
+    expect(screen.queryByTestId("arcana-chat")).not.toBeInTheDocument();
+    expect(mocks.arcanasEnabled).not.toContain(true);
+  });
+
+  it("says the service is not connected and offers a reload", () => {
+    mocks.access = "unavailable";
+    render(<ArcanaPage />);
+
+    expect(
+      screen.getByText("Not connected to the Arcana service."),
+    ).toBeInTheDocument();
+    // The collection list is not read from a service that did not answer.
+    expect(mocks.arcanasEnabled).not.toContain(true);
+    expect(screen.queryByTestId("arcana-chat")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Reload" }));
+    expect(mocks.reload).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Back to chat" }));
+    expect(mocks.navigate).toHaveBeenCalledWith("/chat");
+  });
+
   it("puts the chat in the middle and the editor beside it", () => {
     window.localStorage.setItem("chatai.arcana.editor-open", "true");
     render(<ArcanaPage />);

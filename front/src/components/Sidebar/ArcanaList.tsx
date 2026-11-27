@@ -18,9 +18,10 @@ import { SECTION_RHYTHM } from "./sectionSpacing";
 import { useModal } from "../../modals/ModalContext";
 import { useToast } from "../../hooks/useToast";
 import {
-  useSaiaRagAccess,
+  useSaiaRagAccessWithReload,
   SAIA_RAG_AVAILABLE,
   SAIA_RAG_CHECKING,
+  SAIA_RAG_UNAVAILABLE,
 } from "../../hooks/useSaiaRagAccess";
 import {
   selectCollapsedTopics,
@@ -38,10 +39,10 @@ import type { RagCollection } from "../../workspace/providers/saiaRag";
  * `showAdvancedSidebarSections`: the Arcanas module plus advanced mode. The
  * service's health probe is not part of that decision — a deployment whose
  * saia-rag is down (or not reachable from this browser yet) still shows the
- * section, with a muted "not connected" line, so the feature stays
- * discoverable and the next mount retries the probe. Reading the list only
- * starts once the probe says `available`, so an absent service costs no failed
- * request.
+ * section, with a muted "not connected" line and a Reload control, so the
+ * feature stays discoverable without a browser reload once the service is up.
+ * Reading the list only starts once the probe says `available`, so an absent
+ * service costs no failed request.
  */
 export default function ArcanaList() {
   const { t } = useTranslation();
@@ -50,7 +51,7 @@ export default function ArcanaList() {
   const location = useLocation();
   const { openModal } = useModal();
   const { notifySuccess, notifyError } = useToast();
-  const access = useSaiaRagAccess();
+  const { access, reload } = useSaiaRagAccessWithReload();
   const available = access === SAIA_RAG_AVAILABLE;
   const collapsedTopicIds = useSelector(selectCollapsedTopics) ?? [];
   const collapsed = collapsedTopicIds.includes("__arcanas__");
@@ -136,16 +137,28 @@ export default function ArcanaList() {
       </div>
 
       {collapsed ? null : !available ? (
-        <p
+        <div
           data-guide="arcanas-unavailable"
-          className="px-2 py-1 text-xs text-base-content/50"
+          className="flex items-start gap-1.5 px-2 py-1 text-xs text-base-content/50"
         >
-          {t(
-            access === SAIA_RAG_CHECKING
-              ? "arcanas.loading"
-              : "arcanas.unavailable",
+          <span className="min-w-0 flex-1">
+            {t(
+              access === SAIA_RAG_CHECKING
+                ? "arcanas.loading"
+                : "arcanas.unavailable",
+            )}
+          </span>
+          {access === SAIA_RAG_UNAVAILABLE && (
+            <button
+              type="button"
+              onClick={reload}
+              data-guide="arcanas-reload"
+              className="shrink-0 rounded px-1 font-semibold underline transition hover:text-base-content"
+            >
+              {t("arcanas.reload")}
+            </button>
           )}
-        </p>
+        </div>
       ) : error ? (
         <div className="flex items-start gap-1.5 rounded-lg bg-error/10 px-2 py-1.5 text-[11px] text-error">
           <TriangleAlert size={13} className="mt-0.5 shrink-0" />

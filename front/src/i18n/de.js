@@ -2492,6 +2492,7 @@ export default {
     loading: "Arcanas werden geladen…",
     unavailable: "Keine Verbindung zum Arcana-Dienst.",
     retry: "Erneut versuchen",
+    reload: "Neu laden",
     options: "Arcana-Optionen",
     open_files: "Dateien und Suche",
     add_files: "Dateien hinzufügen",
@@ -2607,6 +2608,8 @@ export default {
     page_missing_title: "Diese Arcana ist nicht verfügbar",
     page_missing_body:
       "Vielleicht wurde sie gelöscht, oder die Liste deiner Arcanas konnte nicht geladen werden.",
+    page_unavailable_body:
+      "Der Dienst hat nicht geantwortet. Vielleicht startet er noch, oder diese Installation bietet noch keine Arcanas an — lade neu, um es erneut zu versuchen.",
     page_back_to_chat: "Zurück zum Chat",
     page_editor: "Dateien und Einstellungen",
     page_editor_show: "Dateien und Einstellungen anzeigen",

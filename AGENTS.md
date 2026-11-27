@@ -651,7 +651,9 @@ panel stays to model/temperature; with it off the sidebar is chats, topics and w
 Arcanas section (`Sidebar/ArcanaList.tsx`) is the third advanced section and is additionally gated by
 `isArcanasEnabled()` through `showAdvancedSidebarSections`. Its own saia-rag health probe does **not**
 remove it: a deployment whose service is down (or is not reachable from this browser) still shows the
-section header, with a muted `arcanas.unavailable` line and a disabled New Arcana button, and only
+section header, with a muted `arcanas.unavailable` line and a disabled New Arcana button, plus a
+Reload control that re-runs the probe (`useSaiaRagAccessWithReload`: it returns to `checking` while
+the new attempt runs, and announces the request so every mounted surface re-probes), and it only
 starts reading the list once the probe answers `available` (`useArcanas(enabled)`). Only the module
 gate hides it.
 
@@ -2834,7 +2836,11 @@ registered service and passes the caller's identity header through (§4.31). The
 missing the hop, and that belongs in the engine or gateway, not in `front.json`. The sidebar section
 does **not** fail closed the way the drive row does: `Sidebar/ArcanaList.tsx` stays visible for the
 module in advanced mode, shows `arcanas.unavailable` instead of rows while the probe is not
-`available`, and `useArcanas(enabled)` is what holds the first `list_collections` until it is (§4.15).
+`available`, offers a Reload control next to that line (`useSaiaRagAccessWithReload`, whose reload
+returns the hook to `checking`, re-runs the probe and tells every mounted surface to re-probe too),
+and `useArcanas(enabled)` is what holds the first `list_collections` until it is (§4.15).
+`/arcana/<collection>` shows the same
+state as a card with Reload and Back to chat, rather than an empty chat column.
 
 **The path shape is collections, then flat files.** `/` lists collections, `/<display>` lists that
 collection's files; a collection has no folders. A caller's own collection uses its name, a shared one

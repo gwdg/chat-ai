@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   pathname: "/chat",
   dispatch: vi.fn(),
   retry: vi.fn(),
+  reload: vi.fn(),
   deleteCollection: vi.fn(),
   access: "available",
   arcanasEnabled: true,
@@ -65,7 +66,11 @@ vi.mock("../../../hooks/useToast", () => ({
 vi.mock("../../../hooks/useSaiaRagAccess", () => ({
   SAIA_RAG_AVAILABLE: "available",
   SAIA_RAG_CHECKING: "checking",
-  useSaiaRagAccess: () => mocks.access,
+  SAIA_RAG_UNAVAILABLE: "unavailable",
+  useSaiaRagAccessWithReload: () => ({
+    access: mocks.access,
+    reload: mocks.reload,
+  }),
 }));
 vi.mock("../../../workspace/arcanas", () => ({
   arcanasProvider: () => ({ deleteCollection: mocks.deleteCollection }),
@@ -158,6 +163,19 @@ describe("ArcanaList", () => {
     render(<ArcanaList />);
 
     expect(screen.getByText("Loading Arcanas…")).toBeInTheDocument();
+    // There is nothing to retry before an answer has come back.
+    expect(
+      screen.queryByRole("button", { name: "Reload" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers a reload when the service does not answer", () => {
+    mocks.access = "unavailable";
+    render(<ArcanaList />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Reload" }));
+
+    expect(mocks.reload).toHaveBeenCalledTimes(1);
   });
 
   it("lists the collections with their role", () => {

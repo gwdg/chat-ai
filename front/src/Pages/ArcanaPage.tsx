@@ -12,7 +12,12 @@ import ArcanaChatPanel from "../components/Arcana/ArcanaChatPanel";
 import ArcanaEditorPanel from "../components/Arcana/ArcanaEditorPanel";
 import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
 import { useUpdateUserData } from "../hooks/useUpdateUserData";
-import { useSaiaRagAccess, SAIA_RAG_AVAILABLE } from "../hooks/useSaiaRagAccess";
+import {
+  useSaiaRagAccessWithReload,
+  SAIA_RAG_AVAILABLE,
+  SAIA_RAG_CHECKING,
+  SAIA_RAG_UNAVAILABLE,
+} from "../hooks/useSaiaRagAccess";
 import { selectUserSettings } from "../Redux/reducers/userSettingsReducer";
 import { getDefaultConversation } from "../utils/conversationUtils";
 import { parseArcanaShareRef } from "../utils/arcanaShareLink";
@@ -62,8 +67,10 @@ export default function ArcanaPage() {
 
   const modelsData = useUpdateModelsData();
   const userData = useUpdateUserData();
-  const access = useSaiaRagAccess();
-  const { collections, loading, loaded, error } = useArcanas();
+  const { access, reload } = useSaiaRagAccessWithReload();
+  const { collections, loading, loaded, error } = useArcanas(
+    access === SAIA_RAG_AVAILABLE,
+  );
 
   const collectionKey = useMemo(() => {
     let decoded = encoded;
@@ -180,10 +187,39 @@ export default function ArcanaPage() {
 
         <main className="relative flex min-h-0 min-w-0 flex-col overflow-hidden">
 
-          {notReady ? (
+          {access === SAIA_RAG_CHECKING || notReady ? (
             <div className="flex flex-1 items-center justify-center gap-2 text-sm text-base-content/60">
               <Loader2 size={16} className="animate-spin" />
               {t("arcanas.loading")}
+            </div>
+          ) : access === SAIA_RAG_UNAVAILABLE ? (
+            <div
+              data-guide="arcana-page-unavailable"
+              className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center"
+            >
+              <p className="text-sm font-medium text-base-content">
+                {t("arcanas.unavailable")}
+              </p>
+              <p className="max-w-md text-xs text-base-content/60">
+                {t("arcanas.page_unavailable_body")}
+              </p>
+              <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
+                <button
+                  type="button"
+                  className="btn btn-sm btn-primary"
+                  onClick={reload}
+                  data-guide="arcana-page-reload"
+                >
+                  {t("arcanas.reload")}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-ghost"
+                  onClick={() => navigate("/chat")}
+                >
+                  {t("arcanas.page_back_to_chat")}
+                </button>
+              </div>
             </div>
           ) : missing ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
