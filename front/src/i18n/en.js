@@ -767,7 +767,7 @@ export default {
       step3:
         "Owners add a person by username or e-mail address and choose Can edit or Read only. Only the owner can add or remove people.",
       step4:
-        "The chat link at the top of the Share tab opens a new chat that already searches and reads this Arcana. Share the link after you added the people who may use it. GWDG Tools → Arcana lists the collections that chat is wired to, so you can check or remove the connection there.",
+        "Turn on Publicly readable so every signed-in SAIA user can read and search this Arcana. Only then does the chat link appear: it opens a new chat whose Arcana Tools already search and read this Arcana. GWDG Tools → Arcana Tools lists the collections that chat is wired to, so you can check or remove the connection there.",
     },
     diagram_renderers: {
       title: "Render diagrams from code blocks",
@@ -2558,9 +2558,21 @@ export default {
     search_hint: "Type a query to search inside this Arcana.",
     result: "Result",
     tab_share: "Share",
+    share_public_title: "Publicly readable",
+    share_public_hint:
+      "Every signed-in SAIA user can read and search this Arcana. The chat link below needs this, because somebody outside the list has no other way in.",
+    share_public_unavailable:
+      "This Arcana service cannot make a collection public, so only the people listed below can open it.",
+    share_public_badge: "Publicly readable",
+    share_public_enabled: "“{{name}}” is now publicly readable.",
+    share_public_disabled: "“{{name}}” is no longer publicly readable.",
     share_link_title: "Chat link",
     share_link_hint:
-      "Anyone who can open this Arcana can use this link to start a chat that searches and reads it. Add people to the list below first.",
+      "Anyone signed in can use this link to start a chat whose Arcana Tools search and read this Arcana.",
+    share_link_needs_public:
+      "Turn on “Publicly readable” to get a link that works for people who are not in the list below.",
+    share_link_needs_members:
+      "This Arcana service cannot make a collection public, so the link only works for the members listed below.",
     share_link_copy: "Copy link",
     share_link_copied: "Copied",
     share_link_copy_failed: "Could not copy the link.",

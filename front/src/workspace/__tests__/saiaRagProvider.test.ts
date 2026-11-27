@@ -24,6 +24,8 @@ const rag = vi.hoisted(() => ({
   // `${collection}\0${filename}` -> bytes staged so far by upload_file_chunk
   staged: new Map<string, Uint8Array>(),
   members: new Map<string, any[]>(),
+  // collection storage name -> public read flag
+  publicRead: new Map<string, boolean>(),
   calls: [] as { name: string; args: Record<string, any> }[],
   connectError: null as Error | null,
   connectCalls: 0,
@@ -261,6 +263,7 @@ vi.mock("@modelcontextprotocol/sdk/client/index.js", () => ({
             can_write: true,
             can_manage: true,
             shared: false,
+            public: false,
           });
           rag.files.set(`alice__${name}`, new Map());
           return text(`Created '${name}'.`);
@@ -294,6 +297,14 @@ vi.mock("@modelcontextprotocol/sdk/client/index.js", () => ({
           rag.members.set(collection, rows);
           return text("ok");
         }
+        case "set_public_read": {
+          rag.publicRead.set(collection, request.arguments.public === true);
+          const row = rag.collections.find(
+            (entry) => entry.collection === collection,
+          );
+          if (row) row.public = request.arguments.public === true;
+          return text("ok");
+        }
         default:
           return failure(`Unknown tool ${request.name}`);
       }
@@ -322,6 +333,7 @@ const ALL_TOOLS = [
   "list_members",
   "add_member",
   "remove_member",
+  "set_public_read",
   "list_tags",
   "get_file_tags",
   "tag_file",
@@ -365,6 +377,7 @@ describe("SaiaRagProvider", () => {
     rag.members = new Map([
       ["alice__recipes", [{ user: "alice", role: "owner", kind: "user" }]],
     ]);
+    rag.publicRead = new Map();
     rag.tags = new Map([
       ["alice__recipes", new Map([["notes.md", ["recipe", "quick"]]])],
     ]);
@@ -946,6 +959,45 @@ describe("SaiaRagProvider", () => {
     await expect(
       ragProvider.addMember("bob__papers", "carol", "editor", "user"),
     ).rejects.toMatchObject({ code: "PERMISSION_DENIED" });
+  });
+
+  it("reports the service's public read flag on a collection", async () => {
+    rag.collections = [{ ...ownCollection, public: true }];
+    const ragProvider = provider();
+
+    const [row] = await ragProvider.listCollections();
+    expect(row.public).toBe(true);
+  });
+
+  it("turns public read on and off through the owner-only tool", async () => {
+    const ragProvider = provider();
+    await ragProvider.listCollections();
+
+    await ragProvider.setPublicRead("recipes", true);
+    expect(rag.calls).toContainEqual({
+      name: "set_public_read",
+      args: { collection: "alice/recipes", public: true },
+    });
+    expect(rag.publicRead.get("alice__recipes")).toBe(true);
+
+    await ragProvider.setPublicRead("recipes", false);
+    expect(rag.publicRead.get("alice__recipes")).toBe(false);
+
+    await expect(
+      ragProvider.setPublicRead("bob__papers", true),
+    ).rejects.toMatchObject({ code: "PERMISSION_DENIED" });
+  });
+
+  it("only offers public read when the service advertises the tool", async () => {
+    const ragProvider = provider();
+    await ragProvider.listCollections();
+    expect(ragProvider.supportsPublicRead()).toBe(true);
+
+    rag.tools = ALL_TOOLS.filter((tool) => tool !== "set_public_read");
+    resetSaiaRagCollectionCache();
+    const older = provider();
+    await older.listCollections();
+    expect(older.supportsPublicRead()).toBe(false);
   });
 
   it("keeps collection-level operations out of the tree but allows per-file removal", async () => {

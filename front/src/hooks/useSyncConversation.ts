@@ -17,9 +17,11 @@ import { CONVERSATION_MOVED_EVENT } from "../utils/conversationEvents";
 import { useImportConversation } from "./useImportConversation";
 import { decodeBase64UrlUtf8 } from "../utils/base64url";
 import {
+  ARCANA_LEGACY_LINK_PARAM,
   ARCANA_LINK_PARAM,
   ARCANA_SHARE_PARAM,
   arcanaRefId,
+  arcanaSharesFromSettings,
   parseArcanaShareRef,
 } from "../utils/arcanaShareLink";
 import { isBrandLocked } from "../config/brandPolicy";
@@ -418,21 +420,38 @@ export function useSyncConversation({
       }
       if (searchParams?.size > 0) {
         // Set settings from query params in URL
-        const arcanaParam = searchParams.get(ARCANA_LINK_PARAM);
+        // The manager's chat link appends its collection to Arcana Tools
+        // (`?arcana-tools=<owner>/<name>`), the read-only tools this app runs
+        // itself. `?arcana=` (the older link, which also fed the deprecated
+        // single Arcana id) and `?arcana_share=` are still read, so an older
+        // link keeps wiring the chat.
+        const arcanaTools = parseArcanaShareRef(
+          searchParams.get(ARCANA_LINK_PARAM),
+        );
+        const arcanaParam = searchParams.get(ARCANA_LEGACY_LINK_PARAM);
         const modelParam = searchParams.get("model");
         const enableToolsParam = searchParams.get("enable_tools");
-        // Two spellings of an Arcana link name the same collection: the access
-        // link the manager hands out (`?arcana=<owner>/<name>`) and the older
-        // `?arcana_share=` one. A link satisfies both the Arcana tool and the
-        // chat's read-only tools, so the chat carries both bindings.
         const arcanaShare =
           parseArcanaShareRef(arcanaParam) ??
           parseArcanaShareRef(searchParams.get(ARCANA_SHARE_PARAM));
 
         const extraSettings: any = {};
-        if (arcanaShare) {
-          // The Arcana tool's field takes the readable Arcana ID, which names
-          // the same collection as the storage name the tools take.
+        if (arcanaTools) {
+          // The list is what the user edits under GWDG Tools → Arcana Tools.
+          // The link adds to whatever the chat already carries instead of
+          // replacing it, and writes the stored shape (`collection` + `name`).
+          const list = arcanaSharesFromSettings(conversation.settings);
+          if (!list.some((ref) => ref.collection === arcanaTools.collection)) {
+            list.push(arcanaTools);
+          }
+          extraSettings.arcana_shares = list.map((ref) => ({
+            collection: ref.collection,
+            name: ref.name,
+            ...(ref.description ? { description: ref.description } : {}),
+          }));
+        } else if (arcanaShare) {
+          // The legacy Arcana tool's field takes the readable Arcana ID, which
+          // names the same collection as the storage name the tools take.
           extraSettings.arcana = { id: arcanaRefId(arcanaShare) };
         } else if (arcanaParam) {
           // Any other value is still the Arcana ID field, as it always was.
@@ -441,26 +460,32 @@ export function useSyncConversation({
         if (modelParam) { extraSettings.model = { id: modelParam }; };
         const enableTools = coerceBoolean(enableToolsParam);
         if (enableTools !== undefined) extraSettings.enable_tools = enableTools;
-        if (arcanaShare) {
-          // The link wires this chat to one collection. It is not a grant: the
+        if (arcanaTools) {
+          // The agent tools need tools enabled. The link is not a grant: the
           // owner still has to share the collection with the recipient.
+          if (!isBrandLocked("tools")) extraSettings.enable_tools = true;
+        }
+        if (arcanaShare) {
+          // The older link wires this chat to one collection through the
+          // single binding, which the tools still merge into their list.
           if (!isBrandLocked("tools")) extraSettings.enable_tools = true;
           extraSettings.arcana_share = arcanaShare;
         }
+        const collectionRef = arcanaTools ?? arcanaShare;
         const renameToCollection =
-          arcanaShare &&
+          collectionRef &&
           !conversation.hasFirstPrompt &&
           (!conversation.title || conversation.title === "Untitled Chat");
         const updatedConversation = {
           ...conversation,
-          ...(renameToCollection ? { title: arcanaShare.name } : {}),
+          ...(renameToCollection ? { title: collectionRef.name } : {}),
           settings: {...conversation.settings, ...extraSettings}
         }
         setSearchParams();
         setLocalState( updatedConversation );
         // A share link is opened once; persist it so a reload keeps the chat
         // wired to the collection even before its first message.
-        if (arcanaShare) {
+        if (collectionRef) {
           try {
             const newLastModified = await updateConversation(conversation.id, {
               title: updatedConversation.title,

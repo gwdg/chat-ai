@@ -920,7 +920,7 @@ export const featureGuides = {
   arcana_share: {
     titleKey: "feature_guide.arcana_share.title",
     prompt:
-      "An Arcana can be shared with other people, so a document collection stays one copy for a team. Open an Arcana in the sidebar and switch to its Share tab: it lists everyone who can open it with their role, and the owner can add a person by username or e-mail address as an editor (can add and change files) or a reader (read and search only). Only the owner can add or remove people. Collections that were shared with you show who shared them and your role under their name in the sidebar. The same tab shows a chat link that opens a new chat already wired to the collection, with read-only tools to search and read it; the link is only a convenience, because the people using it still need access through the member list.",
+      "An Arcana can be shared with other people, so a document collection stays one copy for a team. Open an Arcana in the sidebar and switch to its Share tab: it lists everyone who can open it with their role, and the owner can add a person by username or e-mail address as an editor (can add and change files) or a reader (read and search only). Only the owner can add or remove people. Collections that were shared with you show who shared them and your role under their name in the sidebar. The owner can also make the collection publicly readable, which lets every signed-in SAIA user read and search it; only then does the Share tab offer a chat link that opens a new chat with Arcana Tools already bound to the collection. Without that switch only the member list grants access.",
     keywords: [
       "share",
       "shared",
@@ -950,17 +950,14 @@ export const featureGuides = {
         prepare: openArcanaShare,
         textKey: "feature_guide.arcana_share.step3",
       },
-      // The chat link card is rendered only while the browser agent is on, and
-      // a tour does not start at all when one of its targets is missing.
-      ...(isAgentEnabled()
-        ? [
-            {
-              target: '[data-guide="arcana-share-link"]',
-              prepare: openArcanaShare,
-              textKey: "feature_guide.arcana_share.step4",
-            },
-          ]
-        : []),
+      // Step 4 targets the public switch, not the chat link: the link card is
+      // only rendered once the owner made the collection publicly readable, so
+      // a link target would be missing on every fresh collection.
+      {
+        target: '[data-guide="arcana-share-public"]',
+        prepare: openArcanaShare,
+        textKey: "feature_guide.arcana_share.step4",
+      },
     ],
   },
   diagram_renderers: {

@@ -25,6 +25,7 @@ import {
   arcanaFailureReason,
   classifyArcanaFiles,
   isArcanaIndexed,
+  refreshArcanas,
   updateArcanaStatus,
 } from "../../workspace/arcanas";
 import { isTextFileName } from "../../workspace/providers/saiaRag";
@@ -137,6 +138,11 @@ export default function ArcanaManager({
     null,
   );
   const [shareCopied, setShareCopied] = useState(false);
+  // The owner's "publicly readable" switch. The service stores and enforces the
+  // marker; a deployment without `set_public_read` reports `false` here and the
+  // UI keeps only the member list, which is also what the service then honours.
+  const [publicRead, setPublicRead] = useState(collection.public === true);
+  const [publicSupported, setPublicSupported] = useState<boolean | null>(null);
 
   // One file's Markdown, when it is open in the panel's editor.
   const [markdownFile, setMarkdownFile] = useState<RagFile | null>(null);
@@ -215,6 +221,9 @@ export default function ArcanaManager({
       if (!aliveRef.current) return;
       setMembers(rows);
       setMembersLoaded(true);
+      // The tool list comes with the handshake, which the member call just
+      // completed. A service without the tool can only honour the member list.
+      setPublicSupported(provider.supportsPublicRead());
     } catch (reason) {
       if (!aliveRef.current) return;
       // Keep `membersLoaded` false but show the reason: a failure must not
@@ -267,7 +276,14 @@ export default function ArcanaManager({
     setMembersError("");
     setConfirmRemoveMember(null);
     setNewPrincipal("");
+    setPublicSupported(null);
   }, [display]);
+
+  // The collection row can be replaced by a refresh of the page's list; the
+  // switch follows the row the service reported.
+  useEffect(() => {
+    setPublicRead(collection.public === true);
+  }, [collection.collection, collection.public]);
 
   useEffect(() => {
     if (
@@ -298,9 +314,10 @@ export default function ArcanaManager({
 
   const pending = files.filter((file) => file.status === "stored").length;
 
-  // The link opens a new chat wired to this collection; recipients still need
-  // the role the member list above grants them. Only the browser agent runs the
-  // app-side tools, so the link is offered only while that workflow is on.
+  // The link opens a new chat wired to this collection. It only works for a
+  // caller the service lets read the collection, which outside the member list
+  // means public read; so the link is offered once that is on. Only the browser
+  // agent runs the app-side tools, so it also needs that workflow.
   const chatLinkAvailable = isAgentEnabled();
   const shareLink = useMemo(
     () => buildArcanaShareLink(collection.collection),
@@ -706,6 +723,42 @@ export default function ArcanaManager({
 
   const roleLabel = (role: string) =>
     t(`arcanas.role_${role}`, { defaultValue: role });
+
+  /**
+   * Turn the collection-wide read grant on or off.
+   *
+   * The switch is only drawn when the service advertises `set_public_read`;
+   * without it a collection keeps exactly the member list it has.
+   */
+  const togglePublicRead = async () => {
+    if (publicSupported === false || memberBusy) return;
+    const next = !publicRead;
+    setMemberBusy("public");
+    setMembersError("");
+    try {
+      await provider.setPublicRead(display, next);
+      if (!aliveRef.current) return;
+      setPublicRead(next);
+      // The list carries the flag, so the page header, the sidebar and this
+      // row must not keep the old value.
+      void refreshArcanas();
+      notifySuccess(
+        t(
+          next
+            ? "arcanas.share_public_enabled"
+            : "arcanas.share_public_disabled",
+          { name: collection.name },
+        ),
+      );
+    } catch (reason) {
+      if (!aliveRef.current) return;
+      setMembersError(
+        reason instanceof Error ? reason.message : String(reason),
+      );
+    } finally {
+      if (aliveRef.current) setMemberBusy("");
+    }
+  };
 
   /**
    * Run the query with an explicit tag filter.
@@ -1283,7 +1336,45 @@ export default function ArcanaManager({
           </div>
         ) : (
           <div className="flex min-h-0 flex-col gap-3" data-guide="arcana-share">
-            {chatLinkAvailable && (
+            {collection.can_manage ? (
+              <div
+                className="rounded-xl border border-base-300 bg-base-200/40 p-3"
+                data-guide="arcana-share-public"
+              >
+                <label className="flex items-center justify-between gap-3">
+                  <span className="text-xs font-medium">
+                    {t("arcanas.share_public_title")}
+                  </span>
+                  <input
+                    type="checkbox"
+                    role="switch"
+                    className="toggle toggle-sm"
+                    data-guide="arcana-share-public-toggle"
+                    checked={publicRead}
+                    disabled={
+                      publicSupported === false || memberBusy === "public"
+                    }
+                    onChange={() => void togglePublicRead()}
+                    aria-label={t("arcanas.share_public_title")}
+                  />
+                </label>
+                <p className="mt-0.5 text-[11px] text-base-content/60">
+                  {publicSupported === false
+                    ? t("arcanas.share_public_unavailable")
+                    : t("arcanas.share_public_hint")}
+                </p>
+              </div>
+            ) : publicRead ? (
+              <p
+                className="flex items-center gap-1.5 text-xs text-base-content/60"
+                data-guide="arcana-share-public-badge"
+              >
+                <Share size={13} />
+                {t("arcanas.share_public_badge")}
+              </p>
+            ) : null}
+
+            {chatLinkAvailable && publicRead && (
               <div
                 className="rounded-xl border border-base-300 bg-base-200/40 p-3"
                 data-guide="arcana-share-link"
@@ -1326,6 +1417,17 @@ export default function ArcanaManager({
                   </a>
                 </div>
               </div>
+            )}
+
+            {chatLinkAvailable && !publicRead && collection.can_manage && (
+              <p
+                className="text-[11px] text-base-content/60"
+                data-guide="arcana-share-link-hint"
+              >
+                {publicSupported === false
+                  ? t("arcanas.share_link_needs_members")
+                  : t("arcanas.share_link_needs_public")}
+              </p>
             )}
 
             <p className="text-xs text-base-content/60">

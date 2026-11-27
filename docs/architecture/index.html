@@ -3226,7 +3226,10 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           name is always prefixed with the caller, so it can never reach somebody else's collection; a
           name with a separator names its owner explicitly. The caller's own namespace is owned even
           when the ACL carries no row for them, but anything outside it needs an explicit permission
-          row - an empty ACL is not an invitation to write into another user's collection.
+          row - an empty ACL is not an invitation to write into another user's collection. The one
+          exception is an owner's public-read marker, which answers <code>reader</code> for any
+          signed-in caller; the collection then appears in their list like a shared one, and only the
+          owner can switch it off.
         </li>
         <li>
           <b>Identity is the caller plus their groups.</b> The service reads
@@ -3296,9 +3299,9 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           </tr>
           <tr>
             <td>File provider</td>
-            <td>MCP client, collection addressing, role mapping, base64 reads, chunked writes
-                (1 MiB, shrinking to a smaller size the service announces), append, collection and
-                member calls, error reduction.</td>
+            <td>MCP client, collection addressing, role and public-read mapping, base64 reads,
+                chunked writes (1 MiB, shrinking to a smaller size the service announces), append,
+                collection, member and public-read calls, error reduction.</td>
             <td><span class="mono">front/src/workspace/providers/saiaRag.ts</span></td>
           </tr>
           <tr>
@@ -3382,7 +3385,7 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
       <ul class="paths">
         <li><span class="mono">front/src/apis/saiaRag.js</span> - base URL, probe, timeout</li>
         <li><span class="mono">front/src/workspace/providers/saiaRag.ts</span> - collections, roles,
-            base64 reads, chunked writes, members</li>
+            public read, base64 reads, chunked writes, members</li>
         <li><span class="mono">front/src/hooks/useSaiaRagAccess.ts</span> - availability per view</li>
         <li><span class="mono">front/src/components/Workspace/WorkspaceSourceBrowser.tsx</span> - the
             browsing and inline management UI</li>
@@ -3654,24 +3657,42 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
         <li>
           <b>Sharing and the chat link live in the same tab.</b> The Share tab lists the people and
           groups that hold a role (<code>list_members</code>, owner-only <code>add_member</code> /
-          <code>remove_member</code>) and, above that list, an access link
-          <code>/chat?arcana=&lt;owner&gt;/&lt;name&gt;&amp;enable_tools=true</code>. That is the shape
-          the Share tab has always handed out and the user docs show, so it carries the readable
-          Arcana ID, which is also the reference the chat stores and the tools take; the browser's
-          path segment keeps the slash-free storage spelling <code>&lt;owner&gt;__&lt;name&gt;</code>
-          because it has to be one path component. Opening the link creates a normal chat whose
-          settings carry <code>arcana_share</code> and the Arcana tool's own
-          <code>arcana.id</code>; the older <code>?arcana_share=</code> spelling is still accepted as an
-          alias. The chat page strips the query parameter, enables tools (unless a brand fixes that
-          switch), names an untouched <code>Untitled Chat</code> after the collection and persists the
+          <code>remove_member</code>), the owner's <b>Publicly readable</b> switch
+          (<code>set_public_read</code>), and &mdash; once that switch is on &mdash; an access link
+          <code>/chat?arcana-tools=&lt;owner&gt;/&lt;name&gt;&amp;enable_tools=true</code>. The
+          parameter is <code>arcana-tools</code> because the link fills the chat's Arcana Tools
+          list, the app-side read-only tools; it does not write the deprecated single Arcana id the
+          server-side gateway uses. The value carries the readable Arcana ID, which is also the
+          reference the chat stores and the tools take; the browser's path segment keeps the
+          slash-free storage spelling <code>&lt;owner&gt;__&lt;name&gt;</code> because it has to be
+          one path component. Opening the link creates a normal chat and appends the collection to
+          <code>settings.arcana_shares</code>; the older <code>?arcana=</code> (which also fed the
+          single Arcana tool) and <code>?arcana_share=</code> spellings are still accepted and keep
+          writing <code>arcana_share</code> plus the Arcana tool's own <code>arcana.id</code>. The
+          chat page strips the query parameter, enables tools (unless a brand fixes that switch),
+          names an untouched <code>Untitled Chat</code> after the collection and persists the
           binding through <code>updateConversation</code> with the <code>lastModified</code> it read.
-          A chat owns a <b>list</b> of collections: <code>settings.arcana_shares</code> holds the ones
-          the user adds (each with its <code>owner/name</code> reference and a short user-written
-          description), and the single <code>settings.arcana_share</code> a link writes is merged into
-          the same list. Adding a collection in GWDG Tools &rarr; <b>Arcana Tools</b> writes the
-          binding and the description; it does not turn tools on, because the read tools do not need
-          that switch. Removing or editing one folds the link binding into the list, so only one
-          representation is left behind.
+          A chat owns a <b>list</b> of collections: <code>settings.arcana_shares</code> holds the
+          ones the user adds (each with its <code>owner/name</code> reference and a short user-written
+          description), and the single <code>settings.arcana_share</code> an older link writes is
+          merged into the same list. Adding a collection in GWDG Tools &rarr; <b>Arcana Tools</b>
+          writes the binding and the description; it does not turn tools on, because the read tools
+          do not need that switch. Removing or editing one folds the link binding into the list, so
+          only one representation is left behind.
+        </li>
+        <li>
+          <b>Public read is a marker in the collection database.</b> It cannot be a permission row,
+          because a row names a principal and would appear in the member list. <code>saia-rag</code>
+          keeps it in <code>collection_access (id = 1, public_read INTEGER)</code>, created on the
+          first write so a read-only open never writes, and <code>access.role_of()</code> answers
+          <code>reader</code> for a signed-in caller who is neither owner nor member. An explicit row
+          still outranks it and it never grants write. <code>list_collections</code> reports it as
+          <code>public</code>; the provider exposes <code>supportsPublicRead()</code> and
+          <code>setPublicRead()</code>, which invalidates the short collection list. A service
+          without the <code>set_public_read</code> tool leaves the switch disabled with that reason
+          and the link hidden, so only the member list applies &mdash; the same rule the service
+          then enforces. The chat link is deliberately gated on the switch: a recipient outside the
+          member list has no other way in.
         </li>
         <li>
           <b>Five read-only tools, scoped to the chat's list.</b> <code>agent/arcanaChatTools.ts</code>
@@ -3764,8 +3785,8 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
             <td>Manager</td>
             <td>Files tab: upload, pending banner, status badges, tag filter, inline tag editor and
                 remove confirmation. Search tab: mode, count, tag filter and results. Share tab: the
-                member list, its add/remove controls, and the chat link that opens a new chat wired to
-                the collection.</td>
+                public-read switch, the member list, its add/remove controls, and &mdash; once public
+                &mdash; the chat link that opens a new chat wired to the collection.</td>
             <td><span class="mono">front/src/components/Arcana/ArcanaManager.tsx</span></td>
           </tr>
           <tr>
@@ -3789,10 +3810,10 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           </tr>
           <tr>
             <td>Share link and list</td>
-            <td><code>?arcana=&lt;owner&gt;/&lt;name&gt;</code> parsing (and the
-                <code>?arcana_share=</code> alias), the absolute link, the stored bindings, and
-                <code>arcanaSharesFromSettings()</code> which merges the list with the link binding
-                and keeps each description.</td>
+            <td><code>?arcana-tools=&lt;owner&gt;/&lt;name&gt;</code> parsing (with the older
+                <code>?arcana=</code> and <code>?arcana_share=</code> aliases), the absolute link,
+                the stored bindings, and <code>arcanaSharesFromSettings()</code> which merges the
+                list with the older link binding and keeps each description.</td>
             <td><span class="mono">front/src/utils/arcanaShareLink.ts</span></td>
           </tr>
           <tr>
@@ -3822,7 +3843,7 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           <tr>
             <td>Provider</td>
             <td>Tool constants, collection addressing, tag and search parsers, chunked upload, index,
-                remove, in-place text rewrite and capabilities.</td>
+                remove, in-place text rewrite, public read and capabilities.</td>
             <td><span class="mono">front/src/workspace/providers/saiaRag.ts</span></td>
           </tr>
           <tr>
@@ -3966,8 +3987,9 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
             (imported on the first click) and the card itself, which shares
             <span class="mono">ApprovalCard</span> with the Meta chat</li>
         <li><span class="mono">front/src/utils/arcanaShareLink.ts</span> - the
-            <code>?arcana=&lt;owner&gt;/&lt;name&gt;</code> reference (and its
-            <code>?arcana_share=</code> alias), its link and its stored binding</li>
+            <code>?arcana-tools=&lt;owner&gt;/&lt;name&gt;</code> reference (with the older
+            <code>?arcana=</code> and <code>?arcana_share=</code> aliases), its link and its stored
+            binding</li>
         <li><span class="mono">front/src/agent/arcanaChatTools.ts</span> - the four read-only chat
             tools and their MCP client, wired in <span class="mono">agent/runAgent.ts</span></li>
         <li><span class="mono">front/src/utils/arcanaDocuments.ts</span>,

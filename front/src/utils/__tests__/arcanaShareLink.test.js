@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ARCANA_LEGACY_LINK_PARAM,
   ARCANA_LINK_PARAM,
   arcanaRefId,
   arcanaShareFromSettings,
@@ -82,28 +83,38 @@ describe("arcanaRefId", () => {
   });
 });
 
+describe("share-link parameter", () => {
+  it("writes Arcana Tools under its own parameter", () => {
+    expect(ARCANA_LINK_PARAM).toBe("arcana-tools");
+  });
+
+  it("still reads the parameter the link used before", () => {
+    expect(ARCANA_LEGACY_LINK_PARAM).toBe("arcana");
+  });
+});
+
 describe("buildArcanaShareLink", () => {
   it("builds the documented access link for the collection", () => {
     expect(buildArcanaShareLink("alice/papers", "https://chat.example")).toBe(
-      "https://chat.example/chat?arcana=alice/papers&enable_tools=true",
+      "https://chat.example/chat?arcana-tools=alice/papers&enable_tools=true",
     );
   });
 
   it("accepts the older storage spelling", () => {
     expect(buildArcanaShareLink("alice__papers", "https://chat.example")).toBe(
-      "https://chat.example/chat?arcana=alice/papers&enable_tools=true",
+      "https://chat.example/chat?arcana-tools=alice/papers&enable_tools=true",
     );
   });
 
   it("does not double the slash of the origin", () => {
     expect(buildArcanaShareLink("alice/papers", "https://chat.example/")).toBe(
-      "https://chat.example/chat?arcana=alice/papers&enable_tools=true",
+      "https://chat.example/chat?arcana-tools=alice/papers&enable_tools=true",
     );
   });
 
   it("encodes characters that a query value cannot carry", () => {
     expect(buildArcanaShareLink("alice/a b&c", "https://chat.example")).toBe(
-      "https://chat.example/chat?arcana=alice/a%20b%26c&enable_tools=true",
+      "https://chat.example/chat?arcana-tools=alice/a%20b%26c&enable_tools=true",
     );
   });
 

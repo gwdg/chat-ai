@@ -782,7 +782,7 @@ export default {
       step3:
         "Eigentümer fügen eine Person über Benutzername oder E-Mail-Adresse hinzu und wählen Darf bearbeiten oder Nur lesen. Nur der Eigentümer kann Personen hinzufügen oder entfernen.",
       step4:
-        "Der Chat-Link oben im Reiter Teilen öffnet einen neuen Chat, der diese Arcana bereits durchsucht und daraus liest. Teilen Sie den Link, nachdem Sie die Personen hinzugefügt haben, die ihn nutzen dürfen. Unter GWDG-Werkzeuge → Arcana sehen Sie, mit welchen Sammlungen der Chat verbunden ist, und können die Verbindung dort prüfen oder entfernen.",
+        "Schalten Sie Öffentlich lesbar ein, damit alle angemeldeten SAIA-Nutzerinnen und -Nutzer diese Arcana lesen und durchsuchen können. Erst dann erscheint der Chat-Link: Er öffnet einen neuen Chat, dessen Arcana-Tools diese Arcana bereits durchsuchen und daraus lesen. Unter GWDG-Werkzeuge → Arcana-Tools sehen Sie, mit welchen Sammlungen der Chat verbunden ist, und können die Verbindung dort prüfen oder entfernen.",
     },
     diagram_renderers: {
       title: "Diagramme aus Codeblöcken rendern",
@@ -2582,9 +2582,21 @@ export default {
     search_hint: "Gib eine Suchanfrage ein, um diese Arcana zu durchsuchen.",
     result: "Treffer",
     tab_share: "Teilen",
+    share_public_title: "Öffentlich lesbar",
+    share_public_hint:
+      "Alle angemeldeten SAIA-Nutzerinnen und -Nutzer können diese Arcana lesen und durchsuchen. Der Chat-Link unten setzt das voraus, weil jemand außerhalb der Liste sonst keinen Zugang hat.",
+    share_public_unavailable:
+      "Dieser Arcana-Dienst kann eine Sammlung nicht öffentlich machen; nur die unten gelisteten Personen können sie öffnen.",
+    share_public_badge: "Öffentlich lesbar",
+    share_public_enabled: "„{{name}}“ ist jetzt öffentlich lesbar.",
+    share_public_disabled: "„{{name}}“ ist nicht mehr öffentlich lesbar.",
     share_link_title: "Chat-Link",
     share_link_hint:
-      "Alle Personen, die diese Arcana öffnen können, starten mit diesem Link einen Chat, der sie durchsucht und daraus liest. Füge sie zuerst der Liste unten hinzu.",
+      "Alle angemeldeten Personen starten mit diesem Link einen Chat, dessen Arcana-Tools diese Arcana durchsuchen und daraus lesen.",
+    share_link_needs_public:
+      "Schalte „Öffentlich lesbar“ ein, um einen Link zu erhalten, der auch für Personen außerhalb der Liste unten funktioniert.",
+    share_link_needs_members:
+      "Dieser Arcana-Dienst kann eine Sammlung nicht öffentlich machen; der Link funktioniert daher nur für die unten gelisteten Personen.",
     share_link_copy: "Link kopieren",
     share_link_copied: "Kopiert",
     share_link_copy_failed: "Der Link konnte nicht kopiert werden.",

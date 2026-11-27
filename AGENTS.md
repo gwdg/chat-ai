@@ -2849,14 +2849,16 @@ is `<owner>__<name>` (`providers/saiaRag.ts#ragCollectionDisplayName`). The prov
 collection whose name itself contains `__` would otherwise be read as an owner reference.
 
 **Roles come from the service and are enforced there.** `list_collections` returns `role`,
-`can_write` and `can_manage` per collection; a reader-only collection is `readOnly` on its row, every
-file inside it, and a mount made from it. That is a mirror: `saia-rag-cli/src/saia_rag/access.py`
+`can_write`, `can_manage` and `public` per collection; a reader-only collection is `readOnly` on its
+row, every file inside it, and a mount made from it. That is a mirror: `saia-rag-cli/src/saia_rag/access.py`
 resolves `<owner>__<name>` and `require_role` checks the caller's principals on every tool call. The
 caller's own namespace is owned even without an ACL row; anything outside it needs an explicit row,
-so an empty ACL never opens somebody else's collection. `create_collection` makes the caller owner;
-`delete_collection`, `list_members`, `add_member` and `remove_member` are owner-only, and a group may
-be `reader`/`editor`, never `owner`. `add_member` takes `{collection, principal, role, kind}` and
-`kind` is `user` or `group`.
+so an empty ACL never opens somebody else's collection — the one exception is the owner's
+collection-wide public-read marker, which `role_of` answers with `reader` (§4.36). `create_collection`
+makes the caller owner;
+`delete_collection`, `list_members`, `add_member`, `remove_member` and `set_public_read` are
+owner-only, and a group may be `reader`/`editor`, never `owner`. `add_member` takes
+`{collection, principal, role, kind}` and `kind` is `user` or `group`.
 
 **Identity and groups.** The service reads `x-auth-claim-uid` (falling back to
 `x-consumer-custom-id`); group principals come from `x-auth-claim-groups`, `x-user-groups`,
@@ -2928,34 +2930,53 @@ a second dialog would replace the draft. The feature guide is `workspace_saia_ra
 ### 4.36 A chat reads a list of Arcana collections through four read-only tools
 
 The editor's **Share** tab (`components/Arcana/ArcanaManager.tsx`, rendered inside
-`components/Arcana/ArcanaEditorPanel.tsx` on the collection's page) carries the member list
-and, above it, an access link `/chat?arcana=<owner>/<name>&enable_tools=true`. That is the shape the
-Arcana manager in `saia-rag-web` has always handed out and the one the user docs show, so it carries
-the readable **Arcana ID** (`alice/papers`), which is also the reference the chat stores and the
-saia-rag tools take. It is built by `utils/arcanaShareLink.ts#buildArcanaShareLink`;
+`components/Arcana/ArcanaEditorPanel.tsx` on the collection's page) carries the owner's public-read
+switch, the member list, and — once the collection is public — an access link
+`/chat?arcana-tools=<owner>/<name>&enable_tools=true`. The parameter
+is `arcana-tools` because the link fills the chat's **Arcana Tools** list, the app-side read-only
+tools; it no longer writes the deprecated single Arcana id the server-side gateway uses. The value
+carries the readable **Arcana ID** (`alice/papers`), which is also the reference the chat stores and
+the saia-rag tools take. It is built by `utils/arcanaShareLink.ts#buildArcanaShareLink`;
 `parseArcanaShareRef` is the only reader and normalises the older storage spelling (`alice__papers`)
 to `owner/name`, splitting at the first slash (or first `__`) and refusing empty parts, a second
 slash, an owner carrying `__`, path separators, control characters and over-long text. There is no
-`model` parameter, so a recipient keeps their own default model. The card is rendered only while
-`isAgentEnabled()`, since the tools run inside the browser agent; the member list is still the whole
-access control. **The link is not a grant** — it only writes `settings.arcana.id = <owner>/<name>` and
-`settings.arcana_share = {collection, name, owner}`; the service re-checks the caller's role on every
-tool call, so a recipient outside the member list is refused.
+`model` parameter, so a recipient keeps their own default model. The link card is rendered only while
+`isAgentEnabled()` (the tools run inside the browser agent) **and** the collection is publicly
+readable (below); the member list remains the access control for everybody else. **The link
+is not a grant** — it only writes the collection into
+`settings.arcana_shares` (the list GWDG Tools → Arcana Tools edits); the service re-checks the
+caller's role on every tool call, so a recipient outside the member list is refused.
 
-`hooks/useSyncConversation.ts` applies the link when it hydrates a chat that has no important state
-yet: it reads `?arcana=` (or the older `?arcana_share=`, which the branch itself emitted before the
-shape was unified and is kept as an alias because it is unreleased) with
-`parseArcanaShareRef(cur ?? share)`; a parsed ref sets both `settings.arcana.id` (the readable id) and
-the `arcana_share` binding, while a bare `?arcana=papers` only fills the tool's field as it always
-did. It then sets `enable_tools = true` unless `isBrandLocked("tools")`, names a chat still called
-`Untitled Chat` after the collection, strips the query parameter and persists through
-`updateConversation` with the `lastModified` it read (handling `-1` by leaving the ref alone).
-`hooks/useImportConversation.jsx` restores the same binding from an export. The setting is unindexed,
-needs no Dexie version bump, and travels in the full export.
+**Public read is a collection-wide marker in the collection database, not a permission row.** A
+`permissions` row always names a principal and would show up in the member list, so `saia-rag` keeps
+it in `collection_access (id = 1, public_read INTEGER)`: created on the first write (a read-only open
+must not write), exposed as `ACLService.public_read` / `set_public_read()`, and honoured in
+`access.role_of()` as `READER` for a caller who is neither owner nor member. An explicit permission
+row still outranks it, and it never grants write. `list_collections` reports it as `public`, and the
+owner-only MCP tool `set_public_read` toggles it — so a deployment whose service does not advertise
+that tool has only the ACL: the Share tab then shows the switch disabled with that reason, the link
+stays hidden, and nothing else changes. The Share tab (`data-guide="arcana-share-public"`) shows the
+switch to the owner, a badge to a reader of a public collection, and renders the chat link only once
+the switch is on; `SaiaRagProvider.supportsPublicRead()` / `setPublicRead()` are the two provider
+calls (`setPublicRead` invalidates the 60 s collection list), and a successful toggle also refreshes
+`workspace/arcanas.ts` so the sidebar row and page header carry the new value. Read-only callers get
+no switch, because the service refuses it anyway.
+
+`hooks/useSyncConversation.ts` applies the link when it hydrates a chat: `?arcana-tools=` goes
+through `parseArcanaShareRef`, is appended to `arcanaSharesFromSettings(conversation.settings)` when
+the collection is not already there (the stored shape is `{collection, name, description?}`), sets
+`enable_tools = true` unless `isBrandLocked("tools")`, names a chat still called `Untitled Chat`
+after the collection, strips the query parameter and persists through `updateConversation` with the
+`lastModified` it read (handling `-1` by leaving the ref alone). The two parameters of the older
+link are still read: `?arcana=` and `?arcana_share=` keep the previous behaviour and write
+`settings.arcana.id` (the readable id) plus the single `arcana_share` binding, which
+`arcanaSharesFromSettings` merges into the list; a bare `?arcana=papers` only fills the legacy tool's
+field. `hooks/useImportConversation.jsx` restores the same bindings from an export. The settings are
+unindexed, need no Dexie version bump, and travel in the full export.
 
 **A chat owns a list, not one collection.** `settings.arcana_shares` is an array of
 `{collection, name, owner, description?}` written by the user in GWDG Tools → **Arcana Tools**;
-`settings.arcana_share` (the single object a link writes) is still accepted.
+`settings.arcana_share` (the single object an older link writes) is still accepted.
 `arcanaSharesFromSettings(settings)` is the one reader: it merges both, deduplicates by reference
 (`owner/name`), keeps the first entry's name and fills a missing `description` from the second.
 `arcanaShareFromSettings` is just its first element. The description is **chat-local** and

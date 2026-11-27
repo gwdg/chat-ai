@@ -1,9 +1,9 @@
 // A share link wires a new chat to one SAIA document collection.
 //
-// The link keeps the shape the Arcana manager has always handed out
-// (`/chat?arcana=<owner>/<name>&enable_tools=true`): that is the "Arcana ID"
-// people read in the manager and the link the user docs show. `<owner>/<name>`
-// is also the form the chat stores and the saia-rag tools take; the older
+// The link opens the chat's Arcana Tools list (`/chat?arcana-tools=<owner>/<name>`),
+// the read-only tools this app runs itself, not the deprecated single Arcana id
+// the server-side gateway used. `<owner>/<name>` is the "Arcana ID" people read
+// in the manager and the form the saia-rag tools take; the older
 // `<owner>__<name>` storage spelling is still read on the way in.
 //
 // The reference is not a grant: the service still checks the caller's role, so
@@ -11,8 +11,13 @@
 // manager's Share tab.
 
 export const ARCANA_SHARE_PARAM = "arcana_share";
-/** The access-link parameter, `<owner>/<name>` (`?arcana=alice/papers`). */
-export const ARCANA_LINK_PARAM = "arcana";
+/** The access-link parameter, `<owner>/<name>` (`?arcana-tools=alice/papers`). */
+export const ARCANA_LINK_PARAM = "arcana-tools";
+/**
+ * The parameter the link used before it wrote Arcana Tools, still read so an
+ * older link keeps working. It named the same collection.
+ */
+export const ARCANA_LEGACY_LINK_PARAM = "arcana";
 
 /** The longest reference the service could hand out, with room to spare. */
 const MAX_REF_LENGTH = 320;
@@ -90,7 +95,12 @@ export function arcanaRefId(ref: ArcanaShareRef): string {
   return `${ref.owner}/${ref.name}`;
 }
 
-/** The absolute link that opens a new chat on `collection`. */
+/**
+ * The absolute link that opens a new chat on `collection`.
+ *
+ * The chat reads the collection through its Arcana Tools list, which is what
+ * `?arcana-tools=` appends on load.
+ */
 export function buildArcanaShareLink(
   collection: unknown,
   origin: string = typeof window === "undefined" ? "" : window.location.origin,
@@ -107,10 +117,11 @@ export function buildArcanaShareLink(
 /**
  * Every collection this chat can read, deduplicated by storage name.
  *
- * `settings.arcana_shares` is the list the chat owns and the user edits;
- * `settings.arcana_share` is the single binding an access link writes and is
- * still accepted, so a chat linked before the list existed keeps working. A
- * description on either representation survives the merge.
+ * `settings.arcana_shares` is the list the chat owns, the user edits, and an
+ * access link appends to; `settings.arcana_share` is the single binding an
+ * older link writes and is still accepted, so a chat linked before the list
+ * existed keeps working. A description on either representation survives the
+ * merge.
  */
 export function arcanaSharesFromSettings(settings: any): ArcanaShareRef[] {
   const shares: ArcanaShareRef[] = [];

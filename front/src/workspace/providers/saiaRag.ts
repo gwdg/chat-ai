@@ -64,6 +64,7 @@ const INDEX_COLLECTION_TOOL = "index_collection";
 const LIST_MEMBERS_TOOL = "list_members";
 const ADD_MEMBER_TOOL = "add_member";
 const REMOVE_MEMBER_TOOL = "remove_member";
+const SET_PUBLIC_READ_TOOL = "set_public_read";
 const LIST_TAGS_TOOL = "list_tags";
 const GET_FILE_TAGS_TOOL = "get_file_tags";
 const TAG_FILE_TOOL = "tag_file";
@@ -160,6 +161,13 @@ export type RagCollection = {
   can_write: boolean;
   can_manage: boolean;
   shared: boolean;
+  /**
+   * Every signed-in user may read and search this collection. The service
+   * stores the marker in the collection database and enforces it; a deployment
+   * whose `list_collections` does not report it is always `false` and only the
+   * member list grants access.
+   */
+  public: boolean;
 };
 
 export type RagMember = {
@@ -335,6 +343,7 @@ const collectionOf = (value: any): RagCollection | null => {
     can_write: value.can_write === true,
     can_manage: value.can_manage === true,
     shared: value.shared === true,
+    public: value.public === true,
   };
 };
 
@@ -1198,6 +1207,35 @@ export class SaiaRagProvider implements FileProvider {
       collection: collection.collection,
       principal: String(principal ?? "").trim(),
     });
+  }
+
+  /**
+   * Mark a collection readable by every signed-in user, or stop that.
+   *
+   * The service keeps the marker in the collection database and checks it on
+   * every tool call, so this is what makes a chat link usable by somebody who is
+   * not in the member list. An older service does not offer the tool;
+   * `supportsPublicRead()` is what the UI checks before showing the switch.
+   */
+  supportsPublicRead(): boolean {
+    return this.has(SET_PUBLIC_READ_TOOL);
+  }
+
+  async setPublicRead(display: string, isPublic: boolean): Promise<void> {
+    const collection = await this.resolveCollection(display);
+    if (!collection.can_manage) {
+      throw new WorkspaceError(
+        "PERMISSION_DENIED",
+        "Only the owner can change who can read this collection",
+      );
+    }
+    await this.call(SET_PUBLIC_READ_TOOL, {
+      collection: collection.collection,
+      public: Boolean(isPublic),
+    });
+    // The list carries the flag, so the sidebar and the next open must not keep
+    // the old value.
+    this.invalidateCollections();
   }
 
   // ---- FileProvider -----------------------------------------------------

@@ -18,6 +18,8 @@ const mocks = vi.hoisted(() => ({
   listMembers: vi.fn(),
   addMember: vi.fn(),
   removeMember: vi.fn(),
+  setPublicRead: vi.fn(),
+  supportsPublicRead: vi.fn(() => true),
   notifySuccess: vi.fn(),
   notifyError: vi.fn(),
   downloadBlob: vi.fn(),
@@ -59,6 +61,8 @@ vi.mock("../../../workspace/arcanas", () => {
     listMembers: (...args) => mocks.listMembers(...args),
     addMember: (...args) => mocks.addMember(...args),
     removeMember: (...args) => mocks.removeMember(...args),
+    setPublicRead: (...args) => mocks.setPublicRead(...args),
+    supportsPublicRead: () => mocks.supportsPublicRead(),
   };
   return {
     arcanasProvider: () => provider,
@@ -70,6 +74,7 @@ vi.mock("../../../workspace/arcanas", () => {
     classifyArcanaFiles: () => "current",
     isArcanaIndexed: (status) => status !== "stored" && !/fail|error/i.test(status),
     updateArcanaStatus: vi.fn(),
+    refreshArcanas: vi.fn(() => Promise.resolve([])),
   };
 });
 
@@ -81,6 +86,7 @@ const collection = {
   can_write: true,
   can_manage: true,
   shared: false,
+  public: false,
 };
 
 const files = [
@@ -104,6 +110,9 @@ describe("ArcanaManager", () => {
     mocks.listMembers.mockReset();
     mocks.addMember.mockReset();
     mocks.removeMember.mockReset();
+    mocks.setPublicRead.mockReset();
+    mocks.supportsPublicRead.mockReset();
+    mocks.supportsPublicRead.mockReturnValue(true);
     mocks.notifySuccess.mockReset();
     mocks.notifyError.mockReset();
     mocks.listFiles.mockResolvedValue(files);
@@ -132,6 +141,7 @@ describe("ArcanaManager", () => {
     ]);
     mocks.addMember.mockResolvedValue(undefined);
     mocks.removeMember.mockResolvedValue(undefined);
+    mocks.setPublicRead.mockResolvedValue(undefined);
   });
 
   it("filters the file list by tag and clears that filter again", async () => {
@@ -238,14 +248,14 @@ describe("ArcanaManager", () => {
     });
 
     render(
-      <ArcanaManager collection={collection} />,
+      <ArcanaManager collection={{ ...collection, public: true }} />,
     );
 
     await screen.findByText("a.md");
     fireEvent.click(screen.getByText("arcanas.tab_share"));
     await screen.findByText("bob");
 
-    const expected = `${window.location.origin}/chat?arcana=alice/recipes&enable_tools=true`;
+    const expected = `${window.location.origin}/chat?arcana-tools=alice/recipes&enable_tools=true`;
     const field = screen.getByLabelText("arcanas.share_link_title");
     expect(field).toHaveValue(expected);
     // The link opens a new chat rather than navigating this tab.
@@ -260,6 +270,90 @@ describe("ArcanaManager", () => {
     expect(
       await screen.findByText("arcanas.share_link_copied"),
     ).toBeInTheDocument();
+  });
+
+  it("gates the chat link on public read and stores the switch", async () => {
+    render(<ArcanaManager collection={collection} />);
+
+    await screen.findByText("a.md");
+    fireEvent.click(screen.getByText("arcanas.tab_share"));
+    await screen.findByText("bob");
+
+    // Nobody outside the member list can open the collection yet, so the link
+    // would be dead for every recipient.
+    expect(screen.queryByLabelText("arcanas.share_link_title")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("arcanas.share_link_needs_public"),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("switch"));
+
+    await waitFor(() =>
+      expect(mocks.setPublicRead).toHaveBeenCalledWith("recipes", true),
+    );
+    expect(mocks.notifySuccess).toHaveBeenCalledWith(
+      "arcanas.share_public_enabled",
+    );
+    const field = await screen.findByLabelText("arcanas.share_link_title");
+    expect(field).toHaveValue(
+      `${window.location.origin}/chat?arcana-tools=alice/recipes&enable_tools=true`,
+    );
+
+    // Turning it back off takes the link away again.
+    fireEvent.click(screen.getByRole("switch"));
+    await waitFor(() =>
+      expect(mocks.setPublicRead).toHaveBeenLastCalledWith("recipes", false),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByLabelText("arcanas.share_link_title"),
+      ).not.toBeInTheDocument(),
+    );
+  });
+
+  it("keeps only the member list when the service cannot publish", async () => {
+    mocks.supportsPublicRead.mockReturnValue(false);
+
+    render(<ArcanaManager collection={collection} />);
+
+    await screen.findByText("a.md");
+    fireEvent.click(screen.getByText("arcanas.tab_share"));
+    await screen.findByText("bob");
+
+    const toggle = await screen.findByRole("switch");
+    await waitFor(() => expect(toggle).toBeDisabled());
+    expect(
+      screen.getByText("arcanas.share_public_unavailable"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("arcanas.share_link_title"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText("arcanas.share_link_needs_members"),
+    ).toBeInTheDocument();
+  });
+
+  it("shows a public Arcana as readable for somebody outside the list", async () => {
+    render(
+      <ArcanaManager
+        collection={{
+          ...collection,
+          owner: "bob",
+          role: "reader",
+          can_write: false,
+          can_manage: false,
+          shared: true,
+          public: true,
+        }}
+      />,
+    );
+
+    await screen.findByText("a.md");
+    fireEvent.click(screen.getByText("arcanas.tab_share"));
+    await screen.findByText("alice");
+
+    expect(screen.getByText("arcanas.share_public_badge")).toBeInTheDocument();
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument();
   });
 
   it("shows a shared Arcana read-only and offers no sharing controls", async () => {

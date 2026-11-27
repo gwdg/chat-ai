@@ -147,7 +147,7 @@ describe("useSyncConversation Arcana share links", () => {
     routerMocks.params = [];
   });
 
-  it("wires the chat to the access link's collection and persists both bindings", async () => {
+  it("still wires an older arcana link through the single binding", async () => {
     routerMocks.params = [["arcana", "alice/papers"]];
     const conversation = {
       ...makeConversation([{ role: "user", content: [{ type: "text", text: "" }] }]),
@@ -178,6 +178,55 @@ describe("useSyncConversation Arcana share links", () => {
     expect(payload.settings.arcana.id).toBe("alice/papers");
     // The optimistic-concurrency token is threaded through.
     expect(payload.lastModified).toBe(123);
+  });
+
+  it("appends the link's collection to Arcana Tools", async () => {
+    routerMocks.params = [["arcana-tools", "alice/papers"]];
+    const conversation = {
+      ...makeConversation([{ role: "user", content: [{ type: "text", text: "" }] }]),
+      title: "Untitled Chat",
+      hasFirstPrompt: false,
+    };
+    dbMocks.updateConversation.mockResolvedValue(456);
+    const setLocalState = renderSync(conversation);
+
+    await waitFor(() => expect(setLocalState).toHaveBeenCalled());
+
+    const state = lastState(setLocalState);
+    // The link fills the list GWDG Tools → Arcana Tools edits, not the
+    // deprecated single Arcana id the gateway used.
+    expect(state.settings.arcana_shares).toEqual([
+      { collection: "alice/papers", name: "papers" },
+    ]);
+    expect(state.settings.arcana).toBeUndefined();
+    expect(state.settings.arcana_share).toBeUndefined();
+    expect(state.settings.enable_tools).toBe(true);
+    expect(state.title).toBe("papers");
+
+    await waitFor(() => expect(dbMocks.updateConversation).toHaveBeenCalled());
+    const payload = dbMocks.updateConversation.mock.calls.at(-1)[1];
+    expect(payload.settings.arcana_shares).toEqual([
+      { collection: "alice/papers", name: "papers" },
+    ]);
+    expect(payload.lastModified).toBe(123);
+  });
+
+  it("adds to the collections the chat already carries", async () => {
+    routerMocks.params = [["arcana-tools", "alice/papers"]];
+    const conversation = makeConversation([]);
+    conversation.settings = {
+      arcana_shares: [
+        { collection: "bob/notes", name: "Notes", description: "Lab notes" },
+      ],
+    };
+    const setLocalState = renderSync(conversation);
+
+    await waitFor(() => expect(setLocalState).toHaveBeenCalled());
+
+    expect(lastState(setLocalState).settings.arcana_shares).toEqual([
+      { collection: "bob/notes", name: "Notes", description: "Lab notes" },
+      { collection: "alice/papers", name: "papers" },
+    ]);
   });
 
   it("still accepts the older arcana_share param", async () => {
