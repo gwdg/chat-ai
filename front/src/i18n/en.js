@@ -2636,6 +2636,7 @@ export default {
     source_pages: "Pages {{from}}–{{to}}",
     source_text: "Text file",
     source_open: "Open the document at this page",
+    source_markdown_open: "Open the cited pages as Markdown",
     source_failed: "The document could not be opened: {{reason}}",
   },
   mcp: {

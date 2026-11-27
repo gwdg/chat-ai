@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Markdown } from "@carbon/icons-react";
 import { ExternalLink, Loader2 } from "lucide-react";
 
 import { fileTypeIcon } from "../../DocumentPanel/fileTypeIcon";
@@ -24,12 +25,39 @@ const pageLabel = (document, t) => {
 };
 
 /**
+ * The name the Markdown preview is shown under.
+ *
+ * The bytes are the indexed text, not the original upload, so the preview is a
+ * `.md`. This mirrors `workspace/providers/saiaRag.ts#markdownFileName`; importing
+ * it here would pull the saia-rag MCP client into the chat's own bundle.
+ */
+const markdownName = (name) => {
+  const dot = name.lastIndexOf(".");
+  return `${dot > 0 ? name.slice(0, dot) : name}.md`;
+};
+
+/**
+ * The type printed beside the arrow, e.g. `PDF` or `DOCX`.
+ *
+ * The extension is the most recognisable label; a file without one falls back to
+ * the type the preview would pick for it.
+ */
+const documentTypeLabel = (filename, fileType) => {
+  const dot = filename.lastIndexOf(".");
+  const extension = dot > 0 ? filename.slice(dot + 1) : "";
+  if (/^[a-z0-9]{1,5}$/i.test(extension)) return extension.toUpperCase();
+  return fileType && fileType !== "unknown" ? fileType.toUpperCase() : "";
+};
+
+/**
  * The pages an Arcana answer quotes.
  *
- * The card shows the passage that was used, page by page, and its click opens
- * the original file in the docked preview at that page. Reading happens on the
- * click (the helper is imported then too), so a long answer with many citations
- * does not download anything until the user asks for a document.
+ * The card lists the documents, not their text: the row's Markdown icon opens the
+ * cited pages as Markdown in the docked preview (the excerpt already travels in
+ * the answer, so that costs no request), while the link on the right names the
+ * original's type and opens the original at the cited page. Reading the original
+ * happens on that click (the helper is imported then too), so a long answer with
+ * many citations does not download anything until the user asks for a document.
  */
 export default function ArcanaDocumentCard({ documents = [] }) {
   const { t } = useTranslation();
@@ -37,7 +65,28 @@ export default function ArcanaDocumentCard({ documents = [] }) {
   const { notifyError } = useToast();
   const [opening, setOpening] = useState("");
 
-  const open = async (document) => {
+  const openMarkdown = (document) => {
+    const pages = splitDocumentPages(document.excerpt);
+    const text = pages.length
+      ? pages
+          .map((block) =>
+            block.page === null
+              ? block.text
+              : `## ${t("arcana_chat.source_page", { page: block.page })}\n\n${block.text}`,
+          )
+          .join("\n\n")
+      : String(document.excerpt ?? "");
+    openFilePreview({
+      entry: {
+        name: markdownName(document.filename),
+        mime: "text/markdown",
+        size: text.length,
+      },
+      text,
+    });
+  };
+
+  const openOriginal = async (document) => {
     const key = arcanaDocumentKey(document);
     if (opening) return;
     setOpening(key);
@@ -69,26 +118,22 @@ export default function ArcanaDocumentCard({ documents = [] }) {
       <ul className="flex flex-col gap-2">
         {documents.map((document) => {
           const key = arcanaDocumentKey(document);
-          const pages = splitDocumentPages(document.excerpt);
           const busy = opening === key;
-          const { type: fileType, Icon: TypeIcon } = fileTypeIcon(
-            document.filename,
-          );
+          const { type: fileType } = fileTypeIcon(document.filename);
+          const typeLabel = documentTypeLabel(document.filename, fileType);
           return (
             <li key={key}>
-              <article className="overflow-hidden rounded-lg border border-base-300 bg-base-100">
+              <article className="flex items-stretch gap-0.5 rounded-lg border border-base-300 bg-base-100 p-1">
                 <button
                   type="button"
                   data-guide="arcana-document-open"
-                  onClick={() => void open(document)}
-                  disabled={busy}
-                  className="flex w-full items-start gap-2 p-2.5 text-left transition-colors hover:bg-base-200"
-                  title={t("arcana_chat.source_open")}
+                  onClick={() => openMarkdown(document)}
+                  className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-1.5 py-1 text-left transition-colors hover:bg-base-200"
+                  title={t("arcana_chat.source_markdown_open")}
                 >
-                  <TypeIcon
+                  <Markdown
                     size={16}
-                    data-file-type={fileType}
-                    className="mt-0.5 shrink-0 text-base-content/60"
+                    className="shrink-0 text-base-content/60"
                     aria-hidden="true"
                   />
                   <span className="min-w-0 flex-1">
@@ -99,45 +144,28 @@ export default function ArcanaDocumentCard({ documents = [] }) {
                       {pageLabel(document, t)}
                     </span>
                   </span>
+                </button>
+                <button
+                  type="button"
+                  data-guide="arcana-document-original"
+                  data-file-type={fileType}
+                  onClick={() => void openOriginal(document)}
+                  disabled={busy}
+                  className="flex shrink-0 items-center gap-1 rounded-md px-2 text-[11px] font-semibold uppercase tracking-wide text-base-content/60 transition-colors hover:bg-base-200 hover:text-base-content"
+                  title={t("arcana_chat.source_open")}
+                  aria-label={t("arcana_chat.source_open")}
+                >
+                  {typeLabel}
                   {busy ? (
                     <Loader2
-                      size={14}
-                      className="mt-0.5 shrink-0 animate-spin text-base-content/60"
+                      size={12}
+                      className="animate-spin"
                       aria-hidden="true"
                     />
                   ) : (
-                    <ExternalLink
-                      size={14}
-                      className="mt-0.5 shrink-0 text-base-content/40"
-                      aria-hidden="true"
-                    />
+                    <ExternalLink size={12} aria-hidden="true" />
                   )}
                 </button>
-                <div className="max-h-52 overflow-auto border-t border-base-300/70 px-2.5 py-2">
-                  {pages.length ? (
-                    pages.map((block, index) => (
-                      <div
-                        key={`${key}-${index}`}
-                        className={index ? "mt-2" : ""}
-                      >
-                        {block.page !== null && (
-                          <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-base-content/50">
-                            {t("arcana_chat.source_page", {
-                              page: block.page,
-                            })}
-                          </p>
-                        )}
-                        <p className="whitespace-pre-wrap break-words text-[11px] leading-relaxed text-base-content/80">
-                          {block.text}
-                        </p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="whitespace-pre-wrap break-words text-[11px] leading-relaxed text-base-content/80">
-                      {document.excerpt}
-                    </p>
-                  )}
-                </div>
               </article>
             </li>
           );

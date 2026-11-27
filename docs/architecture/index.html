@@ -3748,9 +3748,12 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           <code>{collection, filename, page?, pages, excerpt}</code>, the app - never the model -
           appends it as an <code>[[ARCANA_DOCUMENT:&lt;base64&gt;]]</code> marker exactly as it does
           for the approval card, and <code>ArcanaDocumentCard</code> renders it under the answer as
-          a <b>Sources</b> section: the cited page range, the passage per page, and a click that
-          opens the <b>original</b> bytes (not the indexed Markdown) in the docked preview at that
-          page. A PDF's URL gets <code>#page=N</code>; a text file opens as text. The page is read
+          a <b>Sources</b> section: the document, its cited page range, and two actions. The row's
+          Markdown icon opens the cited pages as Markdown in the docked preview straight from the
+          excerpt, so it costs no request and works even if the collection has since gone; the link
+          on the right names the original's type (<code>PDF</code>, <code>DOCX</code>, …) and opens
+          the <b>original</b> bytes (not the indexed Markdown) at that page. A PDF's URL gets
+          <code>#page=N</code>; a text file opens as text. The page is read
           from the excerpt's own <code>[Page N]: #</code> markers, so the card and the document
           cannot disagree, and a binary file without indexed text produces no card. The chat page
           filters a normal chat's cards to the collections in its <code>arcana_shares</code>, so a
@@ -3855,7 +3858,8 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           </tr>
           <tr>
             <td>Chat tools</td>
-            <td><code>list_arcanas</code> plus the four read-only tools, each read tool resolving its
+            <td><code>list_arcanas</code>, <code>arcana_details</code> plus the four read-only tools,
+                each read tool resolving its
                 <code>collection</code> argument against the chat's list, and
                 <code>retrieve_document</code> recording the quoted pages for the source card; one
                 lazily opened MCP client per turn, one reconnect on a lost session.</td>
@@ -3863,9 +3867,10 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           </tr>
           <tr>
             <td>Source card</td>
-            <td>The marker module (build, validate, strip, split pages), the card under the answer,
-                and the preview that reads the <b>original</b> bytes and opens the docked panel at
-                the cited page.</td>
+            <td>The marker module (build, validate, strip, split pages), the card under the answer
+                (Markdown preview of the cited pages, and the original at the cited page), and the
+                preview that reads the <b>original</b> bytes and opens the docked panel at the cited
+                page.</td>
             <td><span class="mono">front/src/utils/arcanaDocuments.ts</span>,
                 <span class="mono">front/src/components/Conversation/MessageAssistant/ArcanaDocumentCard.jsx</span>,
                 <span class="mono">front/src/utils/arcanaDocumentPreview.js</span></td>
@@ -4021,13 +4026,13 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
             <code>?arcana-tools=&lt;owner&gt;/&lt;name&gt;</code> reference (with the older
             <code>?arcana=</code> and <code>?arcana_share=</code> aliases), its link and its stored
             binding</li>
-        <li><span class="mono">front/src/agent/arcanaChatTools.ts</span> - the four read-only chat
+        <li><span class="mono">front/src/agent/arcanaChatTools.ts</span> - the six read-only chat
             tools and their MCP client, wired in <span class="mono">agent/runAgent.ts</span></li>
         <li><span class="mono">front/src/utils/arcanaDocuments.ts</span>,
             <span class="mono">utils/arcanaDocumentPreview.js</span> and
             <span class="mono">components/Conversation/MessageAssistant/ArcanaDocumentCard.jsx</span> -
-            the citation marker, the Sources card and the preview that opens the original file at the
-            cited page</li>
+            the citation marker, the Sources card (a Markdown preview of the cited pages, plus the
+            original at the cited page) and the preview that reads the original file</li>
         <li><span class="mono">front/src/workspace/providers/saiaRag.ts</span> - the tool calls and
             the text parsers</li>
         <li><span class="mono">saia/saia-rag-cli/src/saia_rag/mcp_server.py</span> - the MCP tools

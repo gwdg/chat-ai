@@ -3144,7 +3144,7 @@ overwritten plain text file goes back to its text, a new file is removed, and a 
 re-written. Indexing is never revertible, and neither is anything whose original bytes were not
 readable (a converted document's indexed Markdown is not its upload, and the restore text is capped).
 A failed item does not stop the batch, the successful ones stay applied, and Accept can be retried
-because a repeated apply is idempotent. This is separate from the five read-only chat tools of §4.36,
+because a repeated apply is idempotent. This is separate from the six read-only chat tools of §4.36,
 which read a normal chat's `arcana_shares` list.
 
 **A quoted passage becomes a source card, and the card opens the page.** `utils/arcanaChat.js#retrieve_document`
@@ -3155,12 +3155,15 @@ marker — `utils/arcanaDocuments.ts` builds, validates and strips it, and the m
 the assistant text and strips both marker kinds from the history it sends back;
 `MessageAssistant` parses it only for an `arcana-chat:` thread, and for a normal chat only when the
 marker's collection is in `arcanaSharesFromSettings(settings)`. `ArcanaDocumentCard`
-(`data-guide="arcana-documents"`) lists the excerpt page by page and, on click, dynamically imports
+(`data-guide="arcana-documents"`) lists the documents without printing their text: the row's
+Markdown icon opens the cited pages as Markdown in the docked preview (from the excerpt already in
+the marker, so no request), and the link on its right names the original's type (`PDF`, `DOCX`, …)
+and on click dynamically imports
 `utils/arcanaDocumentPreview.js`, which reads the **original** bytes through `readOriginalFile`
-(not the indexed Markdown) and opens `FilePreviewContext`. A text-like file opens as `text`; anything
-else is an object URL released with `release`, and `FilePreviewContent` appends `#page=N` to a PDF's
-URL. `ArcanaPage` mounts `ChatFilePreviewPanel`, which accepts that pre-read `entry`/`url`/`text` as
-well as a stored chat file id, so the same panel shows both.
+(not the indexed Markdown) and opens `FilePreviewContext` at the page. A text-like file opens as
+`text`; anything else is an object URL released with `release`, and `FilePreviewContent` appends
+`#page=N` to a PDF's URL. `ArcanaPage` mounts `ChatFilePreviewPanel`, which accepts that pre-read
+`entry`/`url`/`text` as well as a stored chat file id, so the same panel shows both.
 
 **A file's Markdown is editable in the panel, and a save reindexes in place.** `ArcanaManager`
 shows Edit (`data-guide="arcana-edit-markdown"`) next to Download when `collection.can_write`, the
