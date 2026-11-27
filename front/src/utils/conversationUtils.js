@@ -131,6 +131,32 @@ const applyBrandRestrictionsToDefaults = (settings, deploymentDefaults = {}) => 
   }
 };
 
+/**
+ * Whether a conversation's stored model object is out of date with the row the
+ * deployment lists for that id.
+ *
+ * `ModelSelectorWrapper` writes the fresh row into the conversation, and that
+ * write autosaves, so identical data must not be rewritten every time `/models`
+ * is refetched (every 30 s). Every field the UI *reads from the stored object*
+ * therefore has to be compared, not just the ones that drive the list: `external`
+ * decides the data-safety warning and the blue lock, and a chat saved while an
+ * in-house bridge model was still labelled external would otherwise keep the
+ * warning forever — same id, same name, same status. `null`/`undefined` are
+ * compared as-is, so a deployment that stops sending the field clears a stored
+ * `false`.
+ */
+export const storedModelNeedsRefresh = (next, stored) => {
+  if (!next) return false;
+  if (!stored) return true;
+  return (
+    next.status !== stored.status ||
+    next.name !== stored.name ||
+    next.external !== stored.external ||
+    JSON.stringify(next.input) !== JSON.stringify(stored.input) ||
+    JSON.stringify(next.output) !== JSON.stringify(stored.output)
+  );
+};
+
 export const getDefaultChatAIModel = (userSettings = {}) => {
   const settings = getDefaultSettings(userSettings);
   return (

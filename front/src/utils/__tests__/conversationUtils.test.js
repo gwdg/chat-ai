@@ -5,6 +5,7 @@ import {
   getDefaultConversation,
   getDefaultSettings,
   getDefaultSystemPrompt,
+  storedModelNeedsRefresh,
 } from "../conversationUtils";
 
 describe("conversation defaults", () => {
@@ -100,5 +101,70 @@ describe("conversation defaults", () => {
     } finally {
       setCurrentBrand(null);
     }
+  });
+});
+
+describe("storedModelNeedsRefresh", () => {
+  // A conversation stores the model row it was sent with; `/models` can correct
+  // that row for the same id (an in-house bridge model that was labelled
+  // external), and the selector writes the fresh one back.
+  const stored = {
+    id: "bridge/deepseek-v4.1-flash-1017",
+    name: "DeepSeek V4.1 Flash 1017 (External)",
+    status: "ready",
+    input: ["text"],
+    output: ["text"],
+    external: true,
+  };
+
+  it("refreshes a model whose label the deployment corrected", () => {
+    expect(
+      storedModelNeedsRefresh(
+        {
+          ...stored,
+          name: "DeepSeek V4.1 Flash 1017",
+          external: false,
+        },
+        stored,
+      ),
+    ).toBe(true);
+  });
+
+  it("refreshes on `external` alone, because it decides the data-safety warning", () => {
+    expect(storedModelNeedsRefresh({ ...stored, external: false }, stored)).toBe(true);
+  });
+
+  it("refreshes a stored `external` the deployment does not send any more", () => {
+    // A deployment without the field expresses externality in the name only, so
+    // the stored `true` must be replaced by the row (which carries no field).
+    const fresh = {
+      id: stored.id,
+      name: "DeepSeek V4.1 Flash 1017",
+      status: "ready",
+      input: ["text"],
+      output: ["text"],
+    };
+    expect(storedModelNeedsRefresh(fresh, stored)).toBe(true);
+  });
+
+  it("keeps identical data, so the 30 s refresh does not autosave", () => {
+    expect(storedModelNeedsRefresh({ ...stored }, { ...stored })).toBe(false);
+  });
+
+  it("keeps the chat's model when the deployment does not list it", () => {
+    expect(storedModelNeedsRefresh(undefined, stored)).toBe(false);
+  });
+
+  it("fills in capabilities a chat saved before the field existed", () => {
+    expect(
+      storedModelNeedsRefresh(
+        { id: "qwen3.8-27b", name: "Qwen", status: "ready", input: ["text"] },
+        { id: "qwen3.8-27b", name: "Qwen" },
+      ),
+    ).toBe(true);
+  });
+
+  it("treats a missing stored object as needing a refresh", () => {
+    expect(storedModelNeedsRefresh(stored, undefined)).toBe(true);
   });
 });

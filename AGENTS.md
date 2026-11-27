@@ -394,6 +394,18 @@ stale name. The data-safety warning (`WarningExternalModel`, `SendButton`), both
 field both selector variants read belongs in
 `types/models.ts#BaseModelInfo`, because the simple selector receives the same payload.
 
+**A stored model is a snapshot and must be refreshed from `/models`.** Both a conversation's
+`settings.model` and the `user_settings.model` default hold a copy of the row as it was when it was
+picked, and that copy can outlive the label: a chat saved while an in-house bridge model still carried
+`(External)`/`external: true` would warn about external data forever, because nothing compared
+`external`. `utils/conversationUtils.js#storedModelNeedsRefresh` compares every field the UI reads from
+the stored object (`status`, `name`, `external`, `input`, `output`), `ModelSelectorWrapper` writes the
+fresh row back into the open chat, and `hooks/useUpdateModelsData.jsx` heals the persisted default
+model. A field the deployment *stops* sending is dropped from the snapshot rather than kept: a stored
+`external: true` outranks the name fallback in `isExternalModel`, so preserving it would keep the
+warning after the row itself became clean. A deployment without the field (the GWDG
+`chat-ai.academiccloud.de` service marks externality in the name only) therefore still ends up correct.
+
 The `(External)` marker is also what kept a model out of the demand updater, and that is
 why removing it from in-house bridge models needed a second skip: `bg_worker/demand_updater.py`
 skips names starting with `SAIA_BRIDGE_MODEL_PREFIX` too, because a bridge row is never in the

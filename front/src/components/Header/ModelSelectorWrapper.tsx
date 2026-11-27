@@ -7,7 +7,7 @@ import ModelSelectorSimple from "./ModelSelectorSimple";
 import ModelSelectorExtended from "./ModelSelectorExtended";
 import { useModal } from '../../modals/ModalContext';
 import { selectUserSettings } from '../../Redux/reducers/userSettingsReducer';
-import { getDefaultChatAIModel } from '../../utils/conversationUtils';
+import { getDefaultChatAIModel, storedModelNeedsRefresh } from '../../utils/conversationUtils';
 import { isBrandLocked, isBrandUiVisible } from '../../config/brandPolicy';
 import E2eeLock from '../Others/E2eeLock';
 import type { ModelInfo } from '../../types/models';
@@ -38,17 +38,9 @@ function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader =
   const hasExtendedModels = modelsData?.[0]?.description !== undefined;
 
   function setModel(newModel: ModelInfo) {
-    if (newModel?.id === currentModelId) {
-      const currentModel = localState?.settings?.model;
-      const sameCapabilities =
-        JSON.stringify(newModel?.input) === JSON.stringify(currentModel?.input) &&
-        JSON.stringify(newModel?.output) === JSON.stringify(currentModel?.output);
-      if (
-        newModel?.status === currentModel?.status &&
-        newModel?.name === currentModel?.name &&
-        sameCapabilities
-      ) return;
-    }
+    // Rewriting identical data would autosave on every `/models` refresh; the
+    // comparison covers `external` too, or a stored label never heals.
+    if (newModel?.id === currentModelId && !storedModelNeedsRefresh(newModel, localState?.settings?.model)) return;
     if (newModel?.status === "offline") {
       openModal("serviceOffline");
     }

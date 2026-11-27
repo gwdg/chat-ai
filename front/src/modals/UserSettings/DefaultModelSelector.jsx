@@ -20,11 +20,20 @@ export default function DefaultModelSelector({ modelsData }) {
   const selectedModel =
     modelsData?.find((m) => m.id === currentDefaultModel?.id) || null;
 
+  /*
+  Prefer the row `/models` lists over the stored snapshot. The snapshot carries
+  the name and externality of the day the user picked the model, and the
+  deployment can correct both for the same id (an in-house bridge model that was
+  labelled external); the chip must show what the model is now.
+  */
+  const displayModel = selectedModel ?? currentDefaultModel;
+
   const handleChange = (model) => {
     dispatch(
       setDefaultModel({
         name: model.name,
         id: model.id,
+        external: model.external,
       }),
     );
   };
@@ -40,13 +49,13 @@ export default function DefaultModelSelector({ modelsData }) {
             {t("user_settings.default_model.description")}
           </p>
         </div>
-        {currentDefaultModel?.name && (
+        {displayModel?.name && (
           <span
             className="flex max-w-[45%] shrink-0 items-center gap-1 rounded-md bg-base-200 px-2 py-1 text-xs font-medium text-base-content/70"
-            title={currentDefaultModel.name}
+            title={displayModel.name}
           >
-            <span className="truncate">{currentDefaultModel.name}</span>
-            <E2eeLock modelId={currentDefaultModel.id} size={12} />
+            <span className="truncate">{displayModel.name}</span>
+            <E2eeLock modelId={displayModel.id} size={12} />
           </span>
         )}
       </div>
