@@ -141,7 +141,7 @@ export default function ArcanaChatPanel({
               </div>
             </div>
             <p className="mt-0.5 text-[11px] leading-relaxed text-base-content/70">
-              {t("arcana_chat.subtitle")}
+              {collection.description || t("arcana_chat.subtitle")}
             </p>
           </div>
         </div>

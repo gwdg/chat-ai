@@ -712,9 +712,7 @@ export default {
       step3:
         "Wählen Sie Arcana Tools. Die separate Zeile Arcana ist veraltet: Sie sendet eine einzelne Collection-ID mit der Anfrage.",
       step4:
-        "Fügen Sie jede Sammlung, die der Chat lesen soll, hinzu: den Owner im ersten Feld, den Arcana-Namen im zweiten (z. B. alice und papers). Der Agent listet sie mit list_arcanas auf und wählt die passende.",
-      step5:
-        "Geben Sie der Sammlung eine kurze Beschreibung, damit der Agent weiß, wofür sie gedacht ist.",
+        "Fügen Sie jede Sammlung, die der Chat lesen soll, hinzu: den Owner im ersten Feld, den Arcana-Namen im zweiten (z. B. alice und papers). Wofür eine Sammlung gedacht ist, bearbeiten Sie auf ihrer eigenen Seite; der Agent listet die Sammlungen mit list_arcanas auf und wählt die passende.",
     },
     web_search: {
       title: "Websuche verwenden",
@@ -1402,8 +1400,6 @@ export default {
     arcana_add_owner_placeholder: "Owner, z. B. alice",
     arcana_add_name_placeholder: "Arcana, z. B. papers",
     arcana_add_button: "Hinzufügen",
-    arcana_description_placeholder: "Kurze Beschreibung für den Agenten (optional)",
-    arcana_description_for: "Beschreibung von {{name}}",
     arcana_invalid_ref: "Gib den Owner und den Arcana-Namen ein, z. B. alice und papers.",
     arcana_already_added: "Dieses Arcana ist bereits im Chat.",
     placeholder_mcp_url: "http://localhost:3000/mcp",
@@ -2512,6 +2508,15 @@ export default {
       "Eine Arcana ist eine Dokumentensammlung in SAIA. Dateien und Tags kannst du nach dem Erstellen hinzufügen.",
     name_label: "Name",
     name_placeholder: "z. B. vorlesungsnotizen",
+    description_label: "Beschreibung für den Agenten",
+    description_hint:
+      "Wird bei der Sammlung gespeichert. Die Arcana-Tools eines Chats zeigen sie dem Agenten, damit er die passende Sammlung wählt.",
+    description_placeholder:
+      "Wofür ist diese Sammlung gedacht? z. B. Begutachtete Aufsätze zur Suche.",
+    description_empty:
+      "Noch keine Beschreibung. Der Agent sieht sie, wenn er zwischen Sammlungen wählt.",
+    description_edit: "Beschreibung bearbeiten",
+    description_saved: "Beschreibung gespeichert.",
     create: "Erstellen",
     creating: "Wird erstellt…",
     created: "Arcana „{{name}}“ erstellt.",

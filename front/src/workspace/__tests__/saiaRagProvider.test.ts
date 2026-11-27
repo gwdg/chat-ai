@@ -264,9 +264,26 @@ vi.mock("@modelcontextprotocol/sdk/client/index.js", () => ({
             can_manage: true,
             shared: false,
             public: false,
+            description: String(request.arguments.description ?? "")
+              .split(/\s+/)
+              .filter(Boolean)
+              .join(" "),
           });
           rag.files.set(`alice__${name}`, new Map());
           return text(`Created '${name}'.`);
+        }
+        case "set_collection_description": {
+          const row = rag.collections.find(
+            (entry) => entry.collection === collection,
+          );
+          if (!row) return failure(`Collection '${collection}' not found`);
+          const kept = String(request.arguments.description ?? "")
+            .split(/\s+/)
+            .filter(Boolean)
+            .join(" ")
+            .slice(0, 280);
+          row.description = kept;
+          return text(`The description is now: ${kept}`);
         }
         case "delete_collection": {
           rag.collections = rag.collections.filter(
@@ -334,6 +351,7 @@ const ALL_TOOLS = [
   "add_member",
   "remove_member",
   "set_public_read",
+  "set_collection_description",
   "list_tags",
   "get_file_tags",
   "tag_file",
@@ -998,6 +1016,62 @@ describe("SaiaRagProvider", () => {
     const older = provider();
     await older.listCollections();
     expect(older.supportsPublicRead()).toBe(false);
+  });
+
+  it("reads a collection's description from the service", async () => {
+    rag.collections = [
+      { ...ownCollection, description: "Peer-reviewed papers" },
+    ];
+    const ragProvider = provider();
+
+    const [row] = await ragProvider.listCollections();
+    expect(row.description).toBe("Peer-reviewed papers");
+  });
+
+  it("reports an empty description when the service does not send one", async () => {
+    // A service older than the description table has no field at all.
+    const ragProvider = provider();
+    const [row] = await ragProvider.listCollections();
+    expect(row.description).toBe("");
+  });
+
+  it("stores a description on create and on a later edit", async () => {
+    const ragProvider = provider();
+
+    const created = await ragProvider.createCollection(
+      "drafts",
+      "  Notes   for the draft ",
+    );
+    expect(created?.description).toBe("Notes for the draft");
+    expect(rag.calls).toContainEqual({
+      name: "create_collection",
+      args: { collection: "drafts", description: "Notes   for the draft" },
+    });
+
+    const kept = await ragProvider.setCollectionDescription(
+      "drafts",
+      "  Edited   text ",
+    );
+    // What the service kept is what the caller gets back, and the cached list
+    // carries it too.
+    expect(kept).toBe("Edited text");
+    expect(rag.calls).toContainEqual({
+      name: "set_collection_description",
+      args: { collection: "alice/drafts", description: "Edited   text" },
+    });
+    const rows = await ragProvider.listCollections();
+    expect(
+      rows.find((row) => row.name === "drafts")?.description,
+    ).toBe("Edited text");
+  });
+
+  it("refuses a description edit on a collection it cannot write to", async () => {
+    rag.collections = [{ ...sharedReadOnly }];
+    const ragProvider = provider();
+
+    await expect(
+      ragProvider.setCollectionDescription("bob__papers", "Mine now"),
+    ).rejects.toMatchObject({ code: "PERMISSION_DENIED" });
   });
 
   it("keeps collection-level operations out of the tree but allows per-file removal", async () => {

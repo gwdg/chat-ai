@@ -145,6 +145,14 @@ export default function ArcanaManager({
   const [publicRead, setPublicRead] = useState(collection.public === true);
   const [publicSupported, setPublicSupported] = useState<boolean | null>(null);
 
+  // What the collection is for. It belongs to the collection, not to a chat:
+  // the service stores it and `list_collections` returns it to every client.
+  const [description, setDescription] = useState(collection.description ?? "");
+  const [descriptionDraft, setDescriptionDraft] = useState("");
+  const [descriptionEditing, setDescriptionEditing] = useState(false);
+  const [descriptionSaving, setDescriptionSaving] = useState(false);
+  const [descriptionError, setDescriptionError] = useState("");
+
   // One file's Markdown, when it is open in the panel's editor.
   const [markdownFile, setMarkdownFile] = useState<RagFile | null>(null);
   const [markdownDraft, setMarkdownDraft] = useState("");
@@ -176,10 +184,14 @@ export default function ArcanaManager({
     remove: true,
     setTags: true,
     rewrite: true,
+    description: true,
   });
   const canIndex = tools.index;
   const canRemove = tools.remove;
   const canSetTags = tools.setTags;
+  // A description edit needs the service's own tool; an older deployment has
+  // only the read side, so the control is not drawn there.
+  const canEditDescription = tools.description && collection.can_write;
 
   const reload = useCallback(async (): Promise<RagFile[] | null> => {
     setLoading(true);
@@ -203,6 +215,7 @@ export default function ArcanaManager({
         remove: provider.supportsTool("remove_file"),
         setTags: provider.supportsTool("set_file_tags"),
         rewrite: provider.supportsIndexedTextEdit(),
+        description: provider.supportsTool("set_collection_description"),
       });
       return nextFiles;
     } catch (reason) {
@@ -285,6 +298,11 @@ export default function ArcanaManager({
   useEffect(() => {
     setPublicRead(collection.public === true);
   }, [collection.collection, collection.public]);
+
+  // The same refresh carries a new description (another tab may have edited it).
+  useEffect(() => {
+    setDescription(collection.description ?? "");
+  }, [collection.collection, collection.description]);
 
   useEffect(() => {
     if (
@@ -762,6 +780,37 @@ export default function ArcanaManager({
   };
 
   /**
+   * Save what the collection is for.
+   *
+   * The service stores it with the collection, so every client (this panel,
+   * the sidebar, `list_arcanas` in a chat) reads the same text. The list is
+   * refreshed afterwards, because the page header and the row carry it too.
+   */
+  const saveDescription = async () => {
+    if (descriptionSaving) return;
+    setDescriptionSaving(true);
+    setDescriptionError("");
+    try {
+      const kept = await provider.setCollectionDescription(
+        display,
+        descriptionDraft,
+      );
+      if (!aliveRef.current) return;
+      setDescription(kept);
+      setDescriptionEditing(false);
+      void refreshArcanas();
+      notifySuccess(t("arcanas.description_saved"));
+    } catch (reason) {
+      if (!aliveRef.current) return;
+      setDescriptionError(
+        reason instanceof Error ? reason.message : String(reason),
+      );
+    } finally {
+      if (aliveRef.current) setDescriptionSaving(false);
+    }
+  };
+
+  /**
    * Run the query with an explicit tag filter.
    *
    * The filter is a parameter because a click that changes it re-runs the
@@ -902,6 +951,85 @@ export default function ArcanaManager({
       aria-label={collection.name}
     >
       <div className="flex min-h-0 flex-1 flex-col gap-3">
+        <div
+          data-guide="arcana-description"
+          className="rounded-lg bg-base-200/60 px-2.5 py-2 text-xs"
+        >
+          {descriptionEditing ? (
+            <div className="flex flex-col gap-1.5">
+              <textarea
+                className="textarea textarea-sm w-full text-xs"
+                rows={2}
+                autoFocus
+                maxLength={280}
+                value={descriptionDraft}
+                placeholder={t("arcanas.description_placeholder")}
+                disabled={descriptionSaving}
+                onChange={(event) => setDescriptionDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape" && !descriptionSaving) {
+                    setDescriptionEditing(false);
+                    setDescriptionError("");
+                  }
+                }}
+              />
+              {descriptionError && (
+                <p className="text-[11px] text-error">{descriptionError}</p>
+              )}
+              <div className="flex justify-end gap-1">
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-xs"
+                  disabled={descriptionSaving}
+                  onClick={() => {
+                    setDescriptionEditing(false);
+                    setDescriptionError("");
+                  }}
+                >
+                  {t("common.cancel")}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-xs"
+                  disabled={descriptionSaving}
+                  onClick={() => void saveDescription()}
+                >
+                  {descriptionSaving ? (
+                    <span className="loading loading-spinner loading-xs" />
+                  ) : null}
+                  {t("common.save")}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-start gap-2">
+              <p
+                className={`min-w-0 flex-1 whitespace-pre-wrap leading-relaxed ${
+                  description
+                    ? "text-base-content/70"
+                    : "italic text-base-content/45"
+                }`}
+              >
+                {description || t("arcanas.description_empty")}
+              </p>
+              {canEditDescription && (
+                <button
+                  type="button"
+                  data-guide="arcana-description-edit"
+                  className="btn btn-ghost btn-xs shrink-0"
+                  onClick={() => {
+                    setDescriptionDraft(description);
+                    setDescriptionError("");
+                    setDescriptionEditing(true);
+                  }}
+                >
+                  <Edit size={13} />
+                  {t("arcanas.description_edit")}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-base-300 pb-2">
           <div className="flex items-center gap-1">
             {tabButton("files", <Document size={14} />, t("arcanas.tab_files"))}

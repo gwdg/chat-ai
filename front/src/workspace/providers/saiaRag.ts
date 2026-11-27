@@ -58,6 +58,7 @@ const WRITE_CHUNK_TOOL = "upload_file_chunk";
 const UPLOAD_TEXT_TOOL = "upload_file";
 const UPDATE_TEXT_TOOL = "update_indexed_text";
 const CREATE_COLLECTION_TOOL = "create_collection";
+const SET_DESCRIPTION_TOOL = "set_collection_description";
 const DELETE_COLLECTION_TOOL = "delete_collection";
 const REMOVE_FILE_TOOL = "remove_file";
 const INDEX_COLLECTION_TOOL = "index_collection";
@@ -168,6 +169,12 @@ export type RagCollection = {
    * member list grants access.
    */
   public: boolean;
+  /**
+   * What the collection is for, stored with the collection itself. Empty when
+   * the owner never wrote one, and always empty on a service that does not
+   * report it.
+   */
+  description: string;
 };
 
 export type RagMember = {
@@ -344,6 +351,7 @@ const collectionOf = (value: any): RagCollection | null => {
     can_manage: value.can_manage === true,
     shared: value.shared === true,
     public: value.public === true,
+    description: typeof value.description === "string" ? value.description.trim() : "",
   };
 };
 
@@ -788,10 +796,17 @@ export class SaiaRagProvider implements FileProvider {
     return collection;
   }
 
-  async createCollection(name: string): Promise<RagCollection | undefined> {
+  async createCollection(
+    name: string,
+    description = "",
+  ): Promise<RagCollection | undefined> {
     const trimmed = String(name ?? "").trim();
     if (!trimmed) throw new WorkspaceError("PROVIDER_ERROR", "A name is required");
-    await this.call(CREATE_COLLECTION_TOOL, { collection: trimmed });
+    const text = String(description ?? "").trim();
+    await this.call(CREATE_COLLECTION_TOOL, {
+      collection: trimmed,
+      ...(text ? { description: text } : {}),
+    });
     // A new collection has to appear in this list, so a read that started before
     // the creation is dropped and a fresh one is made.
     this.invalidateCollections();
@@ -799,6 +814,39 @@ export class SaiaRagProvider implements FileProvider {
     return collections.find(
       (collection) =>
         !collection.shared && collection.name === trimmed,
+    );
+  }
+
+  /**
+   * Change what a collection is for.
+   *
+   * The description lives with the collection (`set_collection_description`),
+   * not in the chat that reads it, so every client sees the same text. Writing
+   * it needs the editor role, which the service re-checks; a deployment without
+   * the tool reports it as unsupported and the manager hides the control.
+   */
+  async setCollectionDescription(
+    display: string,
+    description: string,
+  ): Promise<string> {
+    const collection = await this.resolveCollection(display);
+    if (!collection.can_write) {
+      throw new WorkspaceError(
+        "PERMISSION_DENIED",
+        "Only a writer can change this collection's description",
+      );
+    }
+    const text = String(description ?? "").trim();
+    await this.call(SET_DESCRIPTION_TOOL, {
+      collection: collection.collection,
+      description: text,
+    });
+    this.invalidateCollections();
+    const collections = await this.refreshCollections();
+    return (
+      collections.find(
+        (entry) => entry.collection === collection.collection,
+      )?.description ?? text
     );
   }
 

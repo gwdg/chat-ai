@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => ({
   removeMember: vi.fn(),
   setPublicRead: vi.fn(),
   supportsPublicRead: vi.fn(() => true),
+  setCollectionDescription: vi.fn(),
   notifySuccess: vi.fn(),
   notifyError: vi.fn(),
   downloadBlob: vi.fn(),
@@ -63,6 +64,8 @@ vi.mock("../../../workspace/arcanas", () => {
     removeMember: (...args) => mocks.removeMember(...args),
     setPublicRead: (...args) => mocks.setPublicRead(...args),
     supportsPublicRead: () => mocks.supportsPublicRead(),
+    setCollectionDescription: (...args) =>
+      mocks.setCollectionDescription(...args),
   };
   return {
     arcanasProvider: () => provider,
@@ -107,12 +110,15 @@ describe("ArcanaManager", () => {
     mocks.rewriteIndexedText.mockReset();
     mocks.supportsIndexedTextEdit.mockReset();
     mocks.supportsIndexedTextEdit.mockReturnValue(true);
+    mocks.supportsTool.mockReset();
+    mocks.supportsTool.mockReturnValue(true);
     mocks.listMembers.mockReset();
     mocks.addMember.mockReset();
     mocks.removeMember.mockReset();
     mocks.setPublicRead.mockReset();
     mocks.supportsPublicRead.mockReset();
     mocks.supportsPublicRead.mockReturnValue(true);
+    mocks.setCollectionDescription.mockReset();
     mocks.notifySuccess.mockReset();
     mocks.notifyError.mockReset();
     mocks.listFiles.mockResolvedValue(files);
@@ -142,6 +148,9 @@ describe("ArcanaManager", () => {
     mocks.addMember.mockResolvedValue(undefined);
     mocks.removeMember.mockResolvedValue(undefined);
     mocks.setPublicRead.mockResolvedValue(undefined);
+    mocks.setCollectionDescription.mockImplementation(
+      async (_display, text) => text.trim(),
+    );
   });
 
   it("names each file's type in its row", async () => {
@@ -320,6 +329,51 @@ describe("ArcanaManager", () => {
         screen.queryByLabelText("arcanas.share_link_title"),
       ).not.toBeInTheDocument(),
     );
+  });
+
+  it("edits the collection's own description", async () => {
+    mocks.setCollectionDescription.mockResolvedValue("Peer-reviewed papers");
+
+    render(<ArcanaManager collection={collection} />);
+    await screen.findByText("a.md");
+
+    // The collection has none yet, and the owner is the one who can write one.
+    expect(screen.getByText("arcanas.description_empty")).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "arcanas.description_edit" }),
+    );
+
+    const field = screen.getByPlaceholderText("arcanas.description_placeholder");
+    fireEvent.change(field, { target: { value: "  Peer-reviewed papers  " } });
+    fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+
+    await waitFor(() =>
+      expect(mocks.setCollectionDescription).toHaveBeenCalledWith(
+        "recipes",
+        "  Peer-reviewed papers  ",
+      ),
+    );
+    // What the service kept is what the panel shows afterwards.
+    expect(await screen.findByText("Peer-reviewed papers")).toBeInTheDocument();
+    expect(mocks.notifySuccess).toHaveBeenCalledWith(
+      "arcanas.description_saved",
+    );
+  });
+
+  it("shows the stored description and offers no edit without the tool", async () => {
+    mocks.supportsTool.mockReturnValue(false);
+
+    render(
+      <ArcanaManager
+        collection={{ ...collection, description: "Peer-reviewed papers" }}
+      />,
+    );
+
+    await screen.findByText("a.md");
+    expect(screen.getByText("Peer-reviewed papers")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "arcanas.description_edit" }),
+    ).not.toBeInTheDocument();
   });
 
   it("keeps only the member list when the service cannot publish", async () => {

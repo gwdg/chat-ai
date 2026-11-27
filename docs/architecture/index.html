@@ -3673,11 +3673,12 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           names an untouched <code>Untitled Chat</code> after the collection and persists the
           binding through <code>updateConversation</code> with the <code>lastModified</code> it read.
           A chat owns a <b>list</b> of collections: <code>settings.arcana_shares</code> holds the
-          ones the user adds (each with its <code>owner/name</code> reference and a short user-written
-          description), and the single <code>settings.arcana_share</code> an older link writes is
-          merged into the same list. Adding a collection in GWDG Tools &rarr; <b>Arcana Tools</b>
-          writes the binding and the description; it does not turn tools on, because the read tools
-          do not need that switch. Removing or editing one folds the link binding into the list, so
+          ones the user adds (each with its <code>owner/name</code> reference), and the single
+          <code>settings.arcana_share</code> an older link writes is merged into the same list.
+          Adding a collection in GWDG Tools &rarr; <b>Arcana Tools</b> writes the binding only
+          &mdash; the collection's description is not a chat setting, so the form has no field for
+          it; it does not turn tools on either, because the read tools do not need that switch.
+          Removing or editing one folds the link binding into the list, so
           only one representation is left behind.
         </li>
         <li>
@@ -3695,9 +3696,24 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           member list has no other way in.
         </li>
         <li>
+          <b>What a collection is for belongs to the collection.</b> The service keeps it in a
+          singleton <code>collection_info (id = 1, description)</code> row, created on the first
+          write so a read-only open stays a read, and <code>Repository.set_description()</code>
+          collapses whitespace and clips to 280 characters. <code>list_collections</code> returns it,
+          so the sidebar, the page header, the panel and a chat's <code>list_arcanas</code> all read
+          the same text instead of each keeping a copy. Editing needs the editor role and goes
+          through the MCP tool <code>set_collection_description</code> (the REST mirror is
+          <code>PUT /collections/{name}/description</code>); the provider's
+          <code>setCollectionDescription()</code> re-reads the list after it, and the panel draws its
+          Edit control only when the service advertises that tool and the row reports
+          <code>can_write</code>. A create carries the description too, and the page header shows it
+          in place of the generic subtitle once it is set.
+        </li>
+        <li>
           <b>Five read-only tools, scoped to the chat's list.</b> <code>agent/arcanaChatTools.ts</code>
-          offers <code>list_arcanas</code>, which returns every collection with its description,
-          then <code>search_arcana</code> (<code>search_chunks</code>),
+          offers <code>list_arcanas</code>, which returns every collection with the description the
+          service stores on it (<code>list_collections</code>; a chat-local description from an older
+          build is only the fallback), then <code>search_arcana</code> (<code>search_chunks</code>),
           <code>list_arcana_documents</code> (<code>list_files</code>),
           <code>read_arcana_document</code> (<code>read_file_base64</code>, text files only) and
           <code>retrieve_document</code>. The four reading tools take a <code>collection</code>
@@ -3783,7 +3799,10 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           </tr>
           <tr>
             <td>Manager</td>
-            <td>Files tab: upload, pending banner, status badges, tag filter, inline tag editor and
+            <td>Description card above the tabs (the collection's own text, editable through
+                <code>set_collection_description</code> when the service offers it and the row is
+                writable). Files tab: upload, pending banner, status badges, tag filter, inline tag
+                editor and
                 remove confirmation. Search tab: mode, count, tag filter and results. Share tab: the
                 public-read switch, the member list, its add/remove controls, and &mdash; once public
                 &mdash; the chat link that opens a new chat wired to the collection.</td>
@@ -3972,7 +3991,8 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
             editor panel, deep links</li>
         <li><span class="mono">front/src/components/Arcana/ArcanaEditorPanel.tsx</span> - the docked,
             resizable editor panel</li>
-        <li><span class="mono">front/src/components/Arcana/ArcanaManager.tsx</span> - files, tags,
+        <li><span class="mono">front/src/components/Arcana/ArcanaManager.tsx</span> - the collection
+            description, files, tags,
             index, search, remove, members, the chat link and the Markdown edit/save path</li>
         <li><span class="mono">front/src/components/Arcana/ArcanaMarkdownEditor.tsx</span> - the
             in-panel text editor and its save hint</li>

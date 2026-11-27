@@ -76,22 +76,66 @@ describe("Arcana chat tools", () => {
     ]);
   });
 
-  it("lists the collections with their descriptions", async () => {
+  it("lists the collections with the descriptions stored on the service", async () => {
+    // The description belongs to the collection, so `list_collections` is what
+    // the model has to see — including for a collection whose chat-local copy
+    // is stale.
+    mocks.callTool.mockResolvedValue(
+      answer(
+        JSON.stringify({
+          collections: [
+            {
+              collection: "alice__papers",
+              name: "papers",
+              description: "Peer-reviewed papers on retrieval",
+            },
+            {
+              collection: "bob__notes",
+              name: "notes",
+              description: "Meeting minutes and decisions",
+            },
+          ],
+        }),
+      ),
+    );
+    const { tools } = createArcanaChatTools([
+      { ...ref, description: "An older local copy" },
+      notes,
+    ]);
+    const result = await toolNamed(tools, "list_arcanas").execute("id", {});
+    expect(mocks.callTool).toHaveBeenCalledWith({
+      name: "list_collections",
+      arguments: {},
+    });
+    expect(result.content[0].text).toContain(
+      "- alice/papers: Peer-reviewed papers on retrieval",
+    );
+    expect(result.content[0].text).toContain(
+      "- bob/notes: Meeting minutes and decisions",
+    );
+  });
+
+  it("falls back to a chat-local description when the service has none", async () => {
+    // A service older than the description table reports no field at all.
+    mocks.callTool.mockResolvedValue(answer(JSON.stringify({ collections: [] })));
     const { tools } = createArcanaChatTools([
       { ...ref, description: "Peer-reviewed papers" },
-      notes,
     ]);
     const result = await toolNamed(tools, "list_arcanas").execute("id", {});
     expect(result.content[0].text).toContain(
       "- alice/papers: Peer-reviewed papers",
     );
-    expect(result.content[0].text).toContain(
-      "- bob/notes: Meeting minutes and decisions",
-    );
-    expect(mocks.callTool).not.toHaveBeenCalled();
+  });
+
+  it("still lists the collections when the service cannot answer", async () => {
+    mocks.callTool.mockRejectedValue(new Error("unreachable"));
+    const { tools } = createArcanaChatTools([{ ...ref, description: "Local" }]);
+    const result = await toolNamed(tools, "list_arcanas").execute("id", {});
+    expect(result.content[0].text).toContain("- alice/papers: Local");
   });
 
   it("marks a binding without a description", async () => {
+    mocks.callTool.mockResolvedValue(answer(JSON.stringify({ collections: [] })));
     const { tools } = createArcanaChatTools([ref]);
     const result = await toolNamed(tools, "list_arcanas").execute("id", {});
     expect(result.content[0].text).toContain("- alice/papers: (no description)");

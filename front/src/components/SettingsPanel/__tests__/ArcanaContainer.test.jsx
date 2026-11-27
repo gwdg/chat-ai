@@ -227,7 +227,7 @@ describe("ArcanaContainer adding collections", () => {
     ).toBeInTheDocument();
   });
 
-  it("adds a typed owner and Arcana with a description and leaves the switch alone", () => {
+  it("adds a typed owner and Arcana and leaves the switch alone", () => {
     const localState = stateWith({ enable_tools: false, arcana: { id: "" } });
     const setLocalState = vi.fn((updater) => updater(localState));
     render(
@@ -244,22 +244,18 @@ describe("ArcanaContainer adding collections", () => {
     fireEvent.change(screen.getByPlaceholderText("arcana, e.g. papers"), {
       target: { value: "papers" },
     });
-    fireEvent.change(
-      screen.getByPlaceholderText("Short description for the agent (optional)"),
-      { target: { value: " Peer-reviewed papers " } },
-    );
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
 
     const next = setLocalState.mock.results[0].value;
     // The read tools are registered from the list, not from the master switch,
     // so adding a collection must not turn tools on behind the user's back.
     expect(next.settings.enable_tools).toBe(false);
+    // The description belongs to the collection, not to this chat's binding.
     expect(next.settings.arcana_shares).toEqual([
       {
         collection: "alice/papers",
         owner: "alice",
         name: "papers",
-        description: "Peer-reviewed papers",
       },
     ]);
   });
@@ -366,30 +362,30 @@ describe("ArcanaContainer adding collections", () => {
     ).toBeInTheDocument();
   });
 
-  it("edits the description of an added collection", () => {
+  it("has no per-chat description inputs: the collection owns it", () => {
     const localState = stateWith({
       arcana_shares: [
         { collection: "alice__papers", owner: "alice", name: "papers" },
       ],
     });
-    const setLocalState = vi.fn((updater) => updater(localState));
     render(
       <ArcanaContainer
         localState={localState}
-        setLocalState={setLocalState}
+        setLocalState={vi.fn()}
         configurable
       />,
     );
 
-    fireEvent.change(
-      screen.getByLabelText("Description of alice/papers"),
-      { target: { value: "Only the 2026 papers" } },
-    );
-
-    const next = setLocalState.mock.results[0].value;
-    expect(next.settings.arcana_shares[0].description).toBe(
-      "Only the 2026 papers",
-    );
+    expect(screen.getByText("alice/papers")).toBeInTheDocument();
+    // The description is edited on the collection's own page and comes back
+    // through `list_collections`, so neither the row nor the add form keeps a
+    // copy of it.
+    expect(
+      screen.queryByLabelText("Description of alice/papers"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByPlaceholderText("Short description for the agent (optional)"),
+    ).not.toBeInTheDocument();
   });
 
   it("removes one collection and keeps the others", () => {

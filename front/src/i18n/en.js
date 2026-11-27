@@ -701,9 +701,7 @@ export default {
       step3:
         "Select Arcana Tools. The separate Arcana row is legacy: it sends one collection id with the request.",
       step4:
-        "Add each collection the chat should read: the owner in the first field, the Arcana name in the second (e.g. alice and papers). The agent lists them with list_arcanas and picks the matching one.",
-      step5:
-        "Give the collection a short description, so the agent knows what it is for.",
+        "Add each collection the chat should read: the owner in the first field, the Arcana name in the second (e.g. alice and papers). What a collection is for is edited on its own page, and the agent lists the collections with list_arcanas to pick the matching one.",
     },
     web_search: {
       title: "Use Web Search",
@@ -1386,8 +1384,6 @@ export default {
     arcana_add_owner_placeholder: "owner, e.g. alice",
     arcana_add_name_placeholder: "arcana, e.g. papers",
     arcana_add_button: "Add",
-    arcana_description_placeholder: "Short description for the agent (optional)",
-    arcana_description_for: "Description of {{name}}",
     arcana_invalid_ref: "Enter the owner and the Arcana name, e.g. alice and papers.",
     arcana_already_added: "This Arcana is already in the chat.",
     placeholder_mcp_url: "http://localhost:3000/mcp",
@@ -2489,6 +2485,15 @@ export default {
       "An Arcana is a document collection in SAIA. You can add files and tags after creating it.",
     name_label: "Name",
     name_placeholder: "e.g. lecture-notes",
+    description_label: "Description for the agent",
+    description_hint:
+      "Stored with the collection. A chat's Arcana tools show it to the agent, so it can pick the right collection.",
+    description_placeholder:
+      "What is this collection for? e.g. Peer-reviewed papers on retrieval.",
+    description_empty:
+      "No description yet. The agent sees it when it chooses between collections.",
+    description_edit: "Edit description",
+    description_saved: "Description saved.",
     create: "Create",
     creating: "Creating…",
     created: "Created Arcana “{{name}}”.",

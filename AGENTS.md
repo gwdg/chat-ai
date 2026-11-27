@@ -2986,19 +2986,24 @@ unindexed, need no Dexie version bump, and travel in the full export.
 `settings.arcana_share` (the single object an older link writes) is still accepted.
 `arcanaSharesFromSettings(settings)` is the one reader: it merges both, deduplicates by reference
 (`owner/name`), keeps the first entry's name and fills a missing `description` from the second.
-`arcanaShareFromSettings` is just its first element. The description is **chat-local** and
-user-written (neither the saia-rag service nor `saia-rag-web` stores one), is clipped to 280
-characters, and exists so the agent can pick the useful collection.
+`arcanaShareFromSettings` is just its first element. What a collection is for belongs to the
+**collection**: the saia-rag service stores it (a singleton `collection_info` row, schema v12, read
+with `Repository.get_description()` and written by `set_description()`, which collapses whitespace
+and clips to 280 characters) and `list_collections` returns it, so every client sees the same text.
+The optional `description` on a stored binding is therefore **legacy fallback only** — kept so an
+imported chat or an older build still shows something, and `list_arcanas` prefers the service's text
+when there is one (`agent/arcanaChatTools.ts#serviceDescriptions`, which ignores a failed
+`list_collections` instead of failing the tool).
 
 `components/SettingsPanel/ArcanaContainer.jsx` renders the two halves the tool list separates, gated
 by its `legacy` (default true) and `collections` (default true) props:
 
 - The **Arcana Tools** row (`legacy={false}`) shows the list and the add form. It lists every
-  collection the chat can read — every share, each row badged "Read-only tools" — with an inline
-  description input and a remove control. Below it the add form (separate owner and Arcana-name
-  fields plus a short description, `data-guide` `arcana-add-id` on the pair,
-  `arcana-add-owner` / `arcana-add-name` on the inputs and `arcana-add-description`) appends to
-  `arcana_shares`; a pasted `alice/papers` fills both fields.
+  collection the chat can read — every share, each row badged "Read-only tools" — with a remove
+  control and no text input: the description is not edited here. Below it the add form (separate
+  owner and Arcana-name fields, `data-guide` `arcana-add-id` on the pair,
+  `arcana-add-owner` / `arcana-add-name` on the inputs) appends to `arcana_shares`; a pasted
+  `alice/papers` fills both fields.
 - The **Arcana** row (`collections={false}`) is **legacy**: it shows the notice
   (`data-guide="arcana-legacy-notice"`), the single `settings.arcana.id` field (`data-guide`
   `arcana-id`) and, when that id is set, the row for it (badged "Arcana tool"). It is the server-side
@@ -3020,7 +3025,8 @@ deletes `arcana_share`, so the aliases do not drift apart. The add form refuses 
 `<ul data-guide="tools-arcana-list">`.
 
 `agent/arcanaChatTools.ts#createArcanaChatTools(refs)` adds five read-only tools:
-`list_arcanas` (every collection with its description), then `search_arcana` (`search_chunks`),
+`list_arcanas` (every collection with its description, read from the service's `list_collections`),
+then `search_arcana` (`search_chunks`),
 `list_arcana_documents` (`list_files`), `read_arcana_document` (`read_file_base64`, text files only)
 and `retrieve_document`. The four reading tools take a `collection` argument, resolved against this
 chat's list (`owner/name` or the storage name); a value outside it is refused, and with one binding
@@ -3062,12 +3068,21 @@ hidden and whose prompt uses `arcana_chat.prompt_placeholder`. There is no `Page
 page: two stacked titles ("test" over "Chat about test") said the same thing twice, and the bar was
 full-width while the banner sat in the reading column. The head panel carries the collection name,
 `· Arcana · N file(s)` (file count `null` until the editor has read the collection, so it never
-claims "0 files"), `arcana_chat.subtitle`, the `New chat` reset and a page-supplied `actions` node —
+claims "0 files"), the collection's own description when it has one (else `arcana_chat.subtitle`),
+the `New chat` reset and a page-supplied `actions` node —
 the editor toggle (`data-guide="arcana-editor-toggle"`). Below `lg` the head panel scrolls away with
 the chat column, so the editor's own chevron (`onClose`) is the way back from an open panel.
 Files, tags, search and sharing live in `ArcanaEditorPanel` on the right (`components/Arcana/`),
 which renders `ArcanaManager` with `framed={false}` so the panel is the card and there is no dialog
 any more.
+**The description is edited in that panel, not in the chat.** `ArcanaManager` shows it above the tab
+strip (`data-guide="arcana-description"`, the Edit control `arcana-description-edit`) and saves
+through `SaiaRagProvider.setCollectionDescription`, which calls the editor-only MCP tool
+`set_collection_description` and then re-reads the list (the service clears its 30 s
+`_visible_collections` cache on a write, and the provider drops its own caches). The control is drawn
+only when the service advertises that tool **and** the row reports `can_write`
+(`provider.supportsTool("set_collection_description")`), so an older deployment shows the text and no
+Edit. `ArcanaCreateModal` sends an optional description with the create call.
 The panel's width (`chatai.arcana.editor-width`, drag on its left edge, 320–1024 px) and open state
 (`chatai.arcana.editor-open`, default from the viewport) are per browser; below `lg` an open panel
 replaces the chat instead of squeezing it. Sidebar menu entries navigate with `?tab=search`/`?tab=share`

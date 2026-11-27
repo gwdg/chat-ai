@@ -18,8 +18,9 @@ import {
  * backend runs the retrieval. `Arcana Tools` is the current one: the chat owns a
  * list of collections (`settings.arcana_shares`, plus the single
  * `settings.arcana_share` an access link writes) that the app's own read tools
- * (`agent/arcanaChatTools.ts`) use, each with a short description that
- * `list_arcanas` hands to the model.
+ * (`agent/arcanaChatTools.ts`) use. What a collection is for is stored with the
+ * collection itself (edited on its page) and `list_arcanas` reads it from the
+ * service, so the form here records only the reference.
  *
  * The list is deduplicated by reference and each row says where it comes from.
  * It is rendered under Arcana Tools, because that is where the tools that read
@@ -36,7 +37,6 @@ const ArcanaContainer = ({
   const { openModal } = useModal();
   const [draftOwner, setDraftOwner] = useState("");
   const [draftName, setDraftName] = useState("");
-  const [draftDescription, setDraftDescription] = useState("");
   const [error, setError] = useState("");
 
   const settings = localState.settings;
@@ -153,37 +153,17 @@ const ArcanaContainer = ({
       setError(t("settings.arcana_already_added"));
       return;
     }
-    const description = draftDescription.trim();
+    // The description belongs to the collection (edited on its page), so the
+    // form only records the reference.
     setLocalState((prev) => {
       const current = arcanaSharesFromSettings(prev.settings);
       if (current.some((share) => share.collection === ref.collection)) {
         return prev;
       }
-      const next = [
-        ...current,
-        { ...ref, ...(description ? { description } : {}) },
-      ];
-      return writeShares(prev, next);
-    });
-    setDraftOwner("");
+      return writeShares(prev, [...current, { ...ref }]);
+    });    setDraftOwner("");
     setDraftName("");
-    setDraftDescription("");
     setError("");
-  };
-
-  const changeDescription = (entry, value) => {
-    if (!entry.collection) return;
-    setLocalState((prev) => {
-      const next = arcanaSharesFromSettings(prev.settings).map((share) => {
-        if (share.collection !== entry.collection) return share;
-        const updated = { ...share };
-        const description = value.trim();
-        if (description) updated.description = description;
-        else delete updated.description;
-        return updated;
-      });
-      return writeShares(prev, next);
-    });
   };
 
   const removeArcana = (entry) => {
@@ -253,19 +233,6 @@ const ArcanaContainer = ({
                     <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                   </button>
                 </div>
-                {entry.share && (
-                  <input
-                    type="text"
-                    data-guide="arcana-share-description"
-                    value={entry.share.description ?? ""}
-                    onChange={(e) => changeDescription(entry, e.target.value)}
-                    placeholder={t("settings.arcana_description_placeholder")}
-                    aria-label={t("settings.arcana_description_for", {
-                      name: entry.name,
-                    })}
-                    className="input input-xs w-full"
-                  />
-                )}
               </li>
             ))}
           </ul>
@@ -312,18 +279,6 @@ const ArcanaContainer = ({
                 className="input w-full font-mono text-xs"
               />
             </div>
-            <input
-              type="text"
-              data-guide="arcana-add-description"
-              value={draftDescription}
-              onChange={(e) => setDraftDescription(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") addShare();
-              }}
-              placeholder={t("settings.arcana_description_placeholder")}
-              aria-label={t("settings.arcana_description_placeholder")}
-              className="input w-full text-xs"
-            />
             <button
               type="button"
               onClick={addShare}

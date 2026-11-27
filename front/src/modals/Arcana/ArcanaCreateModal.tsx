@@ -10,7 +10,9 @@ import { arcanasProvider, refreshArcanas } from "../../workspace/arcanas";
  *
  * The service creates the collection for the caller, who becomes its owner.
  * A shared collection cannot be created here (sharing happens afterwards), so
- * the name is the only input.
+ * the name and an optional description are the only inputs. The description is
+ * stored with the collection, so the agent can tell what it is for when it
+ * chooses between several.
  */
 export default function ArcanaCreateModal({
   isOpen,
@@ -23,6 +25,7 @@ export default function ArcanaCreateModal({
 }) {
   const { t } = useTranslation();
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -33,10 +36,11 @@ export default function ArcanaCreateModal({
     setBusy(true);
     setError("");
     try {
-      await arcanasProvider().createCollection(trimmed);
+      await arcanasProvider().createCollection(trimmed, description.trim());
       await refreshArcanas();
       notifySuccess?.(t("arcanas.created", { name: trimmed }));
       setName("");
+      setDescription("");
       onClose();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason));
@@ -77,6 +81,23 @@ export default function ArcanaCreateModal({
             disabled={busy}
             onChange={(event) => setName(event.target.value)}
           />
+        </label>
+        <label className="form-control w-full">
+          <span className="mb-1 block text-xs font-medium">
+            {t("arcanas.description_label")}
+          </span>
+          <textarea
+            className="textarea textarea-sm w-full text-xs"
+            rows={2}
+            maxLength={280}
+            value={description}
+            placeholder={t("arcanas.description_placeholder")}
+            disabled={busy}
+            onChange={(event) => setDescription(event.target.value)}
+          />
+          <span className="mt-1 block text-[11px] text-base-content/60">
+            {t("arcanas.description_hint")}
+          </span>
         </label>
         {error && <p className="text-xs text-error">{error}</p>}
         <div className="mt-1 flex justify-end gap-2">

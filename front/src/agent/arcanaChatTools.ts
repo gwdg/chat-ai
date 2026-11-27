@@ -94,13 +94,20 @@ export interface ArcanaChatTools {
 }
 
 /** The label to show a model for one binding. */
-const refLabel = (ref: ArcanaShareRef) =>
-  ref.description
-    ? `${arcanaRefId(ref)}: ${ref.description}`
+const refLabel = (ref: ArcanaShareRef, descriptions?: Map<string, string>) => {
+  const description = descriptions?.get(ref.collection) || ref.description;
+  return description
+    ? `${arcanaRefId(ref)}: ${description}`
     : `${arcanaRefId(ref)}: (no description)`;
+};
 
-const collectionList = (refs: ArcanaShareRef[]) =>
-  refs.map((ref) => `- ${refLabel(ref)}`).join("\n");
+const collectionList = (
+  refs: ArcanaShareRef[],
+  descriptions?: Map<string, string>,
+) =>
+  refs
+    .map((ref) => `- ${refLabel(ref, descriptions)}`)
+    .join("\n");
 
 /**
  * The read tools for `refs`, or an empty set when no binding is configured.
@@ -256,17 +263,54 @@ export function createArcanaChatTools(refs: ArcanaShareRef[]): ArcanaChatTools {
     );
   };
 
+  /**
+   * The descriptions the service stores with the collections.
+   *
+   * The description belongs to the collection, so this is the authoritative
+   * text; a chat-local description from an older build stays the fallback when
+   * the service has none, or cannot answer.
+   */
+  const serviceDescriptions = async (): Promise<Map<string, string>> => {
+    const descriptions = new Map<string, string>();
+    try {
+      const answer = await call("list_collections", {});
+      const payload = parseJson(answer);
+      const rows = Array.isArray(payload?.collections)
+        ? payload.collections
+        : Array.isArray(payload)
+          ? payload
+          : [];
+      for (const row of rows) {
+        const stored = String(row?.collection ?? "").trim();
+        const description =
+          typeof row?.description === "string" ? row.description.trim() : "";
+        if (!stored || !description) continue;
+        descriptions.set(
+          stored.includes("/") ? stored : stored.replace("__", "/"),
+          description,
+        );
+      }
+    } catch {
+      // No service, or an older one that does not report the field: the
+      // chat-local descriptions still give the model something to choose by.
+    }
+    return descriptions;
+  };
+
   const tools = [
     tool(
       "list_arcanas",
       "List the Arcana collections this chat can read, with a short description of each. Use it to choose the collection for search_arcana, list_arcana_documents and read_arcana_document.",
       Type.Object({}),
-      async () =>
-        text(
-          refs.length
-            ? `Arcana collections this chat can read:\n${collectionList(refs)}`
-            : "This chat is not linked to an Arcana collection.",
-        ),
+      async () => {
+        if (!refs.length) {
+          return text("This chat is not linked to an Arcana collection.");
+        }
+        const descriptions = await serviceDescriptions();
+        return text(
+          `Arcana collections this chat can read:\n${collectionList(refs, descriptions)}`,
+        );
+      },
     ),
     tool(
       "search_arcana",
