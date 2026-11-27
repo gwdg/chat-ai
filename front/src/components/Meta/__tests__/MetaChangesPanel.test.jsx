@@ -167,7 +167,7 @@ describe("MetaChangesPanel", () => {
     expect(screen.queryByRole("link", { name: "Chat title" })).toBeNull();
   });
 
-  it("shows the Check now row only on the What's New tab", () => {
+  it("keeps Check now in the header, only on the What's New tab", () => {
     render(
       <MemoryRouter>
         <MetaChangesPanel
@@ -188,50 +188,49 @@ describe("MetaChangesPanel", () => {
       </MemoryRouter>,
     );
 
-    const checkRow = () =>
-      document.querySelector('[data-guide="meta-check-now-row"]');
+    const checkNow = () => screen.queryByRole("button", { name: "Check now" });
 
-    const button = screen.getByRole("button", { name: "Check now" });
-    const row = checkRow();
-    expect(row).not.toBeNull();
-    expect(row).toHaveClass("flex", "items-center", "px-3", "pb-2", "pt-1.5");
-    expect(row.contains(button)).toBe(true);
-    expect(button.closest('[data-guide="meta-check-now-row"]')).toBe(row);
+    const button = checkNow();
+    expect(button).not.toBeNull();
     expect(button).toHaveClass("btn", "btn-ghost", "btn-xs", "gap-1");
 
+    // Next to "What's New" in the header row, not on a row of its own below it.
     const header = screen.getByRole("tablist").parentElement;
-    expect(header.querySelector('[data-guide="meta-check-now-row"]')).toBeNull();
-    expect(header.contains(button)).toBe(false);
-    expect(header.nextElementSibling).toBe(row);
+    expect(header.contains(button)).toBe(true);
+    expect(document.querySelector('[data-guide="meta-check-now-row"]')).toBeNull();
+    expect(
+      header.nextElementSibling.querySelector('[data-guide="meta-check-now"]'),
+    ).toBeNull();
+    // A trailing action: still before the collapse control.
+    expect(header.lastElementChild).toHaveAttribute(
+      "aria-label",
+      "Collapse What's New",
+    );
 
     fireEvent.click(screen.getByRole("tab", { name: "Workspace" }));
-    expect(checkRow()).toBeNull();
-    expect(screen.queryByRole("button", { name: "Check now" })).toBeNull();
+    expect(checkNow()).toBeNull();
 
     fireEvent.click(screen.getByRole("tab", { name: "Sessions" }));
-    expect(checkRow()).toBeNull();
-    expect(screen.queryByRole("button", { name: "Check now" })).toBeNull();
+    expect(checkNow()).toBeNull();
 
     fireEvent.click(screen.getByRole("tab", { name: "What's New" }));
-    const restoredRow = checkRow();
-    expect(restoredRow).not.toBeNull();
-    expect(
-      restoredRow.contains(screen.getByRole("button", { name: "Check now" })),
-    ).toBe(true);
+    expect(header.contains(checkNow())).toBe(true);
   });
 
-  it("shows the Check now row on the no-tabs panel", () => {
+  it("shows Check now in the header of the no-tabs panel", () => {
     const { container } = render(
       <MemoryRouter>
         <MetaChangesPanel userSettings={{}} />
       </MemoryRouter>,
     );
 
-    const row = document.querySelector('[data-guide="meta-check-now-row"]');
-    expect(row).not.toBeNull();
     const button = screen.getByRole("button", { name: "Check now" });
-    expect(row.contains(button)).toBe(true);
-    expect(button.closest('[data-guide="meta-check-now-row"]')).toBe(row);
+    const header = button.parentElement;
+    expect(header).toHaveClass("border-b");
+    expect(
+      header.querySelector('[data-guide="meta-check-now"]'),
+    ).toBe(button);
+    expect(document.querySelector('[data-guide="meta-check-now-row"]')).toBeNull();
     expect(button).toHaveClass("btn", "btn-ghost", "btn-xs", "gap-1");
     expect(screen.getByText("What's New").closest("[data-guide]")).toBeNull();
     expect(container.querySelector("aside")).toHaveStyle({ width: "240px" });

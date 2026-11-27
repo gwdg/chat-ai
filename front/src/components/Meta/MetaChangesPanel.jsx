@@ -299,6 +299,20 @@ export default function MetaChangesPanel({
             {changesTitle}
           </span>
         )}
+        {(tabs.length === 0 || activeTab === "changes") && (
+          <button
+            type="button"
+            data-guide="meta-check-now"
+            onClick={() => void check()}
+            disabled={checking}
+            className="btn btn-ghost btn-xs shrink-0 gap-1 px-1.5"
+            title={t("meta_chat.check_now")}
+            aria-label={t("meta_chat.check_now")}
+          >
+            <RefreshCw size={13} className={checking ? "animate-spin" : ""} />
+            {t("meta_chat.check_now")}
+          </button>
+        )}
         <button
           type="button"
           onClick={toggleCollapsed}
@@ -309,24 +323,6 @@ export default function MetaChangesPanel({
           <ChevronRight size={14} />
         </button>
       </div>
-      {(tabs.length === 0 || activeTab === "changes") && (
-        <div
-          data-guide="meta-check-now-row"
-          className="flex items-center px-3 pb-2 pt-1.5"
-        >
-          <button
-            type="button"
-            onClick={() => void check()}
-            disabled={checking}
-            className="btn btn-ghost btn-xs gap-1"
-            title={t("meta_chat.check_now")}
-            aria-label={t("meta_chat.check_now")}
-          >
-            <RefreshCw size={13} className={checking ? "animate-spin" : ""} />
-            {t("meta_chat.check_now")}
-          </button>
-        </div>
-      )}
       {activeContentTab ? (
         <div
           className={`min-h-0 flex-1 overflow-y-auto ${

@@ -741,8 +741,9 @@ the workspace's chats whose rows look like the sidebar's workspace chat rows and
 `/chat/<id>`) and **Agents** (`agents_tab`, one `WorkspaceAgentPanel` per workspace the chat is
 attached to, headed by the workspace name only when there are several, `framed={false}` so the tab's
 own label is the only heading) — through `MetaChangesPanel.tabs` (`{id,label,content}[]`, default none, so the Meta
-chat's global panel has no strip). "Check now" sits in its own row under the strip and only on the
-report tab. The panel follows the left sidebar's conventions: it defaults to 240 px (the sidebar's
+chat's global panel has no strip). "Check now" sits in the panel header, right of the tab strip and
+before the collapse chevron, and only on the report tab. The panel follows the left sidebar's
+conventions: it defaults to 240 px (the sidebar's
 `15rem`, clamp 200–1024 after a drag; a dragged width is saved in `chatai.meta.changes-width-v2`
 and reopened at that width), starts collapsed below 1280 px to the same 64 px rail as the
 sidebar, and an explicit collapse/expand (localStorage `chatai.meta.changes-collapsed`) overrides
