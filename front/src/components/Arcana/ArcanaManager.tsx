@@ -27,10 +27,7 @@ import {
   isArcanaIndexed,
   updateArcanaStatus,
 } from "../../workspace/arcanas";
-import {
-  isTextFileName,
-  markdownFileName,
-} from "../../workspace/providers/saiaRag";
+import { isTextFileName } from "../../workspace/providers/saiaRag";
 import type {
   RagCollection,
   RagFile,
@@ -167,7 +164,12 @@ export default function ArcanaManager({
   // Tool lists arrive with the MCP handshake, which only happens on the first
   // call. Start optimistic so the buttons are there while the list loads, then
   // narrow them to what this service really advertises.
-  const [tools, setTools] = useState({ index: true, remove: true, setTags: true });
+  const [tools, setTools] = useState({
+    index: true,
+    remove: true,
+    setTags: true,
+    rewrite: true,
+  });
   const canIndex = tools.index;
   const canRemove = tools.remove;
   const canSetTags = tools.setTags;
@@ -193,6 +195,7 @@ export default function ArcanaManager({
         index: provider.supportsTool("index_collection"),
         remove: provider.supportsTool("remove_file"),
         setTags: provider.supportsTool("set_file_tags"),
+        rewrite: provider.supportsIndexedTextEdit(),
       });
       return nextFiles;
     } catch (reason) {
@@ -568,14 +571,12 @@ export default function ArcanaManager({
    *
    * A converted document downloads as Markdown although the collection keeps
    * its original bytes; a plain text file already is text. A PDF without a
-   * converted text has nothing to edit.
+   * converted text has nothing to edit, and an older service that cannot
+   * replace the indexed text in place gets no editor at all, because saving
+   * there would have to remove the uploaded original.
    */
   const editableMarkdown = (file: RagFile): boolean =>
-    file.markdown || isTextFileName(file.name);
-
-  /** The name the edited Markdown is stored under. */
-  const markdownTarget = (file: RagFile): string =>
-    isTextFileName(file.name) ? file.name : markdownFileName(file.name);
+    tools.rewrite && (file.markdown || isTextFileName(file.name));
 
   const openMarkdown = async (file: RagFile) => {
     setMarkdownFile(file);
@@ -605,54 +606,46 @@ export default function ArcanaManager({
   };
 
   /**
-   * Store the edited Markdown and rebuild its index entries.
+   * Save the edited Markdown and rebuild the file's index entries.
    *
-   * saia-rag has no "replace the indexed text" call: `upload_file` stores the
-   * text and indexes it, and its indexer drops the entries of a changed file.
-   * A converted document keeps its original name in storage, so its Markdown is
-   * written as `<stem>.md` and the original upload is removed afterwards - that
-   * removal is what deletes the chunks the conversion produced. A text file is
-   * overwritten under its own name, where reindexing replaces the old chunks.
+   * The service replaces the text its chunks point into, so the uploaded
+   * original (a PDF, a Word file, …) stays in the collection byte for byte and
+   * a plain text file is overwritten under its own name. Re-embedding happens
+   * inside the call, so the status it returns is final: a failed rebuild is
+   * reported instead of a success message, and the refreshed row carries the
+   * reason. An exception means the text itself was not written, so the editor
+   * stays open with the draft.
    */
   const saveMarkdown = async () => {
     const file = markdownFile;
     if (!file || markdownSaving) return;
-    const target = markdownTarget(file);
-    const previous = file.name;
-    // A converted document is written under a new name. If that name is taken
-    // by another file of the collection, uploading would silently replace it,
-    // so the save stops and says which file is in the way.
-    if (
-      target !== previous &&
-      files.some((row) => row.name === target && row.name !== previous)
-    ) {
-      setMarkdownError(
-        t("arcanas.markdown_target_exists", { target, name: previous }),
-      );
+    if (!markdownDraft.trim()) {
+      setMarkdownError(t("arcanas.markdown_empty"));
       return;
     }
     setMarkdownSaving(true);
     setMarkdownError("");
     try {
-      await provider.uploadTextFile(display, target, markdownDraft);
-      if (target !== previous) {
-        try {
-          await provider.removeFile(display, previous);
-        } catch (reason) {
-          notifyError(
-            t("arcanas.markdown_remove_failed", {
-              name: previous,
-              reason: reason instanceof Error ? reason.message : String(reason),
-            }),
-            { autoClose: 8000 },
-          );
-        }
+      const status = await provider.rewriteIndexedText(
+        display,
+        file.name,
+        markdownDraft,
+      );
+      await reload();
+      if (status && !isArcanaIndexed(status)) {
+        notifyError(
+          t("arcanas.markdown_index_failed", {
+            name: file.name,
+            reason: arcanaFailureReason(status) ?? status,
+          }),
+          { autoClose: 8000 },
+        );
+      } else {
+        notifySuccess(t("arcanas.markdown_saved", { name: file.name }));
       }
-      const refreshed = await reload();
-      notifySuccess(t("arcanas.markdown_saved", { name: target }));
+      if (!aliveRef.current) return;
       setMarkdownFile(null);
       setMarkdownDraft("");
-      if (refreshed) followSavedIndex(target, refreshed);
     } catch (reason) {
       if (!aliveRef.current) return;
       setMarkdownError(
@@ -661,34 +654,6 @@ export default function ArcanaManager({
     } finally {
       if (aliveRef.current) setMarkdownSaving(false);
     }
-  };
-
-  /** Follow the save's index job, so the row does not sit at "stored". */
-  const followSavedIndex = (target: string, baseline: RagFile[]) => {
-    if (!canIndex) return;
-    setIndexing(true);
-    stopIndexRef.current = false;
-    void watchIndex([target], baseline)
-      .then((watched) => {
-        if (!watched?.finished) return;
-        const failed = watched.latest.find(
-          (row) => row.name === target && !isArcanaIndexed(row.status),
-        );
-        if (!failed) return;
-        notifyError(
-          t("arcanas.index_done_failed_one", {
-            name: failed.name,
-            reason: arcanaFailureReason(failed.status) ?? failed.status,
-          }),
-          { autoClose: 8000 },
-        );
-      })
-      .catch(() => {
-        // The list reports its own read failure; the save itself worked.
-      })
-      .finally(() => {
-        if (aliveRef.current) setIndexing(false);
-      });
   };
 
   /**
@@ -863,7 +828,6 @@ export default function ArcanaManager({
       >
         <ArcanaMarkdownEditor
           name={markdownFile.name}
-          target={markdownTarget(markdownFile)}
           value={markdownDraft}
           loading={markdownLoading}
           saving={markdownSaving}

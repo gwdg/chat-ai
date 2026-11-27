@@ -701,13 +701,13 @@ export default {
     arcana_manager: {
       title: "Arcanas verwalten",
       step1:
-        "Der Bereich Arcanas listet die Dokumentensammlungen, die Ihnen gehören oder mit Ihnen geteilt wurden. Dateien werden auf dem Server gespeichert und dort indexiert; PDFs, Office-Dokumente und Bilder werden zuerst über den Docling-Dienst konvertiert und sind danach ebenfalls durchsuchbar.",
+        "Der Bereich Arcanas listet die Dokumentensammlungen, die Ihnen gehören oder mit Ihnen geteilt wurden. Dateien werden auf dem Server gespeichert und dort indexiert. Sie können jede Datei hochladen; PDFs, Word-, PowerPoint- und Excel-Dateien, HTML, Markdown und Bilder werden zuerst über den Docling-Dienst konvertiert und sind danach ebenfalls durchsuchbar. Ein Format, das Docling nicht lesen kann, wird in seiner Zeile mit dem Grund als fehlgeschlagen markiert.",
       step2:
         "Erstellen Sie mit der +-Schaltfläche eine Sammlung. Sie werden ihr Eigentümer und können sie später teilen.",
       step3:
         "Klicken Sie auf eine Sammlung, um ihre Seite zu öffnen: Dateien hochladen, Tags pro Datei bearbeiten, die Indexierung starten, den Inhalt durchsuchen und die Sammlung teilen. Der Arcana-Chat daneben kann die Sammlung untersuchen, Fragen aus ihren Dateien beantworten und — nach Ihrer Bestätigung — hochladen, schreiben, löschen, indexieren und Tags setzen. Dieser Chat wird nicht in Ihrer Chatliste gespeichert.",
       step4:
-        "Neben der Download-Schaltfläche einer Datei öffnet Markdown bearbeiten den indexierten Text im rechten Panel. Speichern lädt das bearbeitete Markdown hoch und baut die Indexeinträge der Datei neu auf, sodass die Suche den neuen statt des alten Textes liefert. Aus einem konvertierten PDF wird beim Speichern sein Markdown, weil der Dienst den indexierten Text nicht allein austauschen kann.",
+        "Neben der Download-Schaltfläche einer Datei öffnet Markdown bearbeiten den indexierten Text im rechten Panel. Beim Speichern bleibt die hochgeladene Datei erhalten — ein PDF oder Word-Dokument wird nicht ersetzt — und die Indexeinträge werden neu aufgebaut, sodass die Suche den neuen statt des alten Textes liefert.",
     },
     arcana_share: {
       title: "Eine Arcana teilen",
@@ -2488,14 +2488,11 @@ export default {
     markdown_loading: "Markdown wird geladen…",
     markdown_save: "Speichern und neu indexieren",
     markdown_saved: "{{name}} gespeichert und neu indexiert.",
-    markdown_remove_failed:
-      "Markdown gespeichert, aber {{name}} konnte nicht entfernt werden: {{reason}}",
+    markdown_index_failed:
+      "{{name}} gespeichert, aber der Index konnte nicht neu aufgebaut werden: {{reason}}",
+    markdown_empty: "Das Markdown ist leer; es wurde nichts gespeichert.",
     markdown_reindex_hint:
-      "Speichern ersetzt {{name}} und baut die Indexeinträge neu auf, damit die Suche nicht mehr den alten Text liefert.",
-    markdown_convert_hint:
-      "Speichern legt das bearbeitete Markdown als {{target}} ab und entfernt das Original {{name}}, aus dem die alten Indexeinträge stammen.",
-    markdown_target_exists:
-      "Nicht gespeichert: {{target}} ist in dieser Sammlung bereits vorhanden. Entfernen oder benennen Sie diese Datei zuerst um.",
+      "Beim Speichern bleibt die gespeicherte Datei erhalten, das für den Index gelesene Markdown wird ersetzt und die Einträge werden neu aufgebaut, damit die Suche nicht mehr den alten Text liefert.",
     remove_file: "Datei entfernen",
     tags_placeholder: "tag-eins, tag-zwei",
     save_tags: "Tags speichern",

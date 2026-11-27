@@ -686,13 +686,13 @@ export default {
     arcana_manager: {
       title: "Manage your Arcanas",
       step1:
-        "The Arcanas section lists the document collections you own or that were shared with you. Files are stored on the server and indexed there; PDFs, Office documents and images are converted through the docling service first, so they become searchable too.",
+        "The Arcanas section lists the document collections you own or that were shared with you. Files are stored on the server and indexed there. You can upload any file; PDFs, Word, PowerPoint, Excel, HTML, Markdown and images are converted through the docling service first, so they become searchable too. A format docling cannot read is marked failed on its row, with the reason.",
       step2:
         "Create a collection with the + button. You become its owner and can share it later.",
       step3:
         "Click a collection to open its page: upload files, edit per-file tags, start indexing, search inside it and share it. The Arcana chat beside it can inspect the collection, answer questions from its files and — after asking you first — upload, write, delete, index and tag. That chat is not saved to your chat list.",
       step4:
-        "Next to a file's download button, Edit Markdown opens the indexed text in the right-hand panel. Saving uploads the edited Markdown and rebuilds the file's index entries, so search returns the new text instead of the old one. A converted PDF is stored as its Markdown after saving, because the service has no way to swap only the indexed text.",
+        "Next to a file's download button, Edit Markdown opens the indexed text in the right-hand panel. Saving keeps the uploaded file — a PDF or Word document is not replaced — and rebuilds its index entries, so search returns the new text instead of the old one.",
     },
     arcana_share: {
       title: "Share an Arcana",
@@ -2464,14 +2464,11 @@ export default {
     markdown_loading: "Loading Markdown…",
     markdown_save: "Save and reindex",
     markdown_saved: "Saved {{name}} and reindexed it.",
-    markdown_remove_failed:
-      "Saved the Markdown, but removing {{name}} failed: {{reason}}",
+    markdown_index_failed:
+      "Saved {{name}}, but rebuilding its index failed: {{reason}}",
+    markdown_empty: "The Markdown is empty; nothing was saved.",
     markdown_reindex_hint:
-      "Saving replaces {{name}} and rebuilds its index entries, so search stops returning the old text.",
-    markdown_convert_hint:
-      "Saving stores the edited Markdown as {{target}} and removes the original {{name}}, which is where the old index entries come from.",
-    markdown_target_exists:
-      "Not saved: {{target}} already exists in this collection. Remove or rename that file first.",
+      "Saving keeps the stored file, replaces the Markdown the index reads and rebuilds its entries, so search stops returning the old text.",
     remove_file: "Remove file",
     tags_placeholder: "tag-one, tag-two",
     save_tags: "Save tags",

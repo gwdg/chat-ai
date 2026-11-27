@@ -730,7 +730,7 @@ export const featureGuides = {
   arcana_manager: {
     titleKey: "feature_guide.arcana_manager.title",
     prompt:
-      "The Arcanas section of the sidebar lists your SAIA document collections. Open one to upload files, edit its per-file tags, start indexing and search inside it. Plain text is indexed directly; PDFs, Office documents and images are converted through the docling service while indexing, so they become searchable too. A file's Markdown can be edited next to its download button; saving uploads the edited text and rebuilds the index entries, which replaces the old text in search.",
+      "The Arcanas section of the sidebar lists your SAIA document collections. Open one to upload files, edit its per-file tags, start indexing and search inside it. Any file can be uploaded; plain text is indexed directly while PDFs, Word, PowerPoint, Excel, HTML, Markdown and images are converted through the docling service, so they become searchable too; a format it cannot read is marked failed with the reason. A file's Markdown can be edited next to its download button; saving keeps the uploaded original and replaces the indexed text, so search returns the new text.",
     keywords: [
       "arcana",
       "arcanas",

@@ -13,6 +13,8 @@ const mocks = vi.hoisted(() => ({
   uploadTextFile: vi.fn(),
   downloadFile: vi.fn(),
   removeFile: vi.fn(),
+  rewriteIndexedText: vi.fn(),
+  supportsIndexedTextEdit: vi.fn(() => true),
   listMembers: vi.fn(),
   addMember: vi.fn(),
   removeMember: vi.fn(),
@@ -52,6 +54,8 @@ vi.mock("../../../workspace/arcanas", () => {
     uploadTextFile: (...args) => mocks.uploadTextFile(...args),
     downloadFile: (...args) => mocks.downloadFile(...args),
     removeFile: (...args) => mocks.removeFile(...args),
+    rewriteIndexedText: (...args) => mocks.rewriteIndexedText(...args),
+    supportsIndexedTextEdit: () => mocks.supportsIndexedTextEdit(),
     listMembers: (...args) => mocks.listMembers(...args),
     addMember: (...args) => mocks.addMember(...args),
     removeMember: (...args) => mocks.removeMember(...args),
@@ -94,6 +98,9 @@ describe("ArcanaManager", () => {
     mocks.uploadTextFile.mockReset();
     mocks.downloadFile.mockReset();
     mocks.removeFile.mockReset();
+    mocks.rewriteIndexedText.mockReset();
+    mocks.supportsIndexedTextEdit.mockReset();
+    mocks.supportsIndexedTextEdit.mockReturnValue(true);
     mocks.listMembers.mockReset();
     mocks.addMember.mockReset();
     mocks.removeMember.mockReset();
@@ -118,6 +125,7 @@ describe("ArcanaManager", () => {
       }),
     });
     mocks.removeFile.mockResolvedValue(undefined);
+    mocks.rewriteIndexedText.mockResolvedValue("Success");
     mocks.listMembers.mockResolvedValue([
       { user: "alice", role: "owner", kind: "user" },
       { user: "bob", role: "editor", kind: "user" },
@@ -549,14 +557,15 @@ describe("ArcanaManager", () => {
     fireEvent.click(screen.getByText("arcanas.markdown_save"));
 
     await waitFor(() =>
-      expect(mocks.uploadTextFile).toHaveBeenCalledWith(
+      expect(mocks.rewriteIndexedText).toHaveBeenCalledWith(
         "recipes",
         "a.md",
         "# updated",
       ),
     );
-    // The same name is overwritten, so reindexing replaces the old chunks and
-    // no file has to be removed.
+    // The service replaces the indexed text in place, so nothing else is
+    // uploaded or removed for the save.
+    expect(mocks.uploadTextFile).not.toHaveBeenCalled();
     expect(mocks.removeFile).not.toHaveBeenCalled();
     await waitFor(() =>
       expect(mocks.notifySuccess).toHaveBeenCalledWith(
@@ -565,7 +574,7 @@ describe("ArcanaManager", () => {
     );
   });
 
-  it("stores a converted document as Markdown and removes the original", async () => {
+  it("keeps the original document when a converted Markdown is saved", async () => {
     mocks.listFiles.mockResolvedValue([
       {
         name: "report.pdf",
@@ -587,62 +596,71 @@ describe("ArcanaManager", () => {
     await waitFor(() => expect(input).toHaveValue("# converted"));
     expect(
       document.querySelector('[data-guide="arcana-markdown-editor"]'),
-    ).toHaveAttribute("data-target", "report.md");
+    ).toHaveAttribute("data-file", "report.pdf");
 
     fireEvent.change(input, { target: { value: "# edited" } });
     fireEvent.click(screen.getByText("arcanas.markdown_save"));
 
     await waitFor(() =>
-      expect(mocks.uploadTextFile).toHaveBeenCalledWith(
+      expect(mocks.rewriteIndexedText).toHaveBeenCalledWith(
         "recipes",
-        "report.md",
+        "report.pdf",
         "# edited",
       ),
     );
-    // The old file is where the conversion's chunks came from.
+    // The PDF stays in the collection; only the indexed text changes.
+    expect(mocks.removeFile).not.toHaveBeenCalled();
+    expect(mocks.uploadTextFile).not.toHaveBeenCalled();
     await waitFor(() =>
-      expect(mocks.removeFile).toHaveBeenCalledWith("recipes", "report.pdf"),
+      expect(mocks.notifySuccess).toHaveBeenCalledWith(
+        "arcanas.markdown_saved",
+      ),
     );
   });
 
-  it("refuses to overwrite another file with the converted Markdown", async () => {
-    mocks.listFiles.mockResolvedValue([
-      {
-        name: "report.pdf",
-        status: "indexed",
-        chunks: 3,
-        tags: [],
-        markdown: true,
-      },
-      {
-        name: "report.md",
-        status: "indexed",
-        chunks: 2,
-        tags: [],
-        markdown: false,
-      },
-    ]);
-    mocks.downloadFile.mockResolvedValue({
-      name: "report.md",
-      blob: new Blob(["# converted"], { type: "text/markdown;charset=utf-8" }),
-    });
+  it("reports a failed index rebuild after the text was saved", async () => {
+    mocks.rewriteIndexedText.mockResolvedValue(
+      "Failed: embedding is unreachable",
+    );
     render(<ArcanaManager collection={collection} />);
-    await screen.findByText("report.pdf");
+    await screen.findByText("a.md");
 
     fireEvent.click(screen.getAllByTitle("arcanas.edit_markdown")[0]);
     const input = await screen.findByLabelText("arcanas.markdown_editor_label");
-    await waitFor(() => expect(input).toHaveValue("# converted"));
-    fireEvent.change(input, { target: { value: "# edited" } });
+    await waitFor(() => expect(input).toHaveValue("# Wasserwerksschulung"));
+    fireEvent.change(input, { target: { value: "# updated" } });
     fireEvent.click(screen.getByText("arcanas.markdown_save"));
 
-    // The name is taken by a file the user put there; nothing is written and
-    // the editor stays open with the reason.
+    // The save itself worked, so the panel closes and the toast names the
+    // reason instead of claiming a successful reindex.
     await waitFor(() =>
-      expect(screen.getByText("arcanas.markdown_target_exists"))
-        .toBeInTheDocument(),
+      expect(mocks.notifyError).toHaveBeenCalledWith(
+        "arcanas.markdown_index_failed",
+        expect.objectContaining({ autoClose: 8000 }),
+      ),
     );
-    expect(mocks.uploadTextFile).not.toHaveBeenCalled();
-    expect(mocks.removeFile).not.toHaveBeenCalled();
+    expect(mocks.notifySuccess).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(
+        document.querySelector('[data-guide="arcana-markdown-editor"]'),
+      ).not.toBeInTheDocument(),
+    );
+  });
+
+  it("refuses to save an empty Markdown", async () => {
+    render(<ArcanaManager collection={collection} />);
+    await screen.findByText("a.md");
+
+    fireEvent.click(screen.getAllByTitle("arcanas.edit_markdown")[0]);
+    const input = await screen.findByLabelText("arcanas.markdown_editor_label");
+    await waitFor(() => expect(input).toHaveValue("# Wasserwerksschulung"));
+    fireEvent.change(input, { target: { value: "   \n" } });
+    fireEvent.click(screen.getByText("arcanas.markdown_save"));
+
+    await waitFor(() =>
+      expect(screen.getByText("arcanas.markdown_empty")).toBeInTheDocument(),
+    );
+    expect(mocks.rewriteIndexedText).not.toHaveBeenCalled();
   });
 
   it("offers no Markdown editor for a binary file or on a read-only collection", async () => {
@@ -661,6 +679,15 @@ describe("ArcanaManager", () => {
       <ArcanaManager collection={{ ...collection, can_write: false }} />,
     );
     await screen.findByText("a.md");
+    expect(screen.queryByTitle("arcanas.edit_markdown")).not.toBeInTheDocument();
+  });
+
+  it("hides the editor when the service cannot replace the indexed text", async () => {
+    mocks.supportsIndexedTextEdit.mockReturnValue(false);
+    render(<ArcanaManager collection={collection} />);
+    await screen.findByText("a.md");
+
+    // Saving on such a service would have to remove the original file.
     expect(screen.queryByTitle("arcanas.edit_markdown")).not.toBeInTheDocument();
   });
 });

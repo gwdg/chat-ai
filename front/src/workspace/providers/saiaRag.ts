@@ -56,6 +56,7 @@ const WRITE_BASE64_TOOL = "upload_file_base64";
 const GET_FILE_TOOL = "get_file";
 const WRITE_CHUNK_TOOL = "upload_file_chunk";
 const UPLOAD_TEXT_TOOL = "upload_file";
+const UPDATE_TEXT_TOOL = "update_indexed_text";
 const CREATE_COLLECTION_TOOL = "create_collection";
 const DELETE_COLLECTION_TOOL = "delete_collection";
 const REMOVE_FILE_TOOL = "remove_file";
@@ -96,6 +97,16 @@ const MIN_CHUNK_BYTES = 256 * 1024;
  * Arcanas dialog at "Uploading 0/1" until the SDK gives up silently.
  */
 const MCP_CALL_TIMEOUT_MS = 60_000;
+
+/**
+ * How long saving an edited Markdown may take.
+ *
+ * The save rebuilds the file's chunks instead of only storing text, so a large
+ * document re-embeds every passage before it answers. The service holds the
+ * collection's write lock for that whole time, which is why the ordinary call
+ * timeout is too short for this one.
+ */
+const REWRITE_TEXT_TIMEOUT_MS = 300_000;
 
 const REQUIRED_TOOLS = [
   LIST_COLLECTIONS_TOOL,
@@ -462,6 +473,7 @@ export class SaiaRagProvider implements FileProvider {
   private async rawCall(
     tool: string,
     args: Record<string, unknown>,
+    timeoutMs: number = MCP_CALL_TIMEOUT_MS,
   ): Promise<string> {
     if (!this.client) {
       await this.connect();
@@ -473,7 +485,7 @@ export class SaiaRagProvider implements FileProvider {
       );
     }
     try {
-      return await this.invoke(tool, args);
+      return await this.invoke(tool, args, timeoutMs);
     } catch (error) {
       // saia-rag forgets the session when its process restarts or the session
       // idles out, and the SDK keeps sending the dead id; one fresh handshake
@@ -489,7 +501,7 @@ export class SaiaRagProvider implements FileProvider {
         throw new WorkspaceError("UNSUPPORTED", `saia-rag does not offer ${tool}`);
       }
       try {
-        return await this.invoke(tool, args);
+        return await this.invoke(tool, args, timeoutMs);
       } catch (retryError) {
         throw this.asWorkspaceError(retryError);
       }
@@ -500,20 +512,21 @@ export class SaiaRagProvider implements FileProvider {
   private async invoke(
     tool: string,
     args: Record<string, unknown>,
+    timeoutMs: number = MCP_CALL_TIMEOUT_MS,
   ): Promise<string> {
     let result: any;
     try {
       result = await this.client.callTool(
         { name: tool, arguments: args },
         undefined,
-        { timeout: MCP_CALL_TIMEOUT_MS },
+        { timeout: timeoutMs },
       );
     } catch (error) {
       if (isCallTimeout(error)) {
         throw new WorkspaceError(
           "PROVIDER_ERROR",
           `saia-rag did not answer ${tool} within ${
-            MCP_CALL_TIMEOUT_MS / 1000
+            timeoutMs / 1000
           } s. The service may be busy (indexing holds the collection) or unreachable; try again once it is idle.`,
         );
       }
@@ -538,6 +551,7 @@ export class SaiaRagProvider implements FileProvider {
   private async call(
     tool: string,
     args: Record<string, unknown>,
+    timeoutMs: number = MCP_CALL_TIMEOUT_MS,
   ): Promise<string> {
     // The tool list arrives with the handshake, so a first call has to connect
     // before it can ask whether the service offers the tool.
@@ -548,7 +562,7 @@ export class SaiaRagProvider implements FileProvider {
         `saia-rag does not offer ${tool}`,
       );
     }
-    return this.rawCall(tool, args);
+    return this.rawCall(tool, args, timeoutMs);
   }
 
   // ---- collections ------------------------------------------------------
@@ -815,6 +829,54 @@ export class SaiaRagProvider implements FileProvider {
       filename,
       content,
     });
+  }
+
+  /**
+   * Does this service let a file's indexed text be replaced in place?
+   *
+   * An older service only indexes what it stores, so an edit there would have
+   * to be saved as another file and the original removed. The Arcanas panel
+   * hides the editor instead of destroying the uploaded document.
+   */
+  supportsIndexedTextEdit(): boolean {
+    return this.has(UPDATE_TEXT_TOOL);
+  }
+
+  /**
+   * Replace the text a file's chunks point into and rebuild them.
+   *
+   * The stored original is kept: a converted PDF or Word file stays in the
+   * collection as it was uploaded, and only the Markdown search and the preview
+   * read changes. Saving a plain text file overwrites its own bytes. The
+   * service does the re-embedding inside the call, which is why it gets a
+   * longer timeout than every other request.
+   *
+   * Returns the resulting status ("Success", or "Failed: …"), which the caller
+   * shows instead of claiming the reindex worked.
+   */
+  async rewriteIndexedText(
+    display: string,
+    filename: string,
+    content: string,
+  ): Promise<string> {
+    const collection = await this.resolveCollection(display);
+    if (!collection.can_write) {
+      throw new WorkspaceError(
+        "PERMISSION_DENIED",
+        "You have read-only access to this collection",
+      );
+    }
+    const text = await this.call(
+      UPDATE_TEXT_TOOL,
+      {
+        collection: collection.collection,
+        filename,
+        content,
+      },
+      REWRITE_TEXT_TIMEOUT_MS,
+    );
+    const payload = parseJson(text);
+    return String(payload?.status ?? "");
   }
 
   /** Start indexing every stored text file. Returns the service's job id. */

@@ -4,8 +4,6 @@ import { AlertCircle, ChevronLeft, Loader2, Save } from "lucide-react";
 type ArcanaMarkdownEditorProps = {
   /** The file being edited, as the collection stores it. */
   name: string;
-  /** The name the edited Markdown will be stored under. */
-  target: string;
   value: string;
   loading?: boolean;
   saving?: boolean;
@@ -23,15 +21,13 @@ type ArcanaMarkdownEditorProps = {
  * editor takes the panel over until it is closed, and the save path belongs to
  * `ArcanaManager` because it has to write through the provider and reindex.
  *
- * Saving is not a quiet save: saia-rag has no "replace the indexed text" call,
- * so the edited Markdown is uploaded (which reindexes it) and, when the name
- * changes, the old file that held the source is removed with its old entries.
- * The hint says which of the two happens, because the name-changing case also
- * drops the original upload.
+ * Saving keeps the uploaded file: saia-rag replaces the text its chunks point
+ * into, so a converted PDF or Word document is not turned into a `.md` file.
+ * The hint says that, because losing the original would otherwise be the
+ * obvious reading of "save the Markdown".
  */
 export default function ArcanaMarkdownEditor({
   name,
-  target,
   value,
   loading = false,
   saving = false,
@@ -41,14 +37,12 @@ export default function ArcanaMarkdownEditor({
   onClose,
 }: ArcanaMarkdownEditorProps) {
   const { t } = useTranslation();
-  const renames = target !== name;
 
   return (
     <div
       className="flex h-full min-h-0 flex-col gap-2"
       data-guide="arcana-markdown-editor"
       data-file={name}
-      data-target={target}
     >
       <div className="flex flex-wrap items-center gap-2 border-b border-base-300 pb-2">
         <button
@@ -85,9 +79,7 @@ export default function ArcanaMarkdownEditor({
       </div>
 
       <p className="text-[11px] leading-relaxed text-base-content/60">
-        {renames
-          ? t("arcanas.markdown_convert_hint", { name, target })
-          : t("arcanas.markdown_reindex_hint", { name })}
+        {t("arcanas.markdown_reindex_hint", { name })}
       </p>
 
       {error && (

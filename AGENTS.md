@@ -2887,19 +2887,32 @@ immediately. `hooks/useArcanaChatSend.js` runs the function-tool loop (six round
 `chatCompletions` call and dispatches the change event after a successful write. This is separate from
 the four read-only chat tools of §4.36, which read a normal chat's `arcana_shares` list.
 
-**A file's Markdown is editable in the panel, and a save reindexes.** `ArcanaManager` shows Edit
-(`data-guide="arcana-edit-markdown"`) next to Download when `collection.can_write` and the row has
-`markdown` or an `isTextFileName()` name. It reads through `provider.downloadFile` — the indexed
-Markdown for a converted document, the stored text otherwise — and `ArcanaMarkdownEditor` takes the
-panel over until it is closed. saia-rag has no call that replaces only the indexed text, so saving
-uploads the edited Markdown with `uploadTextFile`: under the same name the service's indexer drops the
-old chunks when the text hash changed, and for a converted document the Markdown is stored as
-`<stem>.md` (`markdownFileName`) and the original PDF/Office file is removed afterwards, which is what
-deletes the chunks the conversion produced. The upload comes first so a failed upload cannot lose the
-file, and the save refuses when `<stem>.md` already exists as another file, because uploading would
-replace it. A converted document therefore stops being a PDF in that collection once its Markdown is
-saved. `followSavedIndex` keeps polling `list_files` after the save so the row does not sit at
-"stored".
+**A file's Markdown is editable in the panel, and a save reindexes in place.** `ArcanaManager`
+shows Edit (`data-guide="arcana-edit-markdown"`) next to Download when `collection.can_write`, the
+row has `markdown` or an `isTextFileName()` name, and the service offers
+`update_indexed_text` (`provider.supportsIndexedTextEdit()`). It reads through
+`provider.downloadFile` — the indexed Markdown for a converted document, the stored text otherwise —
+and `ArcanaMarkdownEditor` takes the panel over until it is closed. Saving calls
+`provider.rewriteIndexedText`, which runs `saia-rag`'s `update_indexed_text` tool inside the
+collection's write lock: the service replaces the text the file's chunks point into, removes the old
+chunks from every vector index, re-splits and re-embeds, and keeps the stored original bytes. A
+converted PDF or Word file therefore stays in the collection byte for byte, and editing its Markdown
+never turns it into a `.md` file. A plain text upload is its own text, so its bytes are overwritten
+under the same name and the row's separate `text` column is cleared. Tags and the file row survive.
+The call is synchronous — the returned status is final — so the manager needs no polling: a
+`Failed: …` status is reported with the reason and shown on the refreshed row, and an exception
+(permission, empty text, unreachable service) keeps the editor open with the draft. The editor is
+hidden entirely on a service without the tool, because saving there would have to remove the
+original. The tool is bounded by `REWRITE_TEXT_TIMEOUT_MS` (5 min), since re-embedding happens
+inside the call.
+
+**A document the converter cannot read fails with a reason, not silently.** Uploads accept any
+file. `_indexable_text` indexes UTF-8 directly and sends every other format to docling;
+`docling/utils.py#FormatToExtensions` covers PDF, Word (`.docx`/`.dotx`/`.docm`/`.dotm`), PowerPoint,
+Excel, HTML/XHTML, Markdown, AsciiDoc and images (jpg/jpeg/png/tif/tiff/bmp/gif/webp).
+`mime_from_extension` resolves every one of those names as well, so a file whose magic bytes do not
+identify it is still converted. Anything else is marked `Failed: no converter for .<ext> files;
+docling converts …`, which the Arcanas row and the failure toast show verbatim.
 
 ## 5. Conventions
 

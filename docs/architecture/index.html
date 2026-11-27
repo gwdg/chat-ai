@@ -3443,14 +3443,14 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           <div class="node kind-edge">
             <div class="node-kicker">3 · Service</div>
             <div class="node-title">saia-rag</div>
-            <div class="node-sub"><code>list_files</code>, <code>upload_file_chunk</code>, <code>set_file_tags</code>, <code>index_collection</code>, <code>remove_file</code>, search</div>
+            <div class="node-sub"><code>list_files</code>, <code>upload_file_chunk</code>, <code>set_file_tags</code>, <code>index_collection</code>, <code>update_indexed_text</code>, <code>remove_file</code>, search</div>
             <span class="sees can">files, tags, index state</span>
           </div>
           <div class="flow-arrow" aria-hidden="true"><span>backend</span></div>
           <div class="node kind-opaque">
             <div class="node-kicker">4 · Embeddings</div>
             <div class="node-title">Index pipeline</div>
-            <div class="node-sub">UTF-8 text only; stored PDFs and images wait for a conversion</div>
+            <div class="node-sub">UTF-8 split as it arrives; PDF, Word, PowerPoint, Excel, HTML, Markdown and images through docling</div>
             <span class="sees cannot">no folder tree</span>
           </div>
         </div>
@@ -3555,13 +3555,18 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
         <li>
           <b>Indexing converts documents it cannot read as text.</b>
           <code>index_collection</code> runs the pipeline with <code>text_only=True</code>: a stored
-          file whose bytes are valid UTF-8 goes to the splitter as it arrived, while a PDF, Office
-          document or image is first converted to Markdown through the docling service, using the
-          caller's own credential (bound from the MCP headers and carried into the worker thread). A
-          format docling cannot read, or a conversion that fails, is written into that file's
-          <code>status</code> as <code>Failed: …</code> - so the row explains why it is not
-          searchable and does not stay "waiting" forever. The CLI's <code>convert</code> command
-          still exists for converting a document before upload; the HTTP route keeps
+          file whose bytes are valid UTF-8 goes to the splitter as it arrived, while a PDF, Word,
+          PowerPoint or Excel document, an HTML, Markdown or AsciiDoc file or an image is first
+          converted to Markdown through the docling service, using the caller's own credential (bound
+          from the MCP headers and carried into the worker thread). That format list lives in
+          <code>docling/utils.py#FormatToExtensions</code>, and <code>mime_from_extension</code>
+          resolves every one of its names, so a file whose magic bytes do not identify it is still
+          converted. A format docling cannot read, or a conversion that fails, is written into that
+          file's <code>status</code> as <code>Failed: …</code> - for an unknown format literally
+          <code>no converter for .&lt;ext&gt; files; docling converts PDF, Word, PowerPoint, Excel,
+          HTML, Markdown, AsciiDoc and images</code> - so the row explains why it is not searchable
+          and does not stay "waiting" forever. The CLI's <code>convert</code> command still exists
+          for converting a document before upload; the HTTP route keeps
           <code>index_stored_files(text_only=False)</code>.
         </li>
         <li>
@@ -3585,20 +3590,23 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           on purpose.
         </li>
         <li>
-          <b>Editing that Markdown is a reindex, not a patch.</b> Next to Download, Edit opens the
-          file's Markdown in the same right-hand panel: <code>ArcanaMarkdownEditor</code> replaces
-          the Files/Search/Share tabs until it is closed. It is offered only on a collection the
-          caller can write and only for a row that has Markdown or a text name, because a PDF without
-          a conversion has nothing to edit. Saving cannot patch the index - <code>saia-rag</code> has
-          no "replace the indexed text" call - so the edited text goes through
-          <code>upload_file</code>, which stores it and (re)indexes it; a changed text hash makes the
-          indexer delete that file's old chunks first. A converted document keeps its original name
-          in storage, so its Markdown is written as <code>&lt;stem&gt;.md</code> and the original
-          PDF or Office file is removed right after the upload, which is what deletes the chunks the
-          conversion produced. Upload comes first, so a failed upload cannot lose the file, and the
-          save refuses when that <code>.md</code> name already belongs to another file instead of
-          replacing it. The panel then follows <code>list_files</code> like any other index job, so
-          the row does not stay at <code>stored</code>.
+          <b>Editing that Markdown replaces the indexed text in place.</b> Next to Download, Edit
+          opens the file's Markdown in the same right-hand panel:
+          <code>ArcanaMarkdownEditor</code> replaces the Files/Search/Share tabs until it is closed.
+          It is offered only on a collection the caller can write, only for a row that has Markdown or
+          a text name (a PDF without a conversion has nothing to edit), and only when the service
+          advertises <code>update_indexed_text</code> - saving on an older service would have to store
+          the edit as another file and drop the original. Saving calls
+          <code>provider.rewriteIndexedText</code>, which runs
+          <code>pipeline.replace_indexed_text</code> inside the collection's write lock: the old
+          chunks are removed from every vector index, the new text is stored where the chunks read it,
+          and the split-and-embed pass runs again. A converted PDF or Word document therefore keeps
+          its stored bytes - editing its Markdown never turns it into a <code>.md</code> file - while
+          a plain text upload <i>is</i> its own text, so its bytes are overwritten and the row's
+          separate <code>text</code> column is cleared. Re-embedding happens inside the call, so the
+          returned status is final and the panel needs no polling; a <code>Failed: …</code> status
+          names the reason on the refreshed row, and an exception keeps the editor open with the
+          draft. The call is bounded to five minutes for that reason.
         </li>
         <li>
           <b>Removing a file is a file action, not a provider capability.</b>
@@ -3727,7 +3735,7 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           <tr>
             <td>Markdown editor</td>
             <td>One file's text in the panel: load through the provider, edit in a mono textarea, save
-                and reindex, and the hint that names the file which is replaced or removed.</td>
+                through <code>update_indexed_text</code>, and the hint that the stored file is kept.</td>
             <td><span class="mono">front/src/components/Arcana/ArcanaMarkdownEditor.tsx</span></td>
           </tr>
           <tr>
@@ -3765,14 +3773,15 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           <tr>
             <td>Provider</td>
             <td>Tool constants, collection addressing, tag and search parsers, chunked upload, index,
-                remove, capabilities.</td>
+                remove, in-place text rewrite and capabilities.</td>
             <td><span class="mono">front/src/workspace/providers/saiaRag.ts</span></td>
           </tr>
           <tr>
             <td>Service tools</td>
             <td><code>remove_file</code>, <code>index_collection</code>, <code>set_file_tags</code>,
-                <code>list_files(include_tags)</code>, plus the text-only index policy.</td>
-            <td><span class="mono">saia/saia-rag-cli/src/saia_rag/{mcp_server,ingestion/pipeline,metadata/repository}.py</span></td>
+                <code>list_files(include_tags)</code>, <code>update_indexed_text</code>, plus the
+                conversion policy and its unsupported-format reason.</td>
+            <td><span class="mono">saia/saia-rag-cli/src/saia_rag/{mcp_server,ingestion/pipeline,metadata/repository,docling/utils}.py</span></td>
           </tr>
           <tr>
             <td>Feature guide</td>
@@ -3795,14 +3804,16 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
             <code>&lt;owner&gt;__&lt;name&gt;</code> in a tool call, whatever the row shows.</li>
         <li><b>Tags replace, never merge, when the service can.</b> A user who removes a tag must see
             it gone.</li>
-        <li><b>Index only text.</b> A stored binary is named as pending, not silently indexed as noise.</li>
+        <li><b>Index what the pipeline can read, name what it cannot.</b> A stored binary that docling
+            cannot convert is marked failed with the format and the supported list, never indexed as
+            noise and never left waiting.</li>
         <li><b>No collection Delete on a workspace row.</b> The provider keeps
             <code>delete: false</code>; per-file removal goes through the manager.</li>
-        <li><b>A Markdown save is a reindex.</b> <code>upload_file</code> is the only write: under the
-            same name a changed hash makes the indexer drop the old chunks, and a converted file is
-            stored as <code>&lt;stem&gt;.md</code> with its original removed afterwards, so its
-            identity changes once. Upload precedes removal, and a <code>.md</code> name another file
-            already owns is refused.</li>
+        <li><b>A Markdown save replaces the indexed text, never the stored file.</b>
+            <code>update_indexed_text</code> rewrites what the chunks read, clears the old chunks from
+            every vector index and re-embeds; a converted PDF or Word file keeps its bytes, and only a
+            plain text upload has its own bytes overwritten. The editor is hidden - not silently
+            destructive - when the service does not advertise the tool.</li>
         <li><b>The service is the guard.</b> <code>can_write</code> disables controls; the service
             still rejects a write that gets through.</li>
         <li><b>A share link is convenience, never a grant.</b> It only writes the two bindings
@@ -3824,8 +3835,8 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
 
       <h3>Limits</h3>
       <ul class="checks limits">
-        <li>A collection with no indexed text is searchable by nothing; upload the converted Markdown,
-            not the PDF.</li>
+        <li>A collection with no indexed text is searchable by nothing; wait for the conversion or
+            edit the Markdown once it exists.</li>
         <li>The index loop is bounded to 240 polls at 2.5 s, so a very large collection finishes after
             the panel stopped watching; reopening it shows the final status.</li>
         <li>Tag filtering is client-side over the files the listing returned, not a server-side query.</li>
@@ -3842,11 +3853,12 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
             speaks the same service and enforces owner-only changes there.</li>
         <li>The page chat is per browser tab: a reload keeps the thread, closing the tab drops it, and
             there is no second copy on another device.</li>
-        <li>Editing a converted document's Markdown replaces it with a <code>.md</code> file: the
-            collection no longer holds the original PDF afterwards, so keep a copy if the layout
-            matters.</li>
+        <li>An edit is re-embedded inside the call and holds the collection's write lock, so a large
+            document takes a while and a second write waits; the provider allows five minutes before
+            it reports a timeout.</li>
         <li>The Markdown editor has no preview, no diff against the stored text and no undo beyond the
-            textarea; closing it discards unsaved changes without asking.</li>
+            textarea; closing it discards unsaved changes without asking. An empty text is refused,
+            because it would delete the searchable content.</li>
       </ul>
 
       <h2>Where to look</h2>
@@ -3878,8 +3890,9 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
         <li><span class="mono">front/src/workspace/providers/saiaRag.ts</span> - the tool calls and
             the text parsers</li>
         <li><span class="mono">saia/saia-rag-cli/src/saia_rag/mcp_server.py</span> - the MCP tools
-            this section calls, and <span class="mono">ingestion/pipeline.py</span> for the text-only
-            index policy</li>
+            this section calls, <span class="mono">ingestion/pipeline.py</span> for the conversion
+            policy and <code>replace_indexed_text</code>, and
+            <span class="mono">docling/utils.py</span> for the formats docling is asked to convert</li>
         <li><span class="mono">saia/saia-rag-cli/src/saia_rag/__main__.py</span> - the
             <code>convert</code> command, where a PDF becomes Markdown</li>
       </ul>
