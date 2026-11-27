@@ -2467,6 +2467,7 @@ export default {
     add: "New Arcana",
     add_empty: "Create your first Arcana",
     loading: "Loading Arcanas…",
+    unavailable: "Not connected to the Arcana service.",
     retry: "Retry",
     options: "Arcana options",
     open_files: "Files and search",

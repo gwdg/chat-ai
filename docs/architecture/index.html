@@ -3428,11 +3428,11 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
 
       <div class="flow-wrap">
         <div class="flow" role="img"
-             aria-label="Arcanas path: the sidebar section gates on the module, advanced mode and the saia-rag health probe; the collection's page is a chat column plus an editor panel, both sending upload, tag, index, search and remove calls through the same module-singleton provider to the service.">
+             aria-label="Arcanas path: the sidebar section gates on the Arcanas module and advanced mode, and its own saia-rag health probe only decides whether the collection list is read; the collection's page is a chat column plus an editor panel, both sending upload, tag, index, search and remove calls through the same module-singleton provider to the service.">
           <div class="node kind-secret">
             <div class="node-kicker">1 · Sidebar</div>
             <div class="node-title">Arcanas section</div>
-            <div class="node-sub">Module + advanced mode + health probe</div>
+            <div class="node-sub">Module + advanced mode; the health probe decides whether rows load</div>
             <span class="sees can">one row per collection</span>
           </div>
           <div class="flow-arrow" aria-hidden="true"><span>open</span></div>
@@ -3461,7 +3461,7 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
         <div class="flow-legend">
           <span><i class="swatch green"></i> holds collections and files</span>
           <span><i class="swatch grey"></i> caches and routes</span>
-          <span>A probe that does not answer renders no section at all.</span>
+          <span>A probe that does not answer keeps the section, with a "not connected" line and no rows.</span>
         </div>
       </div>
 
@@ -3490,13 +3490,18 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           tab from <code>initialTab</code>, so an already-mounted panel follows a new request.
         </li>
         <li>
-          <b>The section is opt-in three times over.</b> It renders only while
-          <code>isArcanasEnabled()</code>, advanced mode and the deployment's
-          <code>saia-rag</code> health probe all agree. The probe is the same one the workspace drive
-          uses: <code>GET &lt;base&gt;/health</code> with a five-second timeout, accepting only
-          <code>{"status":"alive"}</code>. Anything else - <code>checking</code> or
-          <code>unavailable</code> - renders nothing rather than an empty heading, so a deployment
-          without the service never shows a dead branch.
+          <b>The section is opt-in twice; the probe only gates the list.</b> It renders only while
+          <code>isArcanasEnabled()</code> and advanced mode both agree
+          (<code>showAdvancedSidebarSections</code>), so a deployment or brand that switched the
+          module off never shows a dead branch. The <code>saia-rag</code> health probe is not part
+          of that decision: the same probe the workspace drive uses
+          (<code>GET &lt;base&gt;/health</code> with a five-second timeout, accepting only
+          <code>{"status":"alive"}</code>) leaves the section visible while it is
+          <code>checking</code> or <code>unavailable</code> - the body says "Loading Arcanas" or
+          "Not connected to the Arcana service", the New Arcana button is disabled, and no
+          <code>list_collections</code> request is sent. Only <code>available</code> reads the list,
+          so a deployment without the service still lets the user see that the feature exists and a
+          later mount retries the probe.
         </li>
         <li>
           <b>It sits above MCP Servers, not inside it.</b> The order is Workspaces, Arcanas, Agents,
@@ -3700,8 +3705,8 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
         <tbody>
           <tr>
             <td>Sidebar section</td>
-            <td>Gates on module, advanced mode and the probe; rows with their index dot, role copy,
-                add and delete; opens the collection's page.</td>
+            <td>Gates on module and advanced mode; the probe only decides when rows load. Rows with
+                their index dot, role copy, add and delete; opens the collection's page.</td>
             <td><span class="mono">front/src/components/Sidebar/ArcanaList.tsx</span></td>
           </tr>
           <tr>
@@ -3804,8 +3809,12 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
 
       <h2>Invariants worth keeping</h2>
       <ul class="checks">
-        <li><b>Fail closed.</b> No confirmed probe means no section, not an empty one.</li>
-        <li><b>Arcanas is not an MCP feature.</b> Its module flag, probe and rendering are independent
+        <li><b>The module decides the section; the probe decides the rows.</b> Module and advanced mode
+            decide whether it is rendered at all. A probe that is not <code>available</code> keeps the
+            header with a "not connected" line (or the loading line while <code>checking</code>),
+            disables New Arcana and sends no <code>list_collections</code>; only <code>available</code>
+            fills the rows.</li>
+        <li><b>Arcanas is not an MCP feature.</b> Its module flag and rendering are independent
             of the MCP Servers block.</li>
         <li><b>One handshake per page.</b> The provider and the list stay module state; a component
             must not construct its own <code>SaiaRagProvider</code>.</li>

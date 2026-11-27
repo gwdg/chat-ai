@@ -17,7 +17,11 @@ import { SECTION_RHYTHM } from "./sectionSpacing";
 
 import { useModal } from "../../modals/ModalContext";
 import { useToast } from "../../hooks/useToast";
-import { useSaiaRagAccess, SAIA_RAG_AVAILABLE } from "../../hooks/useSaiaRagAccess";
+import {
+  useSaiaRagAccess,
+  SAIA_RAG_AVAILABLE,
+  SAIA_RAG_CHECKING,
+} from "../../hooks/useSaiaRagAccess";
 import {
   selectCollapsedTopics,
   toggleTopic,
@@ -30,11 +34,14 @@ import type { RagCollection } from "../../workspace/providers/saiaRag";
  *
  * A collection opens on its own page (`/arcana/<storage>`) rather than being
  * expanded in the sidebar, because a 240 px rail cannot hold a file table, a
- * tag filter, a search box and a chat. The section only decides whether
- * anything is there at all: the Arcanas module, advanced mode (through
- * `showAdvancedSidebarSections`) and the service's own health probe. When the
- * probe does not confirm the service, the section is absent instead of empty,
- * the same fail-closed rule the workspace drive follows.
+ * tag filter, a search box and a chat. Which sections exist is decided by
+ * `showAdvancedSidebarSections`: the Arcanas module plus advanced mode. The
+ * service's health probe is not part of that decision — a deployment whose
+ * saia-rag is down (or not reachable from this browser yet) still shows the
+ * section, with a muted "not connected" line, so the feature stays
+ * discoverable and the next mount retries the probe. Reading the list only
+ * starts once the probe says `available`, so an absent service costs no failed
+ * request.
  */
 export default function ArcanaList() {
   const { t } = useTranslation();
@@ -44,11 +51,11 @@ export default function ArcanaList() {
   const { openModal } = useModal();
   const { notifySuccess, notifyError } = useToast();
   const access = useSaiaRagAccess();
+  const available = access === SAIA_RAG_AVAILABLE;
   const collapsedTopicIds = useSelector(selectCollapsedTopics) ?? [];
   const collapsed = collapsedTopicIds.includes("__arcanas__");
-  const { collections, statuses, loading, loaded, error } = useArcanas();
-
-  if (access !== SAIA_RAG_AVAILABLE) return null;
+  const { collections, statuses, loading, loaded, error } =
+    useArcanas(available);
 
   const openManager = (
     collection: RagCollection,
@@ -110,22 +117,36 @@ export default function ArcanaList() {
             <span className="block truncate">{t("arcanas.section_title")}</span>
           </Tooltip>
         </button>
-        <span className="text-[11px] font-normal tabular-nums text-base-content/35">
-          {collections.length}
-        </span>
+        {available && (
+          <span className="text-[11px] font-normal tabular-nums text-base-content/35">
+            {collections.length}
+          </span>
+        )}
         <button
           type="button"
           onClick={() => openModal("arcanaCreate")}
+          disabled={!available}
           data-guide="arcanas-add"
-          className="flex h-6 w-6 items-center justify-center rounded-md text-base-content/50 transition hover:bg-base-200 hover:text-accent"
-          title={t("arcanas.add")}
+          className="flex h-6 w-6 items-center justify-center rounded-md text-base-content/50 transition hover:bg-base-200 hover:text-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-base-content/50"
+          title={available ? t("arcanas.add") : t("arcanas.unavailable")}
           aria-label={t("arcanas.add")}
         >
           <Add size={15} />
         </button>
       </div>
 
-      {collapsed ? null : error ? (
+      {collapsed ? null : !available ? (
+        <p
+          data-guide="arcanas-unavailable"
+          className="px-2 py-1 text-xs text-base-content/50"
+        >
+          {t(
+            access === SAIA_RAG_CHECKING
+              ? "arcanas.loading"
+              : "arcanas.unavailable",
+          )}
+        </p>
+      ) : error ? (
         <div className="flex items-start gap-1.5 rounded-lg bg-error/10 px-2 py-1.5 text-[11px] text-error">
           <TriangleAlert size={13} className="mt-0.5 shrink-0" />
           <span className="min-w-0 flex-1 break-words">{error}</span>

@@ -2490,6 +2490,7 @@ export default {
     add: "Neue Arcana",
     add_empty: "Erste Arcana erstellen",
     loading: "Arcanas werden geladen…",
+    unavailable: "Keine Verbindung zum Arcana-Dienst.",
     retry: "Erneut versuchen",
     options: "Arcana-Optionen",
     open_files: "Dateien und Suche",

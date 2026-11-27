@@ -635,7 +635,13 @@ rendered only while `user_settings.advanced_mode` is on (`selectAdvancedMode`, d
 switch lives in one place only — the profile modal's Advanced tab
 (`modals/UserSettings/ChatPreferences.jsx`, `data-guide="profile-advanced-mode-preference"`). It was
 removed from the prompt box's chat settings panel at the admin's request (2026-11-17) so the prompt
-panel stays to model/temperature; with it off the sidebar is chats, topics and workspaces.
+panel stays to model/temperature; with it off the sidebar is chats, topics and workspaces. The
+Arcanas section (`Sidebar/ArcanaList.tsx`) is the third advanced section and is additionally gated by
+`isArcanasEnabled()` through `showAdvancedSidebarSections`. Its own saia-rag health probe does **not**
+remove it: a deployment whose service is down (or is not reachable from this browser) still shows the
+section header, with a muted `arcanas.unavailable` line and a disabled New Arcana button, and only
+starts reading the list once the probe answers `available` (`useArcanas(enabled)`). Only the module
+gate hides it.
 
 The chat's close control is a circle X (`Conversation/CloseChatButton.jsx`, `data-guide="close-chat"`)
 rendered in normal flow at the top of the messages area, directly below `HallucinationWarning` and any
@@ -2792,7 +2798,10 @@ is the deployment's `<backendPath>/mcp/saia-rag` (e.g. `<engine>/public/v1/mcp/s
 nothing else configures it: the engine's generic `/v1/mcp/<service>` hop forwards the exchange to the
 registered service and passes the caller's identity header through (§4.31). The MCP endpoint is
 `<base>/mcp`. Do not reintroduce a service-address key: a stack that cannot reach the drive is
-missing the hop, and that belongs in the engine or gateway, not in `front.json`.
+missing the hop, and that belongs in the engine or gateway, not in `front.json`. The sidebar section
+does **not** fail closed the way the drive row does: `Sidebar/ArcanaList.tsx` stays visible for the
+module in advanced mode, shows `arcanas.unavailable` instead of rows while the probe is not
+`available`, and `useArcanas(enabled)` is what holds the first `list_collections` until it is (§4.15).
 
 **The path shape is collections, then flat files.** `/` lists collections, `/<display>` lists that
 collection's files; a collection has no folders. A caller's own collection uses its name, a shared one

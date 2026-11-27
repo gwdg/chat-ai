@@ -196,11 +196,19 @@ export function retryArcanas(): void {
   void refreshArcanas();
 }
 
-export function useArcanas(): ArcanasState {
+/**
+ * Read the collection list.
+ *
+ * `enabled` gates the automatic first read: the sidebar passes false until the
+ * health probe confirms the service, so a deployment without saia-rag does not
+ * fire a request that can only fail. The state itself stays shared, so a list
+ * that was read on another page is still returned.
+ */
+export function useArcanas(enabled = true): ArcanasState {
   const current = useSyncExternalStore(subscribe, snapshot, snapshot);
   useEffect(() => {
-    if (!current.loaded && !inflight) void refreshArcanas();
-  }, [current.loaded]);
+    if (enabled && !current.loaded && !inflight) void refreshArcanas();
+  }, [current.loaded, enabled]);
   return current;
 }
 

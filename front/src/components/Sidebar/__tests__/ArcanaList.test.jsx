@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   retry: vi.fn(),
   deleteCollection: vi.fn(),
   access: "available",
+  arcanasEnabled: true,
   state: {
     collections: [
       {
@@ -63,6 +64,7 @@ vi.mock("../../../hooks/useToast", () => ({
 }));
 vi.mock("../../../hooks/useSaiaRagAccess", () => ({
   SAIA_RAG_AVAILABLE: "available",
+  SAIA_RAG_CHECKING: "checking",
   useSaiaRagAccess: () => mocks.access,
 }));
 vi.mock("../../../workspace/arcanas", () => ({
@@ -79,7 +81,10 @@ vi.mock("../../../workspace/arcanas", () => ({
     }`;
   },
   retryArcanas: mocks.retry,
-  useArcanas: () => mocks.state,
+  useArcanas: (enabled = true) => {
+    mocks.arcanasEnabled = enabled;
+    return mocks.state;
+  },
 }));
 
 beforeEach(() => {
@@ -91,6 +96,7 @@ beforeEach(() => {
   mocks.deleteCollection.mockReset();
   mocks.deleteCollection.mockResolvedValue(undefined);
   mocks.access = "available";
+  mocks.arcanasEnabled = true;
   mocks.state = {
     collections: [
       {
@@ -123,17 +129,41 @@ beforeEach(() => {
 });
 
 describe("ArcanaList", () => {
-  it("renders nothing until the service probe confirms it is there", () => {
+  it("keeps the section visible while the service probe has not confirmed it", () => {
     for (const access of ["checking", "unavailable"]) {
       mocks.access = access;
-      const { container, unmount } = render(<ArcanaList />);
-      expect(container).toBeEmptyDOMElement();
+      const { unmount } = render(<ArcanaList />);
+      expect(screen.getByText("Arcanas")).toBeInTheDocument();
+      expect(screen.queryByText("recipes")).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "New Arcana" }),
+      ).toBeDisabled();
+      expect(mocks.arcanasEnabled).toBe(false);
       unmount();
     }
   });
 
+  it("says the service is not connected instead of listing nothing", () => {
+    mocks.access = "unavailable";
+    render(<ArcanaList />);
+
+    expect(
+      screen.getByText("Not connected to the Arcana service."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Create your first Arcana")).not.toBeInTheDocument();
+  });
+
+  it("shows the loading line while the probe is still running", () => {
+    mocks.access = "checking";
+    render(<ArcanaList />);
+
+    expect(screen.getByText("Loading Arcanas…")).toBeInTheDocument();
+  });
+
   it("lists the collections with their role", () => {
     render(<ArcanaList />);
+
+    expect(mocks.arcanasEnabled).toBe(true);
 
     expect(screen.getByText("Arcanas")).toBeInTheDocument();
     expect(screen.getByText("recipes")).toBeInTheDocument();
