@@ -56,6 +56,12 @@ import AttachChatModal from "./Workspace/AttachChatModal";
 import AttachAgentModal from "./Workspace/AttachAgentModal";
 import AttachAgentSessionModal from "./Workspace/AttachAgentSessionModal";
 import CreateEntryModal from "./Workspace/CreateEntryModal";
+import GitMenuModal from "./Workspace/GitMenuModal";
+import GitChangesModal from "./Workspace/GitChangesModal";
+import GitCloneModal from "./Workspace/GitCloneModal";
+import GitBranchesModal from "./Workspace/GitBranchesModal";
+import GitRemoteModal from "./Workspace/GitRemoteModal";
+import GitHistoryModal from "./Workspace/GitHistoryModal";
 import McpServerModal from "./McpServer/McpServerModal";
 import McpServerDetailsModal from "./McpServer/McpServerDetailsModal";
 import ArcanaCreateModal from "./Arcana/ArcanaCreateModal";
@@ -259,6 +265,24 @@ export function ModalProvider({ children }) {
       )}
       {modalType === "workspaceCreateEntry" && (
         <CreateEntryModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "gitMenu" && (
+        <GitMenuModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "gitChanges" && (
+        <GitChangesModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "gitClone" && (
+        <GitCloneModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "gitBranches" && (
+        <GitBranchesModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "gitRemote" && (
+        <GitRemoteModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "gitHistory" && (
+        <GitHistoryModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {modalType === "mcpServerEdit" && (
         <McpServerModal isOpen onClose={closeModal} {...modalProps} />

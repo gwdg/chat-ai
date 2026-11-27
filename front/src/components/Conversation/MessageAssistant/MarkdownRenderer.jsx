@@ -518,12 +518,12 @@ export const plainRendererComponents = {
 /* ------------------------------------------------
  * LaTeX preprocessor
  * ------------------------------------------------ */
-const preprocessLaTeX = (content) => {
+export const preprocessLaTeX = (content) => {
   if (!content) return "";
 
   const codeBlocks = [];
   let processedContent = content.replace(
-    /(```[\s\S]*?```|`[^`\n]+`)/g,
+    /(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]+`)/g,
     (match, code) => {
       codeBlocks.push(code);
       return `<<CODE_BLOCK_${codeBlocks.length - 1}>>`;

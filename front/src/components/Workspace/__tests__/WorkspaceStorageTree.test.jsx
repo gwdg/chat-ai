@@ -11,6 +11,11 @@ import WorkspaceStorageTree, {
   resetExpandedFolders,
 } from "../WorkspaceStorageTree";
 import { WorkspaceError } from "../../../workspace/providers/types";
+import { MAX_EDIT_BYTES } from "../../../workspace/filePreview";
+import {
+  resetEditorDrafts,
+  setEditorDraft,
+} from "../../../workspace/editorDrafts";
 
 const h = vi.hoisted(() => ({
   sources: [],
@@ -132,6 +137,7 @@ const mountRow = {
 
 beforeEach(() => {
   resetExpandedFolders();
+  resetEditorDrafts();
   h.sources = [];
   h.mounts = [];
   h.providers = new Map();
@@ -594,6 +600,7 @@ describe("WorkspaceStorageTree", () => {
     expect(onPreview.mock.calls[0][0]).toEqual({
       entry: { name: "notes.txt", mime: "text/plain", size: undefined },
       loading: true,
+      key: expect.any(String),
     });
     await waitFor(() =>
       expect(onPreview).toHaveBeenCalledWith(
@@ -603,6 +610,211 @@ describe("WorkspaceStorageTree", () => {
         }),
       ),
     );
+  });
+
+  it("resolves the files a Typst document includes through its provider", async () => {
+    const stream = (text) =>
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode(text));
+          controller.close();
+        },
+      });
+    // The shared provider mock is the "hello" stream every other test reads.
+    const hello = h.rootProvider.read.getMockImplementation();
+    h.listWorkspaceRoot.mockResolvedValue([
+      entry("/report.typ", "file", { mime: "text/x-typst" }),
+    ]);
+    h.rootProvider.read.mockImplementation(async (path) =>
+      path === "/chapter.typ" ? stream("= Chapter") : stream("#include"),
+    );
+    const onPreview = vi.fn();
+
+    try {
+      render(<WorkspaceStorageTree workspaceId="ws-1" onPreview={onPreview} />);
+      fireEvent.click(await screen.findByText("report.typ"));
+
+      await waitFor(() =>
+        expect(onPreview.mock.calls.at(-1)?.[0].typst).toBeTruthy(),
+      );
+      const { resolveFile } = onPreview.mock.calls.at(-1)[0].typst;
+
+      // The virtual root is the folder the open file sits in, so a sibling
+      // reference reads beside it through the same provider the preview came from.
+      const data = await resolveFile("/chapter.typ");
+      expect(new TextDecoder().decode(data)).toBe("= Chapter");
+      expect(h.rootProvider.read).toHaveBeenCalledWith("/chapter.typ");
+
+      // A reference the document names but the source does not hold is reported
+      // as missing instead of throwing into the preview.
+      h.rootProvider.read.mockRejectedValueOnce(new Error("not found"));
+      await expect(resolveFile("/missing.typ")).resolves.toBeNull();
+    } finally {
+      h.rootProvider.read.mockImplementation(hello);
+    }
+  });
+
+  it("attaches no Typst resolver to a file that is not Typst", async () => {
+    h.listWorkspaceRoot.mockResolvedValue([
+      entry("/notes.txt", "file", { mime: "text/plain" }),
+    ]);
+    const onPreview = vi.fn();
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" onPreview={onPreview} />);
+    fireEvent.click(await screen.findByText("notes.txt"));
+
+    await waitFor(() => expect(onPreview.mock.calls.at(-1)?.[0].text).toBe("hello"));
+    expect(onPreview.mock.calls.at(-1)[0].typst).toBeUndefined();
+  });
+
+  it("gives every open of a file its own preview key", async () => {
+    h.listWorkspaceRoot.mockImplementation(async ({ path }) =>
+      path === "/" ? [entry("/Docs", "dir")] : [entry("/Docs/notes.txt")],
+    );
+    const onPreview = vi.fn();
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" onPreview={onPreview} />);
+    fireEvent.click(await screen.findByText("Docs"));
+    fireEvent.click(await screen.findByText("notes.txt"));
+    await waitFor(() => expect(onPreview).toHaveBeenCalledTimes(2));
+    const first = onPreview.mock.calls.at(-1)[0].key;
+
+    // Clicking the same row again is a new read of the file, so the pane must be
+    // allowed to remount rather than keep the state of the previous view.
+    fireEvent.click(screen.getByText("notes.txt"));
+    await waitFor(() => expect(onPreview).toHaveBeenCalledTimes(4));
+    const second = onPreview.mock.calls.at(-1)[0].key;
+
+    expect(first).not.toBe(second);
+  });
+
+  it("offers an editor for a text file and saves through the provider", async () => {
+    h.listWorkspaceRoot.mockResolvedValue([
+      entry("/notes.txt", "file", { mime: "text/plain" }),
+    ]);
+    h.rootProvider.write.mockClear();
+    const onPreview = vi.fn();
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" onPreview={onPreview} />);
+    fireEvent.click(await screen.findByText("notes.txt"));
+
+    await waitFor(() =>
+      expect(onPreview).toHaveBeenCalledWith(
+        expect.objectContaining({
+          editor: expect.objectContaining({
+            draftKey: "ws-1|root|/notes.txt",
+            readOnly: false,
+            save: expect.any(Function),
+          }),
+        }),
+      ),
+    );
+    const request = onPreview.mock.calls.at(-1)[0];
+
+    await expect(request.editor.save("changed")).resolves.toBe(7);
+
+    // The write goes through the same provider the file was read from, and the
+    // tree is told the path changed so every other view of it follows.
+    expect(h.rootProvider.write).toHaveBeenCalledWith(
+      "/notes.txt",
+      expect.anything(),
+      { size: 7, overwrite: true },
+    );
+  });
+
+  it("opens a read-only source's file without a way to save it", async () => {
+    const provider = {
+      status: "connected",
+      capabilities: { read: true, write: true },
+      connect: vi.fn(async () => {}),
+      write: vi.fn(async () => {}),
+      read: vi.fn(
+        async () =>
+          new ReadableStream({
+            start(controller) {
+              controller.enqueue(new TextEncoder().encode("hello"));
+              controller.close();
+            },
+          }),
+      ),
+      list: vi.fn(async () => ({
+        entries: [
+          {
+            sourceId: "dev-1",
+            path: "/Photos/notes.txt",
+            name: "notes.txt",
+            kind: "file",
+          },
+        ],
+      })),
+    };
+    h.sources = [{ id: "dev-1", kind: "local", label: "Phone", readOnly: true }];
+    h.mounts = [mountRow];
+    h.providers = new Map([["dev-1", provider]]);
+    h.listWorkspaceRoot.mockResolvedValue([
+      entry("/Phone", "dir", { local: false, mount: mountRow }),
+    ]);
+    const onPreview = vi.fn();
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" onPreview={onPreview} />);
+    fireEvent.click(await screen.findByText("Phone"));
+    fireEvent.click(await screen.findByText("notes.txt"));
+
+    await waitFor(() =>
+      expect(onPreview).toHaveBeenCalledWith(
+        expect.objectContaining({
+          editor: expect.objectContaining({
+            draftKey: "ws-1|dev-1|/Photos/notes.txt",
+            readOnly: true,
+          }),
+        }),
+      ),
+    );
+    expect(onPreview.mock.calls.at(-1)[0].editor.save).toBeUndefined();
+    expect(provider.write).not.toHaveBeenCalled();
+  });
+
+  it("marks a file row that holds an unsaved draft", async () => {
+    h.listWorkspaceRoot.mockResolvedValue([
+      entry("/notes.txt", "file", { mime: "text/plain" }),
+    ]);
+    setEditorDraft("ws-1|root|/notes.txt", { text: "draft", base: "hello" });
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" />);
+
+    const row = await screen.findByText("notes.txt");
+    expect(
+      row.closest('[data-guide="workspace-row"]').querySelector(
+        '[data-guide="file-draft"]',
+      ),
+    ).not.toBeNull();
+  });
+
+  it("leaves the plain preview on a file too large to edit", async () => {
+    h.listWorkspaceRoot.mockResolvedValue([
+      entry("/huge.log", "file", { mime: "text/plain" }),
+    ]);
+    // Just over the editor's cap: the preview still shows the text, but without
+    // asking CodeMirror to build a syntax tree for it.
+    const big = new Uint8Array(MAX_EDIT_BYTES + 1).fill(97);
+    h.rootProvider.read.mockImplementationOnce(
+      async () =>
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(big);
+            controller.close();
+          },
+        }),
+    );
+    const onPreview = vi.fn();
+
+    render(<WorkspaceStorageTree workspaceId="ws-1" onPreview={onPreview} />);
+    fireEvent.click(await screen.findByText("huge.log"));
+
+    await waitFor(() => expect(onPreview).toHaveBeenCalledTimes(2));
+    const request = onPreview.mock.calls.at(-1)[0];
+    expect(request.text).toHaveLength(MAX_EDIT_BYTES + 1);
+    expect(request.editor).toBeUndefined();
   });
 
   it("offers to save a description beside an image", async () => {

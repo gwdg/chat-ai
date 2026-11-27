@@ -139,6 +139,51 @@ describe("data safety warning", () => {
     expect(screen.getAllByRole("button").length).toBeGreaterThan(0);
   });
 
+  it("keeps the safe notice closed until the lock is hovered", () => {
+    const { container } = renderSafety(makeStore(), {
+      model: { id: "qwen-a", name: "Internal" },
+      tools: {},
+    });
+
+    expect(
+      screen.queryByText(/processed securely within our servers/i),
+    ).toBeNull();
+
+    fireEvent.mouseEnter(container.firstChild);
+
+    expect(
+      screen.getByText(/processed securely within our servers/i),
+    ).toBeInTheDocument();
+  });
+
+  it("does not reopen the safe notice when another safe model is selected", () => {
+    const { container, rerender } = renderSafety(makeStore(), {
+      model: { id: "qwen-a", name: "Internal" },
+      tools: {},
+    });
+    fireEvent.mouseEnter(container.firstChild);
+    expect(
+      screen.getByText(/processed securely within our servers/i),
+    ).toBeInTheDocument();
+    fireEvent.mouseLeave(container.firstChild);
+
+    rerender(
+      <Provider store={makeStore()}>
+        <WarningExternalModel
+          localState={localState({
+            model: { id: "gemma-4-31b-it", name: "Internal" },
+            tools: {},
+          })}
+          userData={{}}
+        />
+      </Provider>,
+    );
+
+    expect(
+      screen.queryByText(/processed securely within our servers/i),
+    ).toBeNull();
+  });
+
   it("keeps the green lock for a model without a key", () => {
     renderSafety(makeStore(), {
       model: { id: "qwen-a", name: "Internal" },

@@ -7,7 +7,7 @@ import { useModal } from "../ModalContext";
 import { useToast } from "../../hooks/useToast";
 import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
 import ImportChatButton from "../../components/Sidebar/Buttons/ImportChatButton";
-import { getExportData } from "../../utils/conversationUtils";
+import { downloadLocalData } from "../../utils/dataExport";
 import { isSyncEnabled } from "../../utils/modules";
 import StorageStatus from "./StorageStatus";
 import BackupSettings from "./BackupSettings";
@@ -19,17 +19,6 @@ import SyncSettings from "./SyncSettings";
  * synchronization. The latter is only offered while the sync module is on, so a
  * deployment without it shows two sections.
  */
-
-const generateFileName = (extension, username = "user") => {
-  const date = new Date();
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hour = String(date.getHours()).padStart(2, "0");
-  const minute = String(date.getMinutes()).padStart(2, "0");
-  const second = String(date.getSeconds()).padStart(2, "0");
-  return `${username}-chat-ai-${year}${month}${day}-${hour}${minute}${second}.${extension}`;
-};
 
 const DATA_SECTIONS = [
   {
@@ -75,18 +64,10 @@ export default function DataSettings({ userData, initialSection = null }) {
 
   const handleExportData = async () => {
     try {
-      const exportData = await getExportData();
-      exportData.user_settings = userSettings;
-      const content = JSON.stringify(exportData, null, 2);
-      const file = new Blob([content], { type: "application/json" });
-      const link = document.createElement("a");
-      const objectUrl = URL.createObjectURL(file);
-      link.download = generateFileName("json", userData?.username);
-      link.href = objectUrl;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+      await downloadLocalData({
+        username: userData?.username,
+        userSettings,
+      });
       notifySuccess(t("user_settings.data.export_success"));
     } catch (error) {
       console.error("Failed to export local data", error);

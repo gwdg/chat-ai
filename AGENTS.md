@@ -1211,7 +1211,16 @@ workspace in the sidebar and in the workspace's Chats panel, and toggled from th
 left of the Local tools icon in the prompt box. The `+` on a workspace row in the sidebar and the
 `+` in the workspace page's Chats panel both start a new chat that is linked right away; an
 existing chat is linked with the link control in the workspace page's Chats panel, not from the
-sidebar row. Dragging is the third way to link one: `Sidebar/chatDrop.ts` writes the chat id under
+sidebar row. The sidebar's own **New chat**, **Import** and **Persona** entries follow the same
+rule once a workspace is selected: `hooks/useActiveWorkspaceId.ts` returns the workspace page's id
+(`/workspace/<id>`, `/workspace/<id>/files`) or, outside it, the oldest `workspace_chats` link of
+the open chat — the same resolution `getChatWorkspaceId` uses. `SidebarWrapper` then creates the
+chat through `workspace/newChat.ts#createNewChatConversation` (`createAttachedChat`, plus the
+`openWorkspacePanel` navigation state), and the import path receives it as
+`options.workspaceId` and calls `attachWorkspaceChat` after `createConversation`. Nothing is
+attached while the synthetic `meta-chat` is imported. A chat created this way still appears in the
+general Chats list: the lists are views, not moves. Dragging is the third way to link one:
+`Sidebar/chatDrop.ts` writes the chat id under
 the private MIME `application/x-chatai-chat` (plus `application/x-chatai-chat-workspace` when the row
 came out of a workspace), so only the sidebar's own chat drags light up a target. Dropping a chat on
 a workspace row calls `attachWorkspaceChat`; a row dragged out of another workspace is detached from
@@ -1361,6 +1370,58 @@ it. It cannot use `scrollHeight` (that never drops below the frame's own viewpor
 grow) and it only works while scripts run, so `heightClass` stays the height until the first
 measurement and in strict mode.
 
+**Text and code files open read-only in the Preview tab.** `WorkspaceStorageTree#openFile` attaches an
+`editor` to a preview request when the provider returned text and the file is at most
+`MAX_EDIT_BYTES` (512 KB, `workspace/filePreview.ts`); bigger text keeps the `<pre>` preview.
+`WorkspacePreviewTab` then shows `WorkspaceCodeEditor` — a CodeMirror 6 wrapper that is
+`React.lazy`-imported, so neither the core nor a grammar is in the entry chunk, and whose grammar is
+picked from the file name by `workspace/editorLanguages.ts` (each Lezer package and each legacy mode
+is its own import) — **in read-only mode**. Reading a file must not put the user one keystroke away
+from changing it: Preview renders Markdown, HTML and CSV, and shows every other text file as
+highlighted read-only source. Only the Edit button beside Preview unlocks typing, and Preview and
+Edit share the same CodeMirror instance, so switching modes keeps the position. The theme is
+`workspace/editorTheme.ts`, written against the daisyUI CSS variables, so dark mode and a brand
+palette apply without a second stylesheet.
+
+A `.typ`/`.typst` file is source too, and its Preview additionally offers **Render Typst**. The
+document opens in a pane of its own beside the source — `tree | source | document` in the file
+manager, squeezed to one column below `lg` — and never replaces the source, because the pane follows
+the text as it is typed (the editor is kept while Edit is active; the offer is not hidden there).
+That is a `typst watch`: every change re-renders after the hook's 400 ms debounce, through the shared
+compile queue. The rendered document is zoomable (- / 125 % / +, `ZoomControls` in `DocumentPanel/`,
+reset per open), as is a PDF preview. The zoom grows the rendered content's own width (the SVG's
+width in the shadow root, the PDF iframe's size), never a `transform`: a transform paints outside the
+layout box, so the pane would clip everything beside the top-left corner and show no scrollbar. The
+compiler, the ~38 MB consent prompt, the shared SVG cache and the shadow-root crop live in one
+module, `Conversation/MessageAssistant/TypstDocument.jsx`, which the fenced ` ```typst ` block uses
+too — do not duplicate them in the preview. The offer is per open and never driven by
+`user_settings.render_typst`.
+
+A rendered file may load its siblings (`#include`, `#import`, `#image`, `#read`, `#csv`/`#json`/…,
+`#bibliography`), so the compile has a **root of its own**. `$typst.svg({ mainContent })` is not
+usable here: it mounts the source at `/tmp/<random>.typ`, which makes `/tmp` the project root, and
+every reference then fails with `failed to load file (access denied) … cannot read file outside of
+project root`. The compile therefore mounts the source at `/main.typ`, compiles with
+`$typst.vector({ mainFilePath: "/main.typ", root: "/" })` and renders the artifact with
+`$typst.svg({ vectorData })`. `utils/typstFiles.ts` parses the references (each resolved against the
+referencing file's directory, URLs and `@preview` packages skipped, `..` above the root refused,
+200 files / 8 MiB cap) because typst.ts' filesystem hook `FsAccessModel.readAll` is synchronous: a
+provider's async reads cannot happen during compilation. The tree hands the pane a `resolveFile`
+through the preview request's `typst` field, which reads `<folder of the open file>/<virtual path>`
+from the same provider, so no file leaves the browser. The artifact SVG cache is keyed by the source
+**plus** a hash of the loaded files; a missing reference is reported in the error view
+(`typst.missing_files`) instead of only leaving Typst's own "access denied".
+
+Saving is the row's own provider, not a second code path: `openFile` builds `editor.save` from
+`provider.write(sourcePath, streamOf(utf8), { size, overwrite: true })` and calls
+`notifyWorkspaceFilesChanged`, and it only exists when `!readOnlyFor(node)` and the provider reports
+`capabilities.write`. A read-only source therefore opens the file with `readOnly` and **no** `save`;
+the tab then shows a read-only badge instead of the Edit toggle. Unsaved text lives in `workspace/editorDrafts.ts`
+(module-level, keyed by `editorDraftKey(workspaceId, sourceId, providerPath)`) so clicking another
+file does not drop it; the tree subscribes through `useSyncExternalStore` and paints a steady dot on a
+row with a draft. Nothing is persisted: a reload clears every draft. `WorkspaceRightPanel` keys the
+preview tab by `request.key`, so the editor — undo history, cursor, scroll — belongs to one file.
+
 The tree selects a **set**: a plain click selects one row, Shift extends from the row clicked last
 (the DOM order of `[data-row-key]`), and Ctrl/Cmd toggles one row in or out of it. `selection` holds a
 `describeNode()` record per row — provider, source path, and what may be done to it — and `selected`
@@ -1484,6 +1545,22 @@ prompt. The local example repository is
 `chat-ai-manifest.json`, is
 [`hpc-team-public/gaia-teaching-example`](https://gitlab-ce.gwdg.de/hpc-team-public/gaia-teaching-example.git).
 The schema is documented in `docs/workspace-manifests.md`.
+
+Git in the file manager is a **browser-side client over the source**, not an agent shell: workspace files live
+in IndexedDB, in a picked local folder or on saia-fs, where no OpenCode agent can see them.
+`components/Workspace/WorkspaceGitButton.jsx` sits in the `WorkspaceStorageTree` toolbar and acts on the
+folder selected in the tree (the workspace root while nothing is selected). It opens the `gitMenu` modal, which
+links to `gitChanges`, `gitBranches`, `gitRemote` and `gitHistory`, and offers initialise and `gitClone` in the
+menu itself for a folder that is not a repository yet. `workspace/git/providerFs.ts` is a Node-style `fs` on top of a
+`FileProvider`: Git runs with `dir = "/"`, the adapter prefixes the selected folder's provider path, and every
+path Git sees stays repo-relative, so the same client works on browser storage, a local folder and saia-fs.
+`workspace/git/repo.ts` is the only caller; `isomorphic-git` and `isomorphic-git/http/web` are imported on first
+use and a global `Buffer` is installed from the `buffer` package. Git is offered only for `browser`, `local` and
+`saia-fs` sources that report read/write/delete/mkdir; read-only sources and mounts throw
+`READ_ONLY_PROVIDER`. Clone refuses a folder that already has entries (`EMPTY_FOLDER`). The CORS proxy is
+`gitCorsProxy` in `front.json` (`VITE_GIT_CORS_PROXY`, default `https://cors.isomorphic-git.org`; empty disables
+it); credentials are refused through the public proxy (`PROXY_CREDENTIALS`) and are kept only in module memory,
+never in storage. The author identity is in `localStorage["chatai.git.identity"]`.
 
 
 ### 4.25 MCP servers are configured globally and selected per chat

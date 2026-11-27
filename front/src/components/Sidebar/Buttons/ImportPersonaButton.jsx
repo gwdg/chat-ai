@@ -8,6 +8,7 @@ import { useModal } from "../../../modals/ModalContext";
 export default function ImportPersonaButton({
   variant = "icon",
   topicId = null,
+  workspaceId = null,
 }) {
   const { t } = useTranslation();
   const { notifySuccess, notifyError } = useToast();
@@ -20,6 +21,7 @@ export default function ImportPersonaButton({
           onClick={() => {
             openModal("importPersona", {
               topicId: topicId,
+              workspaceId: workspaceId,
             });
           }}
           data-guide="import-persona"
@@ -40,6 +42,7 @@ export default function ImportPersonaButton({
           onClick={() => {
             openModal("importPersona", {
               topicId: topicId,
+              workspaceId: workspaceId,
             });
           }}
           data-guide="import-persona"
@@ -62,6 +65,7 @@ export default function ImportPersonaButton({
           onClick={() => {
             openModal("importPersona", {
               topicId: topicId,
+              workspaceId: workspaceId,
             });
           }}
           data-guide="import-persona"

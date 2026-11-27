@@ -25,6 +25,7 @@ export default function SidebarRail({
   setLocalState,
   userData,
   modelsData,
+  activeWorkspaceId = null,
   onOpen, 
   handleNewConversation 
 }: { 
@@ -32,6 +33,8 @@ export default function SidebarRail({
   setLocalState: any,
   userData: any,
   modelsData: any,
+  /** The workspace a new chat and its imports are created in, if one is open. */
+  activeWorkspaceId?: string | null,
   onOpen: () => void, 
   handleNewConversation: (folderId?: string | null) => Promise<void> 
 }) {
@@ -81,10 +84,18 @@ export default function SidebarRail({
           )}
 
           {/* Import persona from Github button */}
-          <ImportPersonaButton variant="rail" topicId={localState?.folderId} />
+          <ImportPersonaButton
+            variant="rail"
+            topicId={localState?.folderId}
+            workspaceId={activeWorkspaceId}
+          />
 
           {/* Import Chat button */}
-          <ImportConversationButton variant="rail" topicId={localState?.folderId} />
+          <ImportConversationButton
+            variant="rail"
+            topicId={localState?.folderId}
+            workspaceId={activeWorkspaceId}
+          />
         </div>
 
         {/* Center - Expand sidebar button */}

@@ -17,6 +17,7 @@ import { faCalendar, faRectangleList } from '@fortawesome/free-regular-svg-icons
 import DemandIndicator from "./DemandIndicator";
 import E2eeLock from "../Others/E2eeLock";
 import { isExternalModel } from "../../utils/modelExternality";
+import { modelSupportsReasoning } from "../../utils/modelCapabilities";
 
 import type { ExtendedModelInfo } from "../../types/models";
 
@@ -219,7 +220,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
               {model.input.includes("image") && <Tooltip text={"Image Input"}><FontAwesomeIcon icon={faImage} /></Tooltip>}
               {model.input.includes("video") && <Tooltip text={"Video Input"}><FontAwesomeIcon icon={faVideo} /></Tooltip>}
               {model.input.includes("audio") && <Tooltip text={"Audio Input"}><FontAwesomeIcon icon={faMicrophone} /></Tooltip>}
-              {model.output.includes("thought") && <Tooltip text={"Thinking"}><FontAwesomeIcon icon={faBrain} /></Tooltip>}
+              {modelSupportsReasoning(model) && <Tooltip text={"Thinking"}><FontAwesomeIcon icon={faBrain} /></Tooltip>}
               
             </div>
           </div>
@@ -259,7 +260,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
             {model.input.includes("image") && <Tooltip text={"Image Input"}><FontAwesomeIcon icon={faImage} /></Tooltip>}
             {model.input.includes("video") && <Tooltip text={"Video Input"}><FontAwesomeIcon icon={faVideo} /></Tooltip>}
             {model.input.includes("audio") && <Tooltip text={"Audio Input"}><FontAwesomeIcon icon={faMicrophone} /></Tooltip>}
-            {model.output.includes("thought") && <Tooltip text={"Thinking"}><FontAwesomeIcon icon={faBrain} /></Tooltip>}
+            {modelSupportsReasoning(model) && <Tooltip text={"Thinking"}><FontAwesomeIcon icon={faBrain} /></Tooltip>}
           </div>
           {/*
             <span className="text-xs text-base-content/70">
@@ -309,7 +310,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
             </span>*/}
           </div>
           <div className="flex items-center gap-1">
-            {model.output.includes("thought") && (
+            {modelSupportsReasoning(model) && (
               <Tooltip text={"Thinking"}>
                 <div className="text-accent size-9 inline-grid place-items-center rounded-xl border border-base-300" aria-label="Text input">
                   <FontAwesomeIcon icon={faBrain} />
@@ -385,7 +386,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
             <div className="ml-2 flex items-center gap-1 text-accent">
               {selectedModel?.input.includes("image") && <Tooltip text={"Image Input"}><FontAwesomeIcon icon={faImage} /></Tooltip>}
               {selectedModel?.input.includes("video") && <Tooltip text={"Video Input"}><FontAwesomeIcon icon={faVideo} /></Tooltip>}
-              {selectedModel?.output.includes("thought") && <Tooltip text={"Thinking"}><FontAwesomeIcon icon={faBrain} /></Tooltip>}
+              {modelSupportsReasoning(selectedModel) && <Tooltip text={"Thinking"}><FontAwesomeIcon icon={faBrain} /></Tooltip>}
 
             </div>
             <FontAwesomeIcon icon={faChevronDown} />

@@ -12,6 +12,22 @@ export default {
       "The browser storage is full or unavailable. Export a backup, free some space, and reload.",
     database_generic:
       "The local database could not be opened. Your data may still be present. Reload or close other Chat AI tabs.",
+    database_stalled:
+      "The local database is taking unusually long to open. Another Chat AI tab or window is most likely still using it — close every other Chat AI tab and window, then retry. If that does not help, reload the page.",
+    data_safe_title: "Your data is safe",
+    data_safe:
+      "Nothing has been deleted. Your chats, files and settings are still stored in this browser — only this page could not open them.",
+    save_data: "Save all my data",
+    save_data_hint:
+      "You can keep a copy of everything as a file: it downloads to your computer and can be imported again later.",
+    save_data_saving: "Preparing your file…",
+    save_data_done: "Your file has been downloaded.",
+    save_data_failed:
+      "The local database could not be read, so the file was not created. Close the other Chat AI tabs and windows and try again.",
+    retry: "Retry",
+    details: "Details",
+    support_before: "If this does not go away on its own, please contact",
+    support_after: ".",
     reload: "Reload",
   },
   // Common phrases
@@ -484,10 +500,52 @@ export default {
       title: "Import a Git repository",
       step1: "Open Create workspace, pick Git repository on the left, choose the local agent that runs the clone, then press Create.",
     },
+    workspace_git: {
+      title: "Version files with Git",
+      step1:
+        "Git lives in the file manager: open the Files tab of a workspace (or of a chat attached to one) and click the folder the repository should live in. Without a selection the Git button acts on the workspace root. The workspace's own storage, a folder from this device and the SAIA filesystem can hold a repository; read-only sources and mounts cannot.",
+      step2:
+        "Click Git in the file toolbar. It opens a dialog rather than a dropdown, so nothing is clipped by the file list.",
+      step3:
+        "The menu names the folder and reads its state: the current branch and the number of changed files. While the folder is not a repository yet it instead offers to initialise one or to clone a public repository into the empty folder. Refresh re-reads the state.",
+      step4:
+        "Changes stages, unstages and discards files and writes the commit. Branches creates a branch, switches to a local or remote branch, and deletes one that is not checked out.",
+      step5:
+        "Remote keeps the URL and the credentials and runs Fetch, Pull and Push; a token stays in memory for this browser session and is refused through the public CORS proxy. History lists the last 50 commits, newest first.",
+      step6: "Open Changes to write the commit.",
+      step7:
+        "Stage the file in the list, type the message and check the author name and email — they are remembered in this browser. Commit then writes it, and the dialog reloads its state after every action.",
+    },
     workspace_upload: {
       title: "Upload files into a workspace",
       step1: "Open a workspace, pick the Files tab on the right and choose Add file; the browser asks for a file from this computer.",
       step2: "The uploaded file appears in the folder you are viewing. You can also drag files from your computer onto a folder row or onto the list to upload them there.",
+    },
+    workspace_edit_file: {
+      title: "Edit a file in a workspace",
+      step1:
+        "The Files tab beside a chat lists everything a workspace stores. Files and folders in the workspace's own storage, a folder from this device, an Arcana and the SAIA filesystem all appear in the same tree.",
+      step2:
+        "Click a text or code file. It opens in the Preview tab, which stays read-only: source code and plain text appear with syntax highlighting, while Markdown, HTML and CSV are rendered.",
+      step3:
+        "Press Edit beside Preview to unlock typing. Preview and Edit share one editor, so the cursor position survives the switch. A read-only source shows a Read-only badge instead and offers no Edit toggle.",
+      step4:
+        "As soon as the text differs from the stored file, the dot beside the name and Revert appear. Revert throws the draft away and reloads the stored bytes; an unsaved draft survives switching to another file until the tab or the page is reloaded.",
+      step5:
+        "Save writes through the folder's own storage, and Ctrl/Cmd+S does the same. A failed write stays visible above the editor instead of losing the change.",
+    },
+    workspace_typst_preview: {
+      title: "Render a Typst file",
+      step1:
+        "Open the Files tab of a workspace that stores a Typst file (.typ or .typst) in its own storage, on this device or on the SAIA filesystem.",
+      step2:
+        "Click the Typst file. It opens in the Preview tab as source, and a Typst file additionally offers Render Typst beside the mode toggle.",
+      step3:
+        "Press Render Typst. The compiled document opens in a pane of its own beside the source — tree, source and document side by side — and follows the text as it changes, also while you edit. Show source swaps back to the code alone.",
+      step4:
+        "The document is compiled in the browser, so nothing is uploaded. Files it includes, imports or reads resolve relative to the open file, and a missing one is reported under the document instead of failing silently.",
+      step5:
+        "Zoom the document with −, the percentage and +; the percentage resets to 100 % and one step is 25 %. The same controls zoom a PDF preview. The content grows instead of being scaled, so the pane scrolls rather than clipping it.",
     },
     workspace_multiselect: {
       title: "Remove a file from a workspace",
@@ -502,6 +560,11 @@ export default {
         "A collection appears as a folder; open one to browse its files and add it to the workspace.",
       step3:
         "Create a collection here. Its owner can appoint editors and share it with people and groups.",
+    },
+    arcana_filesystem: {
+      title: "Use an Arcana filesystem",
+      step1: "Every workspace already includes an Arcana filesystem source, listed in the Files tab.",
+      step2: "Each Arcana appears as a folder; open one to browse its files.",
     },
     attach_from_workspace: {
       title: "Attach files from a workspace",
@@ -3259,6 +3322,16 @@ export default {
     preview_too_large_hint:
       "Preview is limited to {{limit}}. Download the file to open it.",
     preview_unavailable: "No preview is available for this file type.",
+    mode_preview: "Preview",
+    mode_edit: "Edit",
+    render_typst: "Render Typst",
+    show_source: "Show source",
+    unsaved_changes: "Unsaved changes",
+    no_unsaved_changes: "All changes saved",
+    revert_changes: "Revert changes",
+    read_only_file: "This file is read-only.",
+    read_only_badge: "Read-only",
+    save_failed: "Could not save: {{message}}",
     remove_source: "Remove source",
     remove_source_confirm:
       "Remove this source from the workspace? Files themselves are not deleted.",
@@ -3296,6 +3369,113 @@ export default {
     transfer_conflict_many:
       "{{count}} items already exist at the destination.",
     transfer_multiple_sources: "several sources",
+    git: {
+      button: "Git",
+      button_hint: "Git actions for {{path}}",
+      button_unsupported: "Git needs a writable browser, device or SAIA filesystem folder.",
+      menu_title: "Git",
+      folder_label: "Folder",
+      reading_status: "Reading repository…",
+      unsupported_source:
+        "Git works in the workspace's own storage, a folder from this device and the SAIA filesystem.",
+      not_a_repository: "This folder is not a Git repository yet.",
+      changes: "Changes",
+      changes_hint: "Stage, discard and commit",
+      branches: "Branches",
+      branches_hint: "Create, switch and delete branches",
+      remote: "Remote",
+      remote_hint: "URL, credentials, fetch, pull and push",
+      history: "History",
+      history_hint: "Commits of this branch",
+      refresh: "Refresh",
+      refresh_hint: "Read the status again",
+      init: "Initialise repository",
+      init_hint: "Create a new .git folder here",
+      init_done: "Repository initialised.",
+      clone: "Clone repository",
+      clone_hint: "Copy an existing repository into this folder",
+      clone_action: "Clone",
+      clone_done: "Repository cloned.",
+      folder_scope:
+        "Git acts on the folder selected in the file manager, not on a single file.",
+      detached: "detached HEAD",
+      clean: "Nothing to commit, working tree clean.",
+      change_count_one: "{{count}} change",
+      change_count_other: "{{count}} changes",
+      working: "Working…",
+      staged_section_one: "Staged ({{count}})",
+      staged_section_other: "Staged ({{count}})",
+      unstaged_section_one: "Changes ({{count}})",
+      unstaged_section_other: "Changes ({{count}})",
+      stage: "Stage",
+      unstage: "Unstage",
+      stage_all: "Stage all",
+      unstage_all: "Unstage all",
+      nothing_staged: "Nothing is staged.",
+      nothing_unstaged: "No unstaged changes.",
+      discard: "Discard",
+      discard_confirm: "Discard the changes in “{{name}}”?",
+      discard_untracked_confirm:
+        "Delete the untracked file “{{name}}”? This cannot be undone.",
+      commit_message: "Commit message",
+      commit_message_placeholder: "Describe the change",
+      author_name: "Author name",
+      author_email: "Author email",
+      commit: "Commit {{count}}",
+      commit_done: "Committed.",
+      repository_url: "Repository URL",
+      branch_optional: "Branch (optional)",
+      shallow: "Shallow clone",
+      credentials_optional: "Credentials (optional)",
+      credentials_this_session: "Credentials for this session",
+      credentials_remembered:
+        "Credentials are kept in memory until you close the app.",
+      forget_credentials: "Forget",
+      credentials_memory_only:
+        "Credentials stay in memory for this session and are never stored.",
+      public_proxy_no_credentials:
+        "A public CORS proxy is configured, so credentials cannot be sent. Set gitCorsProxy to your own proxy to use a token.",
+      username: "Username",
+      token: "Token or password",
+      current_branch: "Current branch:",
+      local_branches: "Local branches",
+      remote_branches: "Remote branches",
+      no_branches: "No local branches yet.",
+      head: "current",
+      delete_branch: "Delete branch",
+      new_branch: "Create a branch",
+      create_branch: "Create",
+      checkout_new_branch: "Switch to it right away",
+      branch_created: "Created branch {{name}}.",
+      branch_checked_out: "Switched to {{name}}.",
+      branch_deleted: "Deleted branch {{name}}.",
+      remote_url: "Remote URL",
+      remote_saved: "Remote saved.",
+      no_remote: "Add a remote URL to fetch, pull or push.",
+      fetch: "Fetch",
+      pull: "Pull",
+      push: "Push",
+      fetch_done: "Fetched the remote.",
+      pull_done: "Pulled the remote.",
+      push_done: "Pushed the branch.",
+      commit_total_one: "{{count}} commit",
+      commit_total_other: "{{count}} commits",
+      history_empty: "This branch has no commits yet.",
+      no_message: "(no message)",
+      unknown_author: "Unknown author",
+      error: {
+        generic: "The Git operation failed.",
+        unsupported_provider: "This source does not support Git.",
+        read_only_provider: "This folder is read-only, so Git cannot write to it.",
+        not_a_repository: "This folder is already a Git repository.",
+        empty_folder: "Clone needs an empty folder.",
+        auth_required: "The remote rejected the credentials.",
+        proxy_credentials:
+          "Credentials are not sent through the public CORS proxy. Configure your own proxy first.",
+        empty_commit: "There is nothing staged to commit.",
+        provider_error: "The source reported an error.",
+      },
+    },
   },
 
   // Landing page
@@ -3352,6 +3532,9 @@ export default {
     pdf_original_hint: "This PDF hasn't been processed yet. Click \"Process\" to extract text content.",
     pdf_missing_title: "PDF content not available",
     pdf_missing_hint: "The original PDF file data is not available for preview",
+    zoom_in: "Zoom in",
+    zoom_out: "Zoom out",
+    zoom_reset: "Reset zoom to 100%",
     docx_failed: "Failed to display Word document",
     describe_image: "Describe image",
     describe_unavailable: "No vision model is available for this deployment",
@@ -3369,6 +3552,10 @@ export default {
     rendering: "Rendering Typst document...",
     render_error:
       "Failed to render Typst document. Showing source instead:",
+    missing_files:
+      "These referenced files could not be read: {{files}}",
+    files_truncated:
+      "Some referenced files were skipped because the document loads too many or too large files.",
   },
   latex: {
     download_failed: "Failed to download the LaTeX document.",

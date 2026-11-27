@@ -8,10 +8,11 @@ import SidebarPanel from "./SidebarPanel";
 import SidebarContent from "./SidebarContent";
 import { useCallback, useEffect } from "react";
 import SidebarDrawer from "./SidebarDrawer";
-import { createConversation } from "../../db";
+import { createNewChatConversation } from "../../workspace/newChat";
 import { getDefaultConversation } from "../../utils/conversationUtils";
 import { useNavigate } from "react-router";
 import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
+import { useActiveWorkspaceId } from "../../hooks/useActiveWorkspaceId";
 
 export default function SidebarWrapper({ 
   localState, 
@@ -23,6 +24,9 @@ export default function SidebarWrapper({
   const navigate = useNavigate();
   const showSidebar = useSelector(selectShowSidebar);
   const userSettings = useSelector(selectUserSettings);
+  // A new chat belongs to the workspace the user is in, just as it inherits the
+  // open chat's topic. Without a selected workspace nothing changes.
+  const activeWorkspaceId = useActiveWorkspaceId(localState?.id);
   const { isMobile, isTablet, isDesktop } = useWindowSize();
 
   useEffect(() => {
@@ -45,10 +49,15 @@ export default function SidebarWrapper({
 
   const handleNewConversation = useCallback(async (folderId: string | null = null) => {
     const newConversation = getDefaultConversation(userSettings, folderId ?? null);
-    const newId = await createConversation(newConversation);
-    navigate(`/chat/${newId}`);
+    const { id, attached } = await createNewChatConversation(
+      activeWorkspaceId,
+      newConversation,
+    );
+    // A chat created in a workspace opens its Files panel, like the workspace
+    // row's "+" does.
+    navigate(`/chat/${id}`, attached ? { state: { openWorkspacePanel: true } } : undefined);
     focusPromptInput();
-  }, [userSettings, navigate, focusPromptInput]);
+  }, [userSettings, navigate, focusPromptInput, activeWorkspaceId]);
 
   useEffect(() => {
     let shortcutLocked = false;
@@ -101,6 +110,7 @@ export default function SidebarWrapper({
       localState={localState}
       setLocalState={setLocalState}
       handleNewConversation={handleNewConversation}
+      activeWorkspaceId={activeWorkspaceId}
       userData={userData}
       modelsData={modelsData}
     />
@@ -119,6 +129,7 @@ export default function SidebarWrapper({
             setLocalState={setLocalState}
             userData={userData}
             modelsData={modelsData}
+            activeWorkspaceId={activeWorkspaceId}
             onOpen={() => { dispatch(toggleSidebar()) }}
             handleNewConversation={handleNewConversation} />
         </div>

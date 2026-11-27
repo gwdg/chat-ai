@@ -35,6 +35,24 @@ const DEFAULT_GENERIC_FLAGS = [
 
 export const BINARY_DOCUMENT_TYPES = ["pdf", "docx"];
 
+// Reasoning is declared in two places: the models endpoint lists "thought" in
+// `output` for a model that reasons, while the per-model config files carry
+// `reasoning_options` for the settings panel. A model reasons when either
+// source says so, so the brain icon and the reasoning setting always agree.
+export function modelSupportsReasoning(model) {
+  if (!model || typeof model !== "object") return false;
+  if (Array.isArray(model.output) && model.output.includes("thought")) {
+    return true;
+  }
+  const defaults = model.id ? getModelDefaults(model.id) : undefined;
+  const options = Array.isArray(defaults?.reasoning_options)
+    ? defaults.reasoning_options
+    : [];
+  return options.some(
+    (option) => String(option).toLowerCase() !== "none",
+  );
+}
+
 function capabilityValues(model) {
   if (!model || typeof model !== "object") return [];
   return [

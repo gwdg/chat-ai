@@ -26,6 +26,7 @@ export default function ImportPersonaModal({
   repoName = PERSONA_REPO.name,
   branch = PERSONA_REPO.branch,
   topicId = null,
+  workspaceId = null,
 }) {
   const [selectedPath, setSelectedPath] = useState(null);
   const [rootContents, setRootContents] = useState({ folders: [], files: [] });
@@ -255,6 +256,7 @@ export default function ImportPersonaModal({
       }
 
       await importConversation(parsed, false, topicId, {
+        workspaceId,
         persona: {
           title: parsed?.title || file.title,
           description:
@@ -295,6 +297,7 @@ export default function ImportPersonaModal({
       }
       try {
         await importConversation(parsed, false, topicId, {
+          workspaceId,
           persona: {
             title: parsed?.title,
             description: parsed?.subtitle || parsed?.description || "",

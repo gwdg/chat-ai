@@ -152,6 +152,7 @@ export function WorkspacePreviewPane({ request, onClose, onBack }) {
 
   return (
     <WorkspacePreviewTab
+      key={request.key ?? request.fileId ?? chatPreview.entry?.name}
       preview={preview}
       onClose={onClose}
       onBack={onBack}

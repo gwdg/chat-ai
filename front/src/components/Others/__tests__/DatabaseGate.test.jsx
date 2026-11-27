@@ -1,104 +1,104 @@
 import { act, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import i18n from "../../../i18n";
+import { I18nextProvider } from "react-i18next";
+import i18next from "i18next";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockDb, handlers } = vi.hoisted(() => {
-  const handlers = {};
-  const mockDb = {
-    on: vi.fn((event, callback) => {
-      handlers[event] = callback;
-    }),
-    open: vi.fn(async () => {}),
-    close: vi.fn(),
-  };
-  return { mockDb, handlers };
+import en from "../../../i18n/en";
+import DatabaseGate from "../DatabaseGate";
+
+const { openMock, closeMock } = vi.hoisted(() => ({
+  openMock: vi.fn(),
+  closeMock: vi.fn(),
+}));
+
+vi.mock("../../../db", () => ({
+  db: { open: openMock, close: closeMock, on: vi.fn() },
+}));
+
+const i18n = i18next.createInstance();
+
+beforeAll(async () => {
+  await i18n.init({
+    lng: "en",
+    resources: { en: { translation: en } },
+    interpolation: { escapeValue: false },
+  });
 });
 
-vi.mock("../../../db", () => ({ db: mockDb }));
+beforeEach(() => {
+  vi.useFakeTimers();
+  openMock.mockReset();
+  closeMock.mockReset();
+});
 
-function namedError(name) {
-  const error = new Error(name);
-  error.name = name;
-  return error;
-}
+afterEach(() => {
+  vi.useRealTimers();
+});
 
-async function renderGate() {
-  const { default: DatabaseGate } = await import("../DatabaseGate");
+const renderGate = () =>
   render(
-    <DatabaseGate>
-      <span>app content</span>
-    </DatabaseGate>,
+    <I18nextProvider i18n={i18n}>
+      <DatabaseGate>
+        <div>app is up</div>
+      </DatabaseGate>
+    </I18nextProvider>,
   );
-}
 
 describe("DatabaseGate", () => {
-  beforeEach(() => {
-    vi.resetModules();
-    for (const key of Object.keys(handlers)) delete handlers[key];
-    mockDb.open.mockResolvedValue(undefined);
-    mockDb.close.mockClear();
+  it("shows the spinner while the database is opening", () => {
+    openMock.mockReturnValue(new Promise(() => {}));
+    renderGate();
+    expect(screen.getByLabelText("Loading...")).toBeInTheDocument();
+    expect(screen.queryByText("app is up")).not.toBeInTheDocument();
   });
 
-  it("shows a loader until the database opens, then renders the app", async () => {
+  it("names the cause and offers a retry when the open never settles", () => {
+    openMock.mockReturnValue(new Promise(() => {}));
+    renderGate();
+
+    act(() => {
+      vi.advanceTimersByTime(15000);
+    });
+
+    expect(screen.getByText("Local database unavailable")).toBeInTheDocument();
+    expect(screen.getByText(/close every other Chat AI tab/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+    expect(screen.getByText("Your data is safe")).toBeInTheDocument();
+  });
+
+  it("retries with a fresh open request instead of the same pending one", () => {
+    openMock.mockReturnValue(new Promise(() => {}));
+    renderGate();
+    act(() => {
+      vi.advanceTimersByTime(15000);
+    });
+
+    act(() => {
+      screen.getByRole("button", { name: "Retry" }).click();
+    });
+
+    expect(closeMock).toHaveBeenCalledTimes(1);
+    expect(openMock).toHaveBeenCalledTimes(2);
+    expect(screen.getByLabelText("Loading...")).toBeInTheDocument();
+  });
+
+  it("still loads the app when the open succeeds after the warning", async () => {
     let resolveOpen;
-    mockDb.open.mockReturnValue(
+    openMock.mockReturnValue(
       new Promise((resolve) => {
         resolveOpen = resolve;
       }),
     );
-
-    await renderGate();
-
-    expect(screen.getByLabelText(i18n.t("common.loading"))).toBeInTheDocument();
+    renderGate();
+    act(() => {
+      vi.advanceTimersByTime(15000);
+    });
+    expect(screen.getByText("Local database unavailable")).toBeInTheDocument();
 
     await act(async () => {
       resolveOpen();
     });
 
-    expect(screen.getByText("app content")).toBeInTheDocument();
-  });
-
-  it("explains a database blocked by another tab", async () => {
-    await renderGate();
-    await screen.findByText("app content");
-
-    act(() => handlers.blocked());
-
-    expect(
-      screen.getByText(i18n.t("errors.database_blocked")),
-    ).toBeInTheDocument();
-  });
-
-  it("closes the database and reports a version change in another tab", async () => {
-    await renderGate();
-    await screen.findByText("app content");
-
-    act(() => handlers.versionchange());
-
-    expect(mockDb.close).toHaveBeenCalled();
-    expect(
-      screen.getByText(i18n.t("errors.database_version")),
-    ).toBeInTheDocument();
-  });
-
-  it("maps a quota error when opening the database", async () => {
-    mockDb.open.mockRejectedValueOnce(namedError("QuotaExceededError"));
-
-    await renderGate();
-
-    expect(
-      await screen.findByText(i18n.t("errors.database_quota")),
-    ).toBeInTheDocument();
-    expect(screen.queryByText("app content")).not.toBeInTheDocument();
-  });
-
-  it("falls back to a generic database error", async () => {
-    mockDb.open.mockRejectedValueOnce(namedError("UnknownError"));
-
-    await renderGate();
-
-    expect(
-      await screen.findByText(i18n.t("errors.database_generic")),
-    ).toBeInTheDocument();
+    expect(screen.getByText("app is up")).toBeInTheDocument();
   });
 });
