@@ -2462,6 +2462,8 @@ export default {
     no_tagged_files: "Keine Datei trägt die ausgewählten Tags.",
     chunks: "{{count}} Abschnitte",
     edit_tags: "Tags bearbeiten",
+    download: "Herunterladen",
+    download_markdown: "Indexiertes Markdown herunterladen",
     remove_file: "Datei entfernen",
     tags_placeholder: "tag-eins, tag-zwei",
     save_tags: "Tags speichern",

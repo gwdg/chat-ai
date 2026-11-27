@@ -14,6 +14,10 @@ const rag = vi.hoisted(() => ({
   files: new Map<string, Map<string, Uint8Array>>(),
   // collection storage name -> file name -> tags
   tags: new Map<string, Map<string, string[]>>(),
+  // `${collection}\0${filename}` for files whose indexed text is Markdown
+  markdown: new Set<string>(),
+  // `${collection}\0${filename}` -> the indexed Markdown of a converted file
+  markdownText: new Map<string, string>(),
   // `${collection}\0${filename}` -> bytes staged so far by upload_file_chunk
   staged: new Map<string, Uint8Array>(),
   members: new Map<string, any[]>(),
@@ -79,6 +83,7 @@ vi.mock("@modelcontextprotocol/sdk/client/index.js", () => ({
               size: bytes.length,
               status: "indexed",
               chunks: 1,
+              markdown: rag.markdown.has(`${collection}\0${name}`),
               ...(request.arguments?.include_tags
                 ? { tags: tags?.get(name) ?? [] }
                 : {}),
@@ -164,6 +169,13 @@ vi.mock("@modelcontextprotocol/sdk/client/index.js", () => ({
             size: bytes.length,
             content_base64: toBase64(bytes),
           });
+        }
+        case "get_file": {
+          const markdown = rag.markdownText.get(`${collection}\0${filename}`);
+          if (markdown === undefined) {
+            return failure(`${filename} is not in this collection`);
+          }
+          return text(markdown);
         }
         case "upload_file_base64": {
           let files = rag.files.get(collection);
@@ -281,6 +293,7 @@ const ALL_TOOLS = [
   "list_collections",
   "list_files",
   "read_file_base64",
+  "get_file",
   "upload_file_base64",
   "upload_file_chunk",
   "upload_file",
@@ -335,6 +348,8 @@ describe("SaiaRagProvider", () => {
       ["alice__recipes", new Map([["notes.md", ["recipe", "quick"]]])],
     ]);
     rag.staged = new Map();
+    rag.markdown = new Set();
+    rag.markdownText = new Map();
     rag.calls = [];
     rag.connectError = null;
     rag.connectCalls = 0;
@@ -389,6 +404,44 @@ describe("SaiaRagProvider", () => {
       name: "list_files",
       args: { collection: "bob__papers" },
     });
+  });
+
+  it("downloads a converted document as its indexed Markdown", async () => {
+    rag.markdown.add("alice__recipes\0Wasserwerksschulung.pdf");
+    rag.markdownText.set(
+      "alice__recipes\0Wasserwerksschulung.pdf",
+      "# Wasserwerksschulung\n\nDie Wasserwerke prüfen täglich.",
+    );
+    rag.files.get("alice__recipes")!.set(
+      "Wasserwerksschulung.pdf",
+      encoder.encode("%PDF-1.7"),
+    );
+    const ragProvider = provider();
+    const listed = await ragProvider.listFiles("recipes");
+    const file = listed.find((row) => row.name === "Wasserwerksschulung.pdf")!;
+
+    // The service reports the converted text, so the client can offer it.
+    expect(file).toMatchObject({ markdown: true });
+
+    const saved = await ragProvider.downloadFile("recipes", file);
+    expect(saved.name).toBe("Wasserwerksschulung.md");
+    await expect(saved.blob.text()).resolves.toContain("prüfen");
+  });
+
+  it("downloads an unconverted upload as its stored bytes", async () => {
+    const ragProvider = provider();
+    const file = {
+      name: "notes.md",
+      status: "indexed",
+      chunks: 1,
+      tags: [],
+      markdown: false,
+    };
+
+    const saved = await ragProvider.downloadFile("recipes", file);
+
+    expect(saved.name).toBe("notes.md");
+    await expect(saved.blob.text()).resolves.toBe("# hi");
   });
 
   it("reads and writes bytes through the base64 tools", async () => {

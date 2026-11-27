@@ -52,6 +52,7 @@ const LIST_COLLECTIONS_TOOL = "list_collections";
 const LIST_FILES_TOOL = "list_files";
 const READ_BASE64_TOOL = "read_file_base64";
 const WRITE_BASE64_TOOL = "upload_file_base64";
+const GET_FILE_TOOL = "get_file";
 const WRITE_CHUNK_TOOL = "upload_file_chunk";
 const UPLOAD_TEXT_TOOL = "upload_file";
 const CREATE_COLLECTION_TOOL = "create_collection";
@@ -130,6 +131,12 @@ export type RagFile = {
   status: string;
   chunks: number;
   tags: string[];
+  /**
+   * A converted document is indexed from its Markdown while the collection
+   * keeps the original upload, so `get_file` returns the Markdown and the
+   * bytes stay the uploaded file.
+   */
+  markdown: boolean;
 };
 
 /** One tag of a collection and how many files carry it. */
@@ -165,6 +172,18 @@ export const isTextFileName = (name: string): boolean => {
   const dot = name.lastIndexOf(".");
   if (dot <= 0 || dot === name.length - 1) return false;
   return TEXT_EXTENSIONS.has(name.slice(dot + 1).toLowerCase());
+};
+
+/**
+ * The download name for a converted document's Markdown.
+ *
+ * `Wasserwerksschulung.pdf` becomes `Wasserwerksschulung.md`: the original
+ * extension described bytes that are not in the file any more.
+ */
+export const markdownFileName = (name: string): string => {
+  const dot = name.lastIndexOf(".");
+  const stem = dot > 0 ? name.slice(0, dot) : name;
+  return `${stem}.md`;
 };
 
 /**
@@ -637,6 +656,7 @@ export class SaiaRagProvider implements FileProvider {
           size: typeof row.size === "number" ? row.size : undefined,
           status: String(row.status ?? "indexed"),
           chunks: typeof row.chunks === "number" ? row.chunks : 0,
+          markdown: row.markdown === true,
           tags: Array.isArray(row.tags)
             ? row.tags.map((tag: unknown) => String(tag)).filter(Boolean)
             : [],
@@ -712,6 +732,48 @@ export class SaiaRagProvider implements FileProvider {
       collection: collection.collection,
       filename,
     });
+  }
+
+  /**
+   * A file's content for a download.
+   *
+   * A converted document is indexed from its Markdown while the collection
+   * keeps the original upload, so `markdown` asks the service for the indexed
+   * text and names the download `.md`. Everything else is returned as the
+   * stored bytes, under its own name.
+   */
+  async downloadFile(
+    display: string,
+    file: RagFile,
+  ): Promise<{ name: string; blob: Blob }> {
+    const collection = await this.resolveCollection(display);
+    if (file.markdown) {
+      const text = await this.call(GET_FILE_TOOL, {
+        collection: collection.collection,
+        filename: file.name,
+      });
+      return {
+        name: markdownFileName(file.name),
+        blob: new Blob([text], { type: "text/markdown;charset=utf-8" }),
+      };
+    }
+    const text = await this.call(READ_BASE64_TOOL, {
+      collection: collection.collection,
+      filename: file.name,
+    });
+    const payload = parseJson(text);
+    if (!payload || typeof payload.content_base64 !== "string") {
+      throw new WorkspaceError(
+        "PROVIDER_ERROR",
+        "saia-rag answered unreadable JSON",
+      );
+    }
+    return {
+      name: file.name,
+      blob: new Blob([fromBase64(payload.content_base64)], {
+        type: mimeForName(file.name),
+      }),
+    };
   }
 
   /**

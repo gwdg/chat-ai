@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   isTextFileName,
+  markdownFileName,
   parseSearchResults,
 } from "../providers/saiaRag";
 
@@ -62,5 +63,19 @@ describe("isTextFileName", () => {
     for (const name of ["paper.pdf", "image.png", "archive.zip", "README", ""]) {
       expect(isTextFileName(name)).toBe(false);
     }
+  });
+});
+
+describe("markdownFileName", () => {
+  it("replaces the original extension, because the bytes are Markdown now", () => {
+    expect(markdownFileName("Wasserwerksschulung.pdf")).toBe(
+      "Wasserwerksschulung.md",
+    );
+    expect(markdownFileName("lecture.docx")).toBe("lecture.md");
+  });
+
+  it("appends the extension to a name that has none", () => {
+    expect(markdownFileName("README")).toBe("README.md");
+    expect(markdownFileName(".env")).toBe(".env.md");
   });
 });

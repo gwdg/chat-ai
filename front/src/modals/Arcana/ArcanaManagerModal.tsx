@@ -5,6 +5,7 @@ import {
   Add,
   Copy,
   Document,
+  Download,
   Launch,
   Renew,
   Search,
@@ -36,6 +37,7 @@ import type {
   RagTag,
 } from "../../workspace/providers/saiaRag";
 import { formatBytes } from "../../utils/formatBytes";
+import { downloadBlob } from "../../utils/download";
 import { buildArcanaShareLink } from "../../utils/arcanaShareLink";
 import { isAgentEnabled } from "../../utils/modules";
 
@@ -500,6 +502,25 @@ export default function ArcanaManagerModal({
   };
 
   /**
+   * Save one file to the user's disk.
+   *
+   * A converted document (a PDF, Office file, …) is indexed from its Markdown
+   * while the collection keeps the original upload, so its download is the
+   * Markdown under a `.md` name; everything else is the stored bytes.
+   */
+  const download = async (file: RagFile) => {
+    setBusy(`download:${file.name}`);
+    try {
+      const saved = await provider.downloadFile(display, file);
+      downloadBlob(saved.blob, saved.name);
+    } catch (reason) {
+      notifyError(reason instanceof Error ? reason.message : String(reason));
+    } finally {
+      if (aliveRef.current) setBusy("");
+    }
+  };
+
+  /**
    * Share the collection with a person by username or e-mail.
    *
    * The service validates and normalises the name (an address is stored
@@ -878,6 +899,29 @@ export default function ArcanaManagerModal({
                           </p>
                         </div>
                         {statusBadge(file)}
+                        <button
+                          type="button"
+                          data-guide="arcana-download"
+                          className="btn btn-ghost btn-xs btn-square"
+                          onClick={() => void download(file)}
+                          disabled={Boolean(busy)}
+                          title={
+                            file.markdown
+                              ? t("arcanas.download_markdown")
+                              : t("arcanas.download")
+                          }
+                          aria-label={
+                            file.markdown
+                              ? t("arcanas.download_markdown")
+                              : t("arcanas.download")
+                          }
+                        >
+                          {busy === `download:${file.name}` ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <Download size={14} />
+                          )}
+                        </button>
                         <button
                           type="button"
                           data-guide="arcana-tags"

@@ -11,11 +11,13 @@ const mocks = vi.hoisted(() => ({
   indexCollection: vi.fn(),
   uploadFile: vi.fn(),
   uploadTextFile: vi.fn(),
+  downloadFile: vi.fn(),
   listMembers: vi.fn(),
   addMember: vi.fn(),
   removeMember: vi.fn(),
   notifySuccess: vi.fn(),
   notifyError: vi.fn(),
+  downloadBlob: vi.fn(),
   t: vi.fn((key) => key),
 }));
 
@@ -31,6 +33,10 @@ vi.mock("../../../hooks/useToast", () => ({
   }),
 }));
 
+vi.mock("../../../utils/download", () => ({
+  downloadBlob: (...args) => mocks.downloadBlob(...args),
+}));
+
 vi.mock("../../../workspace/arcanas", () => {
   // One provider object for the lifetime of the module, like the real
   // singleton: a fresh object per render would change the modal's `reload`
@@ -43,6 +49,7 @@ vi.mock("../../../workspace/arcanas", () => {
     indexCollection: (...args) => mocks.indexCollection(...args),
     uploadFile: (...args) => mocks.uploadFile(...args),
     uploadTextFile: (...args) => mocks.uploadTextFile(...args),
+    downloadFile: (...args) => mocks.downloadFile(...args),
     listMembers: (...args) => mocks.listMembers(...args),
     addMember: (...args) => mocks.addMember(...args),
     removeMember: (...args) => mocks.removeMember(...args),
@@ -71,8 +78,8 @@ const collection = {
 };
 
 const files = [
-  { name: "a.md", status: "indexed", chunks: 1, tags: ["alpha"] },
-  { name: "b.md", status: "indexed", chunks: 1, tags: ["beta"] },
+  { name: "a.md", status: "indexed", chunks: 1, tags: ["alpha"], markdown: false },
+  { name: "b.md", status: "indexed", chunks: 1, tags: ["beta"], markdown: false },
 ];
 
 describe("ArcanaManagerModal", () => {
@@ -83,6 +90,7 @@ describe("ArcanaManagerModal", () => {
     mocks.indexCollection.mockReset();
     mocks.uploadFile.mockReset();
     mocks.uploadTextFile.mockReset();
+    mocks.downloadFile.mockReset();
     mocks.listMembers.mockReset();
     mocks.addMember.mockReset();
     mocks.removeMember.mockReset();
@@ -100,6 +108,12 @@ describe("ArcanaManagerModal", () => {
     mocks.indexCollection.mockResolvedValue("job-1");
     mocks.uploadFile.mockResolvedValue(undefined);
     mocks.uploadTextFile.mockResolvedValue(undefined);
+    mocks.downloadFile.mockResolvedValue({
+      name: "Wasserwerksschulung.md",
+      blob: new Blob(["# Wasserwerksschulung"], {
+        type: "text/markdown;charset=utf-8",
+      }),
+    });
     mocks.listMembers.mockResolvedValue([
       { user: "alice", role: "owner", kind: "user" },
       { user: "bob", role: "editor", kind: "user" },
@@ -305,6 +319,88 @@ describe("ArcanaManagerModal", () => {
     expect(screen.getByText("arcanas.status_failed")).toBeInTheDocument();
     expect(screen.getByText(reason)).toBeInTheDocument();
     expect(screen.getAllByTitle(`Failed: ${reason}`).length).toBeGreaterThan(0);
+  });
+
+  it("downloads the converted Markdown of a PDF from the file row", async () => {
+    mocks.listFiles.mockResolvedValue([
+      {
+        name: "Wasserwerksschulung.pdf",
+        status: "indexed",
+        chunks: 12,
+        tags: [],
+        markdown: true,
+      },
+    ]);
+
+    render(
+      <ArcanaManagerModal
+        isOpen
+        onClose={() => {}}
+        collection={collection}
+      />,
+    );
+
+    await screen.findByText("Wasserwerksschulung.pdf");
+    // The tooltip says which of the two contents this saves.
+    fireEvent.click(
+      screen.getByRole("button", { name: "arcanas.download_markdown" }),
+    );
+
+    await waitFor(() =>
+      expect(mocks.downloadFile).toHaveBeenCalledWith(
+        "recipes",
+        expect.objectContaining({
+          name: "Wasserwerksschulung.pdf",
+          markdown: true,
+        }),
+      ),
+    );
+    expect(mocks.downloadBlob).toHaveBeenCalledWith(
+      expect.any(Blob),
+      "Wasserwerksschulung.md",
+    );
+  });
+
+  it("names a plain upload by its own name when it is downloaded", async () => {
+    render(
+      <ArcanaManagerModal
+        isOpen
+        onClose={() => {}}
+        collection={collection}
+      />,
+    );
+
+    await screen.findByText("a.md");
+    fireEvent.click(screen.getAllByRole("button", { name: "arcanas.download" })[0]);
+
+    await waitFor(() =>
+      expect(mocks.downloadFile).toHaveBeenCalledWith(
+        "recipes",
+        expect.objectContaining({ name: "a.md", markdown: false }),
+      ),
+    );
+  });
+
+  it("keeps the dialog usable when a download fails", async () => {
+    mocks.downloadFile.mockRejectedValue(new Error("collection is unavailable"));
+
+    render(
+      <ArcanaManagerModal
+        isOpen
+        onClose={() => {}}
+        collection={collection}
+      />,
+    );
+
+    await screen.findByText("a.md");
+    fireEvent.click(screen.getAllByRole("button", { name: "arcanas.download" })[0]);
+
+    await waitFor(() =>
+      expect(mocks.notifyError).toHaveBeenCalledWith(
+        "collection is unavailable",
+      ),
+    );
+    expect(mocks.downloadBlob).not.toHaveBeenCalled();
   });
 
   it("reports the reason when a single file fails to index", async () => {

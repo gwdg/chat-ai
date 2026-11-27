@@ -8,6 +8,7 @@ const file = (status: string): RagFile => ({
   status,
   chunks: 0,
   tags: [],
+  markdown: false,
 });
 
 // The sidebar shows one dot per collection, so this classification is the

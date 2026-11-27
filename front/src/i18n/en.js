@@ -2438,6 +2438,8 @@ export default {
     no_tagged_files: "No file carries the selected tags.",
     chunks: "{{count}} chunks",
     edit_tags: "Edit tags",
+    download: "Download",
+    download_markdown: "Download indexed Markdown",
     remove_file: "Remove file",
     tags_placeholder: "tag-one, tag-two",
     save_tags: "Save tags",
