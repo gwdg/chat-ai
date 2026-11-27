@@ -45,6 +45,13 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const INDEX_POLL_MS = 2500;
 const INDEX_POLL_LIMIT = 240;
 
+/**
+ * A retried file keeps its previous failure text until the job resets the row
+ * to `stored`. Within this window that unchanged text is still "pending", not
+ * the result of the attempt the user just started.
+ */
+const INDEX_STALE_GRACE_MS = 30_000;
+
 type Tab = "files" | "search" | "share";
 
 /**
@@ -145,7 +152,7 @@ export default function ArcanaManagerModal({
   const canRemove = tools.remove;
   const canSetTags = tools.setTags;
 
-  const reload = useCallback(async () => {
+  const reload = useCallback(async (): Promise<RagFile[] | null> => {
     setLoading(true);
     setError("");
     try {
@@ -155,7 +162,7 @@ export default function ArcanaManagerModal({
           ? provider.listTags(display).catch(() => [] as RagTag[])
           : Promise.resolve([] as RagTag[]),
       ]);
-      if (!aliveRef.current) return;
+      if (!aliveRef.current) return null;
       setFiles(nextFiles);
       setTags(nextTags);
       updateArcanaStatus(
@@ -167,9 +174,11 @@ export default function ArcanaManagerModal({
         remove: provider.supportsTool("remove_file"),
         setTags: provider.supportsTool("set_file_tags"),
       });
+      return nextFiles;
     } catch (reason) {
-      if (!aliveRef.current) return;
+      if (!aliveRef.current) return null;
       setError(reason instanceof Error ? reason.message : String(reason));
+      return null;
     } finally {
       if (aliveRef.current) setLoading(false);
     }
@@ -260,6 +269,49 @@ export default function ArcanaManagerModal({
     }
   };
 
+  /**
+   * Follow a background index job until the file rows settle.
+   *
+   * The service runs indexing after an upload and after an explicit `index`
+   * call, and offers no job status, so the rows are the only completion signal:
+   * a file is done once it is no longer `stored`. Conversion makes a large
+   * document take minutes, hence the generous cap; when it is reached the files
+   * really are still pending. `submitted` names the files this run sent, so a
+   * previous attempt's failure text is not mistaken for this run's result.
+   */
+  const watchIndex = async (
+    submitted: string[],
+    baseline: RagFile[],
+  ): Promise<{ latest: RagFile[]; finished: boolean } | null> => {
+    const before = new Map(baseline.map((file) => [file.name, file.status]));
+    const startedAt = Date.now();
+    let latest = baseline;
+    for (let attempt = 0; attempt < INDEX_POLL_LIMIT; attempt += 1) {
+      await sleep(INDEX_POLL_MS);
+      if (!aliveRef.current || stopIndexRef.current) return null;
+      latest = await provider.listFiles(display, { includeTags: true });
+      if (!aliveRef.current) return null;
+      setFiles(latest);
+      updateArcanaStatus(
+        collection.collection,
+        classifyArcanaFiles(latest),
+      );
+      const pending = latest.some((file) => {
+        if (file.status === "stored") return true;
+        const previous = before.get(file.name);
+        return (
+          submitted.includes(file.name) &&
+          previous !== undefined &&
+          previous === file.status &&
+          !isArcanaIndexed(previous) &&
+          Date.now() - startedAt < INDEX_STALE_GRACE_MS
+        );
+      });
+      if (!pending) return { latest, finished: true };
+    }
+    return { latest, finished: false };
+  };
+
   const upload = async (list: FileList | null) => {
     const picked = Array.from(list ?? []);
     if (!picked.length) return;
@@ -267,6 +319,7 @@ export default function ArcanaManagerModal({
     setBusy("upload");
     let sent = 0;
     let stored = 0;
+    const uploaded: string[] = [];
     setUploadCount({ sent, total: picked.length });
     for (const file of picked) {
       const textPath = !canIndex && isTextFileName(file.name);
@@ -295,6 +348,7 @@ export default function ArcanaManagerModal({
           });
         }
         stored += 1;
+        uploaded.push(file.name);
       } catch (reason) {
         notifyError(
           `${file.name}: ${reason instanceof Error ? reason.message : String(reason)}`,
@@ -307,11 +361,44 @@ export default function ArcanaManagerModal({
     setUploadCount(null);
     setUploadPart(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
-    await reload();
+    const refreshed = await reload();
     // A failed file must not be counted as stored: its reason was already
     // reported, and a "stored" line next to it reads as success.
     if (canIndex && stored > 0) {
       notifySuccess(t("arcanas.upload_done", { count: stored }));
+    }
+    // The service indexes an upload in the background. Following the job here
+    // is what turns the row from "stored" (or an earlier attempt's failure)
+    // into the real result; without it only a manual refresh shows it.
+    if (!canIndex || !uploaded.length || !refreshed) return;
+    setIndexing(true);
+    stopIndexRef.current = false;
+    try {
+      const watched = await watchIndex(uploaded, refreshed);
+      if (!watched?.finished) return;
+      const failed = watched.latest.filter(
+        (file) => uploaded.includes(file.name) && !isArcanaIndexed(file.status),
+      );
+      if (failed.length === 1) {
+        // The badge only says "Failed" and the row's reason line is easy to
+        // miss, so a single rejected file is also named in a toast.
+        notifyError(
+          t("arcanas.index_done_failed_one", {
+            name: failed[0].name,
+            reason: arcanaFailureReason(failed[0].status) ?? failed[0].status,
+          }),
+          { autoClose: 8000 },
+        );
+      } else if (failed.length > 1) {
+        notifyError(t("arcanas.index_done_failed", { count: failed.length }), {
+          autoClose: 6000,
+        });
+      }
+    } catch {
+      // The upload itself worked; a failing list is already visible as the
+      // list's error state, so it is not reported as a failed upload.
+    } finally {
+      if (aliveRef.current) setIndexing(false);
     }
   };
 
@@ -323,34 +410,16 @@ export default function ArcanaManagerModal({
     try {
       await provider.indexCollection(display);
       notifySuccess(t("arcanas.index_started"));
-      // The service runs the job in the background and offers no job status,
-      // so the file rows are the only completion signal: a file is done once it
-      // is no longer `stored`, because indexing turns it into a status (or a
-      // failure). Conversion makes a large document take minutes, hence the
-      // generous cap; when it is reached the files really are still pending.
-      let latest: RagFile[] = [];
-      let finished = false;
-      for (let attempt = 0; attempt < INDEX_POLL_LIMIT; attempt += 1) {
-        await sleep(INDEX_POLL_MS);
-        if (!aliveRef.current || stopIndexRef.current) return;
-        latest = await provider.listFiles(display, { includeTags: true });
-        if (!aliveRef.current) return;
-        setFiles(latest);
-        updateArcanaStatus(
-          collection.collection,
-          classifyArcanaFiles(latest),
-        );
-        if (!latest.some((file) => file.status === "stored")) {
-          finished = true;
-          break;
-        }
-      }
-      if (!aliveRef.current) return;
-      if (!finished) {
+      const watched = await watchIndex(
+        files.map((file) => file.name),
+        files,
+      );
+      if (!watched) return;
+      if (!watched.finished) {
         notifyError(t("arcanas.index_still_running"), { autoClose: 6000 });
         return;
       }
-      const failed = latest.filter(
+      const failed = watched.latest.filter(
         (file) => !isArcanaIndexed(file.status),
       );
       if (failed.length === 1) {

@@ -393,6 +393,68 @@ describe("ArcanaManagerModal", () => {
     await waitFor(() => expect(mocks.notifySuccess).toHaveBeenCalled());
   });
 
+  it("follows the index job an upload starts instead of keeping a stale failure", async () => {
+    // The row was left over from an earlier attempt, and the service indexes
+    // the new upload in the background: the listing right after the upload (and
+    // the first poll) still carry the old text, which is not this run's result.
+    const stale = {
+      name: "doc.pdf",
+      status: "Failed: conversion: 404",
+      chunks: 0,
+      tags: [],
+    };
+    const done = { ...stale, status: "Success", chunks: 12 };
+    mocks.listFiles
+      .mockResolvedValueOnce(files)
+      .mockResolvedValueOnce([...files, stale])
+      .mockResolvedValueOnce([...files, stale])
+      .mockResolvedValue([...files, done]);
+
+    // The poll sleeps 2.5 s per attempt; fake timers keep that deterministic.
+    vi.useFakeTimers();
+    try {
+      render(
+        <ArcanaManagerModal
+          isOpen
+          onClose={() => {}}
+          collection={collection}
+        />,
+      );
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(screen.getByText("a.md")).toBeInTheDocument();
+
+      fireEvent.change(document.querySelector('input[type="file"]'), {
+        target: {
+          files: [new File(["payload"], "doc.pdf", { type: "application/pdf" })],
+        },
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+
+      // Storing it is reported; the old failure is not reported as this run's.
+      expect(mocks.notifySuccess).toHaveBeenCalledWith("arcanas.upload_done");
+      expect(mocks.t).toHaveBeenCalledWith("arcanas.upload_done", { count: 1 });
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2500);
+      });
+      expect(mocks.listFiles).toHaveBeenCalledTimes(3);
+      expect(mocks.notifyError).not.toHaveBeenCalled();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2500);
+      });
+      expect(mocks.listFiles).toHaveBeenCalledTimes(4);
+      expect(mocks.notifyError).not.toHaveBeenCalled();
+      expect(screen.queryByText("conversion: 404")).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("reports a failed upload instead of claiming it was stored", async () => {
     mocks.uploadFile.mockRejectedValue(new Error("MCP error -32001: Request timed out"));
     render(
