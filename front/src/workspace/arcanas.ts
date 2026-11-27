@@ -219,8 +219,8 @@ export const ARCANA_FILES_CHANGED_EVENT = "chatai:arcana-files-changed";
 /**
  * The page that opens a collection.
  *
- * The route carries the storage name (`owner__name` for a shared collection),
- * because a plain name is ambiguous between two people's collections.
+ * The route carries the reference (`owner/name`, `/` percent-encoded), because
+ * a plain name is ambiguous between two people's collections.
  */
 export function arcanaPagePath(
   collection: RagCollection,

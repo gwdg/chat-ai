@@ -240,7 +240,7 @@ describe("MetaActionCard", () => {
             key: "arcana_shares",
             value: [
               {
-                collection: "alice__papers",
+                collection: "alice/papers",
                 description: " Peer-reviewed papers ",
               },
               { collection: "bob/notes" },
@@ -254,7 +254,7 @@ describe("MetaActionCard", () => {
     );
 
     // The proposal names the collections it would bind.
-    expect(screen.getByText(/alice__papers, bob\/notes/)).toBeInTheDocument();
+    expect(screen.getByText(/alice\/papers, bob\/notes/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /accept changes/i }));
     await waitFor(() =>
@@ -262,12 +262,12 @@ describe("MetaActionCard", () => {
         settings: {
           arcana_shares: [
             {
-              collection: "alice__papers",
+              collection: "alice/papers",
               owner: "alice",
               name: "papers",
               description: "Peer-reviewed papers",
             },
-            { collection: "bob__notes", owner: "bob", name: "notes" },
+            { collection: "bob/notes", owner: "bob", name: "notes" },
           ],
         },
       }),

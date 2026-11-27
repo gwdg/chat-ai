@@ -2,9 +2,9 @@
 //
 // The link keeps the shape the Arcana manager has always handed out
 // (`/chat?arcana=<owner>/<name>&enable_tools=true`): that is the "Arcana ID"
-// people read in the manager and the link the user docs show. The collection's
-// storage name `<owner>__<name>` (what the saia-rag tools take) is derived from
-// it here, and both spellings are accepted on the way in.
+// people read in the manager and the link the user docs show. `<owner>/<name>`
+// is also the form the chat stores and the saia-rag tools take; the older
+// `<owner>__<name>` storage spelling is still read on the way in.
 //
 // The reference is not a grant: the service still checks the caller's role, so
 // the owner has to share the collection with every recipient in the Arcana
@@ -18,7 +18,7 @@ export const ARCANA_LINK_PARAM = "arcana";
 const MAX_REF_LENGTH = 320;
 
 export type ArcanaShareRef = {
-  /** The storage name `<owner>__<name>`; this is what the tools take. */
+  /** The reference form `<owner>/<name>`; this is what the tools take. */
   collection: string;
   /** The collection name without the owner prefix. */
   name: string;
@@ -53,12 +53,13 @@ function refFromStored(value: unknown): ArcanaShareRef | null {
 /**
  * Read a collection reference out of a link, a stored setting or an import.
  *
- * Two spellings name the same collection: the Arcana ID `alice/papers` (what
- * the manager shows and the access link carries) and the storage name
- * `alice__papers` (what the tools take). `/` can appear in neither part, and
- * the service splits the storage name at its first `__`, so an owner that
- * carries one itself could never be addressed back. Anything that cannot be a
- * storage name (empty parts, a second separator, control characters,
+ * `alice/papers` is the form this app stores and both the link and the
+ * saia-rag tools use. The older storage spelling `alice__papers` is still
+ * accepted, because chats and settings written before the form changed carry
+ * it, and it is normalised to the slash form here. `/` can appear in neither
+ * part, and the service splits the legacy spelling at its first `__`, so an
+ * owner that carries one itself could never be addressed back. Anything that
+ * cannot be a reference (empty parts, a second slash, control characters,
  * over-long text) is refused rather than turned into a request.
  */
 export function parseArcanaShareRef(raw: unknown): ArcanaShareRef | null {
@@ -81,7 +82,7 @@ export function parseArcanaShareRef(raw: unknown): ArcanaShareRef | null {
     name = value.slice(at + 2);
   }
   if (!owner || !name || owner.includes("__")) return null;
-  return { collection: `${owner}__${name}`, name, owner };
+  return { collection: `${owner}/${name}`, name, owner };
 }
 
 /** The Arcana ID people read and type: `<owner>/<name>`. */

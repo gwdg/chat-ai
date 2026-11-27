@@ -12,28 +12,28 @@ import {
 describe("parseArcanaShareRef", () => {
   it("reads the Arcana ID the manager shows", () => {
     expect(parseArcanaShareRef("alice/papers")).toEqual({
-      collection: "alice__papers",
+      collection: "alice/papers",
       owner: "alice",
       name: "papers",
     });
   });
 
-  it("still reads the storage name the tools take", () => {
+  it("reads the older storage spelling into the same reference", () => {
     expect(parseArcanaShareRef("alice__papers")).toEqual({
-      collection: "alice__papers",
+      collection: "alice/papers",
       owner: "alice",
       name: "papers",
     });
   });
 
-  it("keeps a name that contains the storage separator", () => {
+  it("keeps a name that contains the legacy separator", () => {
     expect(parseArcanaShareRef("alice__team__papers")).toEqual({
-      collection: "alice__team__papers",
+      collection: "alice/team__papers",
       owner: "alice",
       name: "team__papers",
     });
     expect(parseArcanaShareRef("alice/team__papers")).toEqual({
-      collection: "alice__team__papers",
+      collection: "alice/team__papers",
       owner: "alice",
       name: "team__papers",
     });
@@ -41,7 +41,7 @@ describe("parseArcanaShareRef", () => {
 
   it("trims surrounding whitespace", () => {
     expect(parseArcanaShareRef("  alice/papers \n")?.collection).toBe(
-      "alice__papers",
+      "alice/papers",
     );
   });
 
@@ -68,8 +68,8 @@ describe("parseArcanaShareRef", () => {
     expect(parseArcanaShareRef(value)).toBeNull();
   });
 
-  it("refuses a slash-form owner that carries the storage separator", () => {
-    // `ali__ce__papers` would split at the first `__` into the wrong owner.
+  it("refuses a slash-form owner that carries the legacy separator", () => {
+    // `ali__ce` would split at the first `__` when the older spelling is read.
     expect(parseArcanaShareRef("ali__ce/papers")).toBeNull();
   });
 });
@@ -77,39 +77,45 @@ describe("parseArcanaShareRef", () => {
 describe("arcanaRefId", () => {
   it("renders the readable Arcana ID", () => {
     expect(
-      arcanaRefId({ collection: "alice__papers", owner: "alice", name: "papers" }),
+      arcanaRefId({ collection: "alice/papers", owner: "alice", name: "papers" }),
     ).toBe("alice/papers");
   });
 });
 
 describe("buildArcanaShareLink", () => {
   it("builds the documented access link for the collection", () => {
+    expect(buildArcanaShareLink("alice/papers", "https://chat.example")).toBe(
+      "https://chat.example/chat?arcana=alice/papers&enable_tools=true",
+    );
+  });
+
+  it("accepts the older storage spelling", () => {
     expect(buildArcanaShareLink("alice__papers", "https://chat.example")).toBe(
       "https://chat.example/chat?arcana=alice/papers&enable_tools=true",
     );
   });
 
   it("does not double the slash of the origin", () => {
-    expect(buildArcanaShareLink("alice__papers", "https://chat.example/")).toBe(
+    expect(buildArcanaShareLink("alice/papers", "https://chat.example/")).toBe(
       "https://chat.example/chat?arcana=alice/papers&enable_tools=true",
     );
   });
 
   it("encodes characters that a query value cannot carry", () => {
-    expect(buildArcanaShareLink("alice__a b&c", "https://chat.example")).toBe(
+    expect(buildArcanaShareLink("alice/a b&c", "https://chat.example")).toBe(
       "https://chat.example/chat?arcana=alice/a%20b%26c&enable_tools=true",
     );
   });
 
   it("uses the page origin by default", () => {
-    expect(buildArcanaShareLink("alice__papers")).toBe(
+    expect(buildArcanaShareLink("alice/papers")).toBe(
       `${window.location.origin}/chat?${ARCANA_LINK_PARAM}=alice/papers&enable_tools=true`,
     );
   });
 
   it("returns an empty string for an unusable reference", () => {
     expect(buildArcanaShareLink("papers", "https://chat.example")).toBe("");
-    expect(buildArcanaShareLink("alice__papers", "")).toBe("");
+    expect(buildArcanaShareLink("alice/papers", "")).toBe("");
   });
 });
 
@@ -119,41 +125,41 @@ describe("arcanaSharesFromSettings", () => {
       arcanaSharesFromSettings({
         arcana_shares: [
           {
-            collection: "alice__papers",
+            collection: "alice/papers",
             name: "Papers 2026",
             description: "  Peer-reviewed   papers ",
           },
-          { collection: "bob__notes" },
+          { collection: "bob/notes" },
         ],
       }),
     ).toEqual([
       {
-        collection: "alice__papers",
+        collection: "alice/papers",
         owner: "alice",
         name: "Papers 2026",
         description: "Peer-reviewed papers",
       },
-      { collection: "bob__notes", owner: "bob", name: "notes" },
+      { collection: "bob/notes", owner: "bob", name: "notes" },
     ]);
   });
 
-  it("accepts the readable Arcana ID as a stored collection", () => {
+  it("normalises the older storage spelling on read", () => {
     expect(
-      arcanaSharesFromSettings({ arcana_shares: [{ collection: "alice/papers" }] }),
-    ).toEqual([{ collection: "alice__papers", owner: "alice", name: "papers" }]);
+      arcanaSharesFromSettings({ arcana_shares: [{ collection: "alice__papers" }] }),
+    ).toEqual([{ collection: "alice/papers", owner: "alice", name: "papers" }]);
   });
 
-  it("adds the single link binding and deduplicates by storage name", () => {
+  it("adds the single link binding and deduplicates by reference", () => {
     const shares = arcanaSharesFromSettings({
       arcana_share: { collection: "alice__papers", name: "Shared" },
       arcana_shares: [
         { collection: "alice/papers", description: "From the list" },
-        { collection: "bob__notes" },
+        { collection: "bob/notes" },
       ],
     });
     expect(shares.map((share) => share.collection)).toEqual([
-      "alice__papers",
-      "bob__notes",
+      "alice/papers",
+      "bob/notes",
     ]);
     // The list wins, and the link's description fills a gap when it has one.
     expect(shares[0].name).toBe("papers");
@@ -162,7 +168,7 @@ describe("arcanaSharesFromSettings", () => {
 
   it("fills a missing description from the link binding", () => {
     const shares = arcanaSharesFromSettings({
-      arcana_share: { collection: "alice__papers", description: "Shared" },
+      arcana_share: { collection: "alice/papers", description: "Shared" },
       arcana_shares: [{ collection: "alice__papers" }],
     });
     expect(shares).toHaveLength(1);
@@ -172,21 +178,21 @@ describe("arcanaSharesFromSettings", () => {
   it("skips entries that cannot name a collection", () => {
     expect(
       arcanaSharesFromSettings({
-        arcana_shares: ["papers", null, { collection: "eve/x/y" }, { collection: "bob__notes" }],
+        arcana_shares: ["papers", null, { collection: "eve/x/y" }, { collection: "bob/notes" }],
       }),
-    ).toEqual([{ collection: "bob__notes", owner: "bob", name: "notes" }]);
+    ).toEqual([{ collection: "bob/notes", owner: "bob", name: "notes" }]);
   });
 
   it("returns an empty list for a chat without bindings", () => {
     expect(arcanaSharesFromSettings({})).toEqual([]);
     expect(arcanaSharesFromSettings(undefined)).toEqual([]);
-    expect(arcanaSharesFromSettings({ arcana_shares: "alice__papers" })).toEqual([]);
+    expect(arcanaSharesFromSettings({ arcana_shares: "alice/papers" })).toEqual([]);
   });
 
   it("clips an over-long description", () => {
     const shares = arcanaSharesFromSettings({
       arcana_shares: [
-        { collection: "alice__papers", description: "x".repeat(400) },
+        { collection: "alice/papers", description: "x".repeat(400) },
       ],
     });
     expect(shares[0].description.length).toBe(280);
@@ -199,12 +205,12 @@ describe("arcanaShareFromSettings", () => {
     expect(
       arcanaShareFromSettings({
         arcana_share: {
-          collection: "alice__papers",
+          collection: "alice/papers",
           name: "Papers 2026",
         },
       }),
     ).toEqual({
-      collection: "alice__papers",
+      collection: "alice/papers",
       owner: "alice",
       name: "Papers 2026",
     });
@@ -220,7 +226,7 @@ describe("arcanaShareFromSettings", () => {
   it("returns null for a missing or unusable binding", () => {
     expect(arcanaShareFromSettings({})).toBeNull();
     expect(arcanaShareFromSettings(undefined)).toBeNull();
-    expect(arcanaShareFromSettings({ arcana_share: "alice__papers" })).toBeNull();
+    expect(arcanaShareFromSettings({ arcana_share: "alice/papers" })).toBeNull();
     expect(
       arcanaShareFromSettings({ arcana_share: { collection: "papers" } }),
     ).toBeNull();

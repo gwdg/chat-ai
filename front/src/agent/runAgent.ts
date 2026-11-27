@@ -73,8 +73,11 @@ export interface TurnResult extends TurnUpdate {
   error?: string;
 }
 
-// External models are proxied to commercial APIs that refuse tool calls on this endpoint.
-export const isExternalModel = (model: ModelSpec) => (model?.name ?? "").toLowerCase().includes("external");
+// Models served through a commercial API that rejects parts of our sampling payload.
+// This is a property of the upstream API shape, not the `external` field of /models: that
+// field is the data-safety label (and bridge models are external there while keeping their
+// tools and sampling parameters). Name-based on purpose, exactly as before.
+const isCommercialApiModel = (model: ModelSpec) => (model?.name ?? "").toLowerCase().includes("external");
 
 function toModel(spec: ModelSpec): Model<"openai-completions"> {
   return {
@@ -284,7 +287,7 @@ export async function runAgentTurn({
 }): Promise<TurnResult> {
   beginMcpConfirmationSession(conversationId);
   const spec: ModelSpec = typeof settings.model === "string" ? { id: settings.model } : settings.model;
-  const external = isExternalModel(spec);
+  const commercialApi = isCommercialApiModel(spec);
   const useTools = modelSupportsTools(spec);
   // Access storage is the master switch: with it off the model gets no data-access tools at all,
   // even when a local folder is mounted or the chat is attached to a workspace.
@@ -375,7 +378,10 @@ export async function runAgentTurn({
     };
 
     const extra = { top_p: settings.top_p, ...reasoningParams(spec.id, settings) };
-    const gatewayFields = external || !agentGatewayTools() ? {} : gatewayRequestFields(settings);
+    // Gateway fields (the server-side `arcana` selector) are a deployment capability, not a
+    // model one: sending them for an external model is what makes the legacy gateway path
+    // reachable from a bridge model too. The model's own tools are decided by useTools.
+    const gatewayFields = agentGatewayTools() ? gatewayRequestFields(settings) : {};
     const onPayload = (payload: any) => {
       // Let the server pick the output limit, as the plain chat path does.
       delete payload.max_tokens;
@@ -386,7 +392,7 @@ export async function runAgentTurn({
         delete payload.tools;
         payload.messages = flattenToolHistory(payload.messages);
       }
-      if (external) {
+      if (commercialApi) {
         // reasoningParams also sets this for OpenAI models, which reject it; back/ never forwarded it.
         delete payload.chat_template_kwargs;
         // OpenAI's reasoning models only accept the default sampling parameters.

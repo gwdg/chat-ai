@@ -10,12 +10,12 @@ import {
 } from "../../Redux/reducers/userSettingsReducer";
 import { isModelKeyed } from "../../e2ee/registry";
 import { isBrandUiVisible } from "../../config/brandPolicy";
+import { isExternalModel } from "../../utils/modelExternality";
 
 function isSafeSettings(localState) {
-  const modelName = localState?.settings?.model?.name;
-  const isExternalModel =
-    typeof modelName === "string" &&
-    modelName.toLowerCase().includes("external");
+  // Data first (`external` in /models), name marker only as the fallback for a
+  // deployment without that field.
+  const externalModel = isExternalModel(localState?.settings?.model);
 
   // The agent does not use the gateway web search; it calls MCP servers itself (agent/mcp.ts)
   const toolsEnabled = !!localState?.settings?.enable_tools && !isAgentEnabled();
@@ -30,7 +30,7 @@ function isSafeSettings(localState) {
 
   const mcpEnabled = !!tools.mcp;
 
-  return !(isExternalModel || webSearchEnabled || mcpEnabled);
+  return !(externalModel || webSearchEnabled || mcpEnabled);
 }
 
 export function DataSafetyText({ localState, userData }) {

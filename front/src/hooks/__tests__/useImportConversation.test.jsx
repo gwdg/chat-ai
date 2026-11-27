@@ -141,7 +141,7 @@ describe("useImportConversation", () => {
       await result.current(
         {
           title: "Papers",
-          arcana_share: { collection: "alice__papers", name: "Papers 2026" },
+          arcana_share: { collection: "alice/papers", name: "Papers 2026" },
         },
         true,
       );
@@ -149,7 +149,7 @@ describe("useImportConversation", () => {
 
     const params = dbMocks.createConversation.mock.calls[0][0];
     expect(params.settings.arcana_share).toEqual({
-      collection: "alice__papers",
+      collection: "alice/papers",
       owner: "alice",
       name: "Papers 2026",
     });
@@ -169,7 +169,7 @@ describe("useImportConversation", () => {
     expect(
       dbMocks.createConversation.mock.calls[0][0].settings.arcana_share,
     ).toEqual({
-      collection: "alice__papers",
+      collection: "alice/papers",
       owner: "alice",
       name: "papers",
     });
@@ -195,7 +195,9 @@ describe("useImportConversation", () => {
           title: "Many",
           arcana_shares: [
             { collection: "alice/papers", description: " Papers " },
-            { collection: "bob__notes", name: "Notes" },
+            { collection: "bob/notes", name: "Notes" },
+            // The older storage spelling deduplicates against the same
+            // collection, so a chat never reads one Arcana twice.
             { collection: "alice__papers" },
             { collection: "papers" },
           ],
@@ -207,12 +209,12 @@ describe("useImportConversation", () => {
     const params = dbMocks.createConversation.mock.calls[0][0];
     expect(params.settings.arcana_shares).toEqual([
       {
-        collection: "alice__papers",
+        collection: "alice/papers",
         owner: "alice",
         name: "papers",
         description: "Papers",
       },
-      { collection: "bob__notes", owner: "bob", name: "Notes" },
+      { collection: "bob/notes", owner: "bob", name: "Notes" },
     ]);
     expect(params.settings.enable_tools).toBe(true);
   });

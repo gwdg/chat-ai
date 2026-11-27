@@ -161,7 +161,7 @@ describe("useSyncConversation Arcana share links", () => {
 
     const state = lastState(setLocalState);
     expect(state.settings.arcana_share).toEqual({
-      collection: "alice__papers",
+      collection: "alice/papers",
       owner: "alice",
       name: "papers",
     });
@@ -174,7 +174,7 @@ describe("useSyncConversation Arcana share links", () => {
 
     await waitFor(() => expect(dbMocks.updateConversation).toHaveBeenCalled());
     const payload = dbMocks.updateConversation.mock.calls.at(-1)[1];
-    expect(payload.settings.arcana_share.collection).toBe("alice__papers");
+    expect(payload.settings.arcana_share.collection).toBe("alice/papers");
     expect(payload.settings.arcana.id).toBe("alice/papers");
     // The optimistic-concurrency token is threaded through.
     expect(payload.lastModified).toBe(123);
@@ -187,7 +187,7 @@ describe("useSyncConversation Arcana share links", () => {
     await waitFor(() => expect(setLocalState).toHaveBeenCalled());
 
     const state = lastState(setLocalState);
-    expect(state.settings.arcana_share.collection).toBe("alice__papers");
+    expect(state.settings.arcana_share.collection).toBe("alice/papers");
     expect(state.settings.arcana.id).toBe("alice/papers");
     expect(state.settings.enable_tools).toBe(true);
   });
@@ -200,7 +200,7 @@ describe("useSyncConversation Arcana share links", () => {
 
     const state = lastState(setLocalState);
     expect(state.title).toBe("Chat");
-    expect(state.settings.arcana_share.collection).toBe("alice__papers");
+    expect(state.settings.arcana_share.collection).toBe("alice/papers");
   });
 
   it("keeps a plain Arcana ID as the tool's field only", async () => {

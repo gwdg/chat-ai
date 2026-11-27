@@ -26,20 +26,22 @@ export const markToolless = (modelId: string) => toollessModels.add(modelId);
 /**
  * Whether the agent may offer tools to this model.
  *
- * "External" in a display name is a routing and accounting label, not a capability: models
- * served through a bridge carry it so the engine's demand updater skips them, while the engine
- * explicitly keeps their tools in the request body. Tool support therefore comes from data:
- * `external` in the extended /models response, `"tools": false` (or `true`) in
- * config/models/<id>.json, or a rejection learned at runtime (`markToolless`). Anything else
- * starts with tools; `runAgent` retries without them if the first request is rejected.
+ * Externality is not a capability. "(External)" in a display name is a routing and
+ * accounting label (the engine's demand updater skips such a row, and bridge models
+ * front external capacity), not evidence that the model refuses tools; the engine
+ * keeps bridge models' tools in the request body. Tool support therefore comes from
+ * data alone: `"tools": false` (or `true`) in config/models/<id>.json, or a rejection
+ * learned at runtime (`markToolless`, which `runAgent` retries by rerunning the turn
+ * without tools). Anything else starts with tools. The `external` field in /models
+ * only drives the data-safety warning and brand filtering.
  */
-export function modelSupportsTools(model: { id?: string; name?: string; external?: boolean } | undefined) {
+export function modelSupportsTools(model: { id?: string } | undefined) {
   if (!model?.id) return true;
   if (toollessModels.has(model.id)) return false;
   const configured = getModelDefaults(model.id)?.tools;
   if (configured === true) return true;
   if (configured === false) return false;
-  return model.external !== true;
+  return true;
 }
 
 const blob = (data: Uint8Array, type = "") => new Blob([data as Uint8Array<ArrayBuffer>], { type });

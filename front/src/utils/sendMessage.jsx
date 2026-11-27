@@ -14,6 +14,7 @@ import { isBrandExternalAllowed } from "../config/brandPolicy";
 import { brandChatToolsFor } from "./brandChatTools";
 import { confirmMcpNameChange } from "./mcpNameChange";
 import { BINARY_DOCUMENT_TYPES, modelSupportsFileType } from "./modelCapabilities";
+import { isExternalModel } from "./modelExternality";
 
 /**
  * The Browser agent is the default workflow. A model without tool support cannot run it, so that
@@ -343,9 +344,10 @@ const sendMessage = async ({
     const choicesModule = isChoicesEnabled();
 
     const arcanasModule = isArcanasEnabled();
-    const isExternalModel =
-      typeof localState.settings.model?.name === "string" &&
-      localState.settings.model.name.toLowerCase().includes("external");
+    // The plain (non-agent) path still keeps gateway tools off for an external model: the
+    // tool gateway cannot route every model it points at. This is a routing limit, not a
+    // capability claim; the agent path decides tools from modelSupportsTools alone.
+    const externalModel = isExternalModel(localState.settings.model);
     // A model without tool support never gets a tool. It uses the plain chat workflow instead of
     // the Browser agent, which needs tools to act on files.
     const useBrowserAgent = shouldUseBrowserAgent(localState.settings.model);
@@ -355,7 +357,7 @@ const sendMessage = async ({
     const toolsActive =
       modelSupports &&
       toolsModule &&
-      !isExternalModel &&
+      !externalModel &&
       localState.settings?.enable_tools;
     const isArcanaSupported =
       arcanasModule && toolsActive && !!localState.settings.tools.arcana;

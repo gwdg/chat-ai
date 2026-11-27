@@ -115,7 +115,8 @@ Supported per-chat setting keys and values:
 - browser_storage: true or false (agent mode: lets the agent read and write this chat's browser workspace)
 - workspace_write_access: true or false (agent mode: lets the agent change files in the workspaces attached to this chat; a chat without an attached workspace always writes in its own storage)
 - arcana_tools: true or false (lets the assistant inspect Arcana collections, their files, indexes, and sharing)
-- arcana_share: a collection reference "<owner>__<name>" or null (wires this chat to that shared collection with the read-only search_arcana, list_arcana_documents and read_arcana_document tools)
+- arcana_share: a collection reference "owner/name" or null (wires this chat to that shared collection with the read-only search_arcana, list_arcana_documents and read_arcana_document tools)
+- arcana_shares: a list of collection references "owner/name", each optionally as {"collection": "owner/name", "description": "what it is for"}; [] or null clears the chat's list
 
 Use SET_CONVERSATION_SETTING with "target":"all" only when the user explicitly asks to change all chats; otherwise use a conversation id from list_chats. The Meta chat's own settings are read-only.
 

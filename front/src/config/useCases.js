@@ -1,5 +1,5 @@
 import {
-  arcanaIdEntered,
+  arcanaAddIdEntered,
   attachmentProcessed,
   ensureTool,
   ensureToolsEnabled,
@@ -118,15 +118,15 @@ export const useCases = {
       },
       {
         textKey: "use_cases.rag_documents.step2",
-        check: () => isToolActive("arcana"),
-        target: '[data-guide="tool-arcana"]',
+        check: () => isToolActive("arcana_tools"),
+        target: '[data-guide="tool-arcana_tools"]',
         prepare: ensureToolsEnabled,
       },
       {
         textKey: "use_cases.rag_documents.step3",
-        check: arcanaIdEntered,
-        target: '[data-guide="arcana-id"]',
-        prepare: () => ensureTool("arcana"),
+        check: arcanaAddIdEntered,
+        target: '[data-guide="arcana-add-id"]',
+        prepare: () => ensureTool("arcana_tools"),
       },
       {
         textKey: "use_cases.rag_documents.step4",

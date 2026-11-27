@@ -363,11 +363,22 @@ registry to update. A model id containing `/` (e.g. `bridge/local-echo-1`) canno
 because the keys are file names.
 
 `modelSupportsTools()` (`apis/agentEndpoints.ts`) takes tool support from data, not from the display
-name: the `external` field of the extended `/models` response, `"tools": true|false` in the model
-config, or a rejection learned at runtime (`markToolless`, retried by `runAgent`). **"(External)" in
-a name is not a tool-capability signal.** Bridge models carry it so the engine's demand updater
-skips them, while `saia-engine` keeps their tools in the request body; reading the marker as "no
-tools" leaves every bridge model without tools, workspace tools included.
+name or the external label: `"tools": true|false` in the model config, or a rejection learned at
+runtime (`markToolless`, retried by `runAgent` by rerunning the turn without tools). Anything else
+starts with tools. **"(External)" in a name is not a tool-capability signal.** Bridge models carry it
+so the engine's demand updater skips them, while `saia-engine` keeps their tools in the request body;
+reading the marker as "no tools" leaves every bridge model without tools, workspace tools included.
+
+Externality is data for the warning and the filters, and has one reader:
+`utils/modelExternality.js#isExternalModel`. The engine reports `external` in every `/models` row
+(`saia-engine` `server/api.py#is_external_model`: the description marker or the bridge prefix — not
+`is_external_service`, which decides direct Azure routing), and the helper falls back to the name
+marker only when a deployment does not send the field, with an explicit `external: false` overriding a
+stale name. The data-safety warning (`WarningExternalModel`, `SendButton`), both model selectors
+(scope filter, external chip and indicator), `config/brandPolicy.js` (including
+`external_models: false`) and the tools/Arcana gating use it; none of them may re-parse the name. A
+field both selector variants read belongs in
+`types/models.ts#BaseModelInfo`, because the simple selector receives the same payload.
 
 ### 4.7 Secrets
 
@@ -2771,17 +2782,16 @@ The editor's **Share** tab (`components/Arcana/ArcanaManager.tsx`, rendered insi
 `components/Arcana/ArcanaEditorPanel.tsx` on the collection's page) carries the member list
 and, above it, an access link `/chat?arcana=<owner>/<name>&enable_tools=true`. That is the shape the
 Arcana manager in `saia-rag-web` has always handed out and the one the user docs show, so it carries
-the readable **Arcana ID** (`alice/papers`) rather than the service's storage name. It is built by
-`utils/arcanaShareLink.ts#buildArcanaShareLink`, which derives the storage name
-`<owner>__<name>` because that is what the saia-rag tools take; `parseArcanaShareRef` is the only
-reader and accepts both spellings (`alice/papers` and `alice__papers`), splitting the storage form at
-the first `__` and refusing empty parts, a second separator in the owner of a slash form, path
-separators, control characters and over-long text. There is no `model` parameter, so a recipient keeps
-their own default model. The card is rendered only while `isAgentEnabled()`, since the tools run inside
-the browser agent; the member list is still the whole access control. **The link is not a grant** — it
-only writes `settings.arcana.id = <owner>/<name>` and `settings.arcana_share = {collection, name,
-owner}`; the service re-checks the caller's role on every tool call, so a recipient outside the member
-list is refused.
+the readable **Arcana ID** (`alice/papers`), which is also the reference the chat stores and the
+saia-rag tools take. It is built by `utils/arcanaShareLink.ts#buildArcanaShareLink`;
+`parseArcanaShareRef` is the only reader and normalises the older storage spelling (`alice__papers`)
+to `owner/name`, splitting at the first slash (or first `__`) and refusing empty parts, a second
+slash, an owner carrying `__`, path separators, control characters and over-long text. There is no
+`model` parameter, so a recipient keeps their own default model. The card is rendered only while
+`isAgentEnabled()`, since the tools run inside the browser agent; the member list is still the whole
+access control. **The link is not a grant** — it only writes `settings.arcana.id = <owner>/<name>` and
+`settings.arcana_share = {collection, name, owner}`; the service re-checks the caller's role on every
+tool call, so a recipient outside the member list is refused.
 
 `hooks/useSyncConversation.ts` applies the link when it hydrates a chat that has no important state
 yet: it reads `?arcana=` (or the older `?arcana_share=`, which the branch itself emitted before the
@@ -2795,31 +2805,40 @@ did. It then sets `enable_tools = true` unless `isBrandLocked("tools")`, names a
 needs no Dexie version bump, and travels in the full export.
 
 **A chat owns a list, not one collection.** `settings.arcana_shares` is an array of
-`{collection, name, owner, description?}` written by the user in GWDG Tools → Arcana;
+`{collection, name, owner, description?}` written by the user in GWDG Tools → **Arcana Tools**;
 `settings.arcana_share` (the single object a link writes) is still accepted.
-`arcanaSharesFromSettings(settings)` is the one reader: it merges both, deduplicates by storage name,
-keeps the first entry's name and fills a missing `description` from the second. `arcanaShareFromSettings`
-is just its first element. The description is **chat-local** and user-written (neither the saia-rag
-service nor `saia-rag-web` stores one), is clipped to 280 characters, and exists so the agent can pick
-the useful collection.
+`arcanaSharesFromSettings(settings)` is the one reader: it merges both, deduplicates by reference
+(`owner/name`), keeps the first entry's name and fills a missing `description` from the second.
+`arcanaShareFromSettings` is just its first element. The description is **chat-local** and
+user-written (neither the saia-rag service nor `saia-rag-web` stores one), is clipped to 280
+characters, and exists so the agent can pick the useful collection.
 
-`components/SettingsPanel/ArcanaContainer.jsx` (GWDG Tools → Arcana) lists every collection the chat
-can read: the Arcana tool's `settings.arcana.id` and every share, deduplicated by storage name, each
-row badged "Arcana tool" / "Read-only tools", with an inline description input on share rows and a
-remove control. Below the list is the add form (`owner/arcana` + short description, `data-guide`
-`arcana-add-id` / `arcana-add-description`), which appends to `arcana_shares` and forces
-`enable_tools` unless `isBrandLocked("tools")`. **The list and the add form do not depend on the
-gateway Arcana switch** (`settings.tools.arcana`): in agent mode that switch is off by default, while
-`runAgent` registers the read tools from `arcana_shares` whenever the model supports tools, so the
-form stays available with the switch off and `ToolsContainer` drops its "turn this tool on" hint
-while the list is editable (`canEditShares` in `ArcanaContainer.jsx`, `arcanaSharesEditable` in
-`ToolsContainer.jsx`; both need the agent module and a tool-capable, non-external model). Removing or
-editing a row materializes the merged list
-into `arcana_shares` and deletes `arcana_share`, so the aliases do not drift apart. The add form
-refuses anything `parseArcanaShareRef` cannot read and a collection already in the chat.
-`ToolsContainer` always renders it for the Arcana detail and adds the
-`settings.tools_enable_to_configure` hint below it while the tool cannot be configured, so a binding
-stays visible with the tool switched off. It is the `<ul data-guide="tools-arcana-list">`.
+`components/SettingsPanel/ArcanaContainer.jsx` renders the two halves the tool list separates, gated
+by its `legacy` (default true) and `collections` (default true) props:
+
+- The **Arcana Tools** row (`legacy={false}`) shows the list and the add form. It lists every
+  collection the chat can read — every share, each row badged "Read-only tools" — with an inline
+  description input and a remove control. Below it the add form (`owner/arcana` + short description,
+  `data-guide` `arcana-add-id` / `arcana-add-description`) appends to `arcana_shares`.
+- The **Arcana** row (`collections={false}`) is **legacy**: it shows the notice
+  (`data-guide="arcana-legacy-notice"`), the single `settings.arcana.id` field (`data-guide`
+  `arcana-id`) and, when that id is set, the row for it (badged "Arcana tool"). It is the server-side
+  gateway path (`agent/gateway.ts` sends the id with the request), while Arcana Tools is the current
+  list the app's own read tools use. `ToolsContainer` renders the matching `Legacy` badge on the row.
+
+The list and the add form do not depend on the gateway Arcana switch (`settings.tools.arcana`): in
+agent mode that switch is off by default, while `runAgent` registers the read tools from
+`arcana_shares` whenever the model supports tools, so the form stays available with the switch off.
+Adding a collection no longer writes `settings.enable_tools`; the read tools need no master switch in
+agent mode, and turning the user's tools on behind their back was wrong. `ToolsContainer` keeps the
+`settings.tools_enable_to_configure` hint on the legacy row whenever its switch is off, and shows it
+on Arcana Tools only while the list is not editable (`canEditShares` in `ArcanaContainer.jsx`,
+`arcanaSharesEditable` in `ToolsContainer.jsx`; both need the agent module and a tool-capable model —
+externality is not a capability, so a bridge model keeps the list). Removing or editing a row
+materializes the merged list into `arcana_shares` and
+deletes `arcana_share`, so the aliases do not drift apart. The add form refuses anything
+`parseArcanaShareRef` cannot read and a collection already in the chat. The list is the
+`<ul data-guide="tools-arcana-list">`.
 
 `agent/arcanaChatTools.ts#createArcanaChatTools(refs)` adds four read-only tools:
 `list_arcanas` (every collection with its description), then `search_arcana` (`search_chunks`),
@@ -2840,8 +2859,9 @@ The Meta chat reads the list through `get_user_settings`/`buildConversationSetti
 proposes it with `SET_CONVERSATION_SETTING` `key: "arcana_shares"` (`value` is an array of collection
 references or `{collection, description}` objects; `[]`/`null` clears it); `MetaActionCard` resolves
 each reference to the stored object. The single `arcana_share` key is still accepted. The `arcana`
-feature guide gained a fifth step that targets the add row, and `arcana_share` has a fourth step for
-the link card.
+feature guide now walks Arcana Tools and the add row (its step 3 targets `tool-arcana_tools`, step 4
+`arcana-add-id`), `arcana_share` has a fourth step for the link card, and the `rag_documents` use
+case follows the same path.
 
 ### 4.37 A collection has its own page with a chat, edited from a right-hand panel
 

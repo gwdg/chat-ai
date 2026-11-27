@@ -5,6 +5,7 @@ import { useSendMessage } from "../../hooks/useSendMessage";
 import { useSendWithEnter } from "../../hooks/useSendWithEnter";
 import { Send, SendFilled } from "@carbon/icons-react";
 import { isAgentEnabled } from "../../apis/agentEndpoints";
+import { isExternalModel } from "../../utils/modelExternality";
 
 export default function SendButton({localState, setLocalState, handleSend, prompt}) {
     const { t, i18n } = useTranslation();
@@ -15,10 +16,7 @@ export default function SendButton({localState, setLocalState, handleSend, promp
         : "common.send_shortcut_shift_enter";
 
     function isSafeSettings(localState) {
-        const modelName = localState?.settings?.model?.name;
-        const isExternalModel =
-            typeof modelName === "string" &&
-            modelName.toLowerCase().includes("external");
+        const externalModel = isExternalModel(localState?.settings?.model);
 
         // The agent does not use the gateway web search; it calls MCP servers itself (agent/mcp.ts)
         const toolsEnabled = !!localState?.settings?.enable_tools && !isAgentEnabled();
@@ -33,7 +31,7 @@ export default function SendButton({localState, setLocalState, handleSend, promp
 
         const mcpEnabled = !!tools.mcp;
 
-        return !(isExternalModel || webSearchEnabled || mcpEnabled);
+        return !(externalModel || webSearchEnabled || mcpEnabled);
     }
 
     const loading = localState.messages[localState.messages.length - 2]?.role === "assistant"

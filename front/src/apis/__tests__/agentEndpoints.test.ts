@@ -45,12 +45,15 @@ describe("modelSupportsTools", () => {
     ).toBe(true);
   });
 
-  it("honours the external flag of the extended models response", () => {
+  it("does not treat the external flag as a capability claim", () => {
+    // `external` is the data-safety label from /models. A bridge model is external there and
+    // still keeps its tools (saia-engine keeps them in the request body), so only data may
+    // take tools away: a model config, or a rejection learned at runtime.
     expect(
       modelSupportsTools({ id: "openai-gpt5", name: "OpenAI GPT-5", external: true }),
-    ).toBe(false);
+    ).toBe(true);
     expect(
-      modelSupportsTools({ id: "openai-gpt5", name: "OpenAI GPT-5", external: false }),
+      modelSupportsTools({ id: "openai-gpt5", name: "OpenAI GPT-5 (External)", external: true }),
     ).toBe(true);
   });
 

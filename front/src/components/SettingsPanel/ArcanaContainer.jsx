@@ -4,7 +4,6 @@ import { Trans, useTranslation } from "react-i18next";
 import { CircleHelp, Trash2 } from "lucide-react";
 import { useModal } from "../../modals/ModalContext";
 import { isAgentEnabled, modelSupportsTools } from "../../apis/agentEndpoints";
-import { isBrandLocked } from "../../config/brandPolicy";
 import {
   arcanaRefId,
   arcanaSharesFromSettings,
@@ -12,17 +11,27 @@ import {
 } from "../../utils/arcanaShareLink";
 
 /**
- * The Arcana tool's settings page.
+ * The Arcana settings page, in the two halves the tool list separates.
  *
- * A chat can be wired to a collection in two ways: the Arcana tool's own field
- * (`settings.arcana.id`, sent with the request and served by the backend) and
- * the read-only app tools (`settings.arcana_shares`, plus the single
- * `settings.arcana_share` an access link writes). The list of collections this
- * chat uses is deduplicated by storage name and each row says which of the two
- * it comes from. A collection added here gets a short description, which
- * `list_arcanas` hands to the agent so it can pick the right one.
+ * `Arcana` is the **legacy** server-side path: one collection id
+ * (`settings.arcana.id`) that `agent/gateway.ts` sends with the request, so the
+ * backend runs the retrieval. `Arcana Tools` is the current one: the chat owns a
+ * list of collections (`settings.arcana_shares`, plus the single
+ * `settings.arcana_share` an access link writes) that the app's own read tools
+ * (`agent/arcanaChatTools.ts`) use, each with a short description that
+ * `list_arcanas` hands to the model.
+ *
+ * The list is deduplicated by reference and each row says where it comes from.
+ * It is rendered under Arcana Tools, because that is where the tools that read
+ * it live; the legacy row keeps only its own single field.
  */
-const ArcanaContainer = ({ localState, setLocalState, configurable }) => {
+const ArcanaContainer = ({
+  localState,
+  setLocalState,
+  configurable,
+  legacy = true,
+  collections = true,
+}) => {
   const { t } = useTranslation();
   const { openModal } = useModal();
   const [draftId, setDraftId] = useState("");
@@ -30,10 +39,6 @@ const ArcanaContainer = ({ localState, setLocalState, configurable }) => {
   const [error, setError] = useState("");
 
   const settings = localState.settings;
-  const modelName = settings?.model?.name;
-  const isExternalModel =
-    typeof modelName === "string" &&
-    modelName.toLowerCase().includes("external");
 
   const handleArcanaChange = () => (e) => {
     setLocalState((prev) => ({
@@ -52,18 +57,18 @@ const ArcanaContainer = ({ localState, setLocalState, configurable }) => {
   // the editable field there.
   const agentMode = isAgentEnabled();
   const toolsOn = agentMode || !!settings?.enable_tools;
-  const canConfigure =
-    configurable === undefined
-      ? toolsOn && !isExternalModel
-      : !!configurable && !isExternalModel;
+  // The legacy field only needs its own switch. Whether this model is external says
+  // nothing about the gateway accepting the id; ToolsContainer disables the row when the
+  // model cannot run tools at all.
+  const canConfigure = configurable === undefined ? toolsOn : !!configurable;
   // The collection list is the chat's own setting, served by the browser
   // agent's read tools (`agent/arcanaChatTools.ts`). Those do not depend on
   // the gateway "Arcana" switch, which is off by default in agent mode, so the
   // add form must stay available while that switch is off. It only needs a
   // model that can run tools; without one there is nothing to read a
-  // collection with.
-  const canEditShares =
-    agentMode && !isExternalModel && modelSupportsTools(settings?.model);
+  // collection with. Externality is not a capability (see
+  // `apis/agentEndpoints.ts#modelSupportsTools`).
+  const canEditShares = agentMode && modelSupportsTools(settings?.model);
 
   const toolId =
     typeof settings?.arcana?.id === "string" ? settings.arcana.id.trim() : "";
@@ -71,7 +76,9 @@ const ArcanaContainer = ({ localState, setLocalState, configurable }) => {
   const shares = arcanaSharesFromSettings(settings);
 
   const usedArcanas = [];
-  if (toolId) {
+  // The legacy gateway binding is only shown on the legacy row; under Arcana
+  // Tools the list is exactly what the read tools receive.
+  if (legacy && toolId) {
     const match = toolRef
       ? shares.find((share) => share.collection === toolRef.collection)
       : null;
@@ -85,7 +92,7 @@ const ArcanaContainer = ({ localState, setLocalState, configurable }) => {
     });
   }
   for (const share of shares) {
-    if (toolRef && share.collection === toolRef.collection) continue;
+    if (legacy && toolRef && share.collection === toolRef.collection) continue;
     usedArcanas.push({
       key: `share:${share.collection}`,
       name: arcanaRefId(share),
@@ -137,10 +144,7 @@ const ArcanaContainer = ({ localState, setLocalState, configurable }) => {
         ...current,
         { ...ref, ...(description ? { description } : {}) },
       ];
-      const nextState = writeShares(prev, next);
-      // The read tools need tools on, unless a brand fixes that switch.
-      if (!isBrandLocked("tools")) nextState.settings.enable_tools = true;
-      return nextState;
+      return writeShares(prev, next);
     });
     setDraftId("");
     setDraftDescription("");
@@ -178,6 +182,14 @@ const ArcanaContainer = ({ localState, setLocalState, configurable }) => {
 
   return (
     <>
+      {legacy && (
+        <p
+          data-guide="arcana-legacy-notice"
+          className="rounded-lg border border-base-300 bg-base-200 px-3 py-2 text-xs leading-relaxed text-base-content/80"
+        >
+          {t("settings.arcana_legacy_notice")}
+        </p>
+      )}
       {usedArcanas.length > 0 && (
         <div className="space-y-1">
           <p className="text-xs font-medium text-base-content/60">
@@ -239,7 +251,7 @@ const ArcanaContainer = ({ localState, setLocalState, configurable }) => {
           </ul>
         </div>
       )}
-      {canEditShares && (
+      {collections && canEditShares && (
         <div className="space-y-2" data-guide="arcana-add">
           <p className="text-xs font-medium text-base-content/60">
             {t("settings.arcana_add_title")}
@@ -287,7 +299,7 @@ const ArcanaContainer = ({ localState, setLocalState, configurable }) => {
           )}
         </div>
       )}
-      {canConfigure && (
+      {legacy && canConfigure && (
         <div className="flex gap-4 w-full items-center">
           <div className="flex-shrink-0 flex items-center gap-2 select-none">
             <p className="text-sm">{t("settings.label_arcana")}</p>
@@ -309,7 +321,7 @@ const ArcanaContainer = ({ localState, setLocalState, configurable }) => {
           </div>
         </div>
       )}
-      {canConfigure && settings.arcana?.id && (
+      {legacy && canConfigure && settings.arcana?.id && (
         <div className="text-warning text-xs w-full select-none space-y-1">
           <div>
             <Trans i18nKey="alert.arcana_usage" />

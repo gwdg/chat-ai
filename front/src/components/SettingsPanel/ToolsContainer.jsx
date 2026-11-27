@@ -33,6 +33,7 @@ import { agentGatewayTools, isAgentEnabled, modelSupportsTools } from "../../api
 import { mcpServers } from "../../agent/mcp";
 import { isArcanasEnabled } from "../../utils/modules";
 import { isBrandExternalAllowed } from "../../config/brandPolicy";
+import { isExternalModel } from "../../utils/modelExternality";
 import { isFeatureEnabled } from "../../config/deployment";
 
 // Tools the agent has no counterpart for
@@ -64,26 +65,25 @@ export default function ToolsContainer({ localState, setLocalState }) {
   const mcpToolPolicy = useSelector(selectMcpToolPolicy);
   
   const settings = localState?.settings || {};
-  const modelName = settings?.model?.name;
-  const isExternalModel =
-    typeof modelName === "string" &&
-    modelName.toLowerCase().includes("external");
+  // Data first (`external` in /models), "(External)" name only as the fallback for a
+  // deployment without that field.
+  const externalModel = isExternalModel(settings?.model);
 
   const toolsState = settings.tools || {};
-  const toolsEnabled = !!settings.enable_tools && !isExternalModel;
+  const toolsEnabled = !!settings.enable_tools && !externalModel;
   // In agent mode every tool is switched on its own and a missing key counts as on
   // (as in agent/tools.ts); the master switch and the server-side tools do not apply.
   const agentMode = isAgentEnabled();
   const agentWithoutTools = agentMode && !modelSupportsTools(settings?.model);
-  const bulkActionsDisabled = agentMode ? agentWithoutTools : isExternalModel;
+  const bulkActionsDisabled = agentMode ? agentWithoutTools : externalModel;
   const arcanasEnabled = isArcanasEnabled();
   // The chat's collection list is edited by ArcanaContainer through the
   // browser agent's read tools, so it stays available while the gateway
   // "Arcana" switch is off (see ArcanaContainer.jsx). Only when that list
   // cannot be edited either does the "turn this tool on" hint explain the
-  // missing fields.
-  const arcanaSharesEditable =
-    agentMode && !agentWithoutTools && !isExternalModel;
+  // missing fields. Externality is not a capability: a bridge model keeps the
+  // list (see `apis/agentEndpoints.ts#modelSupportsTools`).
+  const arcanaSharesEditable = agentMode && !agentWithoutTools;
 
   // One switch for every configured MCP server.
   const mcpEnabled = !!toolsState.mcp;
@@ -111,6 +111,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
         key: "arcana_tools",
         Icon: Database,
         label: t("settings.label_arcana_tools"),
+        detail: true,
       },
       {
         key: "image_analysis",
@@ -122,12 +123,15 @@ export default function ToolsContainer({ localState, setLocalState }) {
         Icon: FileText,
         label: t("settings.label_create_docx"),
       },
-      // The two with a settings page sit last: they are the ones you open, not tick.
+      // The collection and server rows open a settings page instead of only
+      // toggling on the row itself. Arcana is the legacy gateway path; Arcana
+      // Tools is where a chat's collection list is edited.
       {
         key: "arcana",
         Icon: BookOpen,
         label: t("settings.label_arcana"),
         detail: true,
+        legacy: true,
       },
       {
         key: "mcp",
@@ -359,7 +363,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
                 flush: true,
               }))
             }
-            disabled={isExternalModel}
+            disabled={externalModel}
             data-guide="tools-enable"
             className="inline-flex cursor-pointer disabled:cursor-not-allowed"
             aria-label={
@@ -374,7 +378,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
               tabIndex={-1}
               readOnly
               checked={toolsEnabled}
-              disabled={isExternalModel}
+              disabled={externalModel}
               className="toggle toggle-success pointer-events-none"
             />
           </button>
@@ -437,19 +441,23 @@ export default function ToolsContainer({ localState, setLocalState }) {
               dataGuide: `tool-${detailTool.key}`,
             })}
           </div>
-          {detailTool.key === "arcana" ? (
+          {detailTool.key === "arcana" || detailTool.key === "arcana_tools" ? (
             <div className="space-y-3">
-              {/* The collections this chat is wired to stay listed even while
-                  the tool is off, so a share link's binding is visible. */}
+              {/* A chat's collections stay listed even while the row's switch is
+                  off, so a share link's binding is visible and editable. The
+                  list lives under Arcana Tools; the legacy Arcana row keeps
+                  only its own single id. */}
               <ArcanaContainer
                 localState={localState}
                 setLocalState={setLocalState}
                 configurable={
                   detailState.active && !detailState.disabled
                 }
+                legacy={detailTool.key === "arcana"}
+                collections={detailTool.key === "arcana_tools"}
               />
               {!(detailState.active && !detailState.disabled) &&
-                !arcanaSharesEditable && (
+                (detailTool.key === "arcana" || !arcanaSharesEditable) && (
                 <p className="text-sm text-base-content/70">
                   {t("settings.tools_enable_to_configure")}
                 </p>
@@ -481,7 +489,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
           data-guide="tools-grid"
           className="overflow-hidden rounded-xl border border-base-300 bg-base-100"
         >
-          {TOOL_DEFS.map(({ key, Icon, label, detail }) => {
+          {TOOL_DEFS.map(({ key, Icon, label, detail, legacy }) => {
             const { active, onToggle, disabled, unavailable } =
               getToolState(key);
             const title = unavailable
@@ -510,6 +518,11 @@ export default function ToolsContainer({ localState, setLocalState }) {
                       <span className="min-w-0 flex-1 truncate font-medium">
                         {label}
                       </span>
+                      {legacy && (
+                        <span className="badge badge-ghost badge-xs shrink-0">
+                          {t("settings.arcana_legacy_badge")}
+                        </span>
+                      )}
                       {(key === "web_search" || key === "mcp") && (
                         <Tooltip text={warningTooltip(key)}>
                           <TriangleAlert
@@ -561,6 +574,11 @@ export default function ToolsContainer({ localState, setLocalState }) {
                     <span className="min-w-0 flex-1 truncate font-medium">
                       {label}
                     </span>
+                    {legacy && (
+                      <span className="badge badge-ghost badge-xs shrink-0">
+                        {t("settings.arcana_legacy_badge")}
+                      </span>
+                    )}
                     {(key === "web_search" || key === "mcp") && (
                       <Tooltip text={warningTooltip(key)}>
                         <TriangleAlert

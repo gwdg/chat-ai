@@ -67,7 +67,10 @@ vi.mock("@modelcontextprotocol/sdk/client/index.js", () => ({
         );
       }
       rag.calls.push({ name: request.name, args: request.arguments });
-      const collection = String(request.arguments?.collection ?? "");
+      const reference = String(request.arguments?.collection ?? "");
+      // The service takes `owner/name` and stores `owner__name`; the fake keys
+      // its maps by the storage form, so resolve the reference the same way.
+      const collection = reference.replace("/", "__");
       const filename = String(request.arguments?.filename ?? "");
       switch (request.name) {
         case "list_collections":
@@ -402,7 +405,7 @@ describe("SaiaRagProvider", () => {
     });
     expect(rag.calls).toContainEqual({
       name: "list_files",
-      args: { collection: "bob__papers" },
+      args: { collection: "bob/papers" },
     });
   });
 
@@ -761,7 +764,7 @@ describe("SaiaRagProvider", () => {
     await ragProvider.deleteCollection("recipes");
     expect(rag.calls).toContainEqual({
       name: "delete_collection",
-      args: { collection: "alice__recipes" },
+      args: { collection: "alice/recipes" },
     });
 
     await expect(ragProvider.deleteCollection("bob__papers")).rejects.toMatchObject(
@@ -823,7 +826,7 @@ describe("SaiaRagProvider", () => {
     });
     expect(rag.calls).toContainEqual({
       name: "list_files",
-      args: { collection: "alice__recipes", include_tags: true },
+      args: { collection: "alice/recipes", include_tags: true },
     });
     expect(rag.calls.some((call) => call.name === "get_file_tags")).toBe(false);
   });
@@ -847,7 +850,7 @@ describe("SaiaRagProvider", () => {
     ).toEqual(["soup"]);
     expect(rag.calls).toContainEqual({
       name: "set_file_tags",
-      args: { collection: "alice__recipes", filename: "notes.md", tags: ["soup"] },
+      args: { collection: "alice/recipes", filename: "notes.md", tags: ["soup"] },
     });
 
     expect(await ragProvider.setFileTags("recipes", "notes.md", [])).toEqual([]);
@@ -863,7 +866,7 @@ describe("SaiaRagProvider", () => {
     ).toEqual(["recipe", "quick", "new"]);
     expect(rag.calls).toContainEqual({
       name: "tag_file",
-      args: { collection: "alice__recipes", filename: "notes.md", tags: ["new"] },
+      args: { collection: "alice/recipes", filename: "notes.md", tags: ["new"] },
     });
   });
 
@@ -881,7 +884,7 @@ describe("SaiaRagProvider", () => {
 
     expect(rag.calls).toContainEqual({
       name: "remove_file",
-      args: { collection: "alice__recipes", filename: "notes.md" },
+      args: { collection: "alice/recipes", filename: "notes.md" },
     });
     expect(rag.files.get("alice__recipes")!.has("notes.md")).toBe(false);
     expect(rag.tags.get("alice__recipes")!.has("notes.md")).toBe(false);
@@ -894,7 +897,7 @@ describe("SaiaRagProvider", () => {
     expect(rag.calls).toContainEqual({
       name: "upload_file",
       args: {
-        collection: "alice__recipes",
+        collection: "alice/recipes",
         filename: "new.md",
         content: "# new",
       },
@@ -909,7 +912,7 @@ describe("SaiaRagProvider", () => {
     expect(await ragProvider.indexCollection("recipes")).toBe("job-7");
     expect(rag.calls).toContainEqual({
       name: "index_collection",
-      args: { collection: "alice__recipes" },
+      args: { collection: "alice/recipes" },
     });
   });
 
@@ -926,7 +929,7 @@ describe("SaiaRagProvider", () => {
     expect(rag.calls).toContainEqual({
       name: "search_preview",
       args: {
-        collection: "alice__recipes",
+        collection: "alice/recipes",
         query: "hi",
         count: 3,
         tags: ["recipe"],
@@ -940,7 +943,7 @@ describe("SaiaRagProvider", () => {
     const chunks = await ragProvider.search("recipes", "hi", "chunks");
     expect(rag.calls).toContainEqual({
       name: "search_chunks",
-      args: { collection: "alice__recipes", query: "hi", count: 5 },
+      args: { collection: "alice/recipes", query: "hi", count: 5 },
     });
     expect(chunks.results[0]).toMatchObject({
       filename: "notes.md",
@@ -950,7 +953,7 @@ describe("SaiaRagProvider", () => {
     const documents = await ragProvider.search("recipes", "hi", "documents");
     expect(rag.calls).toContainEqual({
       name: "search_documents",
-      args: { collection: "alice__recipes", query: "hi", count: 5 },
+      args: { collection: "alice/recipes", query: "hi", count: 5 },
     });
     expect(documents.results.map((hit) => hit.filename)).toEqual([
       "notes.md",

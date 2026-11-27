@@ -646,11 +646,12 @@ export default {
       title: "Arcana für RAG verwenden",
       step1: "Öffnen Sie GWDG Tools im Eingabefeld.",
       step2: "Aktivieren Sie die Tools.",
-      step3: "Wählen Sie Arcana.",
+      step3:
+        "Wählen Sie Arcana Tools. Die separate Zeile Arcana ist veraltet: Sie sendet eine einzelne Collection-ID mit der Anfrage.",
       step4:
-        "Geben Sie Ihre Arcana-ID ein. Über den Hilfe-Link können Sie eine Sammlung erstellen.",
+        "Fügen Sie jede Sammlung, die der Chat lesen soll, als owner/arcana hinzu, z. B. alice/papers. Der Agent listet sie mit list_arcanas auf und wählt die passende.",
       step5:
-        "Fügen Sie jede Sammlung, die der Chat lesen soll, als owner/arcana mit einer kurzen Beschreibung hinzu. Der Agent listet sie mit list_arcanas auf und wählt die passende.",
+        "Geben Sie der Sammlung eine kurze Beschreibung, damit der Agent weiß, wofür sie gedacht ist.",
     },
     web_search: {
       title: "Websuche verwenden",
@@ -1121,8 +1122,8 @@ export default {
       title: "Fragen aus eigenen Dokumenten beantworten",
       description: "Verwenden Sie Arcana (RAG), um aus einer eigenen Dokumentensammlung zu antworten.",
       step1: "Öffnen Sie GWDG Tools im Eingabefeld.",
-      step2: "Aktivieren Sie die Tools und wählen Sie Arcana.",
-      step3: "Geben Sie Ihre Arcana-ID ein.",
+      step2: "Aktivieren Sie die Tools und wählen Sie Arcana Tools.",
+      step3: "Fügen Sie eine Sammlung als owner/arcana hinzu, z. B. alice/papers.",
       step4: "Fragen Sie: „Was sagt unsere interne Richtlinie dazu?“",
       step5: "Fragen Sie: „Welches Dokument belegt diese Antwort?“",
     },

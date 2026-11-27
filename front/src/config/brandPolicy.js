@@ -13,6 +13,7 @@
 // react to a late brand resolution read `useBrand()` (App does, which re-renders
 // the tree).
 import { currentBrand } from "./brands.js";
+import { isExternalModel } from "../utils/modelExternality.js";
 
 const asObject = (value) =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -61,11 +62,8 @@ export function brandModelPolicy(brand = currentBrand()) {
   return { fixed: fixed || null, allowed: allowed?.length ? allowed : null };
 }
 
-/** Same signal the data-safety warning uses for a model. */
-export const isExternalModel = (model) =>
-  model?.external === true ||
-  (typeof model?.name === "string" &&
-    model.name.toLowerCase().includes("external"));
+/** Same signal the data-safety warning uses for a model (utils/modelExternality.js). */
+export { isExternalModel };
 
 /**
  * The model list the UI may offer. `models.fixed` narrows to one id and

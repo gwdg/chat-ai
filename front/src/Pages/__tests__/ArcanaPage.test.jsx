@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   collections: [
     {
       name: "Paper pile",
-      collection: "tester__papers",
+      collection: "tester/papers",
       owner: "tester",
       role: "owner",
       can_write: true,
@@ -22,6 +22,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("react-router", () => ({
   useNavigate: () => vi.fn(),
+  // The route still resolves a link from before the form changed.
   useParams: () => ({ collection: "tester__papers" }),
   useSearchParams: () => [mocks.searchParams],
   useLocation: () => ({ pathname: "/arcana/tester__papers", key: mocks.key }),
@@ -99,7 +100,7 @@ beforeEach(() => {
   mocks.collections = [
     {
       name: "Paper pile",
-      collection: "tester__papers",
+      collection: "tester/papers",
       owner: "tester",
       role: "owner",
       can_write: true,

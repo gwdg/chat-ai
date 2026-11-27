@@ -21,9 +21,7 @@ import type { BaseModelInfo } from "../../types/models";
 import Tooltip from "../Others/Tooltip";
 import E2eeLock from "../Others/E2eeLock";
 import DemandIndicator from "./DemandIndicator";
-
-const isExternalModel = (model: { name?: string } | undefined) =>
-  typeof model?.name === "string" && model.name.toLowerCase().includes("external");
+import { isExternalModel } from "../../utils/modelExternality";
 
 // persist the filter choice for the session. 
 // a page reload starts at "all" again.

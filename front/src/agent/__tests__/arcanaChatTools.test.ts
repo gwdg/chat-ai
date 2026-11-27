@@ -23,9 +23,9 @@ vi.mock("../../workspace/providers/saiaRag", () => ({
 
 import { createArcanaChatTools } from "../arcanaChatTools";
 
-const ref = { collection: "alice__papers", owner: "alice", name: "papers" };
+const ref = { collection: "alice/papers", owner: "alice", name: "papers" };
 const notes = {
-  collection: "bob__notes",
+  collection: "bob/notes",
   owner: "bob",
   name: "notes",
   description: "Meeting minutes and decisions",
@@ -96,7 +96,7 @@ describe("Arcana chat tools", () => {
     ).resolves.toEqual({ content: [{ type: "text", text: "passages" }], details: undefined });
     expect(mocks.callTool).toHaveBeenCalledWith({
       name: "search_chunks",
-      arguments: { collection: "alice__papers", query: "water", count: 20 },
+      arguments: { collection: "alice/papers", query: "water", count: 20 },
     });
   });
 
@@ -115,7 +115,7 @@ describe("Arcana chat tools", () => {
     await toolNamed(tools, "search_arcana").execute("id", { query: "water" });
     expect(mocks.callTool).toHaveBeenCalledWith(
       expect.objectContaining({
-        arguments: expect.objectContaining({ collection: "alice__papers" }),
+        arguments: expect.objectContaining({ collection: "alice/papers" }),
       }),
     );
   });
@@ -130,17 +130,17 @@ describe("Arcana chat tools", () => {
     });
     expect(mocks.callTool).toHaveBeenCalledWith(
       expect.objectContaining({
-        arguments: expect.objectContaining({ collection: "bob__notes" }),
+        arguments: expect.objectContaining({ collection: "bob/notes" }),
       }),
     );
 
     await toolNamed(tools, "search_arcana").execute("id", {
       query: "decision",
-      collection: "alice__papers",
+      collection: "alice/papers",
     });
     expect(mocks.callTool).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        arguments: expect.objectContaining({ collection: "alice__papers" }),
+        arguments: expect.objectContaining({ collection: "alice/papers" }),
       }),
     );
   });
@@ -188,7 +188,7 @@ describe("Arcana chat tools", () => {
     });
     expect(mocks.callTool).toHaveBeenCalledWith({
       name: "list_files",
-      arguments: { collection: "alice__papers" },
+      arguments: { collection: "alice/papers" },
     });
     expect(result.content[0].text).toContain("- a.md (2.0 KB, indexed, 3 chunks)");
     expect(result.content[0].text).toContain("- b.pdf (10 B, stored)");
@@ -215,7 +215,7 @@ describe("Arcana chat tools", () => {
     });
     expect(mocks.callTool).toHaveBeenCalledWith({
       name: "read_file_base64",
-      arguments: { collection: "alice__papers", filename: "a.md" },
+      arguments: { collection: "alice/papers", filename: "a.md" },
     });
     expect(result.content[0].text).toBe("# a.md\n\n# Hello");
   });

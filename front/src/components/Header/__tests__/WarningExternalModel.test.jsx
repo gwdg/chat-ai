@@ -79,6 +79,36 @@ describe("data safety warning", () => {
     expect(screen.getByText(/external model or external tools/i)).toBeInTheDocument();
   });
 
+  it("warns for a model the engine marks external without the name marker", () => {
+    // A bridge model can answer `external: true` for a cleaned-up display name; the field is
+    // the data source, the "(External)" suffix only the fallback.
+    render(
+      <DataSafetyText
+        localState={localState({
+          model: { id: "bridge/x", name: "X", external: true },
+          enable_tools: true,
+          tools: {},
+        })}
+        userData={{}}
+      />,
+    );
+    expect(screen.getByText(/external model or external tools/i)).toBeInTheDocument();
+  });
+
+  it("trusts external:false over a stale (External) name", () => {
+    const { container } = render(
+      <DataSafetyText
+        localState={localState({
+          model: { id: "x", name: "X (External)", external: false },
+          enable_tools: false,
+          tools: { mcp: false, web_search: false },
+        })}
+        userData={{}}
+      />,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
   it("warns when MCP is enabled", () => {
     render(
       <DataSafetyText

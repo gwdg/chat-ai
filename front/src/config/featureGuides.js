@@ -1,5 +1,5 @@
 import {
-  arcanaIdEntered,
+  arcanaAddIdEntered,
   attachmentProcessed,
   ensureTool,
   ensureToolsEnabled,
@@ -542,7 +542,7 @@ export const featureGuides = {
   arcana: {
     titleKey: "feature_guide.arcana.title",
     prompt:
-      "Use Arcana for retrieval-augmented generation (RAG). Open GWDG Tools, enable tools and select Arcana. List the collections this chat can read, add one by its owner/arcana id with a short description so the agent knows what it is for, and the agent can call list_arcanas to choose between several.",
+      "Use Arcana for retrieval-augmented generation (RAG). Open GWDG Tools, enable tools and select Arcana Tools. Add the collections this chat should read, each by its owner/arcana id with a short description so the agent knows what it is for; the agent calls list_arcanas to choose between several. The older Arcana row is legacy: it sends one collection id with the request and lets the server run the retrieval.",
     keywords: ["arcana", "rag", "retrieval", "knowledge base", "knowledge"],
     steps: [
       {
@@ -557,20 +557,20 @@ export const featureGuides = {
         check: toolsAreEnabled,
       },
       {
-        target: '[data-guide="tool-arcana"]',
+        target: '[data-guide="tool-arcana_tools"]',
         prepare: ensureToolsEnabled,
         textKey: "feature_guide.arcana.step3",
-        check: () => isToolActive("arcana"),
-      },
-      {
-        target: '[data-guide="arcana-id"]',
-        prepare: () => ensureTool("arcana"),
-        textKey: "feature_guide.arcana.step4",
-        check: arcanaIdEntered,
+        check: () => isToolActive("arcana_tools"),
       },
       {
         target: '[data-guide="arcana-add-id"]',
-        prepare: () => ensureTool("arcana"),
+        prepare: () => ensureTool("arcana_tools"),
+        textKey: "feature_guide.arcana.step4",
+        check: arcanaAddIdEntered,
+      },
+      {
+        target: '[data-guide="arcana-add-description"]',
+        prepare: () => ensureTool("arcana_tools"),
         textKey: "feature_guide.arcana.step5",
       },
     ],

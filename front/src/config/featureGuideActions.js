@@ -229,8 +229,8 @@ export function isToolActive(toolKey) {
   return tool.className.includes("border-success");
 }
 
-export function arcanaIdEntered() {
-  const input = find('[data-guide="arcana-id"]');
+export function arcanaAddIdEntered() {
+  const input = find('[data-guide="arcana-add-id"]');
   return !!input?.value?.trim();
 }
 

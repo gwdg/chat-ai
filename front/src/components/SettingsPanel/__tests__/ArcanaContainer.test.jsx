@@ -206,7 +206,25 @@ describe("ArcanaContainer adding collections", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("adds a typed owner/arcana with a description and turns tools on", () => {
+  it("keeps the add field for a bridge model marked (External)", () => {
+    // The collection tools are the browser agent's own read tools; the
+    // "(External)" label is a routing and accounting marker, not a capability.
+    render(
+      <ArcanaContainer
+        localState={stateWith({
+          model: { id: "bridge/deepseek", name: "DeepSeek (External)" },
+        })}
+        setLocalState={vi.fn()}
+        configurable={false}
+      />,
+    );
+
+    expect(
+      screen.getByPlaceholderText("owner/arcana, e.g. alice/papers"),
+    ).toBeInTheDocument();
+  });
+
+  it("adds a typed owner/arcana with a description and leaves the switch alone", () => {
     const localState = stateWith({ enable_tools: false, arcana: { id: "" } });
     const setLocalState = vi.fn((updater) => updater(localState));
     render(
@@ -228,10 +246,12 @@ describe("ArcanaContainer adding collections", () => {
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
 
     const next = setLocalState.mock.results[0].value;
-    expect(next.settings.enable_tools).toBe(true);
+    // The read tools are registered from the list, not from the master switch,
+    // so adding a collection must not turn tools on behind the user's back.
+    expect(next.settings.enable_tools).toBe(false);
     expect(next.settings.arcana_shares).toEqual([
       {
-        collection: "alice__papers",
+        collection: "alice/papers",
         owner: "alice",
         name: "papers",
         description: "Peer-reviewed papers",
@@ -262,8 +282,8 @@ describe("ArcanaContainer adding collections", () => {
 
     const next = setLocalState.mock.results[0].value;
     expect(next.settings.arcana_shares.map((item) => item.collection)).toEqual([
-      "alice__papers",
-      "bob__notes",
+      "alice/papers",
+      "bob/notes",
     ]);
   });
 
@@ -363,7 +383,7 @@ describe("ArcanaContainer adding collections", () => {
 
     const next = setLocalState.mock.results[0].value;
     expect(next.settings.arcana_shares.map((item) => item.collection)).toEqual([
-      "bob__notes",
+      "bob/notes",
     ]);
   });
 
@@ -393,8 +413,90 @@ describe("ArcanaContainer adding collections", () => {
     const next = setLocalState.mock.results[0].value;
     expect(next.settings.arcana_share).toBeUndefined();
     expect(next.settings.arcana_shares.map((item) => item.collection)).toEqual([
-      "alice__papers",
-      "bob__notes",
+      "alice/papers",
+      "bob/notes",
     ]);
+  });
+});
+
+describe("ArcanaContainer legacy and current halves", () => {
+  it("marks the legacy row and keeps only its single field there", () => {
+    agentMocks.agent = true;
+    render(
+      <ArcanaContainer
+        localState={stateWith({ arcana: { id: "" } })}
+        setLocalState={vi.fn()}
+        configurable
+        legacy
+        collections={false}
+      />,
+    );
+
+    expect(
+      document.querySelector('[data-guide="arcana-legacy-notice"]'),
+    ).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Arcana id")).toBeInTheDocument();
+    // The list belongs to Arcana Tools, so the legacy row has no add form.
+    expect(
+      screen.queryByPlaceholderText("owner/arcana, e.g. alice/papers"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("gives Arcana Tools the list without the legacy notice or field", () => {
+    agentMocks.agent = true;
+    render(
+      <ArcanaContainer
+        localState={stateWith({ arcana: { id: "" } })}
+        setLocalState={vi.fn()}
+        configurable
+        legacy={false}
+        collections
+      />,
+    );
+
+    expect(
+      document.querySelector('[data-guide="arcana-legacy-notice"]'),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("Arcana id")).not.toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText("owner/arcana, e.g. alice/papers"),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps the legacy field for an external model while its switch is on", () => {
+    // The legacy Arcana row follows its own switch; externality says nothing about
+    // whether the gateway accepts the id.
+    agentMocks.agent = true;
+    render(
+      <ArcanaContainer
+        localState={stateWith({
+          model: { id: "bridge/deepseek", name: "DeepSeek (External)" },
+          arcana: { id: "" },
+        })}
+        setLocalState={vi.fn()}
+        configurable
+        legacy
+        collections={false}
+      />,
+    );
+
+    expect(screen.getByPlaceholderText("Arcana id")).toBeInTheDocument();
+  });
+
+  it("still lists the legacy binding under Arcana Tools as read-only", () => {
+    // A chat that an older build wired through the gateway keeps reading that
+    // collection; the row is shown beside the tools' own list.
+    render(
+      <ArcanaContainer
+        localState={stateWith({ arcana: { id: "alice/papers" } })}
+        setLocalState={vi.fn()}
+        configurable
+        legacy
+        collections={false}
+      />,
+    );
+
+    expect(screen.getByText("alice/papers")).toBeInTheDocument();
+    expect(screen.getByText("Arcana tool")).toBeInTheDocument();
   });
 });

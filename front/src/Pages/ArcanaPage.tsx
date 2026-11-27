@@ -15,6 +15,7 @@ import { useUpdateUserData } from "../hooks/useUpdateUserData";
 import { useSaiaRagAccess, SAIA_RAG_AVAILABLE } from "../hooks/useSaiaRagAccess";
 import { selectUserSettings } from "../Redux/reducers/userSettingsReducer";
 import { getDefaultConversation } from "../utils/conversationUtils";
+import { parseArcanaShareRef } from "../utils/arcanaShareLink";
 import { useArcanas } from "../workspace/arcanas";
 import type { RagFile } from "../workspace/providers/saiaRag";
 
@@ -45,11 +46,11 @@ const saveEditorOpen = (open: boolean) => {
  * this collection, and the collection's files, search and sharing docked on
  * the right.
  *
- * The page is addressed by the service's storage name (`owner__name`), because
- * two people can own a collection with the same display name. It stays out of
- * the conversation store entirely: the chat is ephemeral (`sessionStorage`),
- * so nothing here appears in the chat list, an export, a backup or the sync
- * archive.
+ * The page is addressed by the collection reference (`owner/name`, with the
+ * slash percent-encoded), because two people can own a collection with the same
+ * display name. It stays out of the conversation store entirely: the chat is
+ * ephemeral (`sessionStorage`), so nothing here appears in the chat list, an
+ * export, a backup or the sync archive.
  */
 export default function ArcanaPage() {
   const { t } = useTranslation();
@@ -65,11 +66,15 @@ export default function ArcanaPage() {
   const { collections, loading, loaded, error } = useArcanas();
 
   const collectionKey = useMemo(() => {
+    let decoded = encoded;
     try {
-      return decodeURIComponent(encoded);
+      decoded = decodeURIComponent(encoded);
     } catch {
-      return encoded;
+      // A malformed escape stays as-is and simply matches nothing.
     }
+    // Links from before the form changed carry the storage spelling
+    // (`alice__papers`); the reference the list holds is `alice/papers`.
+    return parseArcanaShareRef(decoded)?.collection ?? decoded;
   }, [encoded]);
 
   const collection = collections.find(

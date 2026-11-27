@@ -635,11 +635,12 @@ export default {
       title: "Use Arcana for RAG",
       step1: "Open GWDG Tools from the prompt box.",
       step2: "Enable tools.",
-      step3: "Select Arcana.",
+      step3:
+        "Select Arcana Tools. The separate Arcana row is legacy: it sends one collection id with the request.",
       step4:
-        "Enter your Arcana ID. Use the help link to create a collection if you do not have one.",
+        "Add each collection the chat should read as owner/arcana, e.g. alice/papers. The agent lists them with list_arcanas and picks the matching one.",
       step5:
-        "Add each collection the chat should read as owner/arcana, with a short description. The agent lists them with list_arcanas and picks the matching one.",
+        "Give the collection a short description, so the agent knows what it is for.",
     },
     web_search: {
       title: "Use Web Search",
@@ -1104,8 +1105,8 @@ export default {
       title: "Answer questions from your own documents",
       description: "Use Arcana (RAG) to answer from a document collection you control.",
       step1: "Open GWDG Tools from the prompt box.",
-      step2: "Enable tools and select Arcana.",
-      step3: "Enter your Arcana ID.",
+      step2: "Enable tools and select Arcana Tools.",
+      step3: "Add a collection as owner/arcana, e.g. alice/papers.",
       step4: "Ask: “What does our internal policy say about this?”",
       step5: "Ask: “Which document supports this answer?”",
     },

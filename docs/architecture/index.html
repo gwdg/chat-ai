@@ -3210,7 +3210,8 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           A collection the caller owns shows its plain name; one shared with them shows
           <code>&lt;owner&gt;__&lt;name&gt;</code>, because two people can each own a
           <code>papers</code>. The provider keeps the <code>list_collections</code> answer around to
-          turn a display name back into the storage name the tools take.
+          turn a display name back into the collection reference (<code>owner/name</code>) the tools
+          take; only the path segment stays slash-free.
         </li>
         <li>
           <b>The role is data from the service.</b> <code>list_collections</code> reports
@@ -3396,8 +3397,10 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
         <strong>Why <code>&lt;owner&gt;__&lt;name&gt;</code>.</strong> Collections live in one flat
         storage root, one database per collection. Prefixing the owner keeps two people's
         <code>papers</code> apart without a second index, and resolving a short name to the caller's own
-        prefix means a typo cannot address somebody else's data. The display name the browser shows is
-        derived from that storage name, so the two can never drift.
+        prefix means a typo cannot address somebody else's data. The tools and the UI take a
+        collection reference as <code>owner/name</code>; the storage layer keeps the slash-free
+        <code>&lt;owner&gt;__&lt;name&gt;</code>, which is also what a browser path segment uses, so the
+        two spellings cannot drift.
       </div>
     </section>
     <section class="feature-page" id="arcanas-sidebar"
@@ -3529,13 +3532,15 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           The row whose page is open is tinted, like a selected chat.
         </li>
         <li>
-          <b>Deleting a shared collection uses its storage name.</b> A collection owned by the caller
-          is addressed by its plain name; one shared with them is
-          <code>&lt;owner&gt;__&lt;name&gt;</code>. The page title and toasts show the readable
-          name, and the delete call converts through <code>ragCollectionDisplayName</code> so it can
-          never delete the wrong collection when two people own a <code>papers</code>. The route
-          segment is the same storage name, URL-encoded, because a plain name is ambiguous between
-          two people's collections.
+          <b>Deleting a collection converts the display segment back.</b> The browser addresses a
+          collection by a plain name when the caller owns it, and by
+          <code>&lt;owner&gt;__&lt;name&gt;</code> when it is shared, because that has to stay one path
+          component. The page itself is addressed by the reference (<code>owner/name</code>,
+          URL-encoded, so a plain <code>papers</code> is not ambiguous between two people); the route
+          normalises the older <code>owner__name</code> spelling, so old links still resolve. The page
+          title and toasts show the readable name, and the delete call converts through
+          <code>ragCollectionDisplayName</code> so it can never delete the wrong collection when two
+          people own a <code>papers</code>.
         </li>
         <li>
           <b>Tags are per file, and a save replaces the list.</b> The tag button opens one
@@ -3642,19 +3647,21 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           <code>remove_member</code>) and, above that list, an access link
           <code>/chat?arcana=&lt;owner&gt;/&lt;name&gt;&amp;enable_tools=true</code>. That is the shape
           the Share tab has always handed out and the user docs show, so it carries the readable
-          Arcana ID rather than the service's storage name; the app derives
-          <code>&lt;owner&gt;__&lt;name&gt;</code> from it. Opening the link creates a normal chat whose
+          Arcana ID, which is also the reference the chat stores and the tools take; the browser's
+          path segment keeps the slash-free storage spelling <code>&lt;owner&gt;__&lt;name&gt;</code>
+          because it has to be one path component. Opening the link creates a normal chat whose
           settings carry <code>arcana_share</code> and the Arcana tool's own
           <code>arcana.id</code>; the older <code>?arcana_share=</code> spelling is still accepted as an
           alias. The chat page strips the query parameter, enables tools (unless a brand fixes that
           switch), names an untouched <code>Untitled Chat</code> after the collection and persists the
           binding through <code>updateConversation</code> with the <code>lastModified</code> it read.
           A chat owns a <b>list</b> of collections: <code>settings.arcana_shares</code> holds the ones
-          the user adds (each with its storage name and a short user-written description), and the
-          single <code>settings.arcana_share</code> a link writes is merged into the same list. Adding
-          a collection in GWDG Tools &rarr; Arcana writes both the binding and the description, and
-          turns tools on unless a brand fixes that switch; removing or editing one folds the link
-          binding into the list, so only one representation is left behind.
+          the user adds (each with its <code>owner/name</code> reference and a short user-written
+          description), and the single <code>settings.arcana_share</code> a link writes is merged into
+          the same list. Adding a collection in GWDG Tools &rarr; <b>Arcana Tools</b> writes the
+          binding and the description; it does not turn tools on, because the read tools do not need
+          that switch. Removing or editing one folds the link binding into the list, so only one
+          representation is left behind.
         </li>
         <li>
           <b>Four read-only tools, scoped to the chat's list.</b> <code>agent/arcanaChatTools.ts</code>
@@ -3667,10 +3674,12 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           cannot aim them at a collection the chat was never given; with one collection the argument
           may be omitted. Nothing in the tool set writes. Arcana Tools also registers a
           <code>list_arcanas</code>; when a chat has bindings the chat-scoped one replaces it, because
-          two tools with the same name would break the request. GWDG Tools &rarr; Arcana lists every
-          collection the chat is wired to (deduplicated by storage name), says whether each comes from
-          the Arcana tool or from the list, and removes the binding; the list stays visible while the
-          tool switch is off.
+          two tools with the same name would break the request. GWDG Tools &rarr; <b>Arcana Tools</b>
+          lists every collection the chat is wired to (deduplicated by reference), says whether each
+          comes from the read-only tools, and removes the binding; the list stays visible while the
+          tool switch is off. The older <b>Arcana</b> row is marked <b>Legacy</b>: it sends one
+          collection id with the request and lets the server run the retrieval, so only that single
+          field lives there.
         </li>
         <li>
           <b>The link grants nothing.</b> The service resolves
@@ -3800,8 +3809,10 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
             of the MCP Servers block.</li>
         <li><b>One handshake per page.</b> The provider and the list stay module state; a component
             must not construct its own <code>SaiaRagProvider</code>.</li>
-        <li><b>The storage name is the address.</b> A shared collection is always
-            <code>&lt;owner&gt;__&lt;name&gt;</code> in a tool call, whatever the row shows.</li>
+        <li><b>The reference is the address.</b> A tool call names a collection by
+            <code>owner/name</code> (the service also accepts the older
+            <code>&lt;owner&gt;__&lt;name&gt;</code>), whatever the row shows; only browser paths keep
+            the slash-free segment.</li>
         <li><b>Tags replace, never merge, when the service can.</b> A user who removes a tag must see
             it gone.</li>
         <li><b>Index what the pipeline can read, name what it cannot.</b> A stored binary that docling
@@ -3824,7 +3835,7 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
             <code>list_files</code> and <code>read_file_base64</code> only; upload, tag, index and
             member changes stay in the editor panel.</li>
         <li><b>The page chat never reaches the conversation store.</b> Its thread is
-            <code>sessionStorage</code> under the collection's storage name and its attachments use a
+            <code>sessionStorage</code> under the collection reference and its attachments use a
             per-collection file id, so nothing here can appear in the chat list, an export, a backup
             or the sync archive - and no Dexie version had to move.</li>
         <li><b>Write tools ask first.</b> Upload, write, delete, index and tag calls open
@@ -4872,7 +4883,13 @@ curl -s -H <span class="s">"Authorization: Bearer $KEY"</span> -H <span class="s
           <b><code>(External)</code> is a routing marker, not a description.</b> It tells the engine's
           demand updater to skip these rows: they are not in the registry, so it would otherwise mark them
           offline after its first pass. It is also not a tool-capability signal - Chat AI deliberately keeps
-          bridge models tool-capable, because the engine forwards their tools in the request body.
+          bridge models tool-capable, because the engine forwards their tools in the request body. The
+          models payload therefore carries the label as data (<code>external: true</code>, from
+          <code>is_external_model</code>: the description marker or the bridge prefix, <em>not</em>
+          <code>is_external_service</code>, which decides direct Azure/Anthropic routing). Chat AI's
+          warning, brand filter and model scope read that field and fall back to the name only when a
+          deployment does not send it; tool support comes from a model config or a rejection learned at
+          runtime.
         </li>
         <li>
           <b>Pruning waits for full health.</b> Rows that vanished from the catalogue are marked

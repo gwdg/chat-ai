@@ -117,7 +117,7 @@ const REQUIRED_TOOLS = [
 
 export type RagCollection = {
   name: string;
-  /** The storage name `<owner>__<name>`; this is what the tools take. */
+  /** The reference form `<owner>/<name>`; this is what the tools take. */
   collection: string;
   owner: string;
   role: "owner" | "editor" | "reader" | string;
@@ -199,11 +199,16 @@ export const markdownFileName = (name: string): string => {
 };
 
 /**
- * The path segment a collection is addressed by. A caller's own collection uses
- * its name; a shared one is qualified with its owner, so two people's `papers`
- * do not collide. `list_collections` is the source of this mapping, which is
- * why the provider keeps its result around: an own collection whose name itself
- * contains `__` cannot be told apart from a qualified reference otherwise.
+ * The path segment a collection is addressed by in the browser.
+ *
+ * The segment must stay a single path component, so it keeps the service's
+ * slash-free storage spelling (`owner__name` for a shared collection) even
+ * though the reference the tools take is `owner/name`. A caller's own
+ * collection uses its name; a shared one is qualified with its owner, so two
+ * people's `papers` do not collide. `list_collections` is the source of this
+ * mapping, which is why the provider keeps its result around: an own collection
+ * whose name itself contains `__` cannot be told apart from a qualified
+ * reference otherwise.
  */
 export const ragCollectionDisplayName = (collection: RagCollection): string =>
   collection.shared ? `${collection.owner}__${collection.name}` : collection.name;
@@ -278,12 +283,16 @@ const explainConnect = (error: unknown, endpoint: string): string => {
 const collectionOf = (value: any): RagCollection | null => {
   if (!value || typeof value !== "object") return null;
   const name = String(value.name ?? "").trim();
-  const collection = String(value.collection ?? "").trim();
-  if (!name || !collection) return null;
+  const stored = String(value.collection ?? "").trim();
+  if (!name || !stored) return null;
+  // `list_collections` still reports the service's storage spelling
+  // (`owner__name`); the reference every tool takes is `owner/name`. Only the
+  // first separator is the owner boundary, so a name may keep its own `__`.
+  const collection = stored.includes("/") ? stored : stored.replace("__", "/");
   return {
     name,
     collection,
-    owner: String(value.owner ?? collection.split("__")[0] ?? ""),
+    owner: String(value.owner ?? stored.split("__")[0] ?? ""),
     role: String(value.role ?? "reader"),
     can_write: value.can_write === true,
     can_manage: value.can_manage === true,

@@ -292,7 +292,7 @@ export function buildConversationSettingsSummary(settings = {}) {
     }`,
     `storage access ${browserStorage ? "enabled" : "disabled"}`,
     `writing in this chat ${browserStorage ? "enabled" : "disabled"}; writing in attached workspaces ${workspaceWrite ? "enabled" : "disabled"}`,
-    `arcana ${arcanaId || "none"}`,
+    `arcana (legacy) ${arcanaId || "none"}`,
     `arcanas this chat can read ${arcanaSharesText}`,
     `MCP ${tools.mcp ? "enabled" : "disabled"}${mcpDescription ? ` (${mcpDescription})` : ""}`,
   ].join("; ");

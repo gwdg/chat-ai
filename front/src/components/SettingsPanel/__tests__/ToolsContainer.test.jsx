@@ -309,25 +309,75 @@ describe("ToolsContainer detail pages", () => {
     expect(screen.queryByPlaceholderText("Arcana id")).not.toBeInTheDocument();
   });
 
-  it("offers the collection add field in agent mode without turning Arcana on", () => {
+  it("offers the collection add field under Arcana Tools in agent mode", () => {
     agentMocks.agent = true;
     render(
       <ToolsContainer
-        localState={stateWith({ arcana: false })}
+        localState={stateWith({ arcana: false, arcana_tools: false })}
         setLocalState={vi.fn()}
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Arcana settings" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Arcana Tools settings" }),
+    );
 
-    // The chat's own read tools do not need the gateway switch.
+    // The chat's own read tools do not need the gateway switch, and the list
+    // of collections lives with the tools that read it.
+    expect(
+      screen.getByPlaceholderText("owner/arcana, e.g. alice/papers"),
+    ).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("Arcana id")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Turn this tool on to configure it."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers the collection add field for a bridge model marked (External)", () => {
+    // The add field used to disappear for every model whose name carried the marker,
+    // which is exactly what a bridge model does.
+    agentMocks.agent = true;
+    render(
+      <ToolsContainer
+        localState={{
+          settings: {
+            enable_tools: true,
+            model: { id: "bridge/deepseek", name: "DeepSeek (External)" },
+            tools: { arcana: false, arcana_tools: false },
+          },
+        }}
+        setLocalState={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Arcana Tools settings" }),
+    );
+
     expect(
       screen.getByPlaceholderText("owner/arcana, e.g. alice/papers"),
     ).toBeInTheDocument();
     expect(
       screen.queryByText("Turn this tool on to configure it."),
     ).not.toBeInTheDocument();
-    expect(screen.queryByPlaceholderText("Arcana id")).not.toBeInTheDocument();
+  });
+
+  it("marks the Arcana row as legacy", () => {
+    render(
+      <ToolsContainer
+        localState={stateWith({ arcana: true })}
+        setLocalState={vi.fn()}
+      />,
+    );
+
+    const row = screen.getByRole("button", { name: "Arcana settings" });
+    expect(row.textContent).toContain("Legacy");
+    fireEvent.click(row);
+
+    expect(
+      document.querySelector('[data-guide="arcana-legacy-notice"]'),
+    ).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Arcana id")).toBeInTheDocument();
   });
 
   it("keeps the page honest while the master tools switch is off", () => {
@@ -357,7 +407,7 @@ describe("ToolsContainer Arcana Tools", () => {
     const setLocalState = vi.fn((updater) => updater(localState));
     render(<ToolsContainer localState={localState} setLocalState={setLocalState} />);
 
-    const button = screen.getByRole("button", { name: /arcana tools/i });
+    const button = screen.getByRole("switch", { name: "Arcana Tools" });
     expect(button).not.toBeDisabled();
     fireEvent.click(button);
 
@@ -370,10 +420,12 @@ describe("ToolsContainer Arcana Tools", () => {
     const setLocalState = vi.fn((updater) => updater(localState));
     render(<ToolsContainer localState={localState} setLocalState={setLocalState} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /arcana tools/i }));
+    fireEvent.click(screen.getByRole("switch", { name: "Arcana Tools" }));
 
     const next = setLocalState.mock.results[0].value;
     expect(next.settings.tools.arcana_tools).toBe(true);
+    // The legacy Arcana row keeps its own state.
+    expect(next.settings.tools.arcana).toBeUndefined();
   });
 
   it("hides both Arcana tools when the arcanas module is off", () => {
@@ -496,9 +548,10 @@ describe("ToolsContainer list layout", () => {
       />,
     );
 
-    const arrow = [
-      ...document.querySelectorAll('[data-guide="tools-grid"] svg.lucide-chevron-right'),
-    ][0].closest("button");
+    const row = screen
+      .getByRole("button", { name: "Arcana settings" })
+      .closest("li");
+    const arrow = row.querySelector("svg.lucide-chevron-right").closest("button");
     fireEvent.click(arrow);
 
     expect(screen.getByPlaceholderText("Arcana id")).toBeInTheDocument();

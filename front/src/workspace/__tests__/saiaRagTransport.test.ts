@@ -227,7 +227,7 @@ describe("SaiaRagProvider over a real MCP transport", () => {
       false,
       true,
     ]);
-    expect(stored.get(stageKey("alice__demo", "notes.pdf"))).toEqual(bytes);
+    expect(stored.get(stageKey("alice/demo", "notes.pdf"))).toEqual(bytes);
     // Base64 and the JSON envelope still keep every request under the 4 MiB
     // body limit the MCP server enforces.
     expect(Math.max(...bodySizes)).toBeLessThan(4 * 1024 * 1024);
@@ -252,6 +252,6 @@ describe("SaiaRagProvider over a real MCP transport", () => {
       provider.close();
     }
     expect(entry?.size).toBe(bytes.byteLength);
-    expect(stored.get(stageKey("alice__demo", "tiny.bin"))).toEqual(bytes);
+    expect(stored.get(stageKey("alice/demo", "tiny.bin"))).toEqual(bytes);
   }, 60_000);
 });

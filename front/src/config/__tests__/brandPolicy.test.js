@@ -111,6 +111,20 @@ describe("brand restrictions", () => {
     expect(applyBrandModelPolicy(MODELS, missingPin)).toBe(MODELS);
   });
 
+  it("trusts the data field over a stale (External) name", () => {
+    // A bridge model keeps the marker for the engine's demand updater; a deployment that
+    // reports `external: false` for it has decided it is not external.
+    const noExternal = { restrictions: { external: { external_models: false } } };
+    const models = [
+      { id: "bridge/kept", name: "Kept (External)", external: false },
+      { id: "bridge/dropped", name: "Dropped (External)" },
+      { id: "bridge/flagged", name: "Flagged", external: true },
+    ];
+    expect(
+      applyBrandModelPolicy(models, noExternal).map((model) => model.id),
+    ).toEqual(["bridge/kept"]);
+  });
+
   it("only narrows modules and features, never enables them", () => {
     setCurrentBrand(restricted());
     // A module the brand switches off is off even though the deployment enables it.
