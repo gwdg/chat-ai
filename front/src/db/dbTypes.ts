@@ -127,3 +127,19 @@ export type FolderRow = {
   // to the default icon. Neither field is indexed, so no schema bump is needed.
   icon?: string
 }
+
+// A persona the user created. Stored in the same JSON shape as the personas
+// in gwdg/chat-ai-personas, so useImportConversation can start a chat from it.
+export type PersonaRow = {
+  id: string
+  title: string
+  subtitle?: string
+  system_prompt: string
+  model?: string // model id
+  'model-name'?: string
+  temperature?: number
+  top_p?: number
+  reasoning_effort?: number | null // index into the model's reasoning_options
+  createdAt: number
+  updatedAt: number
+}

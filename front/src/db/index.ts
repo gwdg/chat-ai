@@ -15,7 +15,8 @@ import type {
   MessageRole,
   ContentItemInput,
   FolderRow,
-  FeedbackRow
+  FeedbackRow,
+  PersonaRow
 } from "./dbTypes"
 
 // ---------- Dexie DB ----------
@@ -27,6 +28,7 @@ export class AppDB extends Dexie {
   files_meta!: Table<FileMetaRow, string>
   files_data!: Table<FileDataRow, string>
   folders!: Table<FolderRow, string>
+  personas!: Table<PersonaRow, string>
 
   constructor() {
     super('app-conversations-db')
@@ -71,6 +73,17 @@ export class AppDB extends Dexie {
           conv.hasFirstPrompt = true;
         }
       });
+    });
+
+    // v5: the user's own personas. A new table has no rows to backfill.
+    this.version(5).stores({
+      conversations: 'id, lastModified, createdAt, title, folderId, [folderId+lastModified]',
+      messages: 'id, conversationId, [conversationId+idx], idx, createdAt',
+      content_items: 'id, messageId, [messageId+idx], idx, type',
+      files_meta: 'id, conversationId, type, size, name',
+      files_data: 'id',
+      folders: 'id, name, createdAt',
+      personas: 'id, title, createdAt'
     });
   }
 }
@@ -613,6 +626,43 @@ export function useFolderList() {
     },
     [],
     [] as FolderRow[],
+  );
+}
+
+// ---------- Personas ----------
+
+/** Create a persona, or replace it if `persona.id` already exists. Returns the id. */
+export async function savePersona(
+  persona: Omit<PersonaRow, 'id' | 'createdAt' | 'updatedAt'> & { id?: string; createdAt?: number },
+): Promise<string> {
+  const title = persona.title?.trim();
+  if (!title) {
+    throw new Error('Persona title is required');
+  }
+  const id = persona.id || newId();
+  const now = Date.now();
+  await db.personas.put({
+    ...persona,
+    id,
+    title,
+    createdAt: persona.createdAt ?? now,
+    updatedAt: now,
+  });
+  return id;
+}
+
+export async function deletePersona(personaId: string) {
+  await db.personas.delete(personaId);
+}
+
+export function usePersonaList() {
+  return useLiveQuery(
+    async () => {
+      const rows = await db.personas.toArray();
+      return rows.sort((a, b) => a.title.localeCompare(b.title));
+    },
+    [],
+    [] as PersonaRow[],
   );
 }
 
