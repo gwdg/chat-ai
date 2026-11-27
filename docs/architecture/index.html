@@ -3505,11 +3505,26 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           <code>list_collections</code> request is sent. Only <code>available</code> reads the list,
           so a deployment without the service still lets the user see that the feature exists.
           <code>useSaiaRagAccessWithReload</code> adds the way back: the Reload control beside that
-          line resets the hook to <code>checking</code> and re-runs the five-second probe, and it
-          announces the request on a window event so the sidebar and an open collection page
-          re-probe together instead of one of them staying "not connected". The collection page
+          line resets the shared status to <code>checking</code> and forces a new five-second probe.
+          Every mounted surface reads that one status (a module store, like the collection list), so
+          a page and its own sidebar do not each fire a probe, and a confirmed answer is reused for
+          a minute - the probe crosses the engine's hop into the SAIA registry, which sometimes
+          answers in seconds instead of milliseconds. A failure is never reused, and an answer that
+          arrives after a reload is ignored. The collection page
           (<code>/arcana/&lt;collection&gt;</code>) renders the same state as a card with Reload and
           Back to chat; it no longer leaves the chat column empty while the probe is unresolved.
+        </li>
+        <li>
+          <b>A slow "Loading Arcanas" is the hop, not the app.</b> Measured on the local stack: the
+          same page load took 18.4 s while the registry's <code>/info/connections</code> listed two
+          <code>saia-rag</code> instances and 1.3 s once only the live one was left, with every hop
+          at 10-30 ms. The stalls are exact multiples of the registry's <code>connect=5</code>
+          timeout (5.0, 10.0 and 15.0 s for one <code>/health</code>), and they kept arriving with a
+          single instance registered, so a request appears to pay that timeout on one or more
+          attempts before an instance answers. The service's own connector logs the other side of it,
+          the registry accepting a tunnel and closing it before any request, while the registry
+          reinstalls its upstream connection. The front end cannot see which instance served a
+          request, so it only avoids asking more often than it must.
         </li>
         <li>
           <b>It sits above MCP Servers, not inside it.</b> The order is Workspaces, Arcanas, Agents,

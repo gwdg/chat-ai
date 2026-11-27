@@ -652,8 +652,9 @@ Arcanas section (`Sidebar/ArcanaList.tsx`) is the third advanced section and is 
 `isArcanasEnabled()` through `showAdvancedSidebarSections`. Its own saia-rag health probe does **not**
 remove it: a deployment whose service is down (or is not reachable from this browser) still shows the
 section header, with a muted `arcanas.unavailable` line and a disabled New Arcana button, plus a
-Reload control that re-runs the probe (`useSaiaRagAccessWithReload`: it returns to `checking` while
-the new attempt runs, and announces the request so every mounted surface re-probes), and it only
+Reload control that re-runs the probe (`useSaiaRagAccessWithReload`: every mounted surface shares
+one probe and a confirmed answer is reused for a minute, so a page and its own sidebar do not each
+pay for it; reload returns the shared status to `checking` while the new attempt runs), and it only
 starts reading the list once the probe answers `available` (`useArcanas(enabled)`). Only the module
 gate hides it.
 
@@ -2844,10 +2845,26 @@ missing the hop, and that belongs in the engine or gateway, not in `front.json`.
 does **not** fail closed the way the drive row does: `Sidebar/ArcanaList.tsx` stays visible for the
 module in advanced mode, shows `arcanas.unavailable` instead of rows while the probe is not
 `available`, offers a Reload control next to that line (`useSaiaRagAccessWithReload`, whose reload
-returns the hook to `checking`, re-runs the probe and tells every mounted surface to re-probe too),
-and `useArcanas(enabled)` is what holds the first `list_collections` until it is (§4.15).
+returns the shared status to `checking`, forces a new probe and reaches every mounted surface), and
+`useArcanas(enabled)` is what holds the first `list_collections` until it is (§4.15).
 `/arcana/<collection>` shows the same
 state as a card with Reload and Back to chat, rather than an empty chat column.
+
+**A slow probe is the hop, not the app.** The probe crosses the engine's `/v1/mcp/<service>` hop
+into the SAIA registry, and that hop occasionally answers in seconds instead of milliseconds: the
+same page load took 18.4 s while the registry's `/info/connections` listed two `saia-rag` instances
+and 1.3 s once only the live one was left, with every hop then at 10–30 ms. The stalls are exact
+multiples of the registry's `connect=5` timeout (measured 5.0, 10.0 and 15.0 s for one `/health`),
+and they kept arriving with a single instance registered, so a request appears to pay that timeout
+on one or more attempts before an instance answers. The service's own connector logs the other side
+of it — the registry accepting a tunnel and closing it before any request (`connector.py`) — while
+the registry reinstalls its upstream connection. Nothing in the browser can see which instance
+served a request, which is why the app only avoids asking more often than it must:
+`hooks/useSaiaRagAccess.ts` keeps the answer in module state for that reason:
+one request per in-flight probe, a confirmed `available` reused for `SAIA_RAG_ACCESS_TTL_MS` (60 s),
+a failure never cached (the next mount or Reload asks again), and the probe is not tied to a mount's
+lifetime — leaving a page must not throw away an answer the next page needs. A reload forces a new
+probe, and an older answer that arrives afterwards is ignored.
 
 **The path shape is collections, then flat files.** `/` lists collections, `/<display>` lists that
 collection's files; a collection has no folders. A caller's own collection uses its name, a shared one

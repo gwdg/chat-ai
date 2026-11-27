@@ -1,7 +1,10 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useSaiaRagAccessWithReload } from "../useSaiaRagAccess";
+import {
+  resetSaiaRagAccessForTests,
+  useSaiaRagAccessWithReload,
+} from "../useSaiaRagAccess";
 
 const probe = vi.hoisted(() => ({ check: vi.fn() }));
 
@@ -23,6 +26,7 @@ function AccessProbe({ label = "probe" }) {
 
 beforeEach(() => {
   probe.check.mockReset();
+  resetSaiaRagAccessForTests();
 });
 
 describe("useSaiaRagAccessWithReload", () => {
@@ -97,15 +101,69 @@ describe("useSaiaRagAccessWithReload", () => {
     expect(await screen.findByText("page:available")).toBeInTheDocument();
   });
 
-  it("aborts the probe when it unmounts", () => {
+  it("asks once for two surfaces that mount together", async () => {
     probe.check.mockReturnValue(new Promise(() => {}));
 
-    const { unmount } = render(<AccessProbe />);
-    const { signal } = probe.check.mock.calls[0][0];
+    render(
+      <>
+        <AccessProbe label="sidebar" />
+        <AccessProbe label="page" />
+      </>,
+    );
 
-    expect(signal.aborted).toBe(false);
-    unmount();
+    // Every page mounts its own sidebar; two probes would mean two hops into
+    // the registry for one answer.
+    expect(probe.check).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("sidebar:checking")).toBeInTheDocument();
+    expect(screen.getByText("page:checking")).toBeInTheDocument();
+  });
 
-    expect(signal.aborted).toBe(true);
+  it("keeps a confirmed answer for the next surface and across an unmount", async () => {
+    probe.check.mockResolvedValue(true);
+
+    const first = render(<AccessProbe label="first" />);
+    expect(await screen.findByText("first:available")).toBeInTheDocument();
+    first.unmount();
+
+    // Leaving a page and opening the next one must not pay for the probe again
+    // while the answer is still fresh.
+    render(<AccessProbe label="second" />);
+    expect(screen.getByText("second:available")).toBeInTheDocument();
+    expect(probe.check).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-asks at once when the service was reported absent", async () => {
+    probe.check.mockResolvedValue(false);
+
+    const first = render(<AccessProbe label="first" />);
+    expect(await screen.findByText("first:unavailable")).toBeInTheDocument();
+    first.unmount();
+
+    // A failure is never kept: the service may have started meanwhile, and the
+    // next surface has to find it.
+    render(<AccessProbe label="second" />);
+    expect(await screen.findByText("second:unavailable")).toBeInTheDocument();
+    expect(probe.check).toHaveBeenCalledTimes(2);
+  });
+
+  it("ignores an older answer that arrives after a reload", async () => {
+    let firstAnswer;
+    probe.check.mockReturnValueOnce(
+      new Promise((resolve) => {
+        firstAnswer = resolve;
+      }),
+    );
+    render(<AccessProbe />);
+
+    probe.check.mockResolvedValueOnce(true);
+    fireEvent.click(screen.getByRole("button", { name: "reload-probe" }));
+    expect(await screen.findByText("probe:available")).toBeInTheDocument();
+
+    // The abandoned probe must not overwrite the answer the reload produced.
+    await act(async () => {
+      firstAnswer(false);
+    });
+
+    expect(screen.getByText("probe:available")).toBeInTheDocument();
   });
 });
