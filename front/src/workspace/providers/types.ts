@@ -35,7 +35,12 @@ export interface FileProvider {
   write(
     path: string,
     data: ReadableStream<Uint8Array>,
-    opts: { size?: number; overwrite: boolean },
+    opts: {
+      size?: number;
+      overwrite: boolean;
+      /** Bytes written so far, and the total when the caller knows it. */
+      onProgress?: (sent: number, total: number) => void;
+    },
   ): Promise<ProviderEntry>;
   mkdir(path: string): Promise<void>;
   remove(path: string, opts: { recursive: boolean }): Promise<void>;

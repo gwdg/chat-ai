@@ -9,15 +9,18 @@ const mocks = vi.hoisted(() => ({
   supportsTool: vi.fn(() => true),
   search: vi.fn(),
   indexCollection: vi.fn(),
+  uploadFile: vi.fn(),
+  uploadTextFile: vi.fn(),
   listMembers: vi.fn(),
   addMember: vi.fn(),
   removeMember: vi.fn(),
   notifySuccess: vi.fn(),
   notifyError: vi.fn(),
+  t: vi.fn((key) => key),
 }));
 
 vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key) => key }),
+  useTranslation: () => ({ t: mocks.t }),
   Trans: ({ i18nKey }) => i18nKey,
 }));
 
@@ -28,22 +31,30 @@ vi.mock("../../../hooks/useToast", () => ({
   }),
 }));
 
-vi.mock("../../../workspace/arcanas", () => ({
-  arcanasProvider: () => ({
-    listFiles: mocks.listFiles,
-    listTags: mocks.listTags,
-    supportsTool: mocks.supportsTool,
-    search: mocks.search,
-    indexCollection: mocks.indexCollection,
-    listMembers: mocks.listMembers,
-    addMember: mocks.addMember,
-    removeMember: mocks.removeMember,
-  }),
-  arcanaDisplayName: (collection) => collection.name,
-  classifyArcanaFiles: () => "current",
-  isArcanaIndexed: (status) => status !== "stored" && !/fail|error/i.test(status),
-  updateArcanaStatus: vi.fn(),
-}));
+vi.mock("../../../workspace/arcanas", () => {
+  // One provider object for the lifetime of the module, like the real
+  // singleton: a fresh object per render would change the modal's `reload`
+  // callback on every render and spin the reload effect forever.
+  const provider = {
+    listFiles: (...args) => mocks.listFiles(...args),
+    listTags: (...args) => mocks.listTags(...args),
+    supportsTool: (...args) => mocks.supportsTool(...args),
+    search: (...args) => mocks.search(...args),
+    indexCollection: (...args) => mocks.indexCollection(...args),
+    uploadFile: (...args) => mocks.uploadFile(...args),
+    uploadTextFile: (...args) => mocks.uploadTextFile(...args),
+    listMembers: (...args) => mocks.listMembers(...args),
+    addMember: (...args) => mocks.addMember(...args),
+    removeMember: (...args) => mocks.removeMember(...args),
+  };
+  return {
+    arcanasProvider: () => provider,
+    arcanaDisplayName: (collection) => collection.name,
+    classifyArcanaFiles: () => "current",
+    isArcanaIndexed: (status) => status !== "stored" && !/fail|error/i.test(status),
+    updateArcanaStatus: vi.fn(),
+  };
+});
 
 const collection = {
   name: "recipes",
@@ -66,6 +77,8 @@ describe("ArcanaManagerModal", () => {
     mocks.listTags.mockReset();
     mocks.search.mockReset();
     mocks.indexCollection.mockReset();
+    mocks.uploadFile.mockReset();
+    mocks.uploadTextFile.mockReset();
     mocks.listMembers.mockReset();
     mocks.addMember.mockReset();
     mocks.removeMember.mockReset();
@@ -81,6 +94,8 @@ describe("ArcanaManagerModal", () => {
       raw: "",
     });
     mocks.indexCollection.mockResolvedValue("job-1");
+    mocks.uploadFile.mockResolvedValue(undefined);
+    mocks.uploadTextFile.mockResolvedValue(undefined);
     mocks.listMembers.mockResolvedValue([
       { user: "alice", role: "owner", kind: "user" },
       { user: "bob", role: "editor", kind: "user" },
@@ -258,5 +273,57 @@ describe("ArcanaManagerModal", () => {
       screen.queryByPlaceholderText("arcanas.share_placeholder"),
     ).not.toBeInTheDocument();
     expect(screen.queryByTitle("arcanas.share_remove")).not.toBeInTheDocument();
+  });
+
+  it("shows how far the file being uploaded has got", async () => {
+    // A large document is several tool calls; without the part counter the
+    // button sits at "0/1" for the whole upload and looks stuck.
+    let finish;
+    mocks.uploadFile.mockImplementation((_display, _file, onProgress) => {
+      onProgress(512, 1024);
+      return new Promise((resolve) => {
+        finish = resolve;
+      });
+    });
+    render(
+      <ArcanaManagerModal isOpen onClose={() => {}} collection={collection} />,
+    );
+    await screen.findByText("a.md");
+
+    const input = document.querySelector('input[type="file"]');
+    fireEvent.change(input, {
+      target: {
+        files: [new File(["payload"], "big.pdf", { type: "application/pdf" })],
+      },
+    });
+
+    await waitFor(() =>
+      expect(mocks.t).toHaveBeenCalledWith("arcanas.uploading_progress", {
+        sent: 0,
+        total: 1,
+        percent: 50,
+      }),
+    );
+    finish();
+    await waitFor(() => expect(mocks.notifySuccess).toHaveBeenCalled());
+  });
+
+  it("reports a failed upload instead of claiming it was stored", async () => {
+    mocks.uploadFile.mockRejectedValue(new Error("MCP error -32001: Request timed out"));
+    render(
+      <ArcanaManagerModal isOpen onClose={() => {}} collection={collection} />,
+    );
+    await screen.findByText("a.md");
+
+    fireEvent.change(document.querySelector('input[type="file"]'), {
+      target: {
+        files: [new File(["payload"], "big.pdf", { type: "application/pdf" })],
+      },
+    });
+
+    await waitFor(() => expect(mocks.notifyError).toHaveBeenCalled());
+    expect(mocks.notifyError.mock.calls[0][0]).toContain("big.pdf");
+    await waitFor(() => expect(mocks.listFiles).toHaveBeenCalledTimes(2));
+    expect(mocks.notifySuccess).not.toHaveBeenCalled();
   });
 });

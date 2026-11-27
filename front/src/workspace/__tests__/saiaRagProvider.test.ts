@@ -21,6 +21,7 @@ const rag = vi.hoisted(() => ({
   connectError: null as Error | null,
   connectCalls: 0,
   staleSessionFailures: 0,
+  callError: null as Error | null,
 }));
 
 const json = (value: unknown) => ({
@@ -45,6 +46,7 @@ vi.mock("@modelcontextprotocol/sdk/client/index.js", () => ({
       return { tools: rag.tools.map((name) => ({ name })) };
     }
     async callTool(request: { name: string; arguments: Record<string, any> }) {
+      if (rag.callError) throw rag.callError;
       if (rag.staleSessionFailures > 0) {
         rag.staleSessionFailures -= 1;
         // What the streamable HTTP transport throws when the service forgot the
@@ -320,6 +322,7 @@ describe("SaiaRagProvider", () => {
     rag.connectError = null;
     rag.connectCalls = 0;
     rag.staleSessionFailures = 0;
+    rag.callError = null;
   });
 
   const provider = () => new SaiaRagProvider("rag-1", "http://localhost:9000/mcp");
@@ -425,6 +428,44 @@ describe("SaiaRagProvider", () => {
     ]);
     expect(entry.size).toBe(size);
     expect(rag.files.get("alice__recipes")!.get("big.pdf")).toEqual(data);
+  });
+
+  it("reports the stored bytes after each accepted chunk", async () => {
+    const ragProvider = provider();
+    const size = 2 * 1024 * 1024 + 512 * 1024;
+    const data = new Uint8Array(size);
+    const progress: [number, number][] = [];
+
+    await ragProvider.write("/recipes/big.pdf", streamOf(data), {
+      overwrite: true,
+      size,
+      onProgress: (sent, total) => progress.push([sent, total]),
+    });
+
+    // Only accepted chunks count, so a stalled upload cannot look complete.
+    expect(progress).toEqual([
+      [1024 * 1024, size],
+      [2 * 1024 * 1024, size],
+      [size, size],
+    ]);
+  });
+
+  it("names the tool and the timeout when the service never answers", async () => {
+    const ragProvider = provider();
+    // The handshake has to succeed first: a failing session check is reported
+    // as a missing identity header, which is a different problem.
+    await ragProvider.list("/");
+    // What the MCP SDK rejects with once its 60 s request timeout expires.
+    rag.callError = new Error("MCP error -32001: Request timed out");
+
+    const failure = await ragProvider.listFiles("recipes").catch((error) => error);
+
+    expect(failure).toBeInstanceOf(Error);
+    expect(failure.code).toBe("PROVIDER_ERROR");
+    expect(failure.message).toContain("list_files");
+    expect(failure.message).toContain("60 s");
+    // The raw SDK text alone does not say which tool stalled.
+    expect(failure.message).not.toBe("MCP error -32001: Request timed out");
   });
 
   it("closes an exact multiple of the chunk size with an empty final chunk", async () => {

@@ -2717,6 +2717,16 @@ preview resolves `![](bild.png)` in the browser: `workspace/filePreview.ts` buil
 `resolveImage` callback from the same provider, and `MarkdownRenderer` consumes it through a context
 only when a preview passes one, so chat messages are unaffected.
 
+**A stalled call must look stalled.** Every provider call goes through one `invoke` with an explicit
+`MCP_CALL_TIMEOUT_MS` (60 s, the SDK's own default), and a `-32001` timeout is translated into a
+`PROVIDER_ERROR` naming the tool and the timeout instead of the bare "Request timed out". Uploads
+report progress through `write`'s optional `onProgress(sent, total)` after each chunk the service
+accepted (`uploadFile` passes it on), which is what the manager's "Uploading {{sent}}/{{total}} ·
+{{percent}} %" line shows; a failed file is not counted in the "stored" toast. Both matter because
+the service answers nothing at all while `index_collection` holds the collection's write lock
+(`registry.write_lock` → `exclusive_lock`), so an upload started during indexing waits out the whole
+run.
+
 **Collection management is inline.** Create, delete and the member panel are rendered inside
 `WorkspaceSourceBrowser` (not a modal), because that browser is hosted by `CreateWorkspaceModal` and
 a second dialog would replace the draft. The feature guide is `workspace_saia_rag` (gated only by

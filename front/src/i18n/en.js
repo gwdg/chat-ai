@@ -2421,6 +2421,7 @@ export default {
       "Indexing finished, but {{count}} file(s) could not be indexed. The file's status shows the reason.",
     upload: "Upload",
     uploading: "Uploading {{sent}}/{{total}}",
+    uploading_progress: "Uploading {{sent}}/{{total}} · {{percent}} %",
     upload_done: "Stored {{count}} file(s).",
     read_only_hint:
       "You have read-only access to this Arcana, so files cannot be changed.",

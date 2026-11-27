@@ -85,15 +85,18 @@ export async function isSaiaRagAvailable({
  * the same user; the service itself is never called directly. Each caller owns
  * the returned client and closes it (`client.close()`), except the workspace
  * provider, which keeps one for the life of the source.
+ *
+ * `url` is the provider's own endpoint when it was constructed for one; the
+ * workspace sources use the deployment default.
  */
-export async function openSaiaRagClient() {
+export async function openSaiaRagClient(url = saiaRagMcpUrl()) {
   const [{ Client }, transportModule] = await Promise.all([
     import("@modelcontextprotocol/sdk/client/index.js"),
     import("@modelcontextprotocol/sdk/client/streamableHttp.js"),
   ]);
   const client = new Client({ name: "chat-ai-workspace", version: "1.0.0" });
   const transport = new transportModule.StreamableHTTPClientTransport(
-    new URL(saiaRagMcpUrl()),
+    new URL(url),
     { requestInit: { headers: authHeaders() } },
   );
   await client.connect(transport);

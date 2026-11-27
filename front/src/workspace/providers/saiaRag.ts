@@ -75,6 +75,15 @@ const SEARCH_PREVIEW_TOOL = "search_preview";
  */
 const CHUNK_BYTES = 1024 * 1024;
 
+/**
+ * How long one tool call may stay unanswered.
+ *
+ * That is the MCP SDK's own default, named here so the error the user sees can
+ * quote it. Without this, a request the deployment never answers leaves the
+ * Arcanas dialog at "Uploading 0/1" until the SDK gives up silently.
+ */
+const MCP_CALL_TIMEOUT_MS = 60_000;
+
 const REQUIRED_TOOLS = [
   LIST_COLLECTIONS_TOOL,
   LIST_FILES_TOOL,
@@ -172,6 +181,17 @@ const isAuthFailure = (message: string): boolean =>
 
 const isNotFound = (message: string): boolean =>
   /not in this collection|not found|does not exist|no such/i.test(message);
+
+/**
+ * The MCP SDK's request timeout (`-32001`), which is what a request the
+ * deployment never answers turns into. It is translated because the raw
+ * "MCP error -32001: Request timed out" does not say which tool stalled or
+ * that the service may simply be busy.
+ */
+const isCallTimeout = (error: unknown): boolean => {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return /-32001|request timed out|timed out/i.test(message);
+};
 
 const explainConnect = (error: unknown, endpoint: string): string => {
   const message = error instanceof Error ? error.message : String(error);
@@ -306,7 +326,7 @@ export class SaiaRagProvider implements FileProvider {
   private async open(): Promise<void> {
     let client: any = null;
     try {
-      client = await openSaiaRagClient();
+      client = await openSaiaRagClient(this.endpoint);
       const tools: string[] = [];
       let cursor: string | undefined;
       do {
@@ -411,7 +431,24 @@ export class SaiaRagProvider implements FileProvider {
     tool: string,
     args: Record<string, unknown>,
   ): Promise<string> {
-    const result = await this.client.callTool({ name: tool, arguments: args });
+    let result: any;
+    try {
+      result = await this.client.callTool(
+        { name: tool, arguments: args },
+        undefined,
+        { timeout: MCP_CALL_TIMEOUT_MS },
+      );
+    } catch (error) {
+      if (isCallTimeout(error)) {
+        throw new WorkspaceError(
+          "PROVIDER_ERROR",
+          `saia-rag did not answer ${tool} within ${
+            MCP_CALL_TIMEOUT_MS / 1000
+          } s. The service may be busy (indexing holds the collection) or unreachable; try again once it is idle.`,
+        );
+      }
+      throw error;
+    }
     const { text, isError } = readToolResult(result);
     if (isError) {
       if (isAuthFailure(text)) throw new WorkspaceError("AUTH_EXPIRED", text);
@@ -631,7 +668,11 @@ export class SaiaRagProvider implements FileProvider {
    * Store one file through `upload_file_chunk`, then let the caller index the
    * collection. Binary files are stored exactly as they arrived.
    */
-  async uploadFile(display: string, file: File): Promise<void> {
+  async uploadFile(
+    display: string,
+    file: File,
+    onProgress?: (sent: number, total: number) => void,
+  ): Promise<void> {
     const collection = await this.resolveCollection(display);
     if (!collection.can_write) {
       throw new WorkspaceError(
@@ -642,7 +683,7 @@ export class SaiaRagProvider implements FileProvider {
     await this.write(
       `/${display}/${file.name}`,
       file.stream() as ReadableStream<Uint8Array>,
-      { size: file.size, overwrite: true },
+      { size: file.size, overwrite: true, onProgress },
     );
   }
 
@@ -882,7 +923,13 @@ export class SaiaRagProvider implements FileProvider {
     }
     let size: number;
     if (this.has(WRITE_CHUNK_TOOL)) {
-      size = await this.uploadChunked(collection, name, streamParts(data));
+      size = await this.uploadChunked(
+        collection,
+        name,
+        streamParts(data),
+        opts.size,
+        opts.onProgress,
+      );
     } else {
       const bytes = await readAll(data);
       await this.call(WRITE_BASE64_TOOL, {
@@ -957,6 +1004,8 @@ export class SaiaRagProvider implements FileProvider {
     collection: RagCollection,
     name: string,
     parts: AsyncIterable<Uint8Array>,
+    total?: number,
+    onProgress?: (sent: number, total: number) => void,
   ): Promise<number> {
     const queue: Uint8Array[] = [];
     let queued = 0;
@@ -1000,6 +1049,9 @@ export class SaiaRagProvider implements FileProvider {
         last,
       });
       offset += chunk.length;
+      // Only after the service accepted the chunk: a progress bar that runs
+      // ahead of the stored bytes hides exactly the stall it exists to show.
+      onProgress?.(offset, total ?? 0);
     };
 
     for (;;) {

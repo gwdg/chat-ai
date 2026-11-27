@@ -90,6 +90,11 @@ export default function ArcanaManagerModal({
   const [uploadCount, setUploadCount] = useState<{ sent: number; total: number } | null>(
     null,
   );
+  // Bytes of the file that is being sent right now. `uploadCount` only moves
+  // between files, so a large document would sit at "0/1" while its chunks go.
+  const [uploadPart, setUploadPart] = useState<{ sent: number; total: number } | null>(
+    null,
+  );
 
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<RagSearchMode>("previews");
@@ -257,15 +262,22 @@ export default function ArcanaManagerModal({
     setError("");
     setBusy("upload");
     let sent = 0;
+    let stored = 0;
     setUploadCount({ sent, total: picked.length });
     for (const file of picked) {
+      if (aliveRef.current) setUploadPart(null);
       try {
         if (!canIndex && isTextFileName(file.name)) {
           // An older service only indexes through the text upload path.
           await provider.uploadTextFile(display, file.name, await file.text());
         } else {
-          await provider.uploadFile(display, file);
+          await provider.uploadFile(display, file, (partSent, partTotal) => {
+            if (aliveRef.current) {
+              setUploadPart({ sent: partSent, total: partTotal });
+            }
+          });
         }
+        stored += 1;
       } catch (reason) {
         notifyError(
           `${file.name}: ${reason instanceof Error ? reason.message : String(reason)}`,
@@ -276,10 +288,13 @@ export default function ArcanaManagerModal({
     }
     setBusy("");
     setUploadCount(null);
+    setUploadPart(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
     await reload();
-    if (canIndex) {
-      notifySuccess(t("arcanas.upload_done", { count: sent }));
+    // A failed file must not be counted as stored: its reason was already
+    // reported, and a "stored" line next to it reads as success.
+    if (canIndex && stored > 0) {
+      notifySuccess(t("arcanas.upload_done", { count: stored }));
     }
   };
 
@@ -609,10 +624,19 @@ export default function ArcanaManagerModal({
               >
                 <Upload size={14} />
                 {busy === "upload" && uploadCount
-                  ? t("arcanas.uploading", {
-                      sent: uploadCount.sent,
-                      total: uploadCount.total,
-                    })
+                  ? uploadPart && uploadPart.total > 0
+                    ? t("arcanas.uploading_progress", {
+                        sent: uploadCount.sent,
+                        total: uploadCount.total,
+                        percent: Math.min(
+                          100,
+                          Math.round((uploadPart.sent / uploadPart.total) * 100),
+                        ),
+                      })
+                    : t("arcanas.uploading", {
+                        sent: uploadCount.sent,
+                        total: uploadCount.total,
+                      })
                   : t("arcanas.upload")}
               </button>
               <input
