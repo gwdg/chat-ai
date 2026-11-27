@@ -541,7 +541,7 @@ export const featureGuides = {
   arcana: {
     titleKey: "feature_guide.arcana.title",
     prompt:
-      "Use Arcana for retrieval-augmented generation (RAG). Open Tools, enable tools, select Arcana, then enter the Arcana ID and key.",
+      "Use Arcana for retrieval-augmented generation (RAG). Open GWDG Tools, enable tools, select Arcana and enter the Arcana ID. The page also lists every collection this chat is already wired to, including one a share link bound.",
     keywords: ["arcana", "rag", "retrieval", "knowledge base", "knowledge"],
     steps: [
       {

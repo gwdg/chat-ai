@@ -3586,18 +3586,24 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
         <li>
           <b>Sharing and the chat link live in the same tab.</b> The Share tab lists the people and
           groups that hold a role (<code>list_members</code>, owner-only <code>add_member</code> /
-          <code>remove_member</code>) and, above that list, the chat link
-          <code>/chat?arcana_share=&lt;owner&gt;__&lt;name&gt;</code>. Opening the link creates a
-          normal chat whose settings carry <code>arcana_share</code>; the chat page strips the query
-          parameter, enables tools (unless a brand fixes that switch), names an untouched
-          <code>Untitled Chat</code> after the collection and persists the binding through
-          <code>updateConversation</code> with the <code>lastModified</code> it read. From then on
-          <code>agent/arcanaChatTools.ts</code> offers exactly three read-only tools for that one
-          collection - <code>search_arcana</code> (<code>search_chunks</code>),
+          <code>remove_member</code>) and, above that list, an access link
+          <code>/chat?arcana=&lt;owner&gt;/&lt;name&gt;&amp;enable_tools=true</code>. That is the shape
+          the Arcana manager has always handed out and the user docs show, so it carries the readable
+          Arcana ID rather than the service's storage name; the app derives
+          <code>&lt;owner&gt;__&lt;name&gt;</code> from it. Opening the link creates a normal chat whose
+          settings carry <code>arcana_share</code> and the Arcana tool's own
+          <code>arcana.id</code>; the older <code>?arcana_share=</code> spelling is still accepted as an
+          alias. The chat page strips the query parameter, enables tools (unless a brand fixes that
+          switch), names an untouched <code>Untitled Chat</code> after the collection and persists the
+          binding through <code>updateConversation</code> with the <code>lastModified</code> it read.
+          From then on <code>agent/arcanaChatTools.ts</code> offers exactly three read-only tools for
+          that one collection - <code>search_arcana</code> (<code>search_chunks</code>),
           <code>list_arcana_documents</code> (<code>list_files</code>) and
           <code>read_arcana_document</code> (<code>read_file_base64</code>, text files only). The
           reference is fixed in the setting, so a prompt cannot aim them at another collection, and
-          nothing in the tool set writes.
+          nothing in the tool set writes. GWDG Tools &rarr; Arcana lists every collection the chat is
+          wired to (deduplicated by storage name), says whether each comes from the Arcana tool or from
+          a share link, and removes the binding; the list stays visible while the tool switch is off.
         </li>
         <li>
           <b>The link grants nothing.</b> The service resolves
@@ -3648,8 +3654,15 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           </tr>
           <tr>
             <td>Share link</td>
-            <td><code>?arcana_share=</code> parsing, the absolute link and the stored binding.</td>
+            <td><code>?arcana=&lt;owner&gt;/&lt;name&gt;</code> parsing (and the
+                <code>?arcana_share=</code> alias), the absolute link and the stored binding.</td>
             <td><span class="mono">front/src/utils/arcanaShareLink.ts</span></td>
+          </tr>
+          <tr>
+            <td>Arcana tool page</td>
+            <td>The Arcana ID field, plus the list of collections this chat is wired to with their
+                binding and a remove control.</td>
+            <td><span class="mono">front/src/components/SettingsPanel/ArcanaContainer.jsx</span></td>
           </tr>
           <tr>
             <td>Chat tools</td>
@@ -3694,9 +3707,10 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
             <code>delete: false</code>; per-file removal goes through the manager.</li>
         <li><b>The service is the guard.</b> <code>can_write</code> disables controls; the service
             still rejects a write that gets through.</li>
-        <li><b>A share link is convenience, never a grant.</b> It only writes
-            <code>settings.arcana_share</code>; access is still the member list, and the collection
-            reference is fixed in the setting so the tools cannot be aimed elsewhere.</li>
+        <li><b>A share link is convenience, never a grant.</b> It only writes the two bindings
+            (<code>settings.arcana.id</code> and <code>settings.arcana_share</code>); access is still
+            the member list, and the collection reference is fixed in the setting so the tools cannot
+            be aimed elsewhere.</li>
         <li><b>The chat tools are read-only.</b> They wrap <code>search_chunks</code>,
             <code>list_files</code> and <code>read_file_base64</code> only; upload, tag, index and
             member changes stay in the manager dialog.</li>
@@ -3734,7 +3748,8 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
         <li><span class="mono">front/src/modals/Arcana/ArcanaManagerModal.tsx</span> - files, tags,
             index, search, remove, members and the chat link</li>
         <li><span class="mono">front/src/utils/arcanaShareLink.ts</span> - the
-            <code>?arcana_share=</code> reference, its link and its stored binding</li>
+            <code>?arcana=&lt;owner&gt;/&lt;name&gt;</code> reference (and its
+            <code>?arcana_share=</code> alias), its link and its stored binding</li>
         <li><span class="mono">front/src/agent/arcanaChatTools.ts</span> - the three read-only chat
             tools and their MCP client, wired in <span class="mono">agent/runAgent.ts</span></li>
         <li><span class="mono">front/src/workspace/providers/saiaRag.ts</span> - the tool calls and

@@ -147,8 +147,8 @@ describe("useSyncConversation Arcana share links", () => {
     routerMocks.params = [];
   });
 
-  it("wires the chat to the shared collection and persists the binding", async () => {
-    routerMocks.params = [["arcana_share", "alice__papers"]];
+  it("wires the chat to the access link's collection and persists both bindings", async () => {
+    routerMocks.params = [["arcana", "alice/papers"]];
     const conversation = {
       ...makeConversation([{ role: "user", content: [{ type: "text", text: "" }] }]),
       title: "Untitled Chat",
@@ -165,6 +165,8 @@ describe("useSyncConversation Arcana share links", () => {
       owner: "alice",
       name: "papers",
     });
+    // The Arcana tool keeps the readable Arcana ID the link carried.
+    expect(state.settings.arcana).toEqual({ id: "alice/papers" });
     // The agent tools are only offered while tools are enabled.
     expect(state.settings.enable_tools).toBe(true);
     // A chat the share link created is named after the collection.
@@ -173,12 +175,25 @@ describe("useSyncConversation Arcana share links", () => {
     await waitFor(() => expect(dbMocks.updateConversation).toHaveBeenCalled());
     const payload = dbMocks.updateConversation.mock.calls.at(-1)[1];
     expect(payload.settings.arcana_share.collection).toBe("alice__papers");
+    expect(payload.settings.arcana.id).toBe("alice/papers");
     // The optimistic-concurrency token is threaded through.
     expect(payload.lastModified).toBe(123);
   });
 
-  it("leaves a chat that already has a title alone", async () => {
+  it("still accepts the older arcana_share param", async () => {
     routerMocks.params = [["arcana_share", "alice__papers"]];
+    const setLocalState = renderSync(makeConversation([]));
+
+    await waitFor(() => expect(setLocalState).toHaveBeenCalled());
+
+    const state = lastState(setLocalState);
+    expect(state.settings.arcana_share.collection).toBe("alice__papers");
+    expect(state.settings.arcana.id).toBe("alice/papers");
+    expect(state.settings.enable_tools).toBe(true);
+  });
+
+  it("leaves a chat that already has a title alone", async () => {
+    routerMocks.params = [["arcana", "alice/papers"]];
     const setLocalState = renderSync(makeConversation([]));
 
     await waitFor(() => expect(setLocalState).toHaveBeenCalled());
@@ -186,6 +201,19 @@ describe("useSyncConversation Arcana share links", () => {
     const state = lastState(setLocalState);
     expect(state.title).toBe("Chat");
     expect(state.settings.arcana_share.collection).toBe("alice__papers");
+  });
+
+  it("keeps a plain Arcana ID as the tool's field only", async () => {
+    routerMocks.params = [["arcana", "papers"]];
+    const setLocalState = renderSync(makeConversation([]));
+
+    await waitFor(() => expect(setLocalState).toHaveBeenCalled());
+
+    // An id without an owner is not a share ref, so no read-only binding and
+    // no forced tool switch; it only feeds the Arcana tool's own field.
+    const state = lastState(setLocalState);
+    expect(state.settings.arcana).toEqual({ id: "papers" });
+    expect(state.settings.arcana_share).toBeUndefined();
   });
 
   it("ignores a share value that is not a collection reference", async () => {

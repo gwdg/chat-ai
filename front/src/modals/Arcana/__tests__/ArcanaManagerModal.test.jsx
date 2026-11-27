@@ -249,7 +249,7 @@ describe("ArcanaManagerModal", () => {
     fireEvent.click(screen.getByText("arcanas.tab_share"));
     await screen.findByText("bob");
 
-    const expected = `${window.location.origin}/chat?arcana_share=alice__recipes`;
+    const expected = `${window.location.origin}/chat?arcana=alice/recipes&enable_tools=true`;
     const field = screen.getByLabelText("arcanas.share_link_title");
     expect(field).toHaveValue(expected);
     // The link opens a new chat rather than navigating this tab.

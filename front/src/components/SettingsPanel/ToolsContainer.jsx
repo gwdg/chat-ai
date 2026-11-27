@@ -430,28 +430,38 @@ export default function ToolsContainer({ localState, setLocalState }) {
               dataGuide: `tool-${detailTool.key}`,
             })}
           </div>
-          {detailState.active && !detailState.disabled ? (
-            detailTool.key === "arcana" ? (
+          {detailTool.key === "arcana" ? (
+            <div className="space-y-3">
+              {/* The collections this chat is wired to stay listed even while
+                  the tool is off, so a share link's binding is visible. */}
               <ArcanaContainer
                 localState={localState}
                 setLocalState={setLocalState}
+                configurable={
+                  detailState.active && !detailState.disabled
+                }
               />
-            ) : (
-              <div className="space-y-3">
-                {mcpToolPolicy === "never" && (
-                  <p
-                    className="rounded-lg border border-base-300 bg-base-200 px-3 py-2 text-xs leading-relaxed text-base-content/80"
-                    data-guide="mcp-tool-policy-notice"
-                  >
-                    {t("mcp.policy_never_notice")}
-                  </p>
-                )}
-                <McpServerPicker
-                  localState={localState}
-                  setLocalState={setLocalState}
-                />
-              </div>
-            )
+              {!(detailState.active && !detailState.disabled) && (
+                <p className="text-sm text-base-content/70">
+                  {t("settings.tools_enable_to_configure")}
+                </p>
+              )}
+            </div>
+          ) : detailState.active && !detailState.disabled ? (
+            <div className="space-y-3">
+              {mcpToolPolicy === "never" && (
+                <p
+                  className="rounded-lg border border-base-300 bg-base-200 px-3 py-2 text-xs leading-relaxed text-base-content/80"
+                  data-guide="mcp-tool-policy-notice"
+                >
+                  {t("mcp.policy_never_notice")}
+                </p>
+              )}
+              <McpServerPicker
+                localState={localState}
+                setLocalState={setLocalState}
+              />
+            </div>
           ) : (
             <p className="text-sm text-base-content/70">
               {t("settings.tools_enable_to_configure")}

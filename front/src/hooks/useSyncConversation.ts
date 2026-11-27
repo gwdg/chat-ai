@@ -17,7 +17,9 @@ import { CONVERSATION_MOVED_EVENT } from "../utils/conversationEvents";
 import { useImportConversation } from "./useImportConversation";
 import { decodeBase64UrlUtf8 } from "../utils/base64url";
 import {
+  ARCANA_LINK_PARAM,
   ARCANA_SHARE_PARAM,
+  arcanaRefId,
   parseArcanaShareRef,
 } from "../utils/arcanaShareLink";
 import { isBrandLocked } from "../config/brandPolicy";
@@ -412,15 +414,26 @@ export function useSyncConversation({
       }
       if (searchParams?.size > 0) {
         // Set settings from query params in URL
-        const arcanaParam = searchParams.get("arcana");
+        const arcanaParam = searchParams.get(ARCANA_LINK_PARAM);
         const modelParam = searchParams.get("model");
         const enableToolsParam = searchParams.get("enable_tools");
-        const arcanaShare = parseArcanaShareRef(
-          searchParams.get(ARCANA_SHARE_PARAM),
-        );
+        // Two spellings of an Arcana link name the same collection: the access
+        // link the manager hands out (`?arcana=<owner>/<name>`) and the older
+        // `?arcana_share=` one. A link satisfies both the Arcana tool and the
+        // chat's read-only tools, so the chat carries both bindings.
+        const arcanaShare =
+          parseArcanaShareRef(arcanaParam) ??
+          parseArcanaShareRef(searchParams.get(ARCANA_SHARE_PARAM));
 
         const extraSettings: any = {};
-        if (arcanaParam) { extraSettings.arcana = { id: arcanaParam }; };
+        if (arcanaShare) {
+          // The Arcana tool's field takes the readable Arcana ID, which names
+          // the same collection as the storage name the tools take.
+          extraSettings.arcana = { id: arcanaRefId(arcanaShare) };
+        } else if (arcanaParam) {
+          // Any other value is still the Arcana ID field, as it always was.
+          extraSettings.arcana = { id: arcanaParam };
+        }
         if (modelParam) { extraSettings.model = { id: modelParam }; };
         const enableTools = coerceBoolean(enableToolsParam);
         if (enableTools !== undefined) extraSettings.enable_tools = enableTools;

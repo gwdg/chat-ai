@@ -2768,21 +2768,38 @@ a second dialog would replace the draft. The feature guide is `workspace_saia_ra
 ### 4.36 A shared Arcana opens as a chat with three read-only tools
 
 The Arcana manager's **Share** tab (`modals/Arcana/ArcanaManagerModal.tsx`) carries the member list
-and, above it, a link `/chat?arcana_share=<owner>__<name>`. It is built by
-`utils/arcanaShareLink.ts#buildArcanaShareLink` from the collection's **storage name**, because that
-is what the saia-rag tools take; `parseArcanaShareRef` is the only reader (it splits at the first
-`__` and refuses empty parts, path separators, control characters and over-long text). The card is
-rendered only while `isAgentEnabled()`, since the tools run inside the browser agent; the member list
-is still the whole access control. **The link is not a grant** — it only writes
-`settings.arcana_share = {collection, name, owner}`; the service re-checks the caller's role on
-every tool call, so a recipient outside the member list is refused.
+and, above it, an access link `/chat?arcana=<owner>/<name>&enable_tools=true`. That is the shape the
+Arcana manager in `saia-rag-web` has always handed out and the one the user docs show, so it carries
+the readable **Arcana ID** (`alice/papers`) rather than the service's storage name. It is built by
+`utils/arcanaShareLink.ts#buildArcanaShareLink`, which derives the storage name
+`<owner>__<name>` because that is what the saia-rag tools take; `parseArcanaShareRef` is the only
+reader and accepts both spellings (`alice/papers` and `alice__papers`), splitting the storage form at
+the first `__` and refusing empty parts, a second separator in the owner of a slash form, path
+separators, control characters and over-long text. There is no `model` parameter, so a recipient keeps
+their own default model. The card is rendered only while `isAgentEnabled()`, since the tools run inside
+the browser agent; the member list is still the whole access control. **The link is not a grant** — it
+only writes `settings.arcana.id = <owner>/<name>` and `settings.arcana_share = {collection, name,
+owner}`; the service re-checks the caller's role on every tool call, so a recipient outside the member
+list is refused.
 
-`hooks/useSyncConversation.ts` applies `?arcana_share=` when it hydrates a chat that has no
-important state yet: it sets the binding, sets `enable_tools = true` unless
-`isBrandLocked("tools")`, names a chat still called `Untitled Chat` after the collection, strips the
-query parameter and persists through `updateConversation` with the `lastModified` it read (handling
-`-1` by leaving the ref alone). `hooks/useImportConversation.jsx` restores the same binding from an
-export. The setting is unindexed, needs no Dexie version bump, and travels in the full export.
+`hooks/useSyncConversation.ts` applies the link when it hydrates a chat that has no important state
+yet: it reads `?arcana=` (or the older `?arcana_share=`, which the branch itself emitted before the
+shape was unified and is kept as an alias because it is unreleased) with
+`parseArcanaShareRef(cur ?? share)`; a parsed ref sets both `settings.arcana.id` (the readable id) and
+the `arcana_share` binding, while a bare `?arcana=papers` only fills the tool's field as it always
+did. It then sets `enable_tools = true` unless `isBrandLocked("tools")`, names a chat still called
+`Untitled Chat` after the collection, strips the query parameter and persists through
+`updateConversation` with the `lastModified` it read (handling `-1` by leaving the ref alone).
+`hooks/useImportConversation.jsx` restores the same binding from an export. The setting is unindexed,
+needs no Dexie version bump, and travels in the full export.
+
+`components/SettingsPanel/ArcanaContainer.jsx` (GWDG Tools → Arcana) lists every collection the chat
+is wired to: the Arcana tool's `settings.arcana.id` and the `arcana_share` binding, deduplicated by
+storage name, each row badged "Arcana tool" / "Read-only tools" and removable (clearing `arcana.id`,
+deleting `arcana_share`, or both when one link set them together). `ToolsContainer` always renders it
+for the Arcana detail and adds the `settings.tools_enable_to_configure` hint below it while the tool
+cannot be configured, so a share binding stays visible with the tool switched off. It is the
+`<ul data-guide="tools-arcana-list">`.
 
 `agent/arcanaChatTools.ts#createArcanaChatTools` adds exactly three read-only tools for that fixed
 collection: `search_arcana` (`search_chunks`), `list_arcana_documents` (`list_files`) and

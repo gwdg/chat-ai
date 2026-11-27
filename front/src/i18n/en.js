@@ -699,7 +699,7 @@ export default {
       step3:
         "Owners add a person by username or e-mail address and choose Can edit or Read only. Only the owner can add or remove people.",
       step4:
-        "The chat link at the top of the Share tab opens a new chat that already searches and reads this Arcana. Share the link after you added the people who may use it.",
+        "The chat link at the top of the Share tab opens a new chat that already searches and reads this Arcana. Share the link after you added the people who may use it. GWDG Tools → Arcana lists the collections that chat is wired to, so you can check or remove the connection there.",
     },
     diagram_renderers: {
       title: "Render diagrams from code blocks",
@@ -1307,6 +1307,10 @@ export default {
     model_no_tools_warning:
       "This model does not support tools. The chat runs without file access, web search, or MCP tools.",
     placeholder_arcana_id: "Arcana id",
+    arcana_in_use: "Arcanas this chat uses",
+    arcana_in_use_tool: "Arcana tool",
+    arcana_in_use_readonly: "Read-only tools",
+    arcana_in_use_remove: "Remove {{name}}",
     placeholder_mcp_url: "http://localhost:3000/mcp",
     placeholder_mcp_auth: "Authorization header (optional)",
     mcp_add: "Add MCP server",

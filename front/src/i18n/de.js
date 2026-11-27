@@ -714,7 +714,7 @@ export default {
       step3:
         "Eigentümer fügen eine Person über Benutzername oder E-Mail-Adresse hinzu und wählen Darf bearbeiten oder Nur lesen. Nur der Eigentümer kann Personen hinzufügen oder entfernen.",
       step4:
-        "Der Chat-Link oben im Reiter Teilen öffnet einen neuen Chat, der diese Arcana bereits durchsucht und daraus liest. Teilen Sie den Link, nachdem Sie die Personen hinzugefügt haben, die ihn nutzen dürfen.",
+        "Der Chat-Link oben im Reiter Teilen öffnet einen neuen Chat, der diese Arcana bereits durchsucht und daraus liest. Teilen Sie den Link, nachdem Sie die Personen hinzugefügt haben, die ihn nutzen dürfen. Unter GWDG-Werkzeuge → Arcana sehen Sie, mit welchen Sammlungen der Chat verbunden ist, und können die Verbindung dort prüfen oder entfernen.",
     },
     diagram_renderers: {
       title: "Diagramme aus Codeblöcken rendern",
@@ -1323,6 +1323,10 @@ export default {
     model_no_tools_warning:
       "Dieses Modell unterstützt keine Werkzeuge. Der Chat läuft ohne Dateizugriff, Websuche oder MCP-Werkzeuge.",
     placeholder_arcana_id: "Arcana-ID",
+    arcana_in_use: "Arcanas in diesem Chat",
+    arcana_in_use_tool: "Arcana-Werkzeug",
+    arcana_in_use_readonly: "Nur-Lese-Werkzeuge",
+    arcana_in_use_remove: "{{name}} entfernen",
     placeholder_mcp_url: "http://localhost:3000/mcp",
     placeholder_mcp_auth: "Authorization-Header (optional)",
     mcp_add: "MCP-Server hinzufügen",

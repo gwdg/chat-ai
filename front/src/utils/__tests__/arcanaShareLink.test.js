@@ -1,14 +1,23 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  ARCANA_SHARE_PARAM,
+  ARCANA_LINK_PARAM,
+  arcanaRefId,
   arcanaShareFromSettings,
   buildArcanaShareLink,
   parseArcanaShareRef,
 } from "../arcanaShareLink";
 
 describe("parseArcanaShareRef", () => {
-  it("splits a storage name into owner and collection name", () => {
+  it("reads the Arcana ID the manager shows", () => {
+    expect(parseArcanaShareRef("alice/papers")).toEqual({
+      collection: "alice__papers",
+      owner: "alice",
+      name: "papers",
+    });
+  });
+
+  it("still reads the storage name the tools take", () => {
     expect(parseArcanaShareRef("alice__papers")).toEqual({
       collection: "alice__papers",
       owner: "alice",
@@ -16,8 +25,13 @@ describe("parseArcanaShareRef", () => {
     });
   });
 
-  it("keeps a name that contains the separator", () => {
+  it("keeps a name that contains the storage separator", () => {
     expect(parseArcanaShareRef("alice__team__papers")).toEqual({
+      collection: "alice__team__papers",
+      owner: "alice",
+      name: "team__papers",
+    });
+    expect(parseArcanaShareRef("alice/team__papers")).toEqual({
       collection: "alice__team__papers",
       owner: "alice",
       name: "team__papers",
@@ -25,7 +39,7 @@ describe("parseArcanaShareRef", () => {
   });
 
   it("trims surrounding whitespace", () => {
-    expect(parseArcanaShareRef("  alice__papers \n")?.collection).toBe(
+    expect(parseArcanaShareRef("  alice/papers \n")?.collection).toBe(
       "alice__papers",
     );
   });
@@ -41,38 +55,54 @@ describe("parseArcanaShareRef", () => {
     "__papers",
     "alice__",
     "__",
-    "alice__../etc",
+    "/papers",
+    "alice/",
+    "alice/papers/x",
     "alice__papers/x",
+    "alice/../etc",
     "alice__papers\\x",
     "ali\u0000ce__papers",
     "a".repeat(400) + "__papers",
-  ])("refuses a value that cannot be a storage name: %p", (value) => {
+  ])("refuses a value that cannot name one collection: %p", (value) => {
     expect(parseArcanaShareRef(value)).toBeNull();
+  });
+
+  it("refuses a slash-form owner that carries the storage separator", () => {
+    // `ali__ce__papers` would split at the first `__` into the wrong owner.
+    expect(parseArcanaShareRef("ali__ce/papers")).toBeNull();
+  });
+});
+
+describe("arcanaRefId", () => {
+  it("renders the readable Arcana ID", () => {
+    expect(
+      arcanaRefId({ collection: "alice__papers", owner: "alice", name: "papers" }),
+    ).toBe("alice/papers");
   });
 });
 
 describe("buildArcanaShareLink", () => {
-  it("builds an absolute chat link for the collection", () => {
+  it("builds the documented access link for the collection", () => {
     expect(buildArcanaShareLink("alice__papers", "https://chat.example")).toBe(
-      "https://chat.example/chat?arcana_share=alice__papers",
+      "https://chat.example/chat?arcana=alice/papers&enable_tools=true",
     );
   });
 
   it("does not double the slash of the origin", () => {
     expect(buildArcanaShareLink("alice__papers", "https://chat.example/")).toBe(
-      "https://chat.example/chat?arcana_share=alice__papers",
+      "https://chat.example/chat?arcana=alice/papers&enable_tools=true",
     );
   });
 
   it("encodes characters that a query value cannot carry", () => {
     expect(buildArcanaShareLink("alice__a b&c", "https://chat.example")).toBe(
-      "https://chat.example/chat?arcana_share=alice__a%20b%26c",
+      "https://chat.example/chat?arcana=alice/a%20b%26c&enable_tools=true",
     );
   });
 
   it("uses the page origin by default", () => {
     expect(buildArcanaShareLink("alice__papers")).toBe(
-      `${window.location.origin}/chat?${ARCANA_SHARE_PARAM}=alice__papers`,
+      `${window.location.origin}/chat?${ARCANA_LINK_PARAM}=alice/papers&enable_tools=true`,
     );
   });
 
