@@ -4556,9 +4556,11 @@ saia-fs  ->  &lt;root&gt;/tester/notes/a.txt</pre>
         <li>
           <b>The bridge path pulls another engine's catalogue.</b> <code>bridge.yml</code> defines the GWDG
           upstream (priority 10) and the fake local one (priority 20); every model arrives as
-          <code>bridge/&lt;id&gt;</code> with an <code>(External)</code> description, is placed in the
-          <code>bridge</code> group and is deduplicated by upstream id with the lower priority as the
-          primary. The fake upstream accepts new models at runtime:
+          <code>bridge/&lt;id&gt;</code>, is placed in the <code>bridge</code> group and is deduplicated
+          by upstream id with the lower priority as the primary. Only a model the upstream reports as
+          external (Claude, GPT, or an <code>(External)</code> display name on an older engine) carries
+          that marker; an in-house model behind the bridge does not. The fake upstream accepts new
+          models at runtime:
           <code>POST /admin/models</code> and <code>DELETE /admin/models/&lt;id&gt;</code> with
           <code>Bearer local</code>. Here the catalog refreshes every 10 seconds; a removed model is marked
           <code>unavailable</code>, not deleted, and pruning stays off while any upstream is unhealthy.
@@ -4874,22 +4876,25 @@ curl -s -H <span class="s">"Authorization: Bearer $KEY"</span> -H <span class="s
         <li>
           <b>The catalogue is pushed, not pulled.</b> The bridge calls
           <code>POST /admin/bridge/catalog</code> with <code>x-saia-bridge-token</code>. The endpoint
-          upserts one <code>Service</code> per public id, names the description
-          <code>… (External)</code>, and puts the rows into the configured access group (created if
-          missing). No database migration is involved: bridge models are ordinary service rows, which is
-          why prices, limits, groups and accounting keep working.
+          upserts one <code>Service</code> per public id, copies the upstream model's own externality
+          label into the description (<code>… (External)</code> only for a model the upstream reports
+          as external), and puts the rows into the configured access group (created if missing). No
+          database migration is involved: bridge models are ordinary service rows, which is why
+          prices, limits, groups and accounting keep working.
         </li>
         <li>
-          <b><code>(External)</code> is a routing marker, not a description.</b> It tells the engine's
-          demand updater to skip these rows: they are not in the registry, so it would otherwise mark them
-          offline after its first pass. It is also not a tool-capability signal - Chat AI deliberately keeps
-          bridge models tool-capable, because the engine forwards their tools in the request body. The
-          models payload therefore carries the label as data (<code>external: true</code>, from
-          <code>is_external_model</code>: the description marker or the bridge prefix, <em>not</em>
-          <code>is_external_service</code>, which decides direct Azure/Anthropic routing). Chat AI's
-          warning, brand filter and model scope read that field and fall back to the name only when a
-          deployment does not send it; tool support comes from a model config or a rejection learned at
-          runtime.
+          <b><code>(External)</code> follows the model, not the bridge.</b> It is the engine's
+          data-protection marker (the admin filter, the support pages and the <code>external</code>
+          field in <code>/v1/models</code>). The bridge copies it from each upstream row — the
+          <code>external</code> field of a current engine, the display marker of an older one, or an
+          optional per-upstream <code>external:</code> default — so an in-house model behind the
+          bridge (DeepSeek, EuroLLM) is not reported as leaving the institution. The demand updater
+          keeps bridge rows out of its pass by their <em>prefix</em> instead, because they are not in
+          the registry whether they are external or not. It is also not a tool-capability signal -
+          Chat AI deliberately keeps bridge models tool-capable, because the engine forwards their
+          tools in the request body. Chat AI's warning, brand filter and model scope read the
+          <code>external</code> field and fall back to the name only when a deployment does not send
+          it; tool support comes from a model config or a rejection learned at runtime.
         </li>
         <li>
           <b>Pruning waits for full health.</b> Rows that vanished from the catalogue are marked

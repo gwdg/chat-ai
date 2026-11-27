@@ -8,15 +8,16 @@
  *
  * The deployment reports it as data (`external` in `/models`), because
  * "(External)" in the display name is a routing and accounting label that a
- * client must not parse. That field covers every model the marker used to
- * describe, plus bridge models. A deployment without the field (an older engine,
- * a plain OpenAI-compatible endpoint) falls back to the marker in the name,
- * which is where the field came from.
+ * client must not parse. The field is derived from the description marker the
+ * bridge copies from each upstream model, so a bridge that fronts in-house
+ * models does not mark those external. A deployment without the field (an older
+ * engine, a plain OpenAI-compatible endpoint) falls back to the marker in the
+ * name, which is where the field came from.
  *
  * An explicit `external: false` wins over a name that still carries the marker:
- * the engine only answers `false` for a model that is external by neither the
- * marker nor a bridge prefix, so an administrator who cleaned up the display
- * name must not be re-marked by this client.
+ * the engine only answers `false` for a model it does not consider external, so
+ * an administrator who cleaned up the display name must not be re-marked by
+ * this client.
  */
 export function isExternalModel(model) {
   if (!model || typeof model !== "object") return false;

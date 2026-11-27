@@ -375,14 +375,18 @@ because the keys are file names.
 `modelSupportsTools()` (`apis/agentEndpoints.ts`) takes tool support from data, not from the display
 name or the external label: `"tools": true|false` in the model config, or a rejection learned at
 runtime (`markToolless`, retried by `runAgent` by rerunning the turn without tools). Anything else
-starts with tools. **"(External)" in a name is not a tool-capability signal.** Bridge models carry it
-so the engine's demand updater skips them, while `saia-engine` keeps their tools in the request body;
-reading the marker as "no tools" leaves every bridge model without tools, workspace tools included.
+starts with tools. **"(External)" in a name is not a tool-capability signal.** A bridge model may
+carry it (when the upstream model is external), while `saia-engine` keeps bridge tools in the request
+body; reading the marker as "no tools" leaves every bridge model without tools, workspace tools
+included.
 
 Externality is data for the warning and the filters, and has one reader:
 `utils/modelExternality.js#isExternalModel`. The engine reports `external` in every `/models` row
-(`saia-engine` `server/api.py#is_external_model`: the description marker or the bridge prefix — not
-`is_external_service`, which decides direct Azure routing), and the helper falls back to the name
+(`saia-engine` `server/api.py#is_external_model`: the `(External)` description marker only — not
+`is_external_service`, which decides direct Azure routing, and no longer the bridge prefix, because a
+bridge also fronts in-house models such as DeepSeek and EuroLLM). The bridge copies each upstream
+model's own `external` value (falling back to the name marker on an older engine, and to an optional
+`external:` flag on the upstream config) into the catalog sync. The helper falls back to the name
 marker only when a deployment does not send the field, with an explicit `external: false` overriding a
 stale name. The data-safety warning (`WarningExternalModel`, `SendButton`), both model selectors
 (scope filter, external chip and indicator), `config/brandPolicy.js` (including
