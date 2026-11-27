@@ -40,13 +40,14 @@ import { WorkspaceError } from "./types";
  * File bytes go through `read_file_base64` and a chunked upload: the MCP server
  * rejects one request body above 4 MiB with `413 Request body too large`, so
  * `write()` sends 1 MiB chunks to `upload_file_chunk` and only falls back to
- * `upload_file_base64` when an older service does not offer it. Text files
- * uploaded this way are stored but not indexed, so search still uses the
- * service's own text upload where it applies. Collections
- * are created and deleted with the service's own tools, never as folders here:
- * `mkdir`/`rename`/`move`/`copy` are unsupported on purpose, because a flat
- * collection has no folder tree and the UI must not offer actions that would
- * silently do nothing.
+ * `upload_file_base64` when an older service does not offer it. A current
+ * service queues conversion and indexing itself once the bytes are stored, so a
+ * PDF becomes searchable and gains a Markdown download without a second call; an
+ * older one only stores it, which is why the manager keeps its Index button.
+ * Collections are created and deleted with the service's own tools, never as
+ * folders here: `mkdir`/`rename`/`move`/`copy` are unsupported on purpose,
+ * because a flat collection has no folder tree and the UI must not offer actions
+ * that would silently do nothing.
  */
 const LIST_COLLECTIONS_TOOL = "list_collections";
 const LIST_FILES_TOOL = "list_files";

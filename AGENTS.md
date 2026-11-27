@@ -2713,7 +2713,14 @@ A collection is mounted live (`addSelectionToWorkspace`), and the collection lis
 mount target.
 
 **Bytes and previews.** Files are read with `read_file_base64` and written with
-`upload_file_chunk`, so images and PDFs keep their bytes; those uploads are stored but not indexed.
+`upload_file_chunk`, so images and PDFs keep their bytes. Neither upload tool stores without
+indexing any more: `upload_file_chunk` and `upload_file_base64` queue the same background job as
+`index_collection` once the bytes are stored (and again on an unchanged re-upload, which is how a
+failed conversion is retried), and that job converts a PDF through docling. It holds the
+collection's write lock for the whole conversion, so a second write waits and is refused with "The
+collection is busy…" after the lock's 30 s — an upload that arrives during a long conversion is the
+one case that needs a retry. A stored document's Markdown is what `get_file` returns and what the
+viewer's download saves as `<stem>.md`; `read_file_base64` still returns the original bytes.
 The write path is chunked because the MCP server answers a request body above 4 MiB with `413
 Request body too large` (its own `RequestBodyLimitMiddleware`), which a PDF easily reaches once
 base64 and the JSON envelope are counted. `SaiaRagProvider.uploadChunked` sends `offset`/`last`

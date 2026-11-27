@@ -3253,8 +3253,11 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           client because the tool raises <code>ToolError</code>: the SDK forwards that one and masks
           any other exception as a bare <code>Error executing tool &lt;name&gt;</code>.
           <code>upload_file_base64</code>
-          remains for small writes and for a service that predates the chunk tool. Those uploads are
-          stored but not indexed, so they remain plain files rather than searchable documents. A
+          remains for small writes and for a service that predates the chunk tool. Both upload tools
+          queue the same index job as <code>index_collection</code> once the bytes are stored, so a
+          client does not have to ask for conversion separately - and because that job holds the
+          collection's write lock for a whole conversion, an upload that arrives meanwhile waits for
+          it and is refused with <code>The collection is busy…</code> when the wait exceeds 30 s. A
           Markdown preview that references <code>![](bild.png)</code> resolves the picture in the
           browser through the same provider, not on the service.
         </li>
@@ -3544,6 +3547,15 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           counts the files still in <code>stored</code> and names the button that fixes them.
         </li>
         <li>
+          <b>A converted document downloads as its Markdown.</b> Chunk offsets address the text that
+          was indexed, so the service keeps that text on the file row (schema v11) and
+          <code>list_files</code> reports <code>markdown: true</code> for such a row. Its download
+          button then reads <code>get_file</code> and saves <code>&lt;stem&gt;.md</code>; any other
+          file still comes back from <code>read_file_base64</code> under its own name. The collection
+          keeps the original bytes either way, which is why a downloaded PDF and its Markdown differ
+          on purpose.
+        </li>
+        <li>
           <b>Removing a file is a file action, not a provider capability.</b>
           <code>remove_file</code> deletes the stored bytes and their index entries for exactly one
           file in one collection. The provider still reports <code>capabilities.delete: false</code>,
@@ -3560,10 +3572,10 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
         </li>
         <li>
           <b>Upload chooses the path by service age.</b> With <code>index_collection</code> present,
-          every file goes through the chunked binary upload and is indexed afterwards. Without it, a
-          text file goes through <code>upload_file</code>, which stores and indexes in one step, while
-          a binary file still uses the chunked path. That keeps an older deployment usable without
-          pretending a PDF can be indexed.
+          every file goes through the chunked binary upload, and the service queues indexing itself
+          once the bytes are stored. Without it, a text file goes through <code>upload_file</code>,
+          which stores and indexes in one step, while a binary file still uses the chunked path. That
+          keeps an older deployment usable without pretending a PDF can be indexed.
         </li>
         <li>
           <b>A reader sees the collection but cannot change it.</b> <code>can_write</code> comes from
