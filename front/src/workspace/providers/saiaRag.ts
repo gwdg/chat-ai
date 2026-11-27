@@ -99,6 +99,17 @@ const MIN_CHUNK_BYTES = 256 * 1024;
 const MCP_CALL_TIMEOUT_MS = 60_000;
 
 /**
+ * How long a listed collection set answers without asking the service again.
+ *
+ * `list_collections` is the most expensive call saia-rag has (it opens every
+ * collection it can see to read the ACL), and the workspace source browser can
+ * ask for it several times while the provider is still connecting. A short
+ * window collapses those asks into one request. Creating or deleting a
+ * collection forces a fresh read, and `close()` drops the cache.
+ */
+const COLLECTIONS_TTL_MS = 5_000;
+
+/**
  * How long saving an edited Markdown may take.
  *
  * The save rebuilds the file's chunks instead of only storing text, so a large
@@ -392,6 +403,18 @@ export class SaiaRagProvider implements FileProvider {
   private connectError: Error | null = null;
   /** display path segment -> collection, refreshed by `listCollections`. */
   private collections = new Map<string, RagCollection>();
+  /** Whether `collections` holds an answer, and when it arrived. */
+  private collectionsLoaded = false;
+  private collectionsAt = 0;
+  private collectionsPromise: Promise<RagCollection[]> | null = null;
+  /**
+   * Bumped whenever the cached list is known to be out of date.
+   *
+   * A read that started before the bump must not answer or store afterwards: a
+   * `list_collections` the service had already computed when a collection was
+   * created answers without it, and letting that land would hide the new row.
+   */
+  private collectionsEpoch = 0;
 
   constructor(
     readonly sourceId: string,
@@ -460,12 +483,21 @@ export class SaiaRagProvider implements FileProvider {
     this.client = null;
     this.tools = new Set();
     this.collections.clear();
+    this.collectionsLoaded = false;
+    this.collectionsAt = 0;
+    // A read still in flight belongs to the session being closed.
+    this.collectionsEpoch += 1;
+    this.collectionsPromise = null;
     this.connectError = null;
   }
 
   private async verifySession(): Promise<void> {
     try {
-      await this.call(LIST_COLLECTIONS_TOOL, {});
+      // This is the same call the caller would make for the drive's listing, so
+      // its answer seeds the cache instead of being thrown away. It deliberately
+      // bypasses the shared promise: a reconnect after a dropped session starts
+      // from inside that promise, and awaiting it there would wait on itself.
+      await this.fetchCollections();
     } catch (error) {
       if (error instanceof WorkspaceError && error.code === "AUTH_EXPIRED") {
         throw error;
@@ -576,8 +608,63 @@ export class SaiaRagProvider implements FileProvider {
 
   // ---- collections ------------------------------------------------------
 
-  /** Every collection the caller can see, and the path segment each one uses. */
+  /**
+   * Every collection the caller can see, and the path segment each one uses.
+   *
+   * Concurrent asks share one request, and a result younger than
+   * `COLLECTIONS_TTL_MS` answers without another round trip: the workspace
+   * browser can ask while the source is still connecting, and every ask used to
+   * be a fresh (and expensive) `list_collections`.
+   */
   async listCollections(): Promise<RagCollection[]> {
+    if (this.collectionsPromise) return this.collectionsPromise;
+    if (
+      this.collectionsLoaded &&
+      Date.now() - this.collectionsAt < COLLECTIONS_TTL_MS
+    ) {
+      return [...this.collections.values()];
+    }
+    // The handshake's own session check reads this list, so the session has to
+    // exist before the shared promise is created: otherwise `verifySession`
+    // would await the promise that is waiting for it.
+    if (!this.client) await this.connect();
+    if (
+      this.collectionsLoaded &&
+      Date.now() - this.collectionsAt < COLLECTIONS_TTL_MS
+    ) {
+      return [...this.collections.values()];
+    }
+    return this.refreshCollections();
+  }
+
+  /** Drop the cached list, so the next read asks the service. */
+  invalidateCollections(): void {
+    this.collectionsLoaded = false;
+    this.collectionsAt = 0;
+    this.collectionsEpoch += 1;
+    // Do not join a read that started before the invalidation: its answer is
+    // the one this call says is out of date.
+    this.collectionsPromise = null;
+  }
+
+  /** Read the collection list, ignoring the cache. Concurrent asks share one request. */
+  private refreshCollections(): Promise<RagCollection[]> {
+    if (!this.collectionsPromise) {
+      const epoch = this.collectionsEpoch;
+      const promise: Promise<RagCollection[]> = this.fetchCollections(
+        epoch,
+      ).finally(() => {
+        // A newer read may have replaced this one in the meantime.
+        if (this.collectionsPromise === promise) this.collectionsPromise = null;
+      });
+      this.collectionsPromise = promise;
+    }
+    return this.collectionsPromise;
+  }
+
+  private async fetchCollections(
+    epoch: number = this.collectionsEpoch,
+  ): Promise<RagCollection[]> {
     const text = await this.call(LIST_COLLECTIONS_TOOL, {});
     const payload = parseJson(text);
     const rows = Array.isArray(payload?.collections)
@@ -593,7 +680,13 @@ export class SaiaRagProvider implements FileProvider {
       next.set(ragCollectionDisplayName(collection), collection);
       result.push(collection);
     }
-    this.collections = next;
+    // A read from before an invalidation describes a list the caller already
+    // knows is stale, so it answers its own caller without replacing the cache.
+    if (epoch === this.collectionsEpoch) {
+      this.collections = next;
+      this.collectionsLoaded = true;
+      this.collectionsAt = Date.now();
+    }
     return result;
   }
 
@@ -625,7 +718,10 @@ export class SaiaRagProvider implements FileProvider {
     const trimmed = String(name ?? "").trim();
     if (!trimmed) throw new WorkspaceError("PROVIDER_ERROR", "A name is required");
     await this.call(CREATE_COLLECTION_TOOL, { collection: trimmed });
-    const collections = await this.listCollections();
+    // A new collection has to appear in this list, so a read that started before
+    // the creation is dropped and a fresh one is made.
+    this.invalidateCollections();
+    const collections = await this.refreshCollections();
     return collections.find(
       (collection) =>
         !collection.shared && collection.name === trimmed,
@@ -644,6 +740,8 @@ export class SaiaRagProvider implements FileProvider {
       collection: collection.collection,
     });
     this.collections.delete(display);
+    // A read in flight may still carry the deleted row.
+    this.invalidateCollections();
   }
 
   /** Does this service advertise a tool? The Arcanas UI hides what it cannot do. */

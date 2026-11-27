@@ -33,6 +33,11 @@ const rag = vi.hoisted(() => ({
    * by the tool with a message naming the limit, not with the proxy's 413.
    */
   stagedLimit: null as number | null,
+  /**
+   * The next `list_collections` waits for this before answering, so a test can
+   * hold a read in flight while another call changes the list.
+   */
+  listGate: null as Promise<void> | null,
 }));
 
 const json = (value: unknown) => ({
@@ -73,8 +78,15 @@ vi.mock("@modelcontextprotocol/sdk/client/index.js", () => ({
       const collection = reference.replace("/", "__");
       const filename = String(request.arguments?.filename ?? "");
       switch (request.name) {
-        case "list_collections":
-          return json({ collections: rag.collections });
+        case "list_collections": {
+          // The rows are what the service read when the request arrived; a
+          // collection created while the call is in flight is not in them.
+          const rows = rag.collections.map((row) => ({ ...row }));
+          const gate = rag.listGate;
+          rag.listGate = null;
+          if (gate) await gate;
+          return json({ collections: rows });
+        }
         case "list_files": {
           const files = rag.files.get(collection);
           if (!files) return failure(`Collection '${collection}' not found`);
@@ -363,6 +375,8 @@ describe("SaiaRagProvider", () => {
   });
 
   const provider = () => new SaiaRagProvider("rag-1", "http://localhost:9000/mcp");
+  const listCalls = () =>
+    rag.calls.filter((call) => call.name === "list_collections").length;
 
   it("lists collections at the root, qualifying shared ones with their owner", async () => {
     const ragProvider = provider();
@@ -759,6 +773,111 @@ describe("SaiaRagProvider", () => {
     });
   });
 
+  it("seeds the drive's listing with the handshake's own read", async () => {
+    const ragProvider = provider();
+    await ragProvider.connect();
+    expect(listCalls()).toBe(1);
+
+    // The drive used to ask `list_collections` again right after the session
+    // check — the most expensive call the service has.
+    const page = await ragProvider.list("/");
+    expect(page.entries.map((entry) => entry.name)).toEqual([
+      "recipes",
+      "bob__papers",
+    ]);
+    expect(listCalls()).toBe(1);
+  });
+
+  it("shares one collection read between concurrent asks", async () => {
+    const ragProvider = provider();
+    await ragProvider.connect();
+    ragProvider.invalidateCollections();
+
+    // A source that is still connecting can be listed by more than one caller
+    // (the drive effect re-runs while the provider map is republished).
+    const [collections, page] = await Promise.all([
+      ragProvider.listCollections(),
+      ragProvider.list("/"),
+    ]);
+    expect(collections.map((collection) => collection.name)).toEqual([
+      "recipes",
+      "papers",
+    ]);
+    expect(page.entries).toHaveLength(2);
+    expect(listCalls()).toBe(2);
+  });
+
+  it("asks again after an explicit invalidation", async () => {
+    const ragProvider = provider();
+    await ragProvider.list("/");
+    expect(listCalls()).toBe(1);
+
+    ragProvider.invalidateCollections();
+    await ragProvider.list("/");
+    expect(listCalls()).toBe(2);
+  });
+
+  it("re-reads the collections once the cache window has passed", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      const ragProvider = provider();
+      await ragProvider.list("/");
+      expect(listCalls()).toBe(1);
+
+      vi.setSystemTime(Date.now() + 10_000);
+      await ragProvider.list("/");
+      expect(listCalls()).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("reads a freshly created collection instead of the cached list", async () => {
+    const ragProvider = provider();
+    await ragProvider.list("/");
+    expect(listCalls()).toBe(1);
+
+    const created = await ragProvider.createCollection("drafts");
+    // The public reference is `owner/name`; `collectionOf` rewrites the
+    // service's `owner__name` storage spelling.
+    expect(created).toMatchObject({ collection: "alice/drafts" });
+    // Creating writes the list, so the read behind it bypasses the cache.
+    expect(listCalls()).toBe(2);
+    const page = await ragProvider.list("/");
+    expect(page.entries.map((entry) => entry.name)).toContain("drafts");
+    expect(listCalls()).toBe(2);
+  });
+
+  it("does not answer a create with a read that started before it", async () => {
+    const ragProvider = provider();
+    await ragProvider.connect();
+    ragProvider.invalidateCollections();
+
+    // Hold the next read so it is still in flight when the collection is
+    // created: saia-rag computed its answer before the new row existed.
+    let release!: () => void;
+    rag.listGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const stale = ragProvider.listCollections();
+
+    const created = await ragProvider.createCollection("drafts");
+    expect(created).toMatchObject({ name: "drafts", role: "owner" });
+
+    // The older answer lands afterwards and must not replace the new list.
+    release();
+    expect((await stale).map((collection) => collection.name)).toEqual([
+      "recipes",
+      "papers",
+    ]);
+    const page = await ragProvider.list("/");
+    expect(page.entries.map((entry) => entry.name)).toEqual([
+      "recipes",
+      "bob__papers",
+      "drafts",
+    ]);
+  });
+
   it("deletes a collection only when the caller may manage it", async () => {
     const ragProvider = provider();
     await ragProvider.deleteCollection("recipes");
@@ -986,6 +1105,9 @@ describe("SaiaRagProvider", () => {
     // A restarted service answers the dead session id with 404 "Session not
     // found", which the SDK does not repair on its own.
     rag.staleSessionFailures = 1;
+    // The handshake's own read seeded the list cache, so the drive would not
+    // call the service at all; forget it to exercise the dropped session.
+    ragProvider.invalidateCollections();
     const page = await ragProvider.list("/");
 
     expect(page.entries.map((entry) => entry.name)).toEqual([
@@ -1000,6 +1122,7 @@ describe("SaiaRagProvider", () => {
     await ragProvider.connect();
     const handshakes = rag.connectCalls;
     rag.staleSessionFailures = 99;
+    ragProvider.invalidateCollections();
 
     await expect(ragProvider.list("/")).rejects.toMatchObject({
       code: "AUTH_EXPIRED",

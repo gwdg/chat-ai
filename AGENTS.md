@@ -1109,6 +1109,14 @@ empty placeholder cannot prune sources, and it deletes the derived source when t
 or no longer exists (a source for a bridged-only agent is kept). It uses the same `/fs/list` and
 `/fs/read` endpoints as the agent file panel. Providers declare `capabilities`, and the UI must offer
 only what a provider reports.
+`useWorkspaceProviders(sources)` builds one provider **per call site**, so the three consumers a page
+can mount for the same source (the Sources rail, the source browser and the storage tree) each connect
+it: three handshakes, and for `saia-rag` three `list_collections` requests — the call that makes the
+service open every collection it can see. `SaiaRagProvider` therefore caches the collection list for
+5 s per instance, lets concurrent reads share one request, and seeds that cache from the handshake's
+own session check, so a connect costs one read instead of two; `invalidateCollections()` is what an
+explicit refresh, a create and a delete call first (a read that started before it must not store its
+answer).
 `append(path, data)` and `rename(path, newName)` are optional `FileProvider` methods with their own
 `capabilities.append` / `capabilities.rename` flags, because not every backend can do them natively.
 `rename` is **in place and takes a plain name** (mirroring saia-fs) — relocating within a provider

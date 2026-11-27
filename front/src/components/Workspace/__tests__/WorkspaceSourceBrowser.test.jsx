@@ -662,6 +662,42 @@ describe("WorkspaceSourceBrowser", () => {
     expect(ragProvider.listCollections).toHaveBeenCalled();
   });
 
+  it("does not re-list the collections when a source only reports its status", async () => {
+    const { rerender } = renderBrowser({ target: { drive: "rag" } });
+
+    expect(await screen.findByText("recipes")).toBeInTheDocument();
+    const calls = ragProvider.listCollections.mock.calls.length;
+
+    // `useWorkspaceProviders` publishes a new source array and provider map
+    // twice per connect, and each carries the status the handshake just wrote.
+    // Re-listing on that would repeat the most expensive call saia-rag has.
+    await act(async () => {
+      mocks.sources = [
+        { ...localSource, status: "connected" },
+        { ...ragSource, status: "connecting" },
+      ];
+      mocks.providers = new Map([
+        ["local-1", localProvider],
+        ["rag-1", ragProvider],
+      ]);
+      rerender(
+        <WorkspaceSourceBrowser
+          sources={mocks.sources}
+          target={{ drive: "rag" }}
+          onTargetChange={mocks.onTargetChange}
+          onAddToWorkspace={mocks.onAddToWorkspace}
+          onUnmountSelection={mocks.onUnmountSelection}
+          onRemoveSource={mocks.onRemoveSource}
+          onToggleSourceReadOnly={mocks.onToggleSourceReadOnly}
+          onAddDeviceFolder={mocks.onAddDeviceFolder}
+        />,
+      );
+    });
+
+    expect(screen.getByText("recipes")).toBeInTheDocument();
+    expect(ragProvider.listCollections.mock.calls.length).toBe(calls);
+  });
+
   it("browses the SAIA account folder and mounts one of its folders", async () => {
     mocks.sources = [localSource, ragSource, saiaSource];
     mocks.providers = new Map([

@@ -304,7 +304,13 @@ export default function WorkspaceSourceBrowser({
   className?: string;
 }) {
   const { t } = useTranslation();
-  const conversations = (useConversationList() || []) as Conversation[];
+  // `useConversationList` returns undefined until its first answer; a bare `|| []`
+  // would hand the listing effect a new array on every render and restart it.
+  const conversationRows = useConversationList();
+  const conversations = useMemo(
+    () => (conversationRows ?? []) as Conversation[],
+    [conversationRows],
+  );
   const { providers, quotas, localSources, mcpSources, ragSource, saiaSource } =
     useSourceQuotas(sources);
   const [view, setView] = useState<View | null>(null);
@@ -355,14 +361,78 @@ export default function WorkspaceSourceBrowser({
   const latest = useRef({
     localById,
     mcpById,
+    localSources,
+    mcpSources,
     conversations,
     conversationTitle,
+    ragSource,
+    saiaSource,
   });
-  latest.current = { localById, mcpById, conversations, conversationTitle };
+  latest.current = {
+    localById,
+    mcpById,
+    localSources,
+    mcpSources,
+    conversations,
+    conversationTitle,
+    ragSource,
+    saiaSource,
+  };
 
   const targetDrive = target?.drive ?? null;
   const targetSourceId =
     target && target.drive === "device" ? target.sourceId : undefined;
+
+  /**
+   * The provider the open view lists through.
+   *
+   * A status write after every connect replaces the `sources` array and the
+   * `providers` map, but the provider object itself stays the same. Depending on
+   * that object (instead of the map) keeps the listing effect from restarting —
+   * and re-sending `list_collections` — while a source is still connecting.
+   */
+  const viewProvider = useMemo(() => {
+    if (!view) return null;
+    if (view.drive === "device") {
+      return view.level === "source"
+        ? providers.get(view.sourceId) ?? null
+        : null;
+    }
+    if (view.drive === "mcp") {
+      return view.level === "drives"
+        ? null
+        : providers.get(view.sourceId) ?? null;
+    }
+    if (view.drive === "saia-fs") {
+      return saiaSource ? providers.get(saiaSource.id) ?? null : null;
+    }
+    if (view.drive === "rag") {
+      return ragSource ? providers.get(ragSource.id) ?? null : null;
+    }
+    return null;
+  }, [view, providers, ragSource, saiaSource]);
+
+  /**
+   * What the rail and the tree show, without the fields a connect rewrites
+   * (`status`, `error`, `capabilities`). Each of those writes a new `sources`
+   * array; depending on the content keeps a status report from restarting the
+   * listing.
+   */
+  const sourcesContentKey = useMemo(
+    () =>
+      sources
+        .map((source) =>
+          [
+            source.id,
+            source.kind,
+            source.label ?? "",
+            source.readOnly === true ? "ro" : "rw",
+            JSON.stringify(source.config ?? {}),
+          ].join("|"),
+        )
+        .join("\n"),
+    [sources],
+  );
 
   // Everything listed inside a read-only source is read-only too, so those
   // rows carry the same lock the workspace tree shows.
@@ -436,7 +506,7 @@ export default function WorkspaceSourceBrowser({
         let next: Row[] = [];
         if (view.drive === "device" && view.level === "drives") {
           next = sortRows(
-            localSources.map((source) => ({
+            latest.current.localSources.map((source) => ({
               id: source.id,
               referenceId: source.id,
               name: source.label?.trim() || source.id,
@@ -445,14 +515,13 @@ export default function WorkspaceSourceBrowser({
             })),
           );
         } else if (view.drive === "device") {
-          const source = localById.get(view.sourceId);
+          const source = latest.current.localById.get(view.sourceId);
           if (!source) throw new Error(t("workspace.source_browser.unavailable"));
-          const provider = providers.get(source.id);
-          if (!provider) return;
-          next = await listProvider(provider, path);
+          if (!viewProvider) return;
+          next = await listProvider(viewProvider, path);
         } else if (view.drive === "mcp" && view.level === "drives") {
           next = sortRows(
-            mcpSources.map((source) => ({
+            latest.current.mcpSources.map((source) => ({
               id: source.id,
               referenceId: source.id,
               name: source.label?.trim() || source.id,
@@ -461,11 +530,10 @@ export default function WorkspaceSourceBrowser({
             })),
           );
         } else if (view.drive === "mcp") {
-          const source = mcpById.get(view.sourceId);
+          const source = latest.current.mcpById.get(view.sourceId);
           if (!source) throw new Error(t("workspace.source_browser.unavailable"));
-          const provider = providers.get(source.id);
-          if (!provider) return;
-          next = await listProvider(provider, path);
+          if (!viewProvider) return;
+          next = await listProvider(viewProvider, path);
         } else if (view.drive === "chats") {
           next = sortRows(
             conversations.map((conversation) => {
@@ -480,19 +548,19 @@ export default function WorkspaceSourceBrowser({
             }),
           );
         } else if (view.drive === "saia-fs") {
-          if (!saiaSource) throw new Error(t("workspace.source_browser.unavailable"));
-          const provider = providers.get(saiaSource.id);
-          if (!provider) return;
-          next = await listProvider(provider, path);
+          if (!latest.current.saiaSource)
+            throw new Error(t("workspace.source_browser.unavailable"));
+          if (!viewProvider) return;
+          next = await listProvider(viewProvider, path);
         } else if (view.drive === "rag") {
-          if (!ragSource) throw new Error(t("workspace.source_browser.unavailable"));
-          const provider = providers.get(ragSource.id);
-          if (!provider) return;
+          if (!latest.current.ragSource)
+            throw new Error(t("workspace.source_browser.unavailable"));
+          if (!viewProvider) return;
           if (path === "/") {
             // Collections carry the caller's role, which the rows show and the
             // owner-only actions need, so the metadata comes from the provider's
             // own list rather than from a plain directory listing.
-            const rag = baseProvider(provider) as unknown as SaiaRagProvider;
+            const rag = baseProvider(viewProvider) as unknown as SaiaRagProvider;
             const collections = await rag.listCollections();
             next = sortRows(
               collections.map((collection) => {
@@ -508,7 +576,7 @@ export default function WorkspaceSourceBrowser({
               }),
             );
           } else {
-            next = await listProvider(provider, path);
+            next = await listProvider(viewProvider, path);
           }
         }
         if (!cancelled) {
@@ -531,15 +599,10 @@ export default function WorkspaceSourceBrowser({
   }, [
     view,
     path,
-    providers,
-    localSources,
-    localById,
-    mcpSources,
-    mcpById,
+    viewProvider,
+    sourcesContentKey,
     conversations,
     conversationTitle,
-    ragSource,
-    saiaSource,
     ragRevision,
     t,
   ]);

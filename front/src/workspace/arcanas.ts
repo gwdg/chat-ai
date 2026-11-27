@@ -171,7 +171,11 @@ export function refreshArcanas(): Promise<RagCollection[]> {
   setState({ loading: true, error: null });
   inflight = (async () => {
     try {
-      const collections = await arcanasProvider().listCollections();
+      const provider = arcanasProvider();
+      // An explicit read (after a create, or the retry button) must not be
+      // answered from the provider's short cache.
+      provider.invalidateCollections();
+      const collections = await provider.listCollections();
       setState({ collections, loaded: true, loading: false, error: null });
       loadStatuses(collections);
       return collections;
