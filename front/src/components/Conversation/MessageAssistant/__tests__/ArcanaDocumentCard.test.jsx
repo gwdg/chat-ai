@@ -52,7 +52,7 @@ beforeEach(() => {
 
 describe("ArcanaDocumentCard", () => {
   it("shows the cited pages and the passage, without the layout hints", () => {
-    render(<ArcanaDocumentCard documents={[page]} />);
+    const { container } = render(<ArcanaDocumentCard documents={[page]} />);
 
     expect(screen.getByText("arcana_chat.sources")).toBeTruthy();
     expect(screen.getByText("report.pdf")).toBeTruthy();
@@ -64,12 +64,17 @@ describe("ArcanaDocumentCard", () => {
     expect(screen.getByText("Wasser ist nass.")).toBeTruthy();
     expect(screen.getByText("Immer noch nass.")).toBeTruthy();
     expect(screen.queryByText(/\[Y 10\]/)).toBeNull();
+    // The row names the file's type, so a PDF and a Markdown source do not look alike.
+    expect(container.querySelector('[data-file-type="pdf"]')).toBeTruthy();
   });
 
   it("labels a plain text file instead of inventing a page", () => {
-    render(<ArcanaDocumentCard documents={[textFile]} />);
+    const { container } = render(<ArcanaDocumentCard documents={[textFile]} />);
     expect(screen.getByText("arcana_chat.source_text")).toBeTruthy();
     expect(screen.getByText(/Hello/)).toBeTruthy();
+    expect(
+      container.querySelector('[data-file-type="markdown"]'),
+    ).toBeTruthy();
   });
 
   it("opens the document at the cited page on click", async () => {

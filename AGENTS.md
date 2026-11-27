@@ -1381,6 +1381,13 @@ fence renderers (mermaid, typst, latex, highlighted code) look identical; empty 
 `<pre>` fallback. Because it reads Redux and uses `useNavigate` for internal links, tests that
 preview markdown need a `react-redux` mock and a router (`MemoryRouter`).
 
+The header names a file's **type**, not a generic sheet: `DocumentPanel/fileTypeIcon.jsx#fileTypeIcon(name, mime)`
+returns `{ type, Icon }`, using the same `getFileType` classification as the body and resolving a
+provider's missing MIME type from the name (`utils/mime.ts#resolveMimeType`). `PanelShell` takes it
+as the `icon` / `iconType` props (rendered with `data-file-type`), and the same helper draws the
+header of `WorkspacePreviewTab` and each row of the Arcana file list, so a `.md` source looks like
+Markdown wherever it is cited. Add a type to the `ICONS` map there, not at a call site.
+
 An image preview also offers **Describe** (`DocumentPanel/DescribeImageButton.jsx`, left of Download
 in both headers — `FilePreviewPanel` and `WorkspacePreviewTab`). It asks the deployment's vision
 model (`apis/agentEndpoints.ts#explainImage`, model from `EXPLAIN_IMAGE_MODEL()`) and saves the

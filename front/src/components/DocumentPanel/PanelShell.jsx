@@ -21,9 +21,18 @@ function storeWidth(value) {
   }
 }
 
-export default function PanelShell({ title, subtitle, actions, onClose, children }) {
+export default function PanelShell({
+  title,
+  subtitle,
+  icon,
+  iconType,
+  actions,
+  onClose,
+  children,
+}) {
   const { t } = useTranslation();
   const panelRef = useRef(null);
+  const Icon = icon ?? Document;
 
   const setWidth = (px) => {
     const value = `${Math.round(px)}px`;
@@ -94,8 +103,11 @@ export default function PanelShell({ title, subtitle, actions, onClose, children
         >
           <ArrowLeft size={20} />
         </button>
-        <span className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-base-200 text-accent md:flex">
-          <Document size={17} />
+        <span
+          data-file-type={iconType}
+          className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-base-200 text-accent md:flex"
+        >
+          <Icon size={17} />
         </span>
         <div className="min-w-0 flex-1 pr-12">
           <h2 className="truncate text-sm font-semibold">{title}</h2>

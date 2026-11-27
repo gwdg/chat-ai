@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ExternalLink, FileText, Loader2 } from "lucide-react";
+import { ExternalLink, Loader2 } from "lucide-react";
 
+import { fileTypeIcon } from "../../DocumentPanel/fileTypeIcon";
 import { useFilePreview } from "../../../context/FilePreviewContext";
 import { useToast } from "../../../hooks/useToast";
 import {
@@ -70,6 +71,9 @@ export default function ArcanaDocumentCard({ documents = [] }) {
           const key = arcanaDocumentKey(document);
           const pages = splitDocumentPages(document.excerpt);
           const busy = opening === key;
+          const { type: fileType, Icon: TypeIcon } = fileTypeIcon(
+            document.filename,
+          );
           return (
             <li key={key}>
               <article className="overflow-hidden rounded-lg border border-base-300 bg-base-100">
@@ -81,8 +85,9 @@ export default function ArcanaDocumentCard({ documents = [] }) {
                   className="flex w-full items-start gap-2 p-2.5 text-left transition-colors hover:bg-base-200"
                   title={t("arcana_chat.source_open")}
                 >
-                  <FileText
+                  <TypeIcon
                     size={16}
+                    data-file-type={fileType}
                     className="mt-0.5 shrink-0 text-base-content/60"
                     aria-hidden="true"
                   />

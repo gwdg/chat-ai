@@ -144,6 +144,17 @@ describe("ArcanaManager", () => {
     mocks.setPublicRead.mockResolvedValue(undefined);
   });
 
+  it("names each file's type in its row", async () => {
+    const { container } = render(<ArcanaManager collection={collection} />);
+
+    await screen.findByText("a.md");
+    // Both fixtures are Markdown, so both rows carry the Markdown icon rather
+    // than the generic sheet.
+    expect(
+      container.querySelectorAll('[data-file-type="markdown"]'),
+    ).toHaveLength(2);
+  });
+
   it("filters the file list by tag and clears that filter again", async () => {
     render(
       <ArcanaManager collection={collection} />,

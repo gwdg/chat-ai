@@ -22,6 +22,7 @@ import { useTranslation } from "react-i18next";
 
 import DescribeImageButton from "../DocumentPanel/DescribeImageButton";
 import FilePreviewContent from "../DocumentPanel/FilePreviewContent";
+import { fileTypeIcon } from "../DocumentPanel/fileTypeIcon";
 import TypstDocument from "../Conversation/MessageAssistant/TypstDocument";
 import { getFileType } from "../../utils/attachments";
 import { formatBytes } from "../../utils/formatBytes";
@@ -72,6 +73,12 @@ export default function WorkspacePreviewTab({
   const contentKey = resetKey ?? preview.key ?? entry.name;
   const editor = preview.editor ?? null;
   const fileType = getFileType({ type: entry.mime, name: entry.name });
+  // The header names the type (Markdown, PDF, …) instead of a generic sheet, so
+  // the tab where a PDF would be shown tells a Markdown source apart at a glance.
+  const { type: headerType, Icon: TypeIcon } = fileTypeIcon(
+    entry.name,
+    entry.mime,
+  );
   // HTML is its own preview even though `getFileType` calls it code.
   const isHtml =
     entry.mime?.startsWith("text/html") === true ||
@@ -243,8 +250,11 @@ export default function WorkspacePreviewTab({
             <ChevronLeft size={18} />
           </button>
         )}
-        <span className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-base-200 text-accent sm:flex">
-          <Document size={17} />
+        <span
+          data-file-type={headerType}
+          className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-base-200 text-accent sm:flex"
+        >
+          <TypeIcon size={17} />
         </span>
         <div className="min-w-0 flex-1">
           <h2 className="flex items-center gap-1.5 truncate text-sm font-semibold">

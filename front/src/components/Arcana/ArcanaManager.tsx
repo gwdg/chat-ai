@@ -18,6 +18,7 @@ import {
 import { AlertCircle, Loader2 } from "lucide-react";
 
 import ArcanaMarkdownEditor from "./ArcanaMarkdownEditor";
+import { FileTypeIcon, fileTypeIcon } from "../DocumentPanel/fileTypeIcon";
 import { useToast } from "../../hooks/useToast";
 import {
   arcanasProvider,
@@ -1064,8 +1065,11 @@ export default function ArcanaManager({
                   {visibleFiles.map((file) => (
                     <li key={file.name} className="px-3 py-2">
                       <div className="flex items-center gap-2">
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-base-200 text-base-content/55">
-                          <Document size={14} />
+                        <span
+                          data-file-type={fileTypeIcon(file.name).type}
+                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-base-200 text-base-content/55"
+                        >
+                          <FileTypeIcon name={file.name} size={14} />
                         </span>
                         <div className="min-w-0 flex-1">
                           <p

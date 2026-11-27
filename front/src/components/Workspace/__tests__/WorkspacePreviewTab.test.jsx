@@ -92,6 +92,26 @@ describe("WorkspacePreviewTab", () => {
     expect(screen.getByText("text/plain · 5 B")).toBeInTheDocument();
   });
 
+  it("names the file's type in the header", () => {
+    const markdown = renderTab({
+      preview: {
+        entry: { name: "notes.md", mime: "text/markdown", size: 7 },
+      },
+    });
+    expect(
+      markdown.container.querySelector('[data-file-type="markdown"]'),
+    ).toBeInTheDocument();
+    markdown.unmount();
+
+    // saia-rag lists a file without a MIME type, so the name decides.
+    const pdf = renderTab({
+      preview: { entry: { name: "report.pdf" }, url: "blob:pdf" },
+    });
+    expect(
+      pdf.container.querySelector('[data-file-type="pdf"]'),
+    ).toBeInTheDocument();
+  });
+
   it("shows the file's own content, not just its name", () => {
     renderTab();
 

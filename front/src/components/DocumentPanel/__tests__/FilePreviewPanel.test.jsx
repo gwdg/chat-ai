@@ -53,6 +53,25 @@ describe("FilePreviewPanel", () => {
     expect(document.querySelector("pre")).toBeNull();
   });
 
+  it("names the file's type in the header", () => {
+    const { container, unmount } = renderPanel({
+      entry: { name: "notes.md", mime: "text/markdown" },
+      text: "# Notes",
+    });
+
+    expect(container.querySelector('[data-file-type="markdown"]')).toBeTruthy();
+    unmount();
+
+    // A provider that reports no MIME type still gets the type from the name.
+    const second = renderPanel({
+      entry: { name: "report.pdf" },
+      url: "blob:pdf",
+    });
+    expect(
+      second.container.querySelector('[data-file-type="pdf"]'),
+    ).toBeTruthy();
+  });
+
   it("renders an image from the entry's url", () => {
     renderPanel({
       entry: { name: "chart.png", mime: "image/png", size: 12 },

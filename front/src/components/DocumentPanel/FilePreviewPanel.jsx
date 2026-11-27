@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import DescribeImageButton from "./DescribeImageButton";
 import FilePreviewContent from "./FilePreviewContent";
 import PanelShell from "./PanelShell";
+import { fileTypeIcon } from "./fileTypeIcon";
 import { getFileType } from "../../utils/attachments";
 import { formatBytes } from "../../utils/formatBytes";
 
@@ -85,11 +86,19 @@ export default function FilePreviewPanel({
   // Only an image can be described, and the button sits left of Download in the
   // same header actions, so both previews (workspace tab and docked panel) show it.
   const isImage = getFileType({ type: entry.mime, name: entry.name }) === "image";
+  // The header names the type (Markdown, PDF, …) instead of a generic sheet, so a
+  // cited Markdown source is recognisable before its body is read.
+  const { type: fileType, Icon: TypeIcon } = fileTypeIcon(
+    entry.name,
+    entry.mime,
+  );
 
   return (
     <PanelShell
       title={entry.name}
       subtitle={subtitle}
+      icon={TypeIcon}
+      iconType={fileType}
       onClose={onClose}
       actions={
         isImage || canDownload ? (
