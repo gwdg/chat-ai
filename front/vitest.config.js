@@ -25,7 +25,10 @@ export default defineConfig({
     environmentOptions: { jsdom: { url: "http://localhost/" } },
     globals: true,
     setupFiles: ["./src/test/setup.js"],
-    include: ["src/**/*.{test,spec}.{js,jsx,ts,tsx}"],
+    include: [
+      "src/**/*.{test,spec}.{js,jsx,ts,tsx}",
+      "vite-plugins/**/*.test.{js,mjs}",
+    ],
     // Live tests start real processes; they belong in `npm run test:live`.
     exclude: ["node_modules", "dist", "**/*.live.test.*"],
     restoreMocks: true,
