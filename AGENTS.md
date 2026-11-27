@@ -3030,13 +3030,15 @@ deletes `arcana_share`, so the aliases do not drift apart. The add form refuses 
 `parseArcanaShareRef` cannot read and a collection already in the chat. The list is the
 `<ul data-guide="tools-arcana-list">`.
 
-`agent/arcanaChatTools.ts#createArcanaChatTools(refs)` adds five read-only tools:
-`list_arcanas` (every collection with its description, read from the service's `list_collections`),
-then `search_arcana` (`search_chunks`),
+`agent/arcanaChatTools.ts#createArcanaChatTools(refs)` adds six read-only tools:
+`list_arcanas` (every collection with its description, read from the service's `list_collections`)
+and `arcana_details` (one collection's owner and description, the same row, so an answer never has
+to guess what a chat-local binding once said), then `search_arcana` (`search_chunks`),
 `list_arcana_documents` (`list_files`), `read_arcana_document` (`read_file_base64`, text files only)
-and `retrieve_document`. The four reading tools take a `collection` argument, resolved against this
-chat's list (`owner/name` or the storage name); a value outside it is refused, and with one binding
-the argument may be omitted. `retrieve_document` quotes the page a passage came from plus the page
+and `retrieve_document`. The four reading tools and `arcana_details` take a `collection` argument,
+resolved against this chat's list (`owner/name` or the storage name); a value outside it is refused,
+and with one binding the argument may be omitted. `retrieve_document` quotes the page a passage came
+from plus the page
 after it (`get_file` with `filename@N-N+1` for a converted document, the stored text for a plain text
 file, `search_chunks` to find the page when none is given) and records it through `getDocuments()`,
 which `runAgent` returns as `TurnUpdate.documents`; `sendMessage` appends the app-written

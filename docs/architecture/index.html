@@ -3715,13 +3715,15 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           in place of the generic subtitle once it is set.
         </li>
         <li>
-          <b>Five read-only tools, scoped to the chat's list.</b> <code>agent/arcanaChatTools.ts</code>
+          <b>Six read-only tools, scoped to the chat's list.</b> <code>agent/arcanaChatTools.ts</code>
           offers <code>list_arcanas</code>, which returns every collection with the description the
           service stores on it (<code>list_collections</code>; a chat-local description from an older
-          build is only the fallback), then <code>search_arcana</code> (<code>search_chunks</code>),
+          build is only the fallback), plus <code>arcana_details</code> for one collection's owner and
+          description, then <code>search_arcana</code> (<code>search_chunks</code>),
           <code>list_arcana_documents</code> (<code>list_files</code>),
           <code>read_arcana_document</code> (<code>read_file_base64</code>, text files only) and
-          <code>retrieve_document</code>. The four reading tools take a <code>collection</code>
+          <code>retrieve_document</code>. The four reading tools and <code>arcana_details</code> take
+          a <code>collection</code>
           argument that is resolved against this chat's list (both <code>owner/name</code> and the
           storage name are accepted), so a prompt cannot aim them at a collection the chat was never
           given; with one collection the argument may be omitted. Nothing in the tool set writes.

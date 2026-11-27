@@ -65,10 +65,11 @@ beforeEach(() => {
 });
 
 describe("Arcana chat tools", () => {
-  it("registers the discovery tool and the three read tools", () => {
+  it("registers the discovery tools and the four read tools", () => {
     const { tools } = createArcanaChatTools([ref]);
     expect(tools.map((tool) => tool.name)).toEqual([
       "list_arcanas",
+      "arcana_details",
       "search_arcana",
       "list_arcana_documents",
       "read_arcana_document",
@@ -113,6 +114,65 @@ describe("Arcana chat tools", () => {
     expect(result.content[0].text).toContain(
       "- bob/notes: Meeting minutes and decisions",
     );
+  });
+
+  it("reports one collection's owner and description", async () => {
+    mocks.callTool.mockResolvedValue(
+      answer(
+        JSON.stringify({
+          collections: [
+            {
+              collection: "alice__papers",
+              name: "papers",
+              owner: "alice",
+              description: "Peer-reviewed papers on retrieval",
+            },
+          ],
+        }),
+      ),
+    );
+    const { tools } = createArcanaChatTools([ref]);
+    const result = await toolNamed(tools, "arcana_details").execute("id", {});
+    expect(mocks.callTool).toHaveBeenCalledWith({
+      name: "list_collections",
+      arguments: {},
+    });
+    expect(result.content[0].text).toContain("Arcana: alice/papers");
+    expect(result.content[0].text).toContain("Owner: alice");
+    expect(result.content[0].text).toContain(
+      "Description: Peer-reviewed papers on retrieval",
+    );
+  });
+
+  it("answers details from the binding when the service cannot", async () => {
+    // The owner and the text are known locally too, so an unreachable service
+    // need not turn the collection into an unknown one.
+    mocks.callTool.mockRejectedValue(new Error("unreachable"));
+    const { tools } = createArcanaChatTools([
+      { ...ref, description: "Local text" },
+    ]);
+    const result = await toolNamed(tools, "arcana_details").execute("id", {});
+    expect(result.content[0].text).toContain("Owner: alice");
+    expect(result.content[0].text).toContain("Description: Local text");
+  });
+
+  it("says so when the collection has no description", async () => {
+    mocks.callTool.mockResolvedValue(answer(JSON.stringify({ collections: [] })));
+    const { tools } = createArcanaChatTools([ref]);
+    const result = await toolNamed(tools, "arcana_details").execute("id", {});
+    expect(result.content[0].text).toContain("Description: (none)");
+  });
+
+  it("refuses details for a collection the chat was not given", async () => {
+    mocks.callTool.mockResolvedValue(answer(JSON.stringify({ collections: [] })));
+    const { tools } = createArcanaChatTools([ref, notes]);
+    const result = await toolNamed(tools, "arcana_details").execute("id", {
+      collection: "bob/papers",
+    });
+    expect(result.content[0].text).toContain(
+      `"bob/papers" is not one of this chat's Arcana collections`,
+    );
+    expect(mocks.callTool).not.toHaveBeenCalled();
   });
 
   it("falls back to a chat-local description when the service has none", async () => {

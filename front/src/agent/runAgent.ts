@@ -57,7 +57,7 @@ const arcanaSharesPrompt = (
         ? `"${arcanaRefId(share)}" (${share.collection}) — ${share.description}`
         : `"${arcanaRefId(share)}" (${share.collection})`,
     )
-    .join(", ")}. Call list_arcanas to see them with their descriptions, then pass the wanted collection to search_arcana, list_arcana_documents, read_arcana_document or retrieve_document. When you quote a passage, call retrieve_document with the file and the page the search hit reported (p.N): it returns that page and the next one and shows the user a source card that opens the document at the page. Base answers about a collection on those results, and say so when they contain nothing relevant.`;
+    .join(", ")}. Call list_arcanas to see them with their descriptions (arcana_details gives one collection's owner and description), then pass the wanted collection to search_arcana, list_arcana_documents, read_arcana_document or retrieve_document. When you quote a passage, call retrieve_document with the file and the page the search hit reported (p.N): it returns that page and the next one and shows the user a source card that opens the document at the page. Base answers about a collection on those results, and say so when they contain nothing relevant.`;
 
 type ModelSpec = { id: string; name?: string; input?: string[] };
 

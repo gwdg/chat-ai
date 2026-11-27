@@ -1,8 +1,9 @@
 // Read-only chat tools for the Arcana collections a conversation can read.
 //
 // A chat owns a list of bindings (`settings.arcana_shares`, plus the single
-// `settings.arcana_share` an access link writes), and the model gets five tools:
-// `list_arcanas` to see what is available and what each collection is for, then
+// `settings.arcana_share` an access link writes), and the model gets six tools:
+// `list_arcanas` to see what is available and what each collection is for,
+// `arcana_details` for one collection's owner and description, then
 // `search_arcana`, `list_arcana_documents`, `read_arcana_document` and
 // `retrieve_document`, which take a `collection` argument. The argument is
 // validated against this chat's list, so a prompt cannot point a tool at a
@@ -264,35 +265,53 @@ export function createArcanaChatTools(refs: ArcanaShareRef[]): ArcanaChatTools {
   };
 
   /**
-   * The descriptions the service stores with the collections.
+   * The rows the service reports for its collections, keyed by the readable
+   * Arcana ID (`owner/name`).
    *
-   * The description belongs to the collection, so this is the authoritative
-   * text; a chat-local description from an older build stays the fallback when
-   * the service has none, or cannot answer.
+   * `list_collections` is the one place owner and description both come from, so
+   * `list_arcanas` and `arcana_details` read the same answer: what a collection
+   * is for belongs to the collection, and its owner is what the service says, not
+   * what a chat happens to have stored.
    */
-  const serviceDescriptions = async (): Promise<Map<string, string>> => {
-    const descriptions = new Map<string, string>();
+  const serviceCollections = async (): Promise<
+    Map<string, { owner: string; description: string }>
+  > => {
+    const rows = new Map<string, { owner: string; description: string }>();
     try {
       const answer = await call("list_collections", {});
       const payload = parseJson(answer);
-      const rows = Array.isArray(payload?.collections)
+      const list = Array.isArray(payload?.collections)
         ? payload.collections
         : Array.isArray(payload)
           ? payload
           : [];
-      for (const row of rows) {
+      for (const row of list) {
         const stored = String(row?.collection ?? "").trim();
-        const description =
-          typeof row?.description === "string" ? row.description.trim() : "";
-        if (!stored || !description) continue;
-        descriptions.set(
-          stored.includes("/") ? stored : stored.replace("__", "/"),
-          description,
-        );
+        if (!stored) continue;
+        // A storage name is `owner__name`; the REST shape spells the ID with a
+        // slash. Splitting at the first `__` is what the service does, so a
+        // collection whose own name contains `__` stays intact.
+        const id = stored.includes("/") ? stored : stored.replace("__", "/");
+        rows.set(id, {
+          owner: String(row?.owner ?? "").trim() || stored.split("__")[0],
+          description:
+            typeof row?.description === "string" ? row.description.trim() : "",
+        });
       }
     } catch {
-      // No service, or an older one that does not report the field: the
-      // chat-local descriptions still give the model something to choose by.
+      // No service, or an older one that does not report the fields: the
+      // chat-local bindings still give the model something to choose by.
+    }
+    return rows;
+  };
+
+  /** Just the non-empty texts, for the collection lines `list_arcanas` prints. */
+  const descriptionsOf = (
+    rows: Map<string, { owner: string; description: string }>,
+  ): Map<string, string> => {
+    const descriptions = new Map<string, string>();
+    for (const [id, row] of rows) {
+      if (row.description) descriptions.set(id, row.description);
     }
     return descriptions;
   };
@@ -306,9 +325,31 @@ export function createArcanaChatTools(refs: ArcanaShareRef[]): ArcanaChatTools {
         if (!refs.length) {
           return text("This chat is not linked to an Arcana collection.");
         }
-        const descriptions = await serviceDescriptions();
+        const descriptions = descriptionsOf(await serviceCollections());
         return text(
           `Arcana collections this chat can read:\n${collectionList(refs, descriptions)}`,
+        );
+      },
+    ),
+    tool(
+      "arcana_details",
+      `Show the details of one of this chat's Arcana collections: who owns it and the description that says what it is for. Use list_arcanas instead when you need every collection at once.`,
+      Type.Object({ collection: collectionArgument }),
+      async ({ collection }) => {
+        const ref = collectionRequired(collection);
+        if (typeof ref === "string") return text(ref);
+        const id = arcanaRefId(ref);
+        const row = (await serviceCollections()).get(id);
+        // The service is authoritative; the binding is all an unreachable
+        // service can still answer from.
+        const owner = row?.owner || ref.owner || "";
+        const description = row?.description || ref.description || "";
+        return text(
+          [
+            `Arcana: ${id}`,
+            `Owner: ${owner || "(unknown)"}`,
+            `Description: ${description || "(none)"}`,
+          ].join("\n"),
         );
       },
     ),
