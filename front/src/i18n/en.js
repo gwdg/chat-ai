@@ -701,7 +701,7 @@ export default {
       step3:
         "Select Arcana Tools. The separate Arcana row is legacy: it sends one collection id with the request.",
       step4:
-        "Add each collection the chat should read as owner/arcana, e.g. alice/papers. The agent lists them with list_arcanas and picks the matching one.",
+        "Add each collection the chat should read: the owner in the first field, the Arcana name in the second (e.g. alice and papers). The agent lists them with list_arcanas and picks the matching one.",
       step5:
         "Give the collection a short description, so the agent knows what it is for.",
     },
@@ -1169,7 +1169,7 @@ export default {
       description: "Use Arcana (RAG) to answer from a document collection you control.",
       step1: "Open GWDG Tools from the prompt box.",
       step2: "Enable tools and select Arcana Tools.",
-      step3: "Add a collection as owner/arcana, e.g. alice/papers.",
+      step3: "Add a collection: the owner in the first field, its Arcana name in the second.",
       step4: "Ask: “What does our internal policy say about this?”",
       step5: "Ask: “Which document supports this answer?”",
     },
@@ -1383,11 +1383,12 @@ export default {
     arcana_in_use_readonly: "Read-only tools",
     arcana_in_use_remove: "Remove {{name}}",
     arcana_add_title: "Add an Arcana",
-    arcana_add_placeholder: "owner/arcana, e.g. alice/papers",
+    arcana_add_owner_placeholder: "owner, e.g. alice",
+    arcana_add_name_placeholder: "arcana, e.g. papers",
     arcana_add_button: "Add",
     arcana_description_placeholder: "Short description for the agent (optional)",
     arcana_description_for: "Description of {{name}}",
-    arcana_invalid_ref: "Enter an Arcana as owner/arcana, e.g. alice/papers.",
+    arcana_invalid_ref: "Enter the owner and the Arcana name, e.g. alice and papers.",
     arcana_already_added: "This Arcana is already in the chat.",
     placeholder_mcp_url: "http://localhost:3000/mcp",
     placeholder_mcp_auth: "Authorization header (optional)",

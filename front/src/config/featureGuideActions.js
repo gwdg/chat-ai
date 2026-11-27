@@ -230,8 +230,9 @@ export function isToolActive(toolKey) {
 }
 
 export function arcanaAddIdEntered() {
-  const input = find('[data-guide="arcana-add-id"]');
-  return !!input?.value?.trim();
+  const owner = find('[data-guide="arcana-add-owner"]');
+  const name = find('[data-guide="arcana-add-name"]');
+  return !!owner?.value?.trim() && !!name?.value?.trim();
 }
 
 /**

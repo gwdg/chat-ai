@@ -186,7 +186,10 @@ describe("ArcanaContainer adding collections", () => {
     );
 
     expect(
-      screen.getByPlaceholderText("owner/arcana, e.g. alice/papers"),
+      screen.getByPlaceholderText("owner, e.g. alice"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText("arcana, e.g. papers"),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add" })).toBeInTheDocument();
   });
@@ -202,7 +205,7 @@ describe("ArcanaContainer adding collections", () => {
     );
 
     expect(
-      screen.queryByPlaceholderText("owner/arcana, e.g. alice/papers"),
+      screen.queryByPlaceholderText("owner, e.g. alice"),
     ).not.toBeInTheDocument();
   });
 
@@ -220,11 +223,11 @@ describe("ArcanaContainer adding collections", () => {
     );
 
     expect(
-      screen.getByPlaceholderText("owner/arcana, e.g. alice/papers"),
+      screen.getByPlaceholderText("owner, e.g. alice"),
     ).toBeInTheDocument();
   });
 
-  it("adds a typed owner/arcana with a description and leaves the switch alone", () => {
+  it("adds a typed owner and Arcana with a description and leaves the switch alone", () => {
     const localState = stateWith({ enable_tools: false, arcana: { id: "" } });
     const setLocalState = vi.fn((updater) => updater(localState));
     render(
@@ -235,10 +238,12 @@ describe("ArcanaContainer adding collections", () => {
       />,
     );
 
-    fireEvent.change(
-      screen.getByPlaceholderText("owner/arcana, e.g. alice/papers"),
-      { target: { value: "alice/papers" } },
-    );
+    fireEvent.change(screen.getByPlaceholderText("owner, e.g. alice"), {
+      target: { value: "alice" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("arcana, e.g. papers"), {
+      target: { value: "papers" },
+    });
     fireEvent.change(
       screen.getByPlaceholderText("Short description for the agent (optional)"),
       { target: { value: " Peer-reviewed papers " } },
@@ -259,6 +264,26 @@ describe("ArcanaContainer adding collections", () => {
     ]);
   });
 
+  it("splits a pasted owner/arcana across the two fields", () => {
+    const localState = stateWith({ arcana: { id: "" } });
+    const setLocalState = vi.fn((updater) => updater(localState));
+    render(
+      <ArcanaContainer
+        localState={localState}
+        setLocalState={setLocalState}
+        configurable
+      />,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText("owner, e.g. alice"), {
+      target: { value: "alice/papers" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+
+    const next = setLocalState.mock.results[0].value;
+    expect(next.settings.arcana_shares[0].collection).toBe("alice/papers");
+  });
+
   it("keeps existing collections when another is added", () => {
     const localState = stateWith({
       arcana_shares: [
@@ -274,10 +299,12 @@ describe("ArcanaContainer adding collections", () => {
       />,
     );
 
-    fireEvent.change(
-      screen.getByPlaceholderText("owner/arcana, e.g. alice/papers"),
-      { target: { value: "bob/notes" } },
-    );
+    fireEvent.change(screen.getByPlaceholderText("owner, e.g. alice"), {
+      target: { value: "bob" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("arcana, e.g. papers"), {
+      target: { value: "notes" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
 
     const next = setLocalState.mock.results[0].value;
@@ -287,7 +314,7 @@ describe("ArcanaContainer adding collections", () => {
     ]);
   });
 
-  it("refuses a value that is not owner/arcana", () => {
+  it("refuses a collection without both an owner and a name", () => {
     const setLocalState = vi.fn();
     render(
       <ArcanaContainer
@@ -297,16 +324,16 @@ describe("ArcanaContainer adding collections", () => {
       />,
     );
 
-    fireEvent.change(
-      screen.getByPlaceholderText("owner/arcana, e.g. alice/papers"),
-      { target: { value: "papers" } },
-    );
+    // Only the owner was typed: the two fields are not a description.
+    fireEvent.change(screen.getByPlaceholderText("owner, e.g. alice"), {
+      target: { value: "papers" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
 
     expect(setLocalState).not.toHaveBeenCalled();
     expect(
       screen.getByText(
-        "Enter an Arcana as owner/arcana, e.g. alice/papers.",
+        "Enter the owner and the Arcana name, e.g. alice and papers.",
       ),
     ).toBeInTheDocument();
   });
@@ -325,10 +352,12 @@ describe("ArcanaContainer adding collections", () => {
       />,
     );
 
-    fireEvent.change(
-      screen.getByPlaceholderText("owner/arcana, e.g. alice/papers"),
-      { target: { value: "alice/papers" } },
-    );
+    fireEvent.change(screen.getByPlaceholderText("owner, e.g. alice"), {
+      target: { value: "alice" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("arcana, e.g. papers"), {
+      target: { value: "papers" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
 
     expect(setLocalState).not.toHaveBeenCalled();
@@ -404,10 +433,12 @@ describe("ArcanaContainer adding collections", () => {
       />,
     );
 
-    fireEvent.change(
-      screen.getByPlaceholderText("owner/arcana, e.g. alice/papers"),
-      { target: { value: "bob/notes" } },
-    );
+    fireEvent.change(screen.getByPlaceholderText("owner, e.g. alice"), {
+      target: { value: "bob" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("arcana, e.g. papers"), {
+      target: { value: "notes" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
 
     const next = setLocalState.mock.results[0].value;
@@ -438,7 +469,7 @@ describe("ArcanaContainer legacy and current halves", () => {
     expect(screen.getByPlaceholderText("Arcana id")).toBeInTheDocument();
     // The list belongs to Arcana Tools, so the legacy row has no add form.
     expect(
-      screen.queryByPlaceholderText("owner/arcana, e.g. alice/papers"),
+      screen.queryByPlaceholderText("owner, e.g. alice"),
     ).not.toBeInTheDocument();
   });
 
@@ -459,7 +490,7 @@ describe("ArcanaContainer legacy and current halves", () => {
     ).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText("Arcana id")).not.toBeInTheDocument();
     expect(
-      screen.getByPlaceholderText("owner/arcana, e.g. alice/papers"),
+      screen.getByPlaceholderText("owner, e.g. alice"),
     ).toBeInTheDocument();
   });
 

@@ -712,7 +712,7 @@ export default {
       step3:
         "Wählen Sie Arcana Tools. Die separate Zeile Arcana ist veraltet: Sie sendet eine einzelne Collection-ID mit der Anfrage.",
       step4:
-        "Fügen Sie jede Sammlung, die der Chat lesen soll, als owner/arcana hinzu, z. B. alice/papers. Der Agent listet sie mit list_arcanas auf und wählt die passende.",
+        "Fügen Sie jede Sammlung, die der Chat lesen soll, hinzu: den Owner im ersten Feld, den Arcana-Namen im zweiten (z. B. alice und papers). Der Agent listet sie mit list_arcanas auf und wählt die passende.",
       step5:
         "Geben Sie der Sammlung eine kurze Beschreibung, damit der Agent weiß, wofür sie gedacht ist.",
     },
@@ -1186,7 +1186,7 @@ export default {
       description: "Verwenden Sie Arcana (RAG), um aus einer eigenen Dokumentensammlung zu antworten.",
       step1: "Öffnen Sie GWDG Tools im Eingabefeld.",
       step2: "Aktivieren Sie die Tools und wählen Sie Arcana Tools.",
-      step3: "Fügen Sie eine Sammlung als owner/arcana hinzu, z. B. alice/papers.",
+      step3: "Fügen Sie eine Sammlung hinzu: den Owner im ersten Feld, den Arcana-Namen im zweiten.",
       step4: "Fragen Sie: „Was sagt unsere interne Richtlinie dazu?“",
       step5: "Fragen Sie: „Welches Dokument belegt diese Antwort?“",
     },
@@ -1399,11 +1399,12 @@ export default {
     arcana_in_use_readonly: "Nur-Lese-Werkzeuge",
     arcana_in_use_remove: "{{name}} entfernen",
     arcana_add_title: "Arcana hinzufügen",
-    arcana_add_placeholder: "owner/arcana, z. B. alice/papers",
+    arcana_add_owner_placeholder: "Owner, z. B. alice",
+    arcana_add_name_placeholder: "Arcana, z. B. papers",
     arcana_add_button: "Hinzufügen",
     arcana_description_placeholder: "Kurze Beschreibung für den Agenten (optional)",
     arcana_description_for: "Beschreibung von {{name}}",
-    arcana_invalid_ref: "Gib ein Arcana als owner/arcana ein, z. B. alice/papers.",
+    arcana_invalid_ref: "Gib den Owner und den Arcana-Namen ein, z. B. alice und papers.",
     arcana_already_added: "Dieses Arcana ist bereits im Chat.",
     placeholder_mcp_url: "http://localhost:3000/mcp",
     placeholder_mcp_auth: "Authorization-Header (optional)",

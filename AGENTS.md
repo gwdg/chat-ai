@@ -2995,8 +2995,10 @@ by its `legacy` (default true) and `collections` (default true) props:
 
 - The **Arcana Tools** row (`legacy={false}`) shows the list and the add form. It lists every
   collection the chat can read — every share, each row badged "Read-only tools" — with an inline
-  description input and a remove control. Below it the add form (`owner/arcana` + short description,
-  `data-guide` `arcana-add-id` / `arcana-add-description`) appends to `arcana_shares`.
+  description input and a remove control. Below it the add form (separate owner and Arcana-name
+  fields plus a short description, `data-guide` `arcana-add-id` on the pair,
+  `arcana-add-owner` / `arcana-add-name` on the inputs and `arcana-add-description`) appends to
+  `arcana_shares`; a pasted `alice/papers` fills both fields.
 - The **Arcana** row (`collections={false}`) is **legacy**: it shows the notice
   (`data-guide="arcana-legacy-notice"`), the single `settings.arcana.id` field (`data-guide`
   `arcana-id`) and, when that id is set, the row for it (badged "Arcana tool"). It is the server-side

@@ -687,7 +687,7 @@ export const featureGuides = {
   arcana: {
     titleKey: "feature_guide.arcana.title",
     prompt:
-      "Use Arcana for retrieval-augmented generation (RAG). Open GWDG Tools, enable tools and select Arcana Tools. Add the collections this chat should read, each by its owner/arcana id with a short description so the agent knows what it is for; the agent calls list_arcanas to choose between several. The older Arcana row is legacy: it sends one collection id with the request and lets the server run the retrieval.",
+      "Use Arcana for retrieval-augmented generation (RAG). Open GWDG Tools, enable tools and select Arcana Tools. Add the collections this chat should read, each with its owner in the first field, its Arcana name in the second, and a short description so the agent knows what it is for; the agent calls list_arcanas to choose between several. The older Arcana row is legacy: it sends one collection id with the request and lets the server run the retrieval.",
     keywords: ["arcana", "rag", "retrieval", "knowledge base", "knowledge"],
     steps: [
       {

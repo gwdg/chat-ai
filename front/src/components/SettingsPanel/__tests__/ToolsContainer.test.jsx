@@ -325,7 +325,7 @@ describe("ToolsContainer detail pages", () => {
     // The chat's own read tools do not need the gateway switch, and the list
     // of collections lives with the tools that read it.
     expect(
-      screen.getByPlaceholderText("owner/arcana, e.g. alice/papers"),
+      screen.getByPlaceholderText("owner, e.g. alice"),
     ).toBeInTheDocument();
     expect(screen.queryByPlaceholderText("Arcana id")).not.toBeInTheDocument();
     expect(
@@ -355,7 +355,7 @@ describe("ToolsContainer detail pages", () => {
     );
 
     expect(
-      screen.getByPlaceholderText("owner/arcana, e.g. alice/papers"),
+      screen.getByPlaceholderText("owner, e.g. alice"),
     ).toBeInTheDocument();
     expect(
       screen.queryByText("Turn this tool on to configure it."),

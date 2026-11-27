@@ -34,7 +34,8 @@ const ArcanaContainer = ({
 }) => {
   const { t } = useTranslation();
   const { openModal } = useModal();
-  const [draftId, setDraftId] = useState("");
+  const [draftOwner, setDraftOwner] = useState("");
+  const [draftName, setDraftName] = useState("");
   const [draftDescription, setDraftDescription] = useState("");
   const [error, setError] = useState("");
 
@@ -124,8 +125,26 @@ const ArcanaContainer = ({
     return { ...prev, settings: nextSettings };
   };
 
+  /**
+   * Owner and Arcana name are two fields because that is how people read the
+   * reference. A pasted `alice/papers` fills both instead of being refused.
+   */
+  const changeIdPart = (setter) => (event) => {
+    const value = event.target.value;
+    setError("");
+    if (value.includes("/")) {
+      const at = value.indexOf("/");
+      setDraftOwner(value.slice(0, at));
+      setDraftName(value.slice(at + 1));
+      return;
+    }
+    setter(value);
+  };
+
   const addShare = () => {
-    const ref = parseArcanaShareRef(draftId);
+    const owner = draftOwner.trim();
+    const name = draftName.trim();
+    const ref = parseArcanaShareRef(owner && name ? `${owner}/${name}` : "");
     if (!ref) {
       setError(t("settings.arcana_invalid_ref"));
       return;
@@ -146,7 +165,8 @@ const ArcanaContainer = ({
       ];
       return writeShares(prev, next);
     });
-    setDraftId("");
+    setDraftOwner("");
+    setDraftName("");
     setDraftDescription("");
     setError("");
   };
@@ -257,21 +277,41 @@ const ArcanaContainer = ({
             {t("settings.arcana_add_title")}
           </p>
           <div className="flex flex-col gap-2 sm:flex-row">
-            <input
-              type="text"
+            <div
               data-guide="arcana-add-id"
-              value={draftId}
-              onChange={(e) => {
-                setDraftId(e.target.value);
-                setError("");
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") addShare();
-              }}
-              placeholder={t("settings.arcana_add_placeholder")}
-              aria-label={t("settings.arcana_add_placeholder")}
-              className="input w-full font-mono text-xs"
-            />
+              className="flex min-w-0 flex-1 items-center gap-1"
+            >
+              <input
+                type="text"
+                data-guide="arcana-add-owner"
+                value={draftOwner}
+                onChange={changeIdPart(setDraftOwner)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") addShare();
+                }}
+                placeholder={t("settings.arcana_add_owner_placeholder")}
+                aria-label={t("settings.arcana_add_owner_placeholder")}
+                className="input w-full font-mono text-xs"
+              />
+              <span
+                className="shrink-0 text-xs text-base-content/40"
+                aria-hidden="true"
+              >
+                /
+              </span>
+              <input
+                type="text"
+                data-guide="arcana-add-name"
+                value={draftName}
+                onChange={changeIdPart(setDraftName)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") addShare();
+                }}
+                placeholder={t("settings.arcana_add_name_placeholder")}
+                aria-label={t("settings.arcana_add_name_placeholder")}
+                className="input w-full font-mono text-xs"
+              />
+            </div>
             <input
               type="text"
               data-guide="arcana-add-description"
