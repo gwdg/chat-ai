@@ -2806,7 +2806,12 @@ gained a fourth step that targets the link card.
   `BaseModal.jsx`; that is the pattern every existing modal in the repo follows. `BaseModal` ignores
   its overlay/Escape dismissal for 300 ms after opening, because the second click of the double click
   that opened a dialog lands on the newly mounted overlay and would close it again. The close button
-  and footer buttons call `onClose` directly and close at once.
+  and footer buttons call `onClose` directly and close at once. The context's default value is a
+  no-op fallback, not `undefined`: a Fast Refresh of `ModalContext.jsx` replaces the context object
+  while the mounted provider still supplies the previous one, and the next render reads that default,
+  so `useContext` returned `undefined` and every `const { openModal } = useModal()` threw. The
+  fallback never runs a `confirmAction` callback, because the real one only runs it after the user
+  agreed.
 - **Upstream calls** each get their own file in `apis/`. Components, hooks and modals import them
   directly — there is no enforced layer between them.
 - **Redux persistence storage:** import `redux-persist/es/storage`, not

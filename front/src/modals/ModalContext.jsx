@@ -66,7 +66,20 @@ import RenameAgentSessionModal from "./Agent/RenameAgentSessionModal";
 import BugReportModal from "./Feedback/BugReportModal";
 import FeedbackHistoryModal from "./UserSettings/FeedbackHistoryModal";
 
-const ModalContext = createContext();
+// A consumer can render while no provider is above it. That happens under Fast
+// Refresh: this module is re-executed (so `ModalContext` is a new object) while
+// already-mounted components keep the previous one, and the next render then
+// reads this default. Without one, `useContext` returned `undefined` and every
+// `const { openModal } = useModal()` threw during the hot update. The fallback
+// keeps that update from taking the page down; `confirmAction` deliberately does
+// nothing, because the real one only runs its callback after the user agreed.
+const NO_PROVIDER = {
+  openModal: () => {},
+  closeModal: () => {},
+  confirmAction: () => {},
+};
+
+const ModalContext = createContext(NO_PROVIDER);
 
 export function ModalProvider({ children }) {
   const [modalType, setModalType] = useState(null);
@@ -317,6 +330,15 @@ export function ModalProvider({ children }) {
   );
 }
 
+let warnedMissingProvider = false;
+
 export function useModal() {
-  return useContext(ModalContext);
+  const context = useContext(ModalContext);
+  if (context === NO_PROVIDER && import.meta.env.DEV && !warnedMissingProvider) {
+    warnedMissingProvider = true;
+    console.warn(
+      "useModal() ran without a ModalProvider. A hot update can cause this; reload the page.",
+    );
+  }
+  return context;
 }
