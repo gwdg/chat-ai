@@ -81,7 +81,7 @@ export const fromBase64 = (value: string): Uint8Array => {
 
 /** Base64 for a whole buffer, in chunks small enough for `String.fromCharCode`. */
 export const toBase64 = (data: Uint8Array): string => {
-  // The pieces are collected and joined once: at 2 MiB per upload chunk,
+  // The pieces are collected and joined once: at 1 MiB per upload chunk,
   // growing one string by `+=` makes the encoder quadratic on some engines.
   const pieces: string[] = [];
   for (let i = 0; i < data.length; i += 0x8000) {

@@ -2708,7 +2708,7 @@ OIDC claim to those headers; a direct stack sends them through `fakeAuthHeaders`
 `delete`, `mkdir`, `rename`, `move`, `copy`, `range` and `quota` are not, so the tree hides New
 folder/New file and only offers Upload, and a drag needs a `move` the provider does not report.
 `append` is a provider-side read + concatenate + write, because the service has no append tool, and
-the concatenation goes through the same 1 MiB chunk path.
+the concatenation goes through the same chunked write path.
 A collection is mounted live (`addSelectionToWorkspace`), and the collection list `/` is refused as a
 mount target.
 
@@ -2716,10 +2716,19 @@ mount target.
 `upload_file_chunk`, so images and PDFs keep their bytes; those uploads are stored but not indexed.
 The write path is chunked because the MCP server answers a request body above 4 MiB with `413
 Request body too large` (its own `RequestBodyLimitMiddleware`), which a PDF easily reaches once
-base64 and the JSON envelope are counted. `SaiaRagProvider.uploadChunked` sends 1 MiB slices with
-`offset`/`last`, and an exact multiple ends with an empty final chunk; `upload_file_base64` remains
-the fallback when a service does not list the chunk tool (it is not in `REQUIRED_TOOLS`, so an older
-deployment still connects). `saia-rag-cli/src/saia_rag/uploads.py` stages the slices under
+base64 and the JSON envelope are counted. `SaiaRagProvider.uploadChunked` sends `offset`/`last`
+slices and an exact multiple ends with an empty final chunk; `upload_file_base64` remains the
+fallback when a service does not list the chunk tool (it is not in `REQUIRED_TOOLS`, so an older
+deployment still connects). The provider's chunk size is 1 MiB, the size `uploads.py` stages
+(`CHUNK_BYTES`), so a normal upload is never refused for being too large. A deployment that caps
+lower is handled without failing: a 2xx-with-`isError` naming the limit ("send at most N bytes per
+chunk") is recognised like a proxy's `413`, the bytes go back into the queue and the same offset is
+retried at exactly the announced size, remembered for the rest of the page. Never treat that
+message as final, and never drop the number from it — it is how the client learns the service's
+cap. That message only arrives because `mcp_server.upload_file_chunk` raises
+`mcp.server.mcpserver.exceptions.ToolError`: the SDK forwards `ToolError` verbatim and replaces
+every other exception with a bare `Error executing tool <name>`, dropping the text.
+`saia-rag-cli/src/saia_rag/uploads.py` stages the slices under
 `<tmp>/saia-rag-uploads/<digest>.part`, keyed by caller + collection + file name, refuses an offset
 that does not match the staged size, and stores the file once the last chunk arrives. A Markdown
 preview resolves `![](bild.png)` in the browser: `workspace/filePreview.ts` builds a
@@ -2734,11 +2743,12 @@ byte leaves, then after each chunk the service accepted (`uploadFile` passes the
 manager also sets `0 %` with the file name before it calls, so the button moves on the click and not
 after the first round trip). A failed file is not counted in the "stored" toast. Two things keep the
 upload itself quick: a `write` with `overwrite: true` skips the pre-flight `list_files` conflict check
-(a whole round trip and, on a big collection, a big listing), and chunks are 2 MiB, which halves the
-request count while staying under the service's 4 MiB body limit once base64 and JSON are added. When
-a deployment's proxy rejects that body anyway (`413 Request body too large`, which never reaches the
-tool, so nothing was staged), the provider halves its chunk size and retries the same offset, and it
-remembers the accepted size for the next file. All of this matters because the service answers
+(a whole round trip and, on a big collection, a big listing), and the chunk is 1 MiB, the largest
+piece the service stages, which keeps the request count low while staying far under the 4 MiB body
+limit once base64 and JSON are added. When a deployment refuses that size anyway — a proxy's `413`
+or a service whose own `stage_chunk` cap is lower — the provider retries the same offset smaller
+(1 MiB, then half, then half again to the 256 KiB floor) and remembers the accepted size for the
+rest of the page's uploads. All of this matters because the service answers
 nothing at all while `index_collection` holds the collection's write lock
 (`registry.write_lock` → `exclusive_lock`), so an upload started during indexing waits out the whole
 run.

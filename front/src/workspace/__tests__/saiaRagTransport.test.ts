@@ -215,10 +215,18 @@ describe("SaiaRagProvider over a real MCP transport", () => {
     const chunks = calls.filter((call) => call.name === "upload_file_chunk");
     expect(chunks.map((call) => call.args.offset)).toEqual([
       0,
+      1024 * 1024,
       2 * 1024 * 1024,
+      3 * 1024 * 1024,
       4 * 1024 * 1024,
     ]);
-    expect(chunks.map((call) => call.args.last)).toEqual([false, false, true]);
+    expect(chunks.map((call) => call.args.last)).toEqual([
+      false,
+      false,
+      false,
+      false,
+      true,
+    ]);
     expect(stored.get(stageKey("alice__demo", "notes.pdf"))).toEqual(bytes);
     // Base64 and the JSON envelope still keep every request under the 4 MiB
     // body limit the MCP server enforces.

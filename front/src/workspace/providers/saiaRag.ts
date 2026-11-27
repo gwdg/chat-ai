@@ -70,11 +70,15 @@ const SEARCH_DOCUMENTS_TOOL = "search_documents";
 const SEARCH_PREVIEW_TOOL = "search_preview";
 
 /**
- * Raw bytes per upload chunk. Base64 and the JSON envelope make this ~2.8 MiB
- * on the wire, still below the service's 4 MiB request-body limit, and half the
- * round trips a 1 MiB chunk would need for a large PDF.
+ * Raw bytes per upload chunk.
+ *
+ * Matches the size `saia_rag.uploads.stage_chunk` stages (1 MiB), so the normal
+ * upload never sends a chunk the service refuses. Base64 and the JSON envelope
+ * turn this into ~1.4 MiB on the wire, well below the 4 MiB request-body limit.
+ * A deployment that caps lower still gets a smaller chunk: the refusal names
+ * the size it accepts (or answers 413) and `retrySmaller` steps down.
  */
-const CHUNK_BYTES = 2 * 1024 * 1024;
+const CHUNK_BYTES = 1024 * 1024;
 
 /**
  * The chunk size to fall back to when a deployment's proxy rejects a body far
@@ -212,6 +216,26 @@ const isBodyTooLarge = (error: unknown): boolean => {
   );
 };
 
+/**
+ * The per-chunk cap the service itself enforces, read off its refusal.
+ *
+ * `upload_file_chunk` stages at most 1 MiB — the app's own chunk size, so the
+ * normal upload is never refused — and answers a larger piece from a stricter
+ * deployment with a tool error rather than a 413. That request did reach the
+ * tool, and only `stage_chunk` rejected it, so the chunk is still unstaged and
+ * the same offset can be retried. The message names the limit, so the retry
+ * lands on it in one step instead of halving towards it. Matching the text
+ * (whatever prefix the MCP layer adds) keeps the client and `uploads.py` in
+ * step without either side having to know the other's constant.
+ */
+const refusedChunkLimit = (error: unknown): number | null => {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  const match = /send at most (\d+) bytes per chunk/i.exec(message);
+  if (!match) return null;
+  const limit = Number(match[1]);
+  return Number.isFinite(limit) && limit > 0 ? limit : null;
+};
+
 const explainConnect = (error: unknown, endpoint: string): string => {
   const message = error instanceof Error ? error.message : String(error);
   if (isAuthFailure(message)) {
@@ -318,8 +342,10 @@ export class SaiaRagProvider implements FileProvider {
   private client: any = null;
   private tools = new Set<string>();
   /**
-   * The chunk size this deployment accepts. It only ever shrinks: a body a
-   * proxy rejected is not retried with the same size for the next file.
+   * The chunk size this deployment accepts. It only ever shrinks, and it holds
+   * for this provider: a body a proxy refused with a 413, or one the service's
+   * own chunk cap refused, is not retried at the same size for the next file of
+   * the same page's uploads.
    */
   private chunkBytes = CHUNK_BYTES;
   private connectPromise: Promise<void> | null = null;
@@ -1092,17 +1118,23 @@ export class SaiaRagProvider implements FileProvider {
      * A rejected body stored nothing, so the bytes go back into the queue and
      * the same offset is tried again as a smaller piece. Returns false when the
      * floor is reached, which leaves the error to the caller.
+     *
+     * Two rejections land here: a proxy's `413` (the request never reached the
+     * tool) and the service's own chunk cap (the tool ran and refused to stage
+     * the piece). The second names the size it accepts, so that attempt is not
+     * wasted on a ladder of halvings.
      */
     const retrySmaller = (chunk: Uint8Array, error: unknown): boolean => {
-      if (!isBodyTooLarge(error) || this.chunkBytes <= MIN_CHUNK_BYTES) {
-        return false;
-      }
+      const announced = refusedChunkLimit(error);
+      if (announced === null && !isBodyTooLarge(error)) return false;
+      if (this.chunkBytes <= MIN_CHUNK_BYTES) return false;
       queue.unshift(chunk);
       queued += chunk.length;
-      this.chunkBytes = Math.max(
-        MIN_CHUNK_BYTES,
-        Math.floor(this.chunkBytes / 2),
-      );
+      const smaller =
+        announced !== null && announced < this.chunkBytes
+          ? announced
+          : Math.floor(this.chunkBytes / 2);
+      this.chunkBytes = Math.max(MIN_CHUNK_BYTES, smaller);
       return true;
     };
 

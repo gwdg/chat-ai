@@ -3242,11 +3242,17 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           be left unmanageable.
         </li>
         <li>
-          <b>Bytes travel as base64, in 1 MiB chunks.</b> Images and PDFs are written with
+          <b>Bytes travel as base64, in chunked writes.</b> Images and PDFs are written with
           <code>upload_file_chunk</code> and read with <code>read_file_base64</code>, so a preview
           and a download see the exact bytes. The chunk tool stages one slice at a time because the
           MCP server answers a request body above 4 MiB with <code>413 Request body too large</code>,
-          which a PDF reaches once base64 and the JSON envelope are counted; <code>upload_file_base64</code>
+          which a PDF reaches once base64 and the JSON envelope are counted. The app sends 1 MiB
+          pieces, exactly the size the service stages, so a normal upload is never refused; a
+          deployment that caps lower announces its size in the refusal and the provider retries the
+          same offset at that size instead of failing the upload. That refusal only reaches the
+          client because the tool raises <code>ToolError</code>: the SDK forwards that one and masks
+          any other exception as a bare <code>Error executing tool &lt;name&gt;</code>.
+          <code>upload_file_base64</code>
           remains for small writes and for a service that predates the chunk tool. Those uploads are
           stored but not indexed, so they remain plain files rather than searchable documents. A
           Markdown preview that references <code>![](bild.png)</code> resolves the picture in the
@@ -3268,7 +3274,7 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
         <li>
           <b>Append is a read and a chunked write.</b> There is no native append tool, so the provider
           reads the existing bytes, prepends them to the new ones and streams the result through the
-          same 1 MiB chunk path, which also keeps the request under the body limit.
+          same chunked write path, which also keeps the request under the body limit.
         </li>
       </ol>
 
@@ -3286,8 +3292,9 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           </tr>
           <tr>
             <td>File provider</td>
-            <td>MCP client, collection addressing, role mapping, base64 reads, 1 MiB chunked writes,
-                append, collection and member calls, error reduction.</td>
+            <td>MCP client, collection addressing, role mapping, base64 reads, chunked writes
+                (1 MiB, shrinking to a smaller size the service announces), append, collection and
+                member calls, error reduction.</td>
             <td><span class="mono">front/src/workspace/providers/saiaRag.ts</span></td>
           </tr>
           <tr>
@@ -3354,8 +3361,9 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
             and the UI refuses one above its preview limit.</li>
         <li>A single MCP request body is capped at 4 MiB by the service, so a client that sends a whole
             large file in one <code>upload_file_base64</code> call still gets
-            <code>413 Request body too large</code>; the app's own writes are chunked at 1 MiB and
-            never reach the cap.</li>
+            <code>413 Request body too large</code>; the app's own writes are chunked at 1 MiB, the
+            size the service stages, and shrink only if a deployment's cap is lower, so they stay
+            under the body limit.</li>
         <li>Files uploaded this way are stored but not indexed, so a search over the collection may
             not find them.</li>
         <li>The exact group model is the deployment's business: the service accepts several claim
@@ -5280,7 +5288,7 @@ x-saia-bridge-depth: 2
       <p>
         Sources: the repository at <span class="mono">gwdg/chat-ai</span>, its developer notes and the
         feature documents under <span class="mono">docs/</span>. Facts are checked against the code on
-        26 November 2026; this page is a reading aid, not a specification.
+        27 November 2026; this page is a reading aid, not a specification.
       </p>
       <p>
         Not covered here on purpose: visual polish and sidebar work, tutorial copy, and internal
