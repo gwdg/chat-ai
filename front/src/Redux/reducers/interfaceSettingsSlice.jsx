@@ -16,6 +16,7 @@ const interfaceSettingsSlice = createSlice({
     agree_web_search: false,
     show_usage_in_sidebar: true,
     collapsed_topics: [],
+    topic_sort: "created",
   },
   reducers: {
     toggleTheme: (state) => {
@@ -72,6 +73,10 @@ const interfaceSettingsSlice = createSlice({
         state.collapsed_topics.push(action.payload);
       }
     },
+    // Order of topics in the sidebar: "created" | "activity" | "name".
+    setTopicSort: (state, action) => {
+      state.topic_sort = action.payload;
+    },
   },
 });
 
@@ -88,10 +93,13 @@ export const selectShowUsageInSidebar = (state) =>
 export const selectWarning = (key) => (state) =>
   state.interface_settings[key] ?? true;
 export const selectCollapsedTopics = (state) => state.interface_settings.collapsed_topics;
+// Persisted state from before this key existed lacks it, hence the fallback.
+export const selectTopicSort = (state) =>
+  state.interface_settings.topic_sort ?? "created";
 export const {
   toggleTheme, setDarkMode, setLightMode,
   closeSettings, toggleSettings, toggleSidebar, closeSidebar, openSidebar,
   closeAnnouncement, closeHallucination, agreeWebSearch, closeTour,
-  setShowUsageInSidebar, setWarning, toggleTopic,
+  setShowUsageInSidebar, setWarning, toggleTopic, setTopicSort,
 } = interfaceSettingsSlice.actions;
 export default interfaceSettingsSlice.reducer;

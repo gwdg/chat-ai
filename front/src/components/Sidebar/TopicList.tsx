@@ -1,8 +1,8 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import type { DragEvent, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
-import { BookmarkAdd, ChevronDown, Edit, TrashCan } from "@carbon/icons-react";
+import { ArrowsVertical, BookmarkAdd, ChevronDown, Edit, TrashCan } from "@carbon/icons-react";
 
 import type { FolderRow } from "../../db/dbTypes";
 import { topicColor, withAlpha } from "./topicColors";
@@ -12,7 +12,23 @@ import ImportChatButton from "./Buttons/ImportChatButton";
 import { useModal } from "../../modals/ModalContext";
 import ImportPersonaButton from "./Buttons/ImportPersonaButton";
 import NewChatButton from "./Buttons/NewChatButton";
-import { selectCollapsedTopics, toggleTopic } from "../../Redux/reducers/interfaceSettingsSlice";
+import {
+  selectCollapsedTopics,
+  selectTopicSort,
+  setTopicSort,
+  toggleTopic,
+} from "../../Redux/reducers/interfaceSettingsSlice";
+
+const TOPIC_SORTS = ["created", "activity", "name"] as const;
+type TopicSort = (typeof TOPIC_SORTS)[number];
+
+// Latest change inside a topic; an empty topic counts from its creation.
+function lastActivity(topic: FolderRow, conversations: any[] = []) {
+  return conversations.reduce(
+    (latest, conv) => Math.max(latest, conv.lastModified ?? 0),
+    topic.createdAt ?? 0,
+  );
+}
 
 /**
  * The virtual topic holding conversations with no `folderId`. It is a UI
@@ -59,6 +75,30 @@ export default function TopicList({
   const dispatch = useDispatch();
 
   const collapsedTopicIds = useSelector(selectCollapsedTopics) || [];
+  const storedSort = useSelector(selectTopicSort);
+  const topicSort: TopicSort = TOPIC_SORTS.includes(storedSort) ? storedSort : "created";
+
+  const cycleTopicSort = () => {
+    const next = TOPIC_SORTS[(TOPIC_SORTS.indexOf(topicSort) + 1) % TOPIC_SORTS.length];
+    dispatch(setTopicSort(next));
+  };
+
+  // `topics` arrives newest-first from useFolderList, which is the "created" order.
+  const sortedTopics = useMemo(() => {
+    if (topicSort === "name") {
+      return [...topics].sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { sensitivity: "base", numeric: true }),
+      );
+    }
+    if (topicSort === "activity") {
+      return [...topics].sort(
+        (a, b) =>
+          lastActivity(b, conversationsByTopic.get(b.id)) -
+          lastActivity(a, conversationsByTopic.get(a.id)),
+      );
+    }
+    return topics;
+  }, [topics, conversationsByTopic, topicSort]);
 
   const toggleTopicCollapse = useCallback((topicId: string) => {
     console.log("Dispatching topic toggle", topicId);
@@ -218,8 +258,18 @@ export default function TopicList({
         <BookmarkAdd size={18} className="flex-shrink-0" />
           <span className="truncate px-2">{t("folders.create_button")}</span>
       </button>
+      <button
+        type="button"
+        onClick={cycleTopicSort}
+        title={t("folders.sort_label")}
+        aria-label={`${t("folders.sort_label")}: ${t(`folders.sort_${topicSort}`)}`}
+        className="flex flex-shrink-0 items-center gap-1 px-1 rounded-lg text-[11px] text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition cursor-pointer"
+      >
+        <ArrowsVertical size={12} className="flex-shrink-0" />
+        <span className="whitespace-nowrap">{t(`folders.sort_${topicSort}`)}</span>
+      </button>
       </div>
-      {topics.map((topic) => {
+      {sortedTopics.map((topic) => {
         const color = topicColor(topic);
         return renderRow({
           id: topic.id,
