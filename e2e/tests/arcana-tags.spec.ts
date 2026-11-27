@@ -164,7 +164,7 @@ test.describe("arcana tags", () => {
         user: "The user clicks Clear next to the chips.",
         system:
           "All three files are listed again and the match line disappears.",
-        shows: "the file list with all three files and no active tag chips",
+        shows: "the file list with all three files listed and the finance and hr chips drawn unselected",
       },
       async () => {
         await page.locator('[data-guide="arcana-clear-filter"]').click();
@@ -229,6 +229,89 @@ test.describe("arcana tags", () => {
         await expect
           .poll(async () => (await lastCall(request, "search_preview"))?.args ?? null)
           .toEqual({ collection: COLLECTION, query: "budget", count: 5 });
+      },
+    );
+  });
+
+  test("shares a collection through the public switch and its chat link", async ({
+    page,
+    doc,
+    request,
+  }) => {
+    const manager = page.locator('[data-guide="arcana-manager"]').first();
+
+    await doc.step(
+      "Open the Share tab",
+      {
+        user: "The user opens the collection page and switches the right-hand panel to Share.",
+        system:
+          "The Share tab shows the public-read switch, the chat link and the member list. The collection is publicly readable, so the link is there.",
+        shows:
+          "the Share tab with “Publicly readable” switched on, a chat link and the member share form",
+      },
+      async () => {
+        await openApp(page, COLLECTION_PAGE);
+        await expect(manager.getByText(BOTH, { exact: true })).toBeVisible({
+          timeout: 20_000,
+        });
+        await page.locator('[data-guide="arcana-tab-share"]').click();
+
+        await expect(
+          page.locator('[data-guide="arcana-share-public-toggle"]'),
+        ).toBeChecked();
+        await expect(
+          page.locator('[data-guide="arcana-share-link"] input'),
+        ).toHaveValue(/arcana-tools=demo\/papers/);
+      },
+    );
+
+    await doc.step(
+      "Turn public read off",
+      {
+        user: "The user switches “Publicly readable” off.",
+        system:
+          "The service records the change, the chat link disappears, and the tab explains that the link needs public read to work for people outside the member list.",
+        shows:
+          "the Share tab with the switch off and the hint about turning “Publicly readable” on",
+      },
+      async () => {
+        await page.locator('[data-guide="arcana-share-public-toggle"]').click();
+
+        await expect(
+          page.locator('[data-guide="arcana-share-link"]'),
+        ).toHaveCount(0);
+        await expect(
+          page.locator('[data-guide="arcana-share-link-hint"]'),
+        ).toContainText("Turn on “Publicly readable”");
+        await expect
+          .poll(
+            async () =>
+              (await lastCall(request, "set_public_read"))?.args ?? null,
+          )
+          .toEqual({ collection: COLLECTION, public: false });
+      },
+    );
+
+    await doc.step(
+      "Turn public read back on",
+      {
+        user: "The user switches “Publicly readable” on again.",
+        system:
+          "The service records it and the chat link returns, again bound to demo/papers.",
+        shows: "the Share tab with the switch on and the chat link back",
+      },
+      async () => {
+        await page.locator('[data-guide="arcana-share-public-toggle"]').click();
+
+        await expect(
+          page.locator('[data-guide="arcana-share-link"] input'),
+        ).toHaveValue(/arcana-tools=demo\/papers/, { timeout: 20_000 });
+        await expect
+          .poll(
+            async () =>
+              (await lastCall(request, "set_public_read"))?.args ?? null,
+          )
+          .toEqual({ collection: COLLECTION, public: true });
       },
     );
   });
