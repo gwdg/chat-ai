@@ -25,6 +25,7 @@ import {
   requiresBrandConsent,
 } from "../config/consent";
 import { loadPersonaCatalog } from "./personaCatalog";
+import { arcanaSharesFromSettings } from "./arcanaShareLink";
 import { getSpeechModule } from "./speechAudio";
 import {
   isAgentEnabled,
@@ -253,6 +254,16 @@ export function buildConversationSettingsSummary(settings = {}) {
       ? "default"
       : settings.reasoning_effort;
   const arcanaId = settings.arcana?.id || "";
+  const arcanaShares = arcanaSharesFromSettings(settings);
+  const arcanaSharesText = arcanaShares.length
+    ? arcanaShares
+        .map((share) =>
+          share.description
+            ? `${share.name || share.collection} (${share.collection}): ${share.description}`
+            : `${share.name || share.collection} (${share.collection})`,
+        )
+        .join(", ")
+    : "none";
   const mcpServers = Array.isArray(settings.mcp_servers)
     ? settings.mcp_servers
     : [];
@@ -282,7 +293,7 @@ export function buildConversationSettingsSummary(settings = {}) {
     `storage access ${browserStorage ? "enabled" : "disabled"}`,
     `writing in this chat ${browserStorage ? "enabled" : "disabled"}; writing in attached workspaces ${workspaceWrite ? "enabled" : "disabled"}`,
     `arcana ${arcanaId || "none"}`,
-    `arcana share link ${settings.arcana_share?.collection ? `${settings.arcana_share.name || settings.arcana_share.collection} (${settings.arcana_share.collection})` : "none"}`,
+    `arcanas this chat can read ${arcanaSharesText}`,
     `MCP ${tools.mcp ? "enabled" : "disabled"}${mcpDescription ? ` (${mcpDescription})` : ""}`,
   ].join("; ");
 }

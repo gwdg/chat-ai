@@ -2765,9 +2765,10 @@ run.
 a second dialog would replace the draft. The feature guide is `workspace_saia_rag` (gated only by
 `workspaces`, not by the Arcanas module), and a page exists in `docs/architecture/index.html`.
 
-### 4.36 A shared Arcana opens as a chat with three read-only tools
+### 4.36 A chat reads a list of Arcana collections through four read-only tools
 
-The Arcana manager's **Share** tab (`modals/Arcana/ArcanaManagerModal.tsx`) carries the member list
+The editor's **Share** tab (`components/Arcana/ArcanaManager.tsx`, rendered inside
+`components/Arcana/ArcanaEditorPanel.tsx` on the collection's page) carries the member list
 and, above it, an access link `/chat?arcana=<owner>/<name>&enable_tools=true`. That is the shape the
 Arcana manager in `saia-rag-web` has always handed out and the one the user docs show, so it carries
 the readable **Arcana ID** (`alice/papers`) rather than the service's storage name. It is built by
@@ -2793,29 +2794,83 @@ did. It then sets `enable_tools = true` unless `isBrandLocked("tools")`, names a
 `hooks/useImportConversation.jsx` restores the same binding from an export. The setting is unindexed,
 needs no Dexie version bump, and travels in the full export.
 
+**A chat owns a list, not one collection.** `settings.arcana_shares` is an array of
+`{collection, name, owner, description?}` written by the user in GWDG Tools → Arcana;
+`settings.arcana_share` (the single object a link writes) is still accepted.
+`arcanaSharesFromSettings(settings)` is the one reader: it merges both, deduplicates by storage name,
+keeps the first entry's name and fills a missing `description` from the second. `arcanaShareFromSettings`
+is just its first element. The description is **chat-local** and user-written (neither the saia-rag
+service nor `saia-rag-web` stores one), is clipped to 280 characters, and exists so the agent can pick
+the useful collection.
+
 `components/SettingsPanel/ArcanaContainer.jsx` (GWDG Tools → Arcana) lists every collection the chat
-is wired to: the Arcana tool's `settings.arcana.id` and the `arcana_share` binding, deduplicated by
-storage name, each row badged "Arcana tool" / "Read-only tools" and removable (clearing `arcana.id`,
-deleting `arcana_share`, or both when one link set them together). `ToolsContainer` always renders it
-for the Arcana detail and adds the `settings.tools_enable_to_configure` hint below it while the tool
-cannot be configured, so a share binding stays visible with the tool switched off. It is the
-`<ul data-guide="tools-arcana-list">`.
+can read: the Arcana tool's `settings.arcana.id` and every share, deduplicated by storage name, each
+row badged "Arcana tool" / "Read-only tools", with an inline description input on share rows and a
+remove control. Below the list is the add form (`owner/arcana` + short description, `data-guide`
+`arcana-add-id` / `arcana-add-description`), which appends to `arcana_shares` and forces
+`enable_tools` unless `isBrandLocked("tools")`. Removing or editing a row materializes the merged list
+into `arcana_shares` and deletes `arcana_share`, so the aliases do not drift apart. The add form
+refuses anything `parseArcanaShareRef` cannot read and a collection already in the chat.
+`ToolsContainer` always renders it for the Arcana detail and adds the
+`settings.tools_enable_to_configure` hint below it while the tool cannot be configured, so a binding
+stays visible with the tool switched off. It is the `<ul data-guide="tools-arcana-list">`.
 
-`agent/arcanaChatTools.ts#createArcanaChatTools` adds exactly three read-only tools for that fixed
-collection: `search_arcana` (`search_chunks`), `list_arcana_documents` (`list_files`) and
-`read_arcana_document` (`read_file_base64`, text files only). The collection comes from the setting,
-never from the prompt, so a tool call cannot be pointed at another collection. The MCP client is
-opened lazily on the first call, shared by the three tools of one turn, closed in `runAgent`'s
-`finally`, and reconnected once when `isStaleMcpSessionError` matches (same repair as the workspace
-provider). The tools are registered only when `modelSupportsTools`, `isArcanasEnabled()` **and**
-`storageAccessEnabled` (they are data access, like the workspace tools); `runAgent` also appends a
-short prompt naming the collection. A model without tool support gets the plain chat path with the
-binding stored but no access.
+`agent/arcanaChatTools.ts#createArcanaChatTools(refs)` adds four read-only tools:
+`list_arcanas` (every collection with its description), then `search_arcana` (`search_chunks`),
+`list_arcana_documents` (`list_files`) and `read_arcana_document` (`read_file_base64`, text files
+only). The three read tools take a `collection` argument, resolved against this chat's list
+(`owner/name` or the storage name); a value outside it is refused, and with one binding the argument
+may be omitted. **Arcana Tools also registers a `list_arcanas`** (`agent/tools.ts`, backed by the
+legacy `/arcana-tools/arcanas`): the chat-scoped tool replaces it whenever the chat has bindings,
+because two tools with the same name break the request. The MCP client is opened lazily on the first
+call, shared by the tools of one turn, closed in `runAgent`'s `finally`, and reconnected once when
+`isStaleMcpSessionError` matches (same repair as the workspace provider). The tools are registered
+only when `modelSupportsTools`, `isArcanasEnabled()` **and** `storageAccessEnabled` (they are data
+access, like the workspace tools); `runAgent` also appends a short prompt naming the collections with
+their descriptions. A model without tool support gets the plain chat path with the bindings stored but
+no access.
 
-The Meta chat reads the binding through `get_user_settings`/`buildConversationSettingsSummary` and
-proposes it with `SET_CONVERSATION_SETTING` `key: "arcana_share"` (`value` is a collection reference
-or `null`); `MetaActionCard` resolves it to the stored object. The feature guide `arcana_share`
-gained a fourth step that targets the link card.
+The Meta chat reads the list through `get_user_settings`/`buildConversationSettingsSummary` and
+proposes it with `SET_CONVERSATION_SETTING` `key: "arcana_shares"` (`value` is an array of collection
+references or `{collection, description}` objects; `[]`/`null` clears it); `MetaActionCard` resolves
+each reference to the stored object. The single `arcana_share` key is still accepted. The `arcana`
+feature guide gained a fifth step that targets the add row, and `arcana_share` has a fourth step for
+the link card.
+
+### 4.37 A collection has its own page with a chat, edited from a right-hand panel
+
+`/arcana/:collection` (`Pages/ArcanaPage.tsx`, gated on `isArcanasEnabled()`) is the collection's
+surface; the sidebar row only links to it. The route param is the URL-encoded **storage** name
+(`owner__name` for a shared collection), because a plain name is ambiguous between two owners;
+`workspace/arcanas.ts#arcanaPagePath` builds the URL and `arcanaDisplayName` is the readable name.
+
+**Layout follows the Meta chat, not a split screen.** The middle column is the ordinary chat shell:
+`ArcanaChatPanel` renders a banner naming the collection and then `Conversation`, whose workspace and
+tools buttons are hidden and whose prompt uses `arcana_chat.prompt_placeholder`. Files, tags, search
+and sharing live in `ArcanaEditorPanel` on the right (`components/Arcana/`), which renders
+`ArcanaManager` with `framed={false}` so the panel is the card and there is no dialog any more.
+The panel's width (`chatai.arcana.editor-width`, drag on its left edge, 320–1024 px) and open state
+(`chatai.arcana.editor-open`, default from the viewport) are per browser; below `lg` an open panel
+replaces the chat instead of squeezing it. Sidebar menu entries navigate with `?tab=search`/`?tab=share`
+or `?upload=1`, and the page opens the panel for them, keyed on the router location so the same entry
+works twice; `ArcanaManager` syncs its tab from `initialTab`, so a mounted panel follows a new request.
+The editor writes through the shared provider and announces `ARCANA_FILES_CHANGED_EVENT`
+(`chatai:arcana-files-changed`), which is how the chat's writes reach the file list, and reports its
+rows through `onFiles` for the header's file count.
+
+**The page chat is ephemeral and it writes only after a confirmation.** It is not a conversation row:
+`utils/arcanaChatStore.js` keeps the thread in `sessionStorage` under
+`chatai.arcana-chat:<storage>` (a reload keeps it, a closed tab drops it) and its attachments use the
+files table under the id `arcana-chat:<storage>`, so nothing reaches the sidebar, an export, a backup
+or the sync archive and no Dexie version was needed. `utils/arcanaChat.js` offers
+`list_files`, `read_file`, `search`, `get_index_status` and `list_members`, plus
+`upload_attachment`, `write_text_file`, `delete_file`, `start_index` and `set_file_tags` only while
+the collection has `can_write`; every write tool awaits the `confirmAction` dialog (a dismissal
+resolves false through its `onCancel`) and the runner throws rather than writing for a read-only
+collection, so the model can never mutate a collection the user did not confirm. Reads run
+immediately. `hooks/useArcanaChatSend.js` runs the function-tool loop (six rounds) over the streaming
+`chatCompletions` call and dispatches the change event after a successful write. This is separate from
+the four read-only chat tools of §4.36, which read a normal chat's `arcana_shares` list.
 
 ## 5. Conventions
 

@@ -66,6 +66,7 @@ export const getDefaultSettings = (userSettings = {}) => {
     },
     enable_web_search: false,
     arcana: {id: "",},
+    arcana_shares: [],
   };
 
   // Merged default settings

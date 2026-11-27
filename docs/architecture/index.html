@@ -3401,29 +3401,31 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
       </div>
     </section>
     <section class="feature-page" id="arcanas-sidebar"
-             data-title="Arcanas sidebar and collection manager"
+             data-title="Arcanas sidebar and collection page"
              data-category="Workspace"
-             data-summary="The same collections, managed outside a workspace"
+             data-summary="A collection as a page: chat in the middle, files on the right"
              data-added="2026-11">
       <div class="eyebrow">
         <span>Workspace</span>
-        <span class="chip">Sidebar/ArcanaList.tsx · workspace/arcanas.ts · modals/Arcana/</span>
+        <span class="chip">Sidebar/ArcanaList.tsx · Pages/ArcanaPage.tsx · components/Arcana/</span>
       </div>
-      <h1>Arcanas sidebar and collection manager</h1>
+      <h1>Arcanas sidebar and collection page</h1>
       <p class="lead">
         The Arcanas section lists the caller's <code>saia-rag</code> collections directly in the
-        sidebar, without a workspace. Opening one gives the files of that collection, a per-file tag
-        editor, an index button and a search box. It is the same service and the same
-        <code>SaiaRagProvider</code> the workspace drive uses, so a file uploaded here is the file a
-        workspace mount sees; only the surface is different.
+        sidebar, without a workspace. Opening one navigates to that collection's own page
+        (<code>/arcana/&lt;storage&gt;</code>), which uses the ordinary chat shell for a chat about
+        this collection and docks its files, per-file tag editor, index button, search box and
+        sharing tab on the right. It is the same service and the same <code>SaiaRagProvider</code>
+        the workspace drive uses, so a file uploaded here is the file a workspace mount sees; only
+        the surface is different.
       </p>
 
       <h2>The 100-foot view</h2>
-      <p class="section-note">The sidebar decides whether the section exists; the dialog holds everything a 240 px rail cannot.</p>
+      <p class="section-note">The sidebar decides whether the section exists; the collection's page is a chat with its editor beside it.</p>
 
       <div class="flow-wrap">
         <div class="flow" role="img"
-             aria-label="Arcanas path: the sidebar section gates on the module, advanced mode and the saia-rag health probe, then reads one shared collection list from a module singleton provider; the manager dialog sends upload, tag, index, search and remove calls through the same provider to the service.">
+             aria-label="Arcanas path: the sidebar section gates on the module, advanced mode and the saia-rag health probe; the collection's page is a chat column plus an editor panel, both sending upload, tag, index, search and remove calls through the same module-singleton provider to the service.">
           <div class="node kind-secret">
             <div class="node-kicker">1 · Sidebar</div>
             <div class="node-title">Arcanas section</div>
@@ -3432,10 +3434,10 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           </div>
           <div class="flow-arrow" aria-hidden="true"><span>open</span></div>
           <div class="node kind-edge">
-            <div class="node-kicker">2 · Shared state</div>
-            <div class="node-title"><code>arcanas.ts</code></div>
-            <div class="node-sub">One provider, one collection list, one handshake</div>
-            <span class="sees can">cached rows across remounts</span>
+            <div class="node-kicker">2 · Page</div>
+            <div class="node-title">Chat + editor</div>
+            <div class="node-sub">Chat in the middle; files, tags, search and sharing docked right</div>
+            <span class="sees can">one thread per collection</span>
           </div>
           <div class="flow-arrow" aria-hidden="true"><span>MCP</span></div>
           <div class="node kind-edge">
@@ -3462,6 +3464,24 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
 
       <h2>How it works</h2>
       <ol class="steps">
+        <li>
+          <b>The page is a chat; the editor is a panel.</b> The middle column is the ordinary chat
+          shell for this one collection: a banner names it, then <code>Conversation</code> with the
+          usual prompt box, tools and settings buttons hidden. The files, tags, search and sharing
+          live in <code>ArcanaEditorPanel</code> on the right, which renders
+          <code>ArcanaManager</code> with <code>framed={false}</code> so the panel is the card. The
+          panel is resizable and remembers its width (<code>chatai.arcana.editor-width</code>); its
+          open state (<code>chatai.arcana.editor-open</code>) defaults to the viewport, because 320 px
+          beside a chat does not fit on a phone. Below <code>lg</code> the open panel replaces the
+          chat instead of squeezing it.
+        </li>
+        <li>
+          <b>A sidebar deep link opens the panel.</b> "Add files" and "Search" navigate with
+          <code>?upload=1</code> / <code>?tab=search</code>, and the page opens the editor for any
+          such navigation - keyed on the router's location, so choosing the same menu entry twice
+          works. The panel then switches to the requested tab: <code>ArcanaManager</code> syncs its
+          tab from <code>initialTab</code>, so an already-mounted panel follows a new request.
+        </li>
         <li>
           <b>The section is opt-in three times over.</b> It renders only while
           <code>isArcanasEnabled()</code>, advanced mode and the deployment's
@@ -3491,22 +3511,27 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           status dot instead of the document glyph: green when every file is indexed (or the
           collection is empty, so nothing is waiting), red when nothing is indexed yet, yellow while
           some files are still stored. It comes from one <code>list_files</code> call per collection
-          after the list paints, so the sidebar never waits on it, and the manager updates the same
+          after the list paints, so the sidebar never waits on it, and the collection's page updates
+          the same
           entry after an upload, an index pass or a removal.
         </li>
         <li>
-          <b>The sidebar row is small on purpose; the dialog is the collection.</b> A row carries the
+          <b>The sidebar row is small on purpose; the page is the collection.</b> A row carries the
           name, the caller's role and a shared-by line for a collection owned by somebody else. The
           options menu offers Files and search, Add files, Search and - only for a collection the
-          caller can manage - Delete, which asks through <code>confirmAction</code>. Everything wider
-          than a name happens in <code>ArcanaManagerModal</code>: it would not fit in a 240 px rail.
+          caller can manage - Delete, which asks through <code>confirmAction</code>. Each of those
+          navigates to <code>/arcana/&lt;storage&gt;</code> with <code>?tab=</code> or
+          <code>?upload=1</code>, because everything wider than a name would not fit in a 240 px rail.
+          The row whose page is open is tinted, like a selected chat.
         </li>
         <li>
           <b>Deleting a shared collection uses its storage name.</b> A collection owned by the caller
           is addressed by its plain name; one shared with them is
-          <code>&lt;owner&gt;__&lt;name&gt;</code>. The dialog's title and toasts show the readable
+          <code>&lt;owner&gt;__&lt;name&gt;</code>. The page title and toasts show the readable
           name, and the delete call converts through <code>ragCollectionDisplayName</code> so it can
-          never delete the wrong collection when two people own a <code>papers</code>.
+          never delete the wrong collection when two people own a <code>papers</code>. The route
+          segment is the same storage name, URL-encoded, because a plain name is ambiguous between
+          two people's collections.
         </li>
         <li>
           <b>Tags are per file, and a save replaces the list.</b> The tag button opens one
@@ -3514,7 +3539,7 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           calls <code>set_file_tags</code>, which deletes the file's rows and re-adds the cleaned list.
           Removing a tag is therefore just leaving it out, and an empty input clears them. An older
           service without the tool falls back to <code>tag_file</code>, which merges instead of
-          replacing - the dialog says so by keeping the row's existing tags in the input.
+          replacing - the editor says so by keeping the row's existing tags in the input.
         </li>
         <li>
           <b>The file list carries its tags in one call when the service offers it.</b>
@@ -3538,7 +3563,7 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
         <li>
           <b>Indexing polls the file list, not the job.</b> The manager starts the job, then re-reads
           <code>list_files</code> every 2.5 s until no file is still <code>stored</code>, bounded to
-          240 attempts (ten minutes, because a docling conversion is slow). Closing the dialog cancels
+          240 attempts (ten minutes, because a docling conversion is slow). Leaving the page cancels
           the loop; the service keeps working. Reaching the bound reports that indexing is still
           running rather than claiming success, and a finished run with failed rows names the count.
           A file counts as indexed when its status is neither <code>stored</code> nor a failure - the
@@ -3560,8 +3585,8 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           <code>remove_file</code> deletes the stored bytes and their index entries for exactly one
           file in one collection. The provider still reports <code>capabilities.delete: false</code>,
           because the workspace tree must not offer Delete on a collection row; the manager calls
-          <code>removeFile</code> directly and asks inline (a second dialog would replace the
-          manager).
+          <code>removeFile</code> directly and asks inline (the modal context holds one dialog, and
+          the page above it may be showing another).
         </li>
         <li>
           <b>Search has three shapes and no JSON.</b> The service's <code>search_preview</code>,
@@ -3579,7 +3604,7 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
         </li>
         <li>
           <b>A reader sees the collection but cannot change it.</b> <code>can_write</code> comes from
-          the service. It disables Upload, Index, the tag editor and Remove, and the dialog shows a
+          the service. It disables Upload, Index, the tag editor and Remove, and the Files tab shows a
           read-only hint. The service enforces the same rule, so the disabled buttons are a courtesy,
           not the guard.
         </li>
@@ -3588,7 +3613,7 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           groups that hold a role (<code>list_members</code>, owner-only <code>add_member</code> /
           <code>remove_member</code>) and, above that list, an access link
           <code>/chat?arcana=&lt;owner&gt;/&lt;name&gt;&amp;enable_tools=true</code>. That is the shape
-          the Arcana manager has always handed out and the user docs show, so it carries the readable
+          the Share tab has always handed out and the user docs show, so it carries the readable
           Arcana ID rather than the service's storage name; the app derives
           <code>&lt;owner&gt;__&lt;name&gt;</code> from it. Opening the link creates a normal chat whose
           settings carry <code>arcana_share</code> and the Arcana tool's own
@@ -3596,14 +3621,28 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           alias. The chat page strips the query parameter, enables tools (unless a brand fixes that
           switch), names an untouched <code>Untitled Chat</code> after the collection and persists the
           binding through <code>updateConversation</code> with the <code>lastModified</code> it read.
-          From then on <code>agent/arcanaChatTools.ts</code> offers exactly three read-only tools for
-          that one collection - <code>search_arcana</code> (<code>search_chunks</code>),
+          A chat owns a <b>list</b> of collections: <code>settings.arcana_shares</code> holds the ones
+          the user adds (each with its storage name and a short user-written description), and the
+          single <code>settings.arcana_share</code> a link writes is merged into the same list. Adding
+          a collection in GWDG Tools &rarr; Arcana writes both the binding and the description, and
+          turns tools on unless a brand fixes that switch; removing or editing one folds the link
+          binding into the list, so only one representation is left behind.
+        </li>
+        <li>
+          <b>Four read-only tools, scoped to the chat's list.</b> <code>agent/arcanaChatTools.ts</code>
+          offers <code>list_arcanas</code>, which returns every collection with its description,
+          then <code>search_arcana</code> (<code>search_chunks</code>),
           <code>list_arcana_documents</code> (<code>list_files</code>) and
           <code>read_arcana_document</code> (<code>read_file_base64</code>, text files only). The
-          reference is fixed in the setting, so a prompt cannot aim them at another collection, and
-          nothing in the tool set writes. GWDG Tools &rarr; Arcana lists every collection the chat is
-          wired to (deduplicated by storage name), says whether each comes from the Arcana tool or from
-          a share link, and removes the binding; the list stays visible while the tool switch is off.
+          three read tools take a <code>collection</code> argument that is resolved against this
+          chat's list (both <code>owner/name</code> and the storage name are accepted), so a prompt
+          cannot aim them at a collection the chat was never given; with one collection the argument
+          may be omitted. Nothing in the tool set writes. Arcana Tools also registers a
+          <code>list_arcanas</code>; when a chat has bindings the chat-scoped one replaces it, because
+          two tools with the same name would break the request. GWDG Tools &rarr; Arcana lists every
+          collection the chat is wired to (deduplicated by storage name), says whether each comes from
+          the Arcana tool or from the list, and removes the binding; the list stays visible while the
+          tool switch is off.
         </li>
         <li>
           <b>The link grants nothing.</b> The service resolves
@@ -3625,7 +3664,7 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           <tr>
             <td>Sidebar section</td>
             <td>Gates on module, advanced mode and the probe; rows with their index dot, role copy,
-                add and delete; opens the manager.</td>
+                add and delete; opens the collection's page.</td>
             <td><span class="mono">front/src/components/Sidebar/ArcanaList.tsx</span></td>
           </tr>
           <tr>
@@ -3645,29 +3684,56 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
             <td><span class="mono">front/src/modals/Arcana/ArcanaCreateModal.tsx</span></td>
           </tr>
           <tr>
-            <td>Manager dialog</td>
+            <td>Collection page</td>
+            <td>Header (file count, editor toggle), the chat column and the editor panel; reads
+                <code>?tab=</code> and <code>?upload=1</code> from the sidebar, opens the panel for
+                them and keeps its open state in <code>localStorage</code>.</td>
+            <td><span class="mono">front/src/Pages/ArcanaPage.tsx</span></td>
+          </tr>
+          <tr>
+            <td>Editor panel</td>
+            <td>The right-hand card: remembered, draggable width, a collapse control, and the manager
+                inside it without a second border.</td>
+            <td><span class="mono">front/src/components/Arcana/ArcanaEditorPanel.tsx</span></td>
+          </tr>
+          <tr>
+            <td>Manager</td>
             <td>Files tab: upload, pending banner, status badges, tag filter, inline tag editor and
                 remove confirmation. Search tab: mode, count, tag filter and results. Share tab: the
                 member list, its add/remove controls, and the chat link that opens a new chat wired to
                 the collection.</td>
-            <td><span class="mono">front/src/modals/Arcana/ArcanaManagerModal.tsx</span></td>
+            <td><span class="mono">front/src/components/Arcana/ArcanaManager.tsx</span></td>
           </tr>
           <tr>
-            <td>Share link</td>
+            <td>Arcana chat</td>
+            <td>The middle column: a banner naming the collection, the ephemeral thread, its
+                <code>sessionStorage</code> store, the send loop with the confirmed tool runner, and
+                the confirmation-gated write tools.</td>
+            <td><span class="mono">front/src/components/Arcana/ArcanaChatPanel.tsx</span>,
+                <span class="mono">hooks/useArcanaChatSend.js</span>,
+                <span class="mono">utils/arcanaChat.js</span>,
+                <span class="mono">utils/arcanaChatStore.js</span></td>
+          </tr>
+          <tr>
+            <td>Share link and list</td>
             <td><code>?arcana=&lt;owner&gt;/&lt;name&gt;</code> parsing (and the
-                <code>?arcana_share=</code> alias), the absolute link and the stored binding.</td>
+                <code>?arcana_share=</code> alias), the absolute link, the stored bindings, and
+                <code>arcanaSharesFromSettings()</code> which merges the list with the link binding
+                and keeps each description.</td>
             <td><span class="mono">front/src/utils/arcanaShareLink.ts</span></td>
           </tr>
           <tr>
             <td>Arcana tool page</td>
-            <td>The Arcana ID field, plus the list of collections this chat is wired to with their
-                binding and a remove control.</td>
+            <td>The Arcana ID field, the add form (<code>owner/arcana</code> plus a short
+                description), and the list of collections this chat can read with their description
+                inputs and a remove control.</td>
             <td><span class="mono">front/src/components/SettingsPanel/ArcanaContainer.jsx</span></td>
           </tr>
           <tr>
             <td>Chat tools</td>
-            <td>The three read-only tools for the bound collection, one lazily opened MCP client per
-                turn, one reconnect on a lost session.</td>
+            <td><code>list_arcanas</code> plus the three read-only tools, each read tool resolving its
+                <code>collection</code> argument against the chat's list; one lazily opened MCP client
+                per turn, one reconnect on a lost session.</td>
             <td><span class="mono">front/src/agent/arcanaChatTools.ts</span></td>
           </tr>
           <tr>
@@ -3685,7 +3751,8 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           <tr>
             <td>Feature guide</td>
             <td><code>arcana_manager</code>, gated on <code>isArcanasEnabled()</code>, targeting the
-                section and its add button.</td>
+                section and its add button; <code>arcana_share</code> targets the page and the
+                editor's Share tab.</td>
             <td><span class="mono">front/src/config/featureGuides.js</span></td>
           </tr>
         </tbody>
@@ -3713,15 +3780,23 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
             be aimed elsewhere.</li>
         <li><b>The chat tools are read-only.</b> They wrap <code>search_chunks</code>,
             <code>list_files</code> and <code>read_file_base64</code> only; upload, tag, index and
-            member changes stay in the manager dialog.</li>
+            member changes stay in the editor panel.</li>
+        <li><b>The page chat never reaches the conversation store.</b> Its thread is
+            <code>sessionStorage</code> under the collection's storage name and its attachments use a
+            per-collection file id, so nothing here can appear in the chat list, an export, a backup
+            or the sync archive - and no Dexie version had to move.</li>
+        <li><b>Write tools ask first.</b> Upload, write, delete, index and tag calls open
+            <code>confirmAction</code> and are skipped when it is dismissed; every read tool runs
+            immediately. A read-only collection is offered no write tool at all, and the runner
+            refuses a write that still arrives.</li>
       </ul>
 
       <h3>Limits</h3>
       <ul class="checks limits">
         <li>A collection with no indexed text is searchable by nothing; upload the converted Markdown,
             not the PDF.</li>
-        <li>The index loop is bounded to 120 polls at 2.5 s, so a very large collection finishes after
-            the dialog stopped watching; reopening it shows the final status.</li>
+        <li>The index loop is bounded to 240 polls at 2.5 s, so a very large collection finishes after
+            the panel stopped watching; reopening it shows the final status.</li>
         <li>Tag filtering is client-side over the files the listing returned, not a server-side query.</li>
         <li>Search answers are parsed from formatted text. A service that changes its formatting still
             shows the raw answer, but loses the per-hit fields.</li>
@@ -3732,8 +3807,10 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
             collection is not reachable there.</li>
         <li>A collection keeps the original bytes, so <code>read_arcana_document</code> refuses a
             PDF or image and points at <code>search_arcana</code> for the indexed text.</li>
-        <li>The section manages collections, not members. Sharing is the manager's Share tab, which
+        <li>The section manages collections, not members. Sharing is the editor's Share tab, which
             speaks the same service and enforces owner-only changes there.</li>
+        <li>The page chat is per browser tab: a reload keeps the thread, closing the tab drops it, and
+            there is no second copy on another device.</li>
       </ul>
 
       <h2>Where to look</h2>
@@ -3745,8 +3822,16 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
         <li><span class="mono">front/src/workspace/arcanas.ts</span> - singleton provider and shared
             collection state</li>
         <li><span class="mono">front/src/modals/Arcana/ArcanaCreateModal.tsx</span> - creation</li>
-        <li><span class="mono">front/src/modals/Arcana/ArcanaManagerModal.tsx</span> - files, tags,
+        <li><span class="mono">front/src/Pages/ArcanaPage.tsx</span> - the page: params, chat column,
+            editor panel, deep links</li>
+        <li><span class="mono">front/src/components/Arcana/ArcanaEditorPanel.tsx</span> - the docked,
+            resizable editor panel</li>
+        <li><span class="mono">front/src/components/Arcana/ArcanaManager.tsx</span> - files, tags,
             index, search, remove, members and the chat link</li>
+        <li><span class="mono">front/src/components/Arcana/ArcanaChatPanel.tsx</span> plus
+            <span class="mono">utils/arcanaChat*.js</span> and
+            <span class="mono">hooks/useArcanaChatSend.js</span> - the page chat, its tool runner and
+            its <code>sessionStorage</code> thread</li>
         <li><span class="mono">front/src/utils/arcanaShareLink.ts</span> - the
             <code>?arcana=&lt;owner&gt;/&lt;name&gt;</code> reference (and its
             <code>?arcana_share=</code> alias), its link and its stored binding</li>
@@ -3765,7 +3850,7 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
         <strong>Why a second surface for the same service.</strong> A workspace is the right home for a
         collection that belongs to a project, but a user with a personal set of notes should not have
         to create a workspace to search it. The sidebar section is that shortcut: same provider, same
-        tools, same ACL, one manager dialog. The workspace drive stays the place where a collection is
+        tools, same ACL, one page. The workspace drive stays the place where a collection is
         mounted into a project and where sharing is managed.
       </div>
     </section>

@@ -1,10 +1,12 @@
-// Read-only chat tools for one shared Arcana collection.
+// Read-only chat tools for the Arcana collections a conversation can read.
 //
-// A conversation can be linked to a collection (`settings.arcana_share`), and
-// then the model gets three tools that search and read it through the saia-rag
-// MCP service. They are deliberately narrow: the collection is fixed by the
-// link, so a prompt cannot point them at another collection, and every call is
-// still authorised by the service's ACL. Nothing here writes.
+// A chat owns a list of bindings (`settings.arcana_shares`, plus the single
+// `settings.arcana_share` an access link writes), and the model gets four tools:
+// `list_arcanas` to see what is available and what each collection is for, then
+// `search_arcana`, `list_arcana_documents` and `read_arcana_document`, which
+// take a `collection` argument. The argument is validated against this chat's
+// list, so a prompt cannot point a tool at a collection the chat was never given;
+// every call is still authorised by the service's ACL. Nothing here writes.
 //
 // The client is created lazily on the first tool call, shared by the tools of
 // one turn, and closed when the turn ends. A service that forgot the MCP session
@@ -22,7 +24,11 @@ import { fromBase64 } from "../workspace/bytes";
 import { isStaleMcpSessionError } from "../workspace/providers/mcpSession";
 import { isTextFileName } from "../workspace/providers/saiaRag";
 import { formatBytes } from "../utils/formatBytes";
-import type { ArcanaShareRef } from "../utils/arcanaShareLink";
+import {
+  arcanaRefId,
+  parseArcanaShareRef,
+  type ArcanaShareRef,
+} from "../utils/arcanaShareLink";
 
 /** One document read is capped so a large file cannot fill the context. */
 const MAX_DOCUMENT_CHARS = 100_000;
@@ -69,11 +75,23 @@ export interface ArcanaChatTools {
   close: () => void;
 }
 
+/** The label to show a model for one binding. */
+const refLabel = (ref: ArcanaShareRef) =>
+  ref.description
+    ? `${arcanaRefId(ref)}: ${ref.description}`
+    : `${arcanaRefId(ref)}: (no description)`;
+
+const collectionList = (refs: ArcanaShareRef[]) =>
+  refs.map((ref) => `- ${refLabel(ref)}`).join("\n");
+
 /**
- * The three read tools for `ref`, or an empty set when the service cannot be
- * reached. A failure is reported by the tool itself, so the turn continues.
+ * The read tools for `refs`, or an empty set when no binding is configured.
+ * A failure is reported by the tool itself, so the turn continues.
  */
-export function createArcanaChatTools(ref: ArcanaShareRef): ArcanaChatTools {
+export function createArcanaChatTools(refs: ArcanaShareRef[]): ArcanaChatTools {
+  const byCollection = new Map(refs.map((ref) => [ref.collection, ref]));
+  const only = refs.length === 1 ? refs[0] : null;
+
   let client: any = null;
   let connecting: Promise<any> | null = null;
 
@@ -119,12 +137,57 @@ export function createArcanaChatTools(ref: ArcanaShareRef): ArcanaChatTools {
     }
   };
 
+  /**
+   * Resolve the `collection` argument against this chat's list. Both spellings
+   * are accepted, because the model sees the readable Arcana ID in
+   * `list_arcanas`. With one binding the argument may be left out; with several
+   * it is required, and the answer says how to choose.
+   */
+  const resolveRef = (value: unknown): ArcanaShareRef | null => {
+    const wanted = String(value ?? "").trim();
+    if (!wanted) return only;
+    const direct = byCollection.get(wanted);
+    if (direct) return direct;
+    const parsed = parseArcanaShareRef(wanted);
+    return parsed ? byCollection.get(parsed.collection) ?? null : null;
+  };
+
+  const collectionArgument = Type.Optional(
+    Type.String({
+      description:
+        refs.length === 1
+          ? `Which collection, from list_arcanas. Optional here: the only collection is "${arcanaRefId(refs[0])}".`
+          : `Which collection to use, from list_arcanas (e.g. "${arcanaRefId(refs[0])}").`,
+    }),
+  );
+
+  const collectionRequired = (value: unknown): ArcanaShareRef | string => {
+    const ref = resolveRef(value);
+    if (ref) return ref;
+    if (!String(value ?? "").trim() && !only) {
+      return `A collection is required. Call list_arcanas, then pass one of:\n${collectionList(refs)}`;
+    }
+    return `"${String(value ?? "").trim()}" is not one of this chat's Arcana collections. Call list_arcanas for the available ones.`;
+  };
+
   const tools = [
     tool(
+      "list_arcanas",
+      "List the Arcana collections this chat can read, with a short description of each. Use it to choose the collection for search_arcana, list_arcana_documents and read_arcana_document.",
+      Type.Object({}),
+      async () =>
+        text(
+          refs.length
+            ? `Arcana collections this chat can read:\n${collectionList(refs)}`
+            : "This chat is not linked to an Arcana collection.",
+        ),
+    ),
+    tool(
       "search_arcana",
-      `Search the shared Arcana collection "${ref.name}" and return the most relevant text passages with their source file and score. Use this for questions about the collection's content.`,
+      `Search one of this chat's Arcana collections and return the most relevant text passages with their source file and score. Use it for questions about a collection's content; call list_arcanas first when there is more than one.`,
       Type.Object({
         query: Type.String({ description: "What to look for" }),
+        collection: collectionArgument,
         count: Type.Optional(
           Type.Integer({
             minimum: 1,
@@ -133,9 +196,11 @@ export function createArcanaChatTools(ref: ArcanaShareRef): ArcanaChatTools {
           }),
         ),
       }),
-      async ({ query, count }) => {
+      async ({ query, collection, count }) => {
         const value = String(query ?? "").trim();
         if (!value) return text("A query is required.");
+        const ref = collectionRequired(collection);
+        if (typeof ref === "string") return text(ref);
         const answer = await call("search_chunks", {
           collection: ref.collection,
           query: value,
@@ -146,9 +211,11 @@ export function createArcanaChatTools(ref: ArcanaShareRef): ArcanaChatTools {
     ),
     tool(
       "list_arcana_documents",
-      `List the files stored in the shared Arcana collection "${ref.name}", with their size and indexing status. Use it to see what the collection contains before reading a file.`,
-      Type.Object({}),
-      async () => {
+      `List the files stored in one of this chat's Arcana collections, with their size and indexing status. Use it to see what a collection contains before reading a file; call list_arcanas first when there is more than one.`,
+      Type.Object({ collection: collectionArgument }),
+      async ({ collection }) => {
+        const ref = collectionRequired(collection);
+        if (typeof ref === "string") return text(ref);
         const answer = await call("list_files", {
           collection: ref.collection,
         });
@@ -174,15 +241,18 @@ export function createArcanaChatTools(ref: ArcanaShareRef): ArcanaChatTools {
     ),
     tool(
       "read_arcana_document",
-      `Read one text file of the shared Arcana collection "${ref.name}" in full. Use list_arcana_documents for the exact file name. For PDFs, Office documents and images use search_arcana instead, because their stored bytes are not text.`,
+      `Read one text file of one of this chat's Arcana collections in full. Use list_arcana_documents for the exact file name. For PDFs, Office documents and images use search_arcana instead, because their stored bytes are not text.`,
       Type.Object({
         filename: Type.String({
           description: "A file name from list_arcana_documents",
         }),
+        collection: collectionArgument,
       }),
-      async ({ filename }) => {
+      async ({ filename, collection }) => {
         const name = String(filename ?? "").trim();
         if (!name) return text("A file name is required.");
+        const ref = collectionRequired(collection);
+        if (typeof ref === "string") return text(ref);
         if (!isTextFileName(name)) {
           return text(
             `"${name}" is not a text file, so its stored bytes cannot be shown as text. Use search_arcana to read the passages that were indexed from it.`,

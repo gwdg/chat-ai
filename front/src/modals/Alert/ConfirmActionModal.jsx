@@ -18,6 +18,8 @@ import { setWarning } from "../../Redux/reducers/interfaceSettingsSlice";
  *   actions that must always be confirmed
  * - danger (boolean): style the confirm button as destructive
  * - onConfirm (function): runs when the user confirms
+ * - onCancel (function): runs when the dialog is dismissed without confirming,
+ *   so a caller that awaits the answer is not left hanging
  */
 export default function ConfirmActionModal({
   isOpen,
@@ -29,9 +31,15 @@ export default function ConfirmActionModal({
   showDontShowAgain = true,
   danger = false,
   onConfirm,
+  onCancel,
 }) {
   const dispatch = useDispatch();
   const [dontShowAgain, setDontShowAgain] = useState(false);
+
+  const cancel = () => {
+    onCancel?.();
+    onClose();
+  };
 
   // Only remember the choice once the action is actually confirmed.
   const handleConfirm = () => {
@@ -43,7 +51,7 @@ export default function ConfirmActionModal({
   };
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} titleKey="alert.title">
+    <BaseModal isOpen={isOpen} onClose={cancel} titleKey="alert.title">
       {/* Message */}
       <div className="pt-0 pb-2">
         <p className="text-base-content text-justify text-sm">
@@ -75,7 +83,7 @@ export default function ConfirmActionModal({
         {/* Cancel button */}
         <button
           className="btn md:w-fit w-full min-w-[130px] select-none"
-          onClick={onClose}
+          onClick={cancel}
         >
           <Trans i18nKey="common.cancel" />
         </button>

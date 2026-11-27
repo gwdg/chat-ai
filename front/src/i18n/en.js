@@ -638,6 +638,8 @@ export default {
       step3: "Select Arcana.",
       step4:
         "Enter your Arcana ID. Use the help link to create a collection if you do not have one.",
+      step5:
+        "Add each collection the chat should read as owner/arcana, with a short description. The agent lists them with list_arcanas and picks the matching one.",
     },
     web_search: {
       title: "Use Web Search",
@@ -688,7 +690,7 @@ export default {
       step2:
         "Create a collection with the + button. You become its owner and can share it later.",
       step3:
-        "Click a collection to open its manager: upload files, edit per-file tags, start indexing and search inside it.",
+        "Click a collection to open its page: upload files, edit per-file tags, start indexing, search inside it and share it. The Arcana chat beside it can inspect the collection, answer questions from its files and — after asking you first — upload, write, delete, index and tag. That chat is not saved to your chat list.",
     },
     arcana_share: {
       title: "Share an Arcana",
@@ -1311,6 +1313,13 @@ export default {
     arcana_in_use_tool: "Arcana tool",
     arcana_in_use_readonly: "Read-only tools",
     arcana_in_use_remove: "Remove {{name}}",
+    arcana_add_title: "Add an Arcana",
+    arcana_add_placeholder: "owner/arcana, e.g. alice/papers",
+    arcana_add_button: "Add",
+    arcana_description_placeholder: "Short description for the agent (optional)",
+    arcana_description_for: "Description of {{name}}",
+    arcana_invalid_ref: "Enter an Arcana as owner/arcana, e.g. alice/papers.",
+    arcana_already_added: "This Arcana is already in the chat.",
     placeholder_mcp_url: "http://localhost:3000/mcp",
     placeholder_mcp_auth: "Authorization header (optional)",
     mcp_add: "Add MCP server",
@@ -2488,6 +2497,40 @@ export default {
     share_remove: "Remove",
     share_remove_confirm: "Remove {{name}} from this Arcana?",
     share_group: "Group",
+    page_kind: "Arcana",
+    page_file_count: "{{count}} file(s)",
+    page_unknown_title: "Arcana",
+    page_missing_title: "This Arcana is not available",
+    page_missing_body:
+      "It may have been deleted, or the list of your Arcanas could not be loaded.",
+    page_back_to_chat: "Back to chat",
+    page_editor: "Files and settings",
+    page_editor_show: "Show files and settings",
+    page_editor_hide: "Hide files and settings",
+    page_editor_resize: "Resize the Arcana panel",
+  },
+  arcana_chat: {
+    title: "Chat about {{name}}",
+    subtitle:
+      "This chat reads the Arcana through SAIA and asks before it changes anything. It is not saved to your chat list.",
+    reset: "New chat",
+    prompt_placeholder: "Ask about this Arcana, upload a file or test a search…",
+    no_model: "No model is selected for this chat.",
+    no_tools:
+      "This chat needs a model that supports tools. Pick one in the chat settings.",
+    error: "The Arcana chat could not answer.",
+    done: "Done.",
+    confirm_upload: "Store “{{name}}” ({{size}}) in “{{collection}}”?",
+    confirm_upload_yes: "Upload file",
+    confirm_write: "Write “{{name}}” ({{size}}) into this Arcana? An existing file is overwritten.",
+    confirm_write_yes: "Write file",
+    confirm_delete:
+      "Delete “{{name}}” from this Arcana and remove its index entries?",
+    confirm_delete_yes: "Delete file",
+    confirm_index: "Index every stored file in “{{collection}}”?",
+    confirm_index_yes: "Start indexing",
+    confirm_tags: "Set the tags of “{{name}}” to: {{tags}}?",
+    confirm_tags_yes: "Set tags",
   },
   mcp: {
     section_title: "MCP Servers",

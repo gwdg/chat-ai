@@ -23,7 +23,32 @@ export type ArcanaShareRef = {
   /** The collection name without the owner prefix. */
   name: string;
   owner: string;
+  /**
+   * A short note the user writes for the agent, telling it what the collection
+   * is good for. `list_arcanas` returns it so the model can pick a collection.
+   */
+  description?: string;
 };
+
+/** How long a binding description may get before it is clipped. */
+const MAX_DESCRIPTION_LENGTH = 280;
+
+const cleanText = (value: unknown, max: number): string => {
+  if (typeof value !== "string") return "";
+  const text = value.replace(/\s+/g, " ").trim();
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+};
+
+/** Read one stored binding object (`{collection, name?, description?}`). */
+function refFromStored(value: unknown): ArcanaShareRef | null {
+  if (!value || typeof value !== "object") return null;
+  const stored = value as Record<string, unknown>;
+  const ref = parseArcanaShareRef(stored.collection);
+  if (!ref) return null;
+  const name = cleanText(stored.name, 120) || ref.name;
+  const description = cleanText(stored.description, MAX_DESCRIPTION_LENGTH);
+  return description ? { ...ref, name, description } : { ...ref, name };
+}
 
 /**
  * Read a collection reference out of a link, a stored setting or an import.
@@ -78,15 +103,38 @@ export function buildArcanaShareLink(
   return `${base}/chat?${ARCANA_LINK_PARAM}=${id}&enable_tools=true`;
 }
 
-/** The valid share binding of a conversation, or `null` when it has none. */
+/**
+ * Every collection this chat can read, deduplicated by storage name.
+ *
+ * `settings.arcana_shares` is the list the chat owns and the user edits;
+ * `settings.arcana_share` is the single binding an access link writes and is
+ * still accepted, so a chat linked before the list existed keeps working. A
+ * description on either representation survives the merge.
+ */
+export function arcanaSharesFromSettings(settings: any): ArcanaShareRef[] {
+  const shares: ArcanaShareRef[] = [];
+  const byCollection = new Map<string, ArcanaShareRef>();
+  const add = (ref: ArcanaShareRef | null) => {
+    if (!ref) return;
+    const existing = byCollection.get(ref.collection);
+    if (existing) {
+      if (!existing.description && ref.description) {
+        existing.description = ref.description;
+      }
+      return;
+    }
+    byCollection.set(ref.collection, ref);
+    shares.push(ref);
+  };
+  const stored = settings?.arcana_shares;
+  if (Array.isArray(stored)) {
+    for (const value of stored) add(refFromStored(value));
+  }
+  add(refFromStored(settings?.arcana_share));
+  return shares;
+}
+
+/** The first collection binding of a conversation, or `null` when it has none. */
 export function arcanaShareFromSettings(settings: any): ArcanaShareRef | null {
-  const stored = settings?.arcana_share;
-  if (!stored || typeof stored !== "object") return null;
-  const ref = parseArcanaShareRef(stored.collection);
-  if (!ref) return null;
-  const name =
-    typeof stored.name === "string" && stored.name.trim()
-      ? stored.name.trim()
-      : ref.name;
-  return { ...ref, name };
+  return arcanaSharesFromSettings(settings)[0] ?? null;
 }

@@ -235,22 +235,38 @@ export function arcanaIdEntered() {
 }
 
 /**
- * Open the first Arcana and switch its manager to the Share tab.
+ * Open the first Arcana, make sure its editor panel is visible and switch it
+ * to the Share tab.
  *
- * The tour runs from whatever screen the user is on, so it opens the dialog
+ * The tour runs from whatever screen the user is on, so it opens the page
  * itself. Clicking a row of the sidebar is enough; the tab click is retried
- * because the manager mounts a moment later.
+ * because the page mounts a moment later (it also has to read the collections
+ * first, which is why the window is generous). The editor panel starts closed
+ * on a narrow window, so the retry asks the header toggle to open it once.
  */
 export function openArcanaShare() {
   if (!find('[data-guide="arcana-tab-share"]')) {
     click('[data-guide="arcana-row"]');
   }
-  retry(() => {
-    const tab = find('[data-guide="arcana-tab-share"]');
-    if (!tab) return false;
-    tab.click();
-    return true;
-  });
+  let askedForPanel = false;
+  retry(
+    () => {
+      const tab = find('[data-guide="arcana-tab-share"]');
+      if (tab) {
+        tab.click();
+        return true;
+      }
+      if (!askedForPanel) {
+        const toggle = find('[data-guide="arcana-editor-toggle"]');
+        if (toggle && toggle.getAttribute("aria-pressed") === "false") {
+          toggle.click();
+          askedForPanel = true;
+        }
+      }
+      return false;
+    },
+    80,
+  );
 }
 
 export function mcpConfigured() {

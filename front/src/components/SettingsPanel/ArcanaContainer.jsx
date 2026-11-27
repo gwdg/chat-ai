@@ -1,11 +1,13 @@
 // components/settings/ArcanaContainer.jsx
+import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { CircleHelp, Trash2 } from "lucide-react";
 import { useModal } from "../../modals/ModalContext";
 import { isAgentEnabled } from "../../apis/agentEndpoints";
+import { isBrandLocked } from "../../config/brandPolicy";
 import {
   arcanaRefId,
-  arcanaShareFromSettings,
+  arcanaSharesFromSettings,
   parseArcanaShareRef,
 } from "../../utils/arcanaShareLink";
 
@@ -14,13 +16,19 @@ import {
  *
  * A chat can be wired to a collection in two ways: the Arcana tool's own field
  * (`settings.arcana.id`, sent with the request and served by the backend) and
- * the read-only app tools a share link binds (`settings.arcana_share`). A share
- * link sets both, so the list of collections this chat uses is deduplicated by
- * storage name and each row says which of the two it comes from.
+ * the read-only app tools (`settings.arcana_shares`, plus the single
+ * `settings.arcana_share` an access link writes). The list of collections this
+ * chat uses is deduplicated by storage name and each row says which of the two
+ * it comes from. A collection added here gets a short description, which
+ * `list_arcanas` hands to the agent so it can pick the right one.
  */
 const ArcanaContainer = ({ localState, setLocalState, configurable }) => {
   const { t } = useTranslation();
   const { openModal } = useModal();
+  const [draftId, setDraftId] = useState("");
+  const [draftDescription, setDraftDescription] = useState("");
+  const [error, setError] = useState("");
+
   const settings = localState.settings;
   const modelName = settings?.model?.name;
   const isExternalModel =
@@ -52,25 +60,99 @@ const ArcanaContainer = ({ localState, setLocalState, configurable }) => {
   const toolId =
     typeof settings?.arcana?.id === "string" ? settings.arcana.id.trim() : "";
   const toolRef = parseArcanaShareRef(toolId);
-  const share = arcanaShareFromSettings(settings);
+  const shares = arcanaSharesFromSettings(settings);
 
   const usedArcanas = [];
   if (toolId) {
+    const match = toolRef
+      ? shares.find((share) => share.collection === toolRef.collection)
+      : null;
     usedArcanas.push({
       key: `tool:${toolRef?.collection ?? toolId}`,
       name: toolRef ? arcanaRefId(toolRef) : toolId,
+      collection: toolRef?.collection ?? "",
       tool: true,
-      readOnly: !!share && share.collection === toolRef?.collection,
+      share: match ?? null,
+      readOnly: !!match,
     });
   }
-  if (share && share.collection !== toolRef?.collection) {
+  for (const share of shares) {
+    if (toolRef && share.collection === toolRef.collection) continue;
     usedArcanas.push({
       key: `share:${share.collection}`,
       name: arcanaRefId(share),
+      collection: share.collection,
       tool: false,
+      share,
       readOnly: true,
     });
   }
+
+  /**
+   * Write the merged list as the canonical `arcana_shares` and fold in the
+   * single link binding, so an edit leaves one representation behind.
+   */
+  const writeShares = (prev, nextShares) => {
+    const nextSettings = { ...prev.settings };
+    const list = nextShares.map((share) => {
+      const entry = {
+        collection: share.collection,
+        name: share.name,
+        owner: share.owner,
+      };
+      if (share.description) entry.description = share.description;
+      return entry;
+    });
+    if (list.length) nextSettings.arcana_shares = list;
+    else delete nextSettings.arcana_shares;
+    delete nextSettings.arcana_share;
+    return { ...prev, settings: nextSettings };
+  };
+
+  const addShare = () => {
+    const ref = parseArcanaShareRef(draftId);
+    if (!ref) {
+      setError(t("settings.arcana_invalid_ref"));
+      return;
+    }
+    if (shares.some((share) => share.collection === ref.collection)) {
+      setError(t("settings.arcana_already_added"));
+      return;
+    }
+    const description = draftDescription.trim();
+    setLocalState((prev) => {
+      const current = arcanaSharesFromSettings(prev.settings);
+      if (current.some((share) => share.collection === ref.collection)) {
+        return prev;
+      }
+      const next = [
+        ...current,
+        { ...ref, ...(description ? { description } : {}) },
+      ];
+      const nextState = writeShares(prev, next);
+      // The read tools need tools on, unless a brand fixes that switch.
+      if (!isBrandLocked("tools")) nextState.settings.enable_tools = true;
+      return nextState;
+    });
+    setDraftId("");
+    setDraftDescription("");
+    setError("");
+  };
+
+  const changeDescription = (entry, value) => {
+    if (!entry.collection) return;
+    setLocalState((prev) => {
+      const next = arcanaSharesFromSettings(prev.settings).map((share) => {
+        if (share.collection !== entry.collection) return share;
+        const updated = { ...share };
+        const description = value.trim();
+        if (description) updated.description = description;
+        else delete updated.description;
+        return updated;
+      });
+      return writeShares(prev, next);
+    });
+  };
 
   const removeArcana = (entry) => {
     setLocalState((prev) => {
@@ -78,10 +160,11 @@ const ArcanaContainer = ({ localState, setLocalState, configurable }) => {
       if (entry.tool) {
         nextSettings.arcana = { ...nextSettings.arcana, id: "" };
       }
-      if (entry.readOnly) {
-        delete nextSettings.arcana_share;
-      }
-      return { ...prev, settings: nextSettings };
+      const current = arcanaSharesFromSettings(prev.settings);
+      const remaining = entry.collection
+        ? current.filter((share) => share.collection !== entry.collection)
+        : current;
+      return writeShares({ ...prev, settings: nextSettings }, remaining);
     });
   };
 
@@ -99,38 +182,101 @@ const ArcanaContainer = ({ localState, setLocalState, configurable }) => {
             {usedArcanas.map((entry) => (
               <li
                 key={entry.key}
-                className="flex items-center gap-2 border-b border-base-300/70 px-3 py-2 last:border-b-0"
+                className="space-y-2 border-b border-base-300/70 px-3 py-2 last:border-b-0"
               >
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-mono text-xs">
-                    {entry.name}
+                <div className="flex items-center gap-2">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-mono text-xs">
+                      {entry.name}
+                    </span>
+                    <span className="mt-1 flex flex-wrap items-center gap-1">
+                      {entry.tool && (
+                        <span className="badge badge-xs">
+                          {t("settings.arcana_in_use_tool")}
+                        </span>
+                      )}
+                      {entry.readOnly && (
+                        <span className="badge badge-ghost badge-xs">
+                          {t("settings.arcana_in_use_readonly")}
+                        </span>
+                      )}
+                    </span>
                   </span>
-                  <span className="mt-1 flex flex-wrap items-center gap-1">
-                    {entry.tool && (
-                      <span className="badge badge-xs">
-                        {t("settings.arcana_in_use_tool")}
-                      </span>
-                    )}
-                    {entry.readOnly && (
-                      <span className="badge badge-ghost badge-xs">
-                        {t("settings.arcana_in_use_readonly")}
-                      </span>
-                    )}
-                  </span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => removeArcana(entry)}
-                  aria-label={t("settings.arcana_in_use_remove", {
-                    name: entry.name,
-                  })}
-                  className="btn btn-ghost btn-xs btn-square shrink-0"
-                >
-                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => removeArcana(entry)}
+                    aria-label={t("settings.arcana_in_use_remove", {
+                      name: entry.name,
+                    })}
+                    className="btn btn-ghost btn-xs btn-square shrink-0"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
+                </div>
+                {entry.share && (
+                  <input
+                    type="text"
+                    data-guide="arcana-share-description"
+                    value={entry.share.description ?? ""}
+                    onChange={(e) => changeDescription(entry, e.target.value)}
+                    placeholder={t("settings.arcana_description_placeholder")}
+                    aria-label={t("settings.arcana_description_for", {
+                      name: entry.name,
+                    })}
+                    className="input input-xs w-full"
+                  />
+                )}
               </li>
             ))}
           </ul>
+        </div>
+      )}
+      {canConfigure && (
+        <div className="space-y-2" data-guide="arcana-add">
+          <p className="text-xs font-medium text-base-content/60">
+            {t("settings.arcana_add_title")}
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              type="text"
+              data-guide="arcana-add-id"
+              value={draftId}
+              onChange={(e) => {
+                setDraftId(e.target.value);
+                setError("");
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") addShare();
+              }}
+              placeholder={t("settings.arcana_add_placeholder")}
+              aria-label={t("settings.arcana_add_placeholder")}
+              className="input w-full font-mono text-xs"
+            />
+            <input
+              type="text"
+              data-guide="arcana-add-description"
+              value={draftDescription}
+              onChange={(e) => setDraftDescription(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") addShare();
+              }}
+              placeholder={t("settings.arcana_description_placeholder")}
+              aria-label={t("settings.arcana_description_placeholder")}
+              className="input w-full text-xs"
+            />
+            <button
+              type="button"
+              onClick={addShare}
+              className="btn btn-primary btn-sm shrink-0"
+            >
+              {t("settings.arcana_add_button")}
+            </button>
+          </div>
+          {error && (
+            <p className="text-xs text-error" role="alert">
+              {error}
+            </p>
+          )}
         </div>
       )}
       {canConfigure && (

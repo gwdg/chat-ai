@@ -59,7 +59,6 @@ import CreateEntryModal from "./Workspace/CreateEntryModal";
 import McpServerModal from "./McpServer/McpServerModal";
 import McpServerDetailsModal from "./McpServer/McpServerDetailsModal";
 import ArcanaCreateModal from "./Arcana/ArcanaCreateModal";
-import ArcanaManagerModal from "./Arcana/ArcanaManagerModal";
 import AddAgentModal from "./Agent/AddAgentModal";
 import AgentToolsModal from "./Agent/AgentToolsModal";
 import RenameAgentSessionModal from "./Agent/RenameAgentSessionModal";
@@ -269,9 +268,6 @@ export function ModalProvider({ children }) {
       )}
       {modalType === "arcanaCreate" && (
         <ArcanaCreateModal isOpen onClose={closeModal} {...modalProps} />
-      )}
-      {modalType === "arcanaManager" && (
-        <ArcanaManagerModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {modalType === "agentAdd" && (
         <AddAgentModal isOpen onClose={closeModal} {...modalProps} />

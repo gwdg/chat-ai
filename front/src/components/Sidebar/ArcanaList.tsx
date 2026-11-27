@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
+import { useLocation, useNavigate } from "react-router";
 import { Popover, PopoverButton, PopoverPanel } from "@headlessui/react";
 import {
   Add,
@@ -21,23 +22,25 @@ import {
   selectCollapsedTopics,
   toggleTopic,
 } from "../../Redux/reducers/interfaceSettingsSlice";
-import { arcanasProvider, arcanaDisplayName, retryArcanas, useArcanas } from "../../workspace/arcanas";
+import { arcanasProvider, arcanaDisplayName, arcanaPagePath, retryArcanas, useArcanas } from "../../workspace/arcanas";
 import type { RagCollection } from "../../workspace/providers/saiaRag";
 
 /**
  * The Arcanas section of the left sidebar: the caller's saia-rag collections.
  *
- * A collection is opened in the manager dialog rather than expanded in the
- * sidebar, because a 240 px rail cannot hold a file table, a tag filter and a
- * search box. The section only decides whether anything is there at all: the
- * Arcanas module, advanced mode (through `showAdvancedSidebarSections`) and the
- * service's own health probe. When the probe does not confirm the service, the
- * section is absent instead of empty, the same fail-closed rule the workspace
- * drive follows.
+ * A collection opens on its own page (`/arcana/<storage>`) rather than being
+ * expanded in the sidebar, because a 240 px rail cannot hold a file table, a
+ * tag filter, a search box and a chat. The section only decides whether
+ * anything is there at all: the Arcanas module, advanced mode (through
+ * `showAdvancedSidebarSections`) and the service's own health probe. When the
+ * probe does not confirm the service, the section is absent instead of empty,
+ * the same fail-closed rule the workspace drive follows.
  */
 export default function ArcanaList() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { openModal } = useModal();
   const { notifySuccess, notifyError } = useToast();
   const access = useSaiaRagAccess();
@@ -49,8 +52,24 @@ export default function ArcanaList() {
 
   const openManager = (
     collection: RagCollection,
-    options: { initialTab?: "files" | "search"; focus?: "upload" } = {},
-  ) => openModal("arcanaManager", { collection, ...options });
+    options: { initialTab?: "files" | "search" | "share"; focus?: "upload" } = {},
+  ) =>
+    navigate(
+      arcanaPagePath(collection, {
+        tab: options.initialTab,
+        upload: options.focus === "upload",
+      }),
+    );
+
+  const activeCollection = (() => {
+    if (!location.pathname.startsWith("/arcana/")) return null;
+    const encoded = location.pathname.slice("/arcana/".length);
+    try {
+      return decodeURIComponent(encoded);
+    } catch {
+      return encoded;
+    }
+  })();
 
   const remove = (collection: RagCollection) => {
     openModal("confirmAction", {
@@ -146,10 +165,13 @@ export default function ArcanaList() {
                   : indexStatus === "partial"
                     ? "bg-warning"
                     : "bg-base-content/20";
+            const active = activeCollection === collection.collection;
             return (
               <div
                 key={collection.collection}
-                className="group flex items-center gap-1 rounded-xl px-2 py-1 text-base-content transition hover:bg-base-200"
+                className={`group flex items-center gap-1 rounded-xl px-2 py-1 text-base-content transition hover:bg-base-200 ${
+                  active ? "bg-base-200 shadow-sm" : ""
+                }`}
               >
                 <button
                   type="button"

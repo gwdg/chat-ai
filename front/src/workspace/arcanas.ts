@@ -206,3 +206,31 @@ export function useArcanas(): ArcanasState {
 
 /** The path segment a collection is addressed by in this UI. */
 export const arcanaDisplayName = ragCollectionDisplayName;
+
+/**
+ * Announced after the Arcana chat changed a collection.
+ *
+ * The chat talks to the service directly, so the page cannot see the write
+ * itself; the manager reloads on this event instead of the two components
+ * sharing their row state.
+ */
+export const ARCANA_FILES_CHANGED_EVENT = "chatai:arcana-files-changed";
+
+/**
+ * The page that opens a collection.
+ *
+ * The route carries the storage name (`owner__name` for a shared collection),
+ * because a plain name is ambiguous between two people's collections.
+ */
+export function arcanaPagePath(
+  collection: RagCollection,
+  options: { tab?: "files" | "search" | "share"; upload?: boolean } = {},
+): string {
+  const params = new URLSearchParams();
+  if (options.upload) params.set("upload", "1");
+  if (options.tab && options.tab !== "files") params.set("tab", options.tab);
+  const query = params.toString();
+  return `/arcana/${encodeURIComponent(collection.collection)}${
+    query ? `?${query}` : ""
+  }`;
+}

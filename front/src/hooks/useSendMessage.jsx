@@ -4,6 +4,7 @@ import sendMessage from "../utils/sendMessage";
 import { useModal } from "../modals/ModalContext";
 import { useToast } from "./useToast";
 import { MetaChatSendContext } from "../context/MetaChatContext";
+import { ArcanaChatSendContext } from "../context/ArcanaChatContext";
 import {
   selectAllMemories,
   selectDefaultMemoryGroup,
@@ -31,8 +32,10 @@ export function useSendMessage() {
   const setTitleOnce = useSelector(selectSetTitleOnce);
   const mcpToolPolicy = useSelector(selectMcpToolPolicy);
   const metaSendMessage = useContext(MetaChatSendContext);
+  const arcanaSendMessage = useContext(ArcanaChatSendContext);
 
   if (metaSendMessage) return metaSendMessage;
+  if (arcanaSendMessage) return arcanaSendMessage;
 
   // Make this async
   return async ({localState, setLocalState, formSubmission, speechMode = false}) => {

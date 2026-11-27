@@ -25,6 +25,7 @@ export default function Conversation({
   modelsData,
   userData,
   hideCloseButton = false,
+  promptPlaceholder,
 }) {
   const showSettings = useSelector(selectShowSettings);
   const { t } = useTranslation();
@@ -561,6 +562,7 @@ export default function Conversation({
         setLocalState={setLocalState}
         userData={userData}
         modelsData={modelsData}
+        placeholder={promptPlaceholder}
       />
       {emptyConversation && <BrandDisclaimer />}
       {emptyConversation && <Motto />}

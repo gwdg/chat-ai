@@ -541,7 +541,7 @@ export const featureGuides = {
   arcana: {
     titleKey: "feature_guide.arcana.title",
     prompt:
-      "Use Arcana for retrieval-augmented generation (RAG). Open GWDG Tools, enable tools, select Arcana and enter the Arcana ID. The page also lists every collection this chat is already wired to, including one a share link bound.",
+      "Use Arcana for retrieval-augmented generation (RAG). Open GWDG Tools, enable tools and select Arcana. List the collections this chat can read, add one by its owner/arcana id with a short description so the agent knows what it is for, and the agent can call list_arcanas to choose between several.",
     keywords: ["arcana", "rag", "retrieval", "knowledge base", "knowledge"],
     steps: [
       {
@@ -566,6 +566,11 @@ export const featureGuides = {
         prepare: () => ensureTool("arcana"),
         textKey: "feature_guide.arcana.step4",
         check: arcanaIdEntered,
+      },
+      {
+        target: '[data-guide="arcana-add-id"]',
+        prepare: () => ensureTool("arcana"),
+        textKey: "feature_guide.arcana.step5",
       },
     ],
   },

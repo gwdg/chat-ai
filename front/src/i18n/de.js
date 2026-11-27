@@ -649,6 +649,8 @@ export default {
       step3: "Wählen Sie Arcana.",
       step4:
         "Geben Sie Ihre Arcana-ID ein. Über den Hilfe-Link können Sie eine Sammlung erstellen.",
+      step5:
+        "Fügen Sie jede Sammlung, die der Chat lesen soll, als owner/arcana mit einer kurzen Beschreibung hinzu. Der Agent listet sie mit list_arcanas auf und wählt die passende.",
     },
     web_search: {
       title: "Websuche verwenden",
@@ -703,7 +705,7 @@ export default {
       step2:
         "Erstellen Sie mit der +-Schaltfläche eine Sammlung. Sie werden ihr Eigentümer und können sie später teilen.",
       step3:
-        "Klicken Sie auf eine Sammlung, um ihre Verwaltung zu öffnen: Dateien hochladen, Tags pro Datei bearbeiten, die Indexierung starten und den Inhalt durchsuchen.",
+        "Klicken Sie auf eine Sammlung, um ihre Seite zu öffnen: Dateien hochladen, Tags pro Datei bearbeiten, die Indexierung starten, den Inhalt durchsuchen und die Sammlung teilen. Der Arcana-Chat daneben kann die Sammlung untersuchen, Fragen aus ihren Dateien beantworten und — nach Ihrer Bestätigung — hochladen, schreiben, löschen, indexieren und Tags setzen. Dieser Chat wird nicht in Ihrer Chatliste gespeichert.",
     },
     arcana_share: {
       title: "Eine Arcana teilen",
@@ -1327,6 +1329,13 @@ export default {
     arcana_in_use_tool: "Arcana-Werkzeug",
     arcana_in_use_readonly: "Nur-Lese-Werkzeuge",
     arcana_in_use_remove: "{{name}} entfernen",
+    arcana_add_title: "Arcana hinzufügen",
+    arcana_add_placeholder: "owner/arcana, z. B. alice/papers",
+    arcana_add_button: "Hinzufügen",
+    arcana_description_placeholder: "Kurze Beschreibung für den Agenten (optional)",
+    arcana_description_for: "Beschreibung von {{name}}",
+    arcana_invalid_ref: "Gib ein Arcana als owner/arcana ein, z. B. alice/papers.",
+    arcana_already_added: "Dieses Arcana ist bereits im Chat.",
     placeholder_mcp_url: "http://localhost:3000/mcp",
     placeholder_mcp_auth: "Authorization-Header (optional)",
     mcp_add: "MCP-Server hinzufügen",
@@ -2512,6 +2521,43 @@ export default {
     share_remove: "Entfernen",
     share_remove_confirm: "{{name}} aus dieser Arcana entfernen?",
     share_group: "Gruppe",
+    page_kind: "Arcana",
+    page_file_count: "{{count}} Datei(en)",
+    page_unknown_title: "Arcana",
+    page_missing_title: "Diese Arcana ist nicht verfügbar",
+    page_missing_body:
+      "Vielleicht wurde sie gelöscht, oder die Liste deiner Arcanas konnte nicht geladen werden.",
+    page_back_to_chat: "Zurück zum Chat",
+    page_editor: "Dateien und Einstellungen",
+    page_editor_show: "Dateien und Einstellungen anzeigen",
+    page_editor_hide: "Dateien und Einstellungen ausblenden",
+    page_editor_resize: "Arcana-Bereich breiter oder schmaler ziehen",
+  },
+  arcana_chat: {
+    title: "Chat zu {{name}}",
+    subtitle:
+      "Dieser Chat liest die Arcana über SAIA und fragt nach, bevor er etwas ändert. Er wird nicht in deiner Chatliste gespeichert.",
+    reset: "Neuer Chat",
+    prompt_placeholder:
+      "Frage zu dieser Arcana, lade eine Datei hoch oder teste eine Suche…",
+    no_model: "Für diesen Chat ist kein Modell ausgewählt.",
+    no_tools:
+      "Dieser Chat braucht ein Modell, das Werkzeuge unterstützt. Wähle eines in den Chat-Einstellungen.",
+    error: "Der Arcana-Chat konnte nicht antworten.",
+    done: "Fertig.",
+    confirm_upload:
+      "„{{name}}“ ({{size}}) in „{{collection}}“ speichern?",
+    confirm_upload_yes: "Datei hochladen",
+    confirm_write:
+      "„{{name}}“ ({{size}}) in diese Arcana schreiben? Eine vorhandene Datei wird überschrieben.",
+    confirm_write_yes: "Datei schreiben",
+    confirm_delete:
+      "„{{name}}“ aus dieser Arcana löschen und die Indexeinträge entfernen?",
+    confirm_delete_yes: "Datei löschen",
+    confirm_index: "Alle gespeicherten Dateien in „{{collection}}“ indexieren?",
+    confirm_index_yes: "Indexierung starten",
+    confirm_tags: "Tags von „{{name}}“ auf {{tags}} setzen?",
+    confirm_tags_yes: "Tags setzen",
   },
   mcp: {
     section_title: "MCP-Server",

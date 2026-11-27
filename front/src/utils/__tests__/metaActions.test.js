@@ -226,6 +226,34 @@ describe("Meta chat action markers", () => {
     ).toEqual([]);
   });
 
+  it("accepts a list of collections and refuses one unusable entry", () => {
+    const accepted = getMetaActionProposals(
+      '[[SET_CONVERSATION_SETTING:{"id":"c1","key":"arcana_shares","value":[{"collection":"alice__papers","description":"Papers"},{"collection":"bob/notes"}]}]]',
+    );
+    expect(accepted).toHaveLength(1);
+    expect(accepted[0]).toMatchObject({
+      type: "conversation_setting",
+      key: "arcana_shares",
+      value: [
+        { collection: "alice__papers", description: "Papers" },
+        { collection: "bob/notes" },
+      ],
+    });
+
+    // An empty list clears the chat's collections.
+    expect(
+      getMetaActionProposals(
+        '[[SET_CONVERSATION_SETTING:{"id":"c1","key":"arcana_shares","value":[]}]]',
+      ),
+    ).toHaveLength(1);
+
+    expect(
+      getMetaActionProposals(
+        '[[SET_CONVERSATION_SETTING:{"id":"c1","key":"arcana_shares","value":[{"collection":"papers"}]}]]',
+      ),
+    ).toEqual([]);
+  });
+
   it("parses the whole-transcript feedback preference", () => {
     const proposals = getMetaActionProposals(
       [

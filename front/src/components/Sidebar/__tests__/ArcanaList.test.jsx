@@ -5,6 +5,8 @@ import ArcanaList from "../ArcanaList";
 
 const mocks = vi.hoisted(() => ({
   openModal: vi.fn(),
+  navigate: vi.fn(),
+  pathname: "/chat",
   dispatch: vi.fn(),
   retry: vi.fn(),
   deleteCollection: vi.fn(),
@@ -45,6 +47,10 @@ vi.mock("react-redux", () => ({
     selector({ interface_settings: { dark_mode: false } }),
   useDispatch: () => mocks.dispatch,
 }));
+vi.mock("react-router", () => ({
+  useNavigate: () => mocks.navigate,
+  useLocation: () => ({ pathname: mocks.pathname }),
+}));
 vi.mock("../../../modals/ModalContext", () => ({
   useModal: () => ({ openModal: mocks.openModal }),
 }));
@@ -63,12 +69,23 @@ vi.mock("../../../workspace/arcanas", () => ({
   arcanasProvider: () => ({ deleteCollection: mocks.deleteCollection }),
   arcanaDisplayName: (collection) =>
     collection.shared ? `${collection.owner}__${collection.name}` : collection.name,
+  arcanaPagePath: (collection, options = {}) => {
+    const params = new URLSearchParams();
+    if (options.upload) params.set("upload", "1");
+    if (options.tab && options.tab !== "files") params.set("tab", options.tab);
+    const query = params.toString();
+    return `/arcana/${encodeURIComponent(collection.collection)}${
+      query ? `?${query}` : ""
+    }`;
+  },
   retryArcanas: mocks.retry,
   useArcanas: () => mocks.state,
 }));
 
 beforeEach(() => {
   mocks.openModal.mockReset();
+  mocks.navigate.mockReset();
+  mocks.pathname = "/chat";
   mocks.dispatch.mockReset();
   mocks.retry.mockReset();
   mocks.deleteCollection.mockReset();
@@ -137,13 +154,36 @@ describe("ArcanaList", () => {
     expect(partial?.className).toContain("bg-warning");
   });
 
-  it("opens the manager when a collection is clicked", () => {    render(<ArcanaList />);
+  it("opens the page when a collection is clicked", () => {
+    render(<ArcanaList />);
 
     fireEvent.click(screen.getByText("recipes"));
 
-    expect(mocks.openModal).toHaveBeenCalledWith("arcanaManager", {
-      collection: mocks.state.collections[0],
-    });
+    expect(mocks.navigate).toHaveBeenCalledWith("/arcana/alice__recipes");
+  });
+
+  it("marks the open collection in the sidebar", () => {
+    mocks.pathname = "/arcana/alice__recipes";
+    render(<ArcanaList />);
+
+    expect(screen.getByText("recipes").closest(".group")?.className).toContain(
+      "bg-base-200 shadow-sm",
+    );
+    expect(screen.getByText("papers").closest(".group")?.className).not.toContain(
+      "shadow-sm",
+    );
+  });
+
+  it("opens the page's search tab from the options menu", async () => {
+    render(<ArcanaList />);
+
+    const row = screen.getByText("recipes").closest(".group");
+    fireEvent.click(within(row).getByRole("button", { name: "Arcana options" }));
+    fireEvent.click(await screen.findByText("Search"));
+
+    expect(mocks.navigate).toHaveBeenCalledWith(
+      "/arcana/alice__recipes?tab=search",
+    );
   });
 
   it("offers the empty state when there is no collection", () => {

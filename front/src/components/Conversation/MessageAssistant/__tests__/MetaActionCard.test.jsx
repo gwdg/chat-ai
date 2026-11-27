@@ -225,6 +225,70 @@ describe("MetaActionCard", () => {
     );
   });
 
+  it("applies and reverts a chat's list of Arcana collections", async () => {
+    vi.mocked(getConversationMeta).mockResolvedValue({
+      ...conversation,
+      settings: { arcana_shares: [] },
+    });
+    render(
+      <MetaActionCard
+        actions={[
+          {
+            type: "conversation_setting",
+            scope: "conversation",
+            conversationId: "chat-1",
+            key: "arcana_shares",
+            value: [
+              {
+                collection: "alice__papers",
+                description: " Peer-reviewed papers ",
+              },
+              { collection: "bob/notes" },
+            ],
+          },
+        ]}
+        localState={localState}
+        setLocalState={vi.fn()}
+        message_index={0}
+      />,
+    );
+
+    // The proposal names the collections it would bind.
+    expect(screen.getByText(/alice__papers, bob\/notes/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /accept changes/i }));
+    await waitFor(() =>
+      expect(updateConversationMeta).toHaveBeenCalledWith("chat-1", {
+        settings: {
+          arcana_shares: [
+            {
+              collection: "alice__papers",
+              owner: "alice",
+              name: "papers",
+              description: "Peer-reviewed papers",
+            },
+            { collection: "bob__notes", owner: "bob", name: "notes" },
+          ],
+        },
+      }),
+    );
+
+    // The applied settings are what the chat now holds; the revert only runs
+    // when they still match, exactly like a real conversation row.
+    const appliedSettings = vi.mocked(updateConversationMeta).mock.calls[0][1]
+      .settings;
+    vi.mocked(getConversationMeta).mockResolvedValue({
+      ...conversation,
+      settings: appliedSettings,
+    });
+    fireEvent.click(await screen.findByRole("button", { name: /revert changes/i }));
+    await waitFor(() =>
+      expect(updateConversationMeta).toHaveBeenLastCalledWith("chat-1", {
+        settings: { arcana_shares: [] },
+      }),
+    );
+  });
+
   it("assigns a chat to a topic", async () => {
     render(
       <MetaActionCard

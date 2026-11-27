@@ -373,6 +373,31 @@ export function useImportConversation() {
         if (!isBrandLocked("tools")) settings.enable_tools = true;
       }
 
+      // The chat may carry several collections, each with a short description.
+      const arcanaShares = extractParameter(data, "arcana_shares");
+      if (Array.isArray(arcanaShares)) {
+        const list = [];
+        const seen = new Set();
+        for (const item of arcanaShares) {
+          const ref = parseArcanaShareRef(
+            typeof item === "string" ? item : item?.collection,
+          );
+          if (!ref || seen.has(ref.collection)) continue;
+          seen.add(ref.collection);
+          const description =
+            typeof item?.description === "string" ? item.description.trim() : "";
+          list.push({
+            ...ref,
+            name: String(item?.name || ref.name).trim(),
+            ...(description ? { description } : {}),
+          });
+        }
+        if (list.length) {
+          settings.arcana_shares = list;
+          if (!isBrandLocked("tools")) settings.enable_tools = true;
+        }
+      }
+
       // Determine folder assignment
       let folderId = topicId;
       const folderRef =

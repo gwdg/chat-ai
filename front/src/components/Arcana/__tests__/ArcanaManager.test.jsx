@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import ArcanaManagerModal from "../ArcanaManagerModal";
+import ArcanaManager from "../ArcanaManager";
 
 const mocks = vi.hoisted(() => ({
   listFiles: vi.fn(),
@@ -82,7 +82,7 @@ const files = [
   { name: "b.md", status: "indexed", chunks: 1, tags: ["beta"], markdown: false },
 ];
 
-describe("ArcanaManagerModal", () => {
+describe("ArcanaManager", () => {
   beforeEach(() => {
     mocks.listFiles.mockReset();
     mocks.listTags.mockReset();
@@ -124,11 +124,7 @@ describe("ArcanaManagerModal", () => {
 
   it("filters the file list by tag and clears that filter again", async () => {
     render(
-      <ArcanaManagerModal
-        isOpen
-        onClose={() => {}}
-        collection={collection}
-      />,
+      <ArcanaManager collection={collection} />,
     );
 
     await screen.findByText("a.md");
@@ -144,11 +140,7 @@ describe("ArcanaManagerModal", () => {
 
   it("re-runs a search when the tag filter is cleared", async () => {
     render(
-      <ArcanaManagerModal
-        isOpen
-        onClose={() => {}}
-        collection={collection}
-      />,
+      <ArcanaManager collection={collection} />,
     );
 
     await screen.findByText("a.md");
@@ -184,11 +176,7 @@ describe("ArcanaManagerModal", () => {
 
   it("lists, adds and removes people on the Share tab", async () => {
     render(
-      <ArcanaManagerModal
-        isOpen
-        onClose={() => {}}
-        collection={collection}
-      />,
+      <ArcanaManager collection={collection} />,
     );
 
     await screen.findByText("a.md");
@@ -238,11 +226,7 @@ describe("ArcanaManagerModal", () => {
     });
 
     render(
-      <ArcanaManagerModal
-        isOpen
-        onClose={() => {}}
-        collection={collection}
-      />,
+      <ArcanaManager collection={collection} />,
     );
 
     await screen.findByText("a.md");
@@ -268,9 +252,7 @@ describe("ArcanaManagerModal", () => {
 
   it("shows a shared Arcana read-only and offers no sharing controls", async () => {
     render(
-      <ArcanaManagerModal
-        isOpen
-        onClose={() => {}}
+      <ArcanaManager
         collection={{
           ...collection,
           owner: "bob",
@@ -307,11 +289,7 @@ describe("ArcanaManagerModal", () => {
     ]);
 
     render(
-      <ArcanaManagerModal
-        isOpen
-        onClose={() => {}}
-        collection={collection}
-      />,
+      <ArcanaManager collection={collection} />,
     );
 
     await screen.findByText("Wasserwerksschulung.pdf");
@@ -333,11 +311,7 @@ describe("ArcanaManagerModal", () => {
     ]);
 
     render(
-      <ArcanaManagerModal
-        isOpen
-        onClose={() => {}}
-        collection={collection}
-      />,
+      <ArcanaManager collection={collection} />,
     );
 
     await screen.findByText("Wasserwerksschulung.pdf");
@@ -363,11 +337,7 @@ describe("ArcanaManagerModal", () => {
 
   it("names a plain upload by its own name when it is downloaded", async () => {
     render(
-      <ArcanaManagerModal
-        isOpen
-        onClose={() => {}}
-        collection={collection}
-      />,
+      <ArcanaManager collection={collection} />,
     );
 
     await screen.findByText("a.md");
@@ -385,11 +355,7 @@ describe("ArcanaManagerModal", () => {
     mocks.downloadFile.mockRejectedValue(new Error("collection is unavailable"));
 
     render(
-      <ArcanaManagerModal
-        isOpen
-        onClose={() => {}}
-        collection={collection}
-      />,
+      <ArcanaManager collection={collection} />,
     );
 
     await screen.findByText("a.md");
@@ -419,11 +385,7 @@ describe("ArcanaManagerModal", () => {
       ]);
 
     render(
-      <ArcanaManagerModal
-        isOpen
-        onClose={() => {}}
-        collection={collection}
-      />,
+      <ArcanaManager collection={collection} />,
     );
 
     await screen.findByText("Wasserwerksschulung.pdf");
@@ -454,7 +416,7 @@ describe("ArcanaManagerModal", () => {
       });
     });
     render(
-      <ArcanaManagerModal isOpen onClose={() => {}} collection={collection} />,
+      <ArcanaManager collection={collection} />,
     );
     await screen.findByText("a.md");
 
@@ -510,11 +472,7 @@ describe("ArcanaManagerModal", () => {
     vi.useFakeTimers();
     try {
       render(
-        <ArcanaManagerModal
-          isOpen
-          onClose={() => {}}
-          collection={collection}
-        />,
+        <ArcanaManager collection={collection} />,
       );
       await act(async () => {
         await vi.advanceTimersByTimeAsync(0);
@@ -554,7 +512,7 @@ describe("ArcanaManagerModal", () => {
   it("reports a failed upload instead of claiming it was stored", async () => {
     mocks.uploadFile.mockRejectedValue(new Error("MCP error -32001: Request timed out"));
     render(
-      <ArcanaManagerModal isOpen onClose={() => {}} collection={collection} />,
+      <ArcanaManager collection={collection} />,
     );
     await screen.findByText("a.md");
 

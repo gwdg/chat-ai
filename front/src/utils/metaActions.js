@@ -46,6 +46,7 @@ const SUPPORTED_CONVERSATION_SETTING_KEYS = new Set([
   "workspace_write_access",
   "arcana_tools",
   "arcana_share",
+  "arcana_shares",
 ]);
 
 const LOCKED_CHAT_SETTING_KEYS = new Set([
@@ -93,6 +94,20 @@ function isValidConversationSetting(key, value) {
     return Boolean(
       parseArcanaShareRef(
         typeof value === "string" ? value : value?.collection,
+      ),
+    );
+  }
+  if (key === "arcana_shares") {
+    // `null` or an empty list clears the chat's collections; otherwise every
+    // entry has to name a collection the tools can address.
+    if (value === null) return true;
+    if (!Array.isArray(value)) return false;
+    if (value.length === 0) return true;
+    return value.every((item) =>
+      Boolean(
+        parseArcanaShareRef(
+          typeof item === "string" ? item : item?.collection,
+        ),
       ),
     );
   }

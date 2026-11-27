@@ -16,7 +16,6 @@ import {
 } from "@carbon/icons-react";
 import { AlertCircle, Loader2 } from "lucide-react";
 
-import BaseModal from "../BaseModal";
 import { useToast } from "../../hooks/useToast";
 import {
   arcanasProvider,
@@ -57,36 +56,43 @@ const INDEX_STALE_GRACE_MS = 30_000;
 type Tab = "files" | "search" | "share";
 
 /**
- * The file list, tag editor and search of one collection.
+ * The file list, tag editor, search and sharing of one collection.
  *
  * The sidebar can only show one row per collection, so everything a collection
- * does happens here: upload, index, tag and search. Tags are per file and are
- * edited as a comma-separated list (`set_file_tags` replaces the whole list, so
- * removing a tag is just leaving it out).
+ * does happens on its page: upload, index, tag, search and share. Tags are per
+ * file and are edited as a comma-separated list (`set_file_tags` replaces the
+ * whole list, so removing a tag is just leaving it out).
  *
  * Deleting a file asks inline instead of through `confirmAction`: the
  * modal context holds exactly one dialog, so opening the confirmation would
- * replace this one.
+ * replace the one the page may be showing.
+ *
+ * `onFiles` reports the current rows so the page header can count them, and
+ * `chatai:arcana-files-changed` (dispatched by the Arcana chat after it wrote
+ * something) reloads the list without a manual refresh.
  */
-export default function ArcanaManagerModal({
-  isOpen,
-  onClose,
+export default function ArcanaManager({
   collection,
   initialTab = "files",
   focus,
+  onFiles,
+  framed = true,
 }: {
-  isOpen: boolean;
-  onClose: () => void;
   collection: RagCollection;
   initialTab?: Tab;
   focus?: "upload";
+  onFiles?: (files: RagFile[]) => void;
+  /**
+   * `false` drops the card border and rounding, so the editor can fill a panel
+   * that already is the card (the right-hand panel of the collection's page).
+   */
+  framed?: boolean;
 }) {
   const { t } = useTranslation();
   const { notifySuccess, notifyError } = useToast();
   const display = arcanaDisplayName(collection);
 
-  const [tab, setTab] = useState<Tab>(initialTab);
-  const [files, setFiles] = useState<RagFile[]>([]);
+  const [tab, setTab] = useState<Tab>(initialTab);  const [files, setFiles] = useState<RagFile[]>([]);
   const [tags, setTags] = useState<RagTag[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -212,6 +218,25 @@ export default function ArcanaManagerModal({
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  // The page header counts the rows; it gets them whenever they change.
+  useEffect(() => {
+    onFiles?.(files);
+  }, [files, onFiles]);
+
+  // The Arcana chat writes through the provider, not through this component,
+  // so it announces its changes instead of the two sharing state.
+  useEffect(() => {
+    const onChanged = (event: Event) => {
+      const changed = (event as CustomEvent<{ collection?: string }>).detail
+        ?.collection;
+      if (changed && changed !== collection.collection) return;
+      void reload();
+    };
+    window.addEventListener("chatai:arcana-files-changed", onChanged);
+    return () =>
+      window.removeEventListener("chatai:arcana-files-changed", onChanged);
+  }, [collection.collection, reload]);
 
   // A different collection has a different ACL; never show the previous one's
   // people while the new list loads.
@@ -674,29 +699,18 @@ export default function ArcanaManagerModal({
   );
 
   return (
-    <BaseModal
-      isOpen={isOpen}
-      onClose={onClose}
-      titleNode={
-        <span className="flex items-center gap-2">
-          <Document size={16} />
-          {collection.name}
-          <span className="badge badge-ghost badge-sm">
-            {t(`arcanas.role_${collection.role}`, {
-              defaultValue: collection.role,
-            })}
-          </span>
-        </span>
-      }
-      maxWidth="max-w-3xl"
-      contentClassName="p-5 pt-0"
+    <section
+      className={`flex h-full min-h-0 flex-col ${
+        framed
+          ? "rounded-2xl border border-base-300 bg-base-100 p-3 shadow-sm"
+          : ""
+      }`}
+      data-guide="arcana-manager"
+      data-collection={collection.collection}
+      aria-label={collection.name}
     >
-      <div
-        className="flex flex-col gap-3"
-        data-guide="arcana-manager"
-        data-collection={collection.collection}
-      >
-        <div className="flex items-center justify-between gap-2 border-b border-base-300 pb-2">
+      <div className="flex min-h-0 flex-1 flex-col gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-base-300 pb-2">
           <div className="flex items-center gap-1">
             {tabButton("files", <Document size={14} />, t("arcanas.tab_files"))}
             {tabButton("search", <Search size={14} />, t("arcanas.tab_search"))}
@@ -842,7 +856,7 @@ export default function ArcanaManagerModal({
               </p>
             )}
 
-            <div className="max-h-[50vh] overflow-y-auto rounded-xl border border-base-300">
+            <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-base-300">
               {loading ? (
                 <div className="flex items-center justify-center gap-2 py-8 text-xs text-base-content/60">
                   <Loader2 size={14} className="animate-spin" />
@@ -1079,7 +1093,7 @@ export default function ArcanaManagerModal({
                 </button>
               </div>
             )}
-            <div className="max-h-[50vh] space-y-2 overflow-y-auto">
+            <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
               {results.length === 0 ? (
                 rawResults && !/no (matching|results)/i.test(rawResults) ? (
                   <pre className="whitespace-pre-wrap rounded-xl bg-base-200/60 px-3 py-2 text-xs">
@@ -1240,7 +1254,7 @@ export default function ArcanaManagerModal({
                 </p>
               )
             ) : (
-              <ul className="max-h-[45vh] divide-y divide-base-300 overflow-y-auto rounded-xl border border-base-300">
+              <ul className="min-h-0 flex-1 divide-y divide-base-300 overflow-y-auto rounded-xl border border-base-300">
                 {members.map((member) => (
                   <li
                     key={`${member.kind}:${member.user}`}
@@ -1325,13 +1339,7 @@ export default function ArcanaManagerModal({
             )}
           </div>
         )}
-
-        <div className="flex items-center justify-end gap-2 border-t border-base-300 pt-2">
-          <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>
-            {t("common.close")}
-          </button>
-        </div>
       </div>
-    </BaseModal>
+    </section>
   );
 }

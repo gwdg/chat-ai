@@ -185,4 +185,35 @@ describe("useImportConversation", () => {
       dbMocks.createConversation.mock.calls[0][0].settings.arcana_share,
     ).toBeUndefined();
   });
+
+  it("restores the chat's list of collections with their descriptions", async () => {
+    const { result } = renderHook(() => useImportConversation());
+
+    await act(async () => {
+      await result.current(
+        {
+          title: "Many",
+          arcana_shares: [
+            { collection: "alice/papers", description: " Papers " },
+            { collection: "bob__notes", name: "Notes" },
+            { collection: "alice__papers" },
+            { collection: "papers" },
+          ],
+        },
+        true,
+      );
+    });
+
+    const params = dbMocks.createConversation.mock.calls[0][0];
+    expect(params.settings.arcana_shares).toEqual([
+      {
+        collection: "alice__papers",
+        owner: "alice",
+        name: "papers",
+        description: "Papers",
+      },
+      { collection: "bob__notes", owner: "bob", name: "Notes" },
+    ]);
+    expect(params.settings.enable_tools).toBe(true);
+  });
 });

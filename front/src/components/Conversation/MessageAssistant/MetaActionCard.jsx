@@ -418,6 +418,7 @@ export default function MetaActionCard({
     workspace_write_access: "settings.label_write_access",
     arcana_tools: "settings.label_arcana_tools",
     arcana_share: "arcanas.share_link_title",
+    arcana_shares: "settings.arcana_in_use",
   };
 
   const formatSettingValue = (key, value) => {
@@ -499,6 +500,17 @@ export default function MetaActionCard({
         (typeof value === "object" && (value.name || value.collection)) ||
         String(value)
       );
+    }
+    if (key === "arcana_shares") {
+      const list = Array.isArray(value) ? value : [];
+      const names = list
+        .map((item) =>
+          typeof item === "string"
+            ? item
+            : item?.name || item?.collection || "",
+        )
+        .filter(Boolean);
+      return names.length ? names.join(", ") : t("meta_chat.setting_off");
     }
     if (typeof value === "boolean") {
       return value ? t("meta_chat.setting_on") : t("meta_chat.setting_off");
@@ -927,6 +939,29 @@ export default function MetaActionCard({
                   ? action.value
                   : action.value?.collection,
               ) ?? undefined;
+          }
+          if (action.key === "arcana_shares") {
+            // The chat owns the list the read tools take; the marker carries
+            // references, so resolve each one and keep its short description.
+            const list = Array.isArray(action.value)
+              ? action.value
+              : action.value === null || action.value === ""
+                ? []
+                : [action.value];
+            nextValue = list
+              .map((item) => {
+                const ref = parseArcanaShareRef(
+                  typeof item === "string" ? item : item?.collection,
+                );
+                if (!ref) return null;
+                const description =
+                  typeof item?.description === "string"
+                    ? item.description.trim()
+                    : "";
+                return description ? { ...ref, description } : ref;
+              })
+              .filter(Boolean);
+            if (!nextValue.length) nextValue = undefined;
           }
           entry.previous[action.key] = readConversationSetting(
             conversation.settings,

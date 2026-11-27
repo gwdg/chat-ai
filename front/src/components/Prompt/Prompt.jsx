@@ -28,6 +28,7 @@ import { useModal } from "../../modals/ModalContext";
 import { useDebounce } from "../../hooks/useDebounce";
 import UndoButton from "../Conversation/UndoButton";
 import { MetaChatSendContext } from "../../context/MetaChatContext";
+import { ArcanaChatSendContext } from "../../context/ArcanaChatContext";
 
 export default function Prompt({
   localState,
@@ -39,6 +40,8 @@ export default function Prompt({
 }) {
   const { t } = useTranslation();
   const metaChatSend = useContext(MetaChatSendContext);
+  const arcanaChatSend = useContext(ArcanaChatSendContext);
+  const ephemeralChat = Boolean(metaChatSend || arcanaChatSend);
   const defaultSendMessage = useSendMessage();
   const sendMessage = sendMessageOverride ?? defaultSendMessage;
   const { openModal } = useModal();
@@ -179,7 +182,12 @@ export default function Prompt({
           handleChange={handleChange}
           prompt={prompt}
           placeholder={
-            placeholder ?? (metaChatSend ? t("meta_chat.prompt_placeholder") : undefined)
+            placeholder ??
+            (metaChatSend
+              ? t("meta_chat.prompt_placeholder")
+              : arcanaChatSend
+                ? t("arcana_chat.prompt_placeholder")
+                : undefined)
           }
         />
         
@@ -202,7 +210,7 @@ export default function Prompt({
           </div>
           {/* Buttons in the center */}
           <div className="flex gap-4 items-center justify-center">
-            {!metaChatSend && (
+            {!ephemeralChat && (
               <>
                 {isFeatureEnabled("workspaces") && (
                   <WorkspaceAttachButton

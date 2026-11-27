@@ -11,11 +11,12 @@ import TopicMasterPage from "../Pages/TopicMasterPage";
 import WorkspacePage from "../Pages/WorkspacePage";
 import WorkspaceFilesPage from "../Pages/WorkspaceFilesPage";
 import AgentPage from "../Pages/AgentPage";
+import ArcanaPage from "../Pages/ArcanaPage";
 import ToolFormDemoPage from "../Pages/ToolFormDemoPage";
 import BrandPage from "../Pages/BrandPage";
 import SitemapPage from "../Pages/SitemapPage";
 import CoursePage from "../Pages/CoursePage";
-import { isAgentsEnabled } from "../utils/modules";
+import { isAgentsEnabled, isArcanasEnabled } from "../utils/modules";
 import { isFeatureEnabled } from "../config/deployment";
 
 const PublicRoute = () => {
@@ -42,6 +43,9 @@ const PublicRoute = () => {
             element={<WorkspaceFilesPage />}
           />
         </>
+      )}
+      {isArcanasEnabled() && (
+        <Route path="/arcana/:collection" element={<ArcanaPage />} />
       )}
       {isAgentsEnabled() && (
         <Route path="/agent/:agentId" element={<AgentPage />} />

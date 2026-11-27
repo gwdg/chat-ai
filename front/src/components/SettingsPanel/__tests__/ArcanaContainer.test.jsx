@@ -166,3 +166,197 @@ describe("ArcanaContainer list of arcanas in use", () => {
     expect(list()).toBeNull();
   });
 });
+
+describe("ArcanaContainer adding collections", () => {
+  it("adds a typed owner/arcana with a description and turns tools on", () => {
+    const localState = stateWith({ enable_tools: false, arcana: { id: "" } });
+    const setLocalState = vi.fn((updater) => updater(localState));
+    render(
+      <ArcanaContainer
+        localState={localState}
+        setLocalState={setLocalState}
+        configurable
+      />,
+    );
+
+    fireEvent.change(
+      screen.getByPlaceholderText("owner/arcana, e.g. alice/papers"),
+      { target: { value: "alice/papers" } },
+    );
+    fireEvent.change(
+      screen.getByPlaceholderText("Short description for the agent (optional)"),
+      { target: { value: " Peer-reviewed papers " } },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+
+    const next = setLocalState.mock.results[0].value;
+    expect(next.settings.enable_tools).toBe(true);
+    expect(next.settings.arcana_shares).toEqual([
+      {
+        collection: "alice__papers",
+        owner: "alice",
+        name: "papers",
+        description: "Peer-reviewed papers",
+      },
+    ]);
+  });
+
+  it("keeps existing collections when another is added", () => {
+    const localState = stateWith({
+      arcana_shares: [
+        { collection: "alice__papers", owner: "alice", name: "papers" },
+      ],
+    });
+    const setLocalState = vi.fn((updater) => updater(localState));
+    render(
+      <ArcanaContainer
+        localState={localState}
+        setLocalState={setLocalState}
+        configurable
+      />,
+    );
+
+    fireEvent.change(
+      screen.getByPlaceholderText("owner/arcana, e.g. alice/papers"),
+      { target: { value: "bob/notes" } },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+
+    const next = setLocalState.mock.results[0].value;
+    expect(next.settings.arcana_shares.map((item) => item.collection)).toEqual([
+      "alice__papers",
+      "bob__notes",
+    ]);
+  });
+
+  it("refuses a value that is not owner/arcana", () => {
+    const setLocalState = vi.fn();
+    render(
+      <ArcanaContainer
+        localState={stateWith({ arcana: { id: "" } })}
+        setLocalState={setLocalState}
+        configurable
+      />,
+    );
+
+    fireEvent.change(
+      screen.getByPlaceholderText("owner/arcana, e.g. alice/papers"),
+      { target: { value: "papers" } },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+
+    expect(setLocalState).not.toHaveBeenCalled();
+    expect(
+      screen.getByText(
+        "Enter an Arcana as owner/arcana, e.g. alice/papers.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("refuses a collection that is already in the chat", () => {
+    const setLocalState = vi.fn();
+    render(
+      <ArcanaContainer
+        localState={stateWith({
+          arcana_shares: [
+            { collection: "alice__papers", owner: "alice", name: "papers" },
+          ],
+        })}
+        setLocalState={setLocalState}
+        configurable
+      />,
+    );
+
+    fireEvent.change(
+      screen.getByPlaceholderText("owner/arcana, e.g. alice/papers"),
+      { target: { value: "alice/papers" } },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+
+    expect(setLocalState).not.toHaveBeenCalled();
+    expect(
+      screen.getByText("This Arcana is already in the chat."),
+    ).toBeInTheDocument();
+  });
+
+  it("edits the description of an added collection", () => {
+    const localState = stateWith({
+      arcana_shares: [
+        { collection: "alice__papers", owner: "alice", name: "papers" },
+      ],
+    });
+    const setLocalState = vi.fn((updater) => updater(localState));
+    render(
+      <ArcanaContainer
+        localState={localState}
+        setLocalState={setLocalState}
+        configurable
+      />,
+    );
+
+    fireEvent.change(
+      screen.getByLabelText("Description of alice/papers"),
+      { target: { value: "Only the 2026 papers" } },
+    );
+
+    const next = setLocalState.mock.results[0].value;
+    expect(next.settings.arcana_shares[0].description).toBe(
+      "Only the 2026 papers",
+    );
+  });
+
+  it("removes one collection and keeps the others", () => {
+    const localState = stateWith({
+      arcana_shares: [
+        { collection: "alice__papers", owner: "alice", name: "papers" },
+        { collection: "bob__notes", owner: "bob", name: "notes" },
+      ],
+    });
+    const setLocalState = vi.fn((updater) => updater(localState));
+    render(
+      <ArcanaContainer
+        localState={localState}
+        setLocalState={setLocalState}
+        configurable
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove alice/papers" }));
+
+    const next = setLocalState.mock.results[0].value;
+    expect(next.settings.arcana_shares.map((item) => item.collection)).toEqual([
+      "bob__notes",
+    ]);
+  });
+
+  it("folds a link binding into the list when the list is edited", () => {
+    const localState = stateWith({
+      arcana_share: {
+        collection: "alice__papers",
+        owner: "alice",
+        name: "papers",
+      },
+    });
+    const setLocalState = vi.fn((updater) => updater(localState));
+    render(
+      <ArcanaContainer
+        localState={localState}
+        setLocalState={setLocalState}
+        configurable
+      />,
+    );
+
+    fireEvent.change(
+      screen.getByPlaceholderText("owner/arcana, e.g. alice/papers"),
+      { target: { value: "bob/notes" } },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+
+    const next = setLocalState.mock.results[0].value;
+    expect(next.settings.arcana_share).toBeUndefined();
+    expect(next.settings.arcana_shares.map((item) => item.collection)).toEqual([
+      "alice__papers",
+      "bob__notes",
+    ]);
+  });
+});
