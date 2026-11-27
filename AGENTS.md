@@ -394,6 +394,16 @@ stale name. The data-safety warning (`WarningExternalModel`, `SendButton`), both
 field both selector variants read belongs in
 `types/models.ts#BaseModelInfo`, because the simple selector receives the same payload.
 
+The `(External)` marker is also what kept a model out of the demand updater, and that is
+why removing it from in-house bridge models needed a second skip: `bg_worker/demand_updater.py`
+skips names starting with `SAIA_BRIDGE_MODEL_PREFIX` too, because a bridge row is never in the
+registry and the sync owns its status. **That variable is read in the worker's own process**, so a
+deployment must set it on the API *and* on the background worker (compose `environment:` is per
+service). With it unset, every bridge model is written `status: unavailable` within a second while
+the bridge's own catalog says `ready`; the worker's startup line logs `bridge_prefix=...` and how
+many services it tracks for that reason. `tests/test_demand_updater_bridge_prefix.py` guards the
+compose files.
+
 ### 4.7 Secrets
 
 The API key is read only by `back/service.mjs` from `secrets/back.json`. `secrets/.gitignore`
