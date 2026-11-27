@@ -4557,6 +4557,107 @@ saia-fs  ->  &lt;root&gt;/tester/notes/a.txt</pre>
         mistake - <code>9999</code> is the connector socket, not an HTTP API.
       </p>
 
+      <h2>saia-fs and saia-rag, side by side</h2>
+      <p class="section-note">Two MCP services on the same rail: one keeps bytes, the other keeps meaning.</p>
+
+      <p>
+        <code>saia-fs</code> and <code>saia-rag</code> are siblings in the registry and both appear as a
+        workspace drive, but they answer different questions. <code>saia-fs</code> is a general-purpose
+        filesystem: whatever the caller writes is what reads back. <code>saia-rag</code> (the
+        <code>saia/saia-rag-cli</code> service) is a document store whose point is retrieval: it
+        converts, chunks, embeds and indexes what is uploaded, and it enforces a per-collection ACL. A
+        workspace can mount both; neither replaces the other.
+      </p>
+
+      <table class="table">
+        <thead>
+          <tr><th>Dimension</th><th>saia-fs</th><th>saia-rag</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Unit of storage</td>
+            <td>A path in a per-user directory tree, any depth</td>
+            <td>A collection; flat files inside it, no folders</td>
+          </tr>
+          <tr>
+            <td>What is kept</td>
+            <td>The exact bytes, unchanged</td>
+            <td>The original bytes plus chunks, embeddings, a SQLite index and tags</td>
+          </tr>
+          <tr>
+            <td>MCP tools</td>
+            <td>13 file operations: <code>list</code>, <code>list_json</code>, <code>read</code>,
+                <code>read_base64</code>, <code>write</code>, <code>write_base64</code>,
+                <code>append</code>, <code>delete</code>, <code>mkdir</code>, <code>exists</code>,
+                <code>move</code>, <code>rename</code>, <code>info</code></td>
+            <td>25 tools: collection create/describe/delete/list, public read, members and roles, tags,
+                search, and the file operations (<code>list_files</code>, <code>get_file</code>,
+                <code>read_file_base64</code>, <code>upload_file</code>,
+                <code>upload_file_base64</code>, <code>upload_file_chunk</code>,
+                <code>update_indexed_text</code>, <code>remove_file</code>)</td>
+          </tr>
+          <tr>
+            <td>Write model</td>
+            <td>Overwrite, append, offset write, mkdir, move, in-place rename, recursive delete</td>
+            <td>Upload (text, base64 or chunked), replace indexed text, remove a file, tag it. No folders,
+                so no mkdir/move/rename; an append means the client reads and re-writes the file</td>
+          </tr>
+          <tr>
+            <td>Retrieval</td>
+            <td>None on purpose: the client lists and reads</td>
+            <td><code>search_chunks</code>, <code>search_documents</code>, <code>search_preview</code> and
+                <code>fetch_top_document</code>, with page numbers and tag filters</td>
+          </tr>
+          <tr>
+            <td>Processing</td>
+            <td>None: bytes in, bytes out</td>
+            <td>docling conversion for PDF, Office and images, chunking, embeddings, background indexing
+                and a per-collection write lock</td>
+          </tr>
+          <tr>
+            <td>Authorization</td>
+            <td>Identity only: one namespace per caller, no sharing, roles or per-file grants</td>
+            <td>Per-collection ACL: owner/editor/reader for users and groups, public read and member
+                management, enforced on every tool call</td>
+          </tr>
+          <tr>
+            <td>Storage backends</td>
+            <td>A local directory or S3</td>
+            <td>A per-collection local directory, S3 or a remote <code>fs</code> backend</td>
+          </tr>
+          <tr>
+            <td>Other interfaces</td>
+            <td>MCP only: streamable HTTP and SSE</td>
+            <td>MCP plus a REST API on <code>:8000</code>, a CLI and a Python SDK</td>
+          </tr>
+          <tr>
+            <td>Identity and reachability</td>
+            <td colspan="2">The same plumbing for both. <code>saia</code> mode reads
+                <code>x-auth-claim-uid</code> and registers a connector; <code>mcp</code> mode serves one
+                configured user; h2c tunnels, streamable HTTP plus SSE, <code>/health</code>, no
+                <code>/v1/models</code> row, and the engine's
+                <code>/v1/mcp/&lt;service&gt;</code> hop supplies the identity.</td>
+          </tr>
+          <tr>
+            <td>In Chat AI</td>
+            <td>A workspace drive, and the storage under the encrypted sync vault</td>
+            <td>A workspace drive, the Arcanas section, the collection page and the Arcana chat tools</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p class="section-note">The <code>rag-fs/</code> folder inside <code>saia-rag-cli</code> is not a third
+        feature set.</p>
+      <p>
+        It is a copy of this filesystem server taken before <code>append</code> and the in-place
+        <code>rename</code> existed: 11 tools, a <code>move</code> that also relocates within a directory,
+        an <code>/api/v1/fs/*</code> REST surface this service does not have, and a <code>rag_client</code>
+        that no module imports (its <code>SAIA_FS_RAG_URL</code> is not even a setting). Its identity
+        resolution also prefers the header in <code>mcp</code> mode, where the standalone service ignores
+        headers and serves the configured user. Treat <code>saia/saia-fs</code> as the filesystem service
+        and <code>saia/saia-rag-cli</code> as the collection service.
+      </p>
+
       <h2>Components</h2>
       <table class="table">
         <thead>
