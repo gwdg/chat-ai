@@ -9,7 +9,15 @@ import {
   FolderOpen,
   Bot,
   Menu,
+  Pencil,
+  Plus,
+  UserRound,
 } from "lucide-react";
+import { usePersonaList } from "../../../db";
+import PersonaEditor from "./PersonaEditor";
+
+// Sidebar entry for the user's own personas; not a folder of the GitHub repo.
+const MY_PERSONAS = "__my_personas__";
 
 export default function ImportPersonaModal({
   isOpen,
@@ -29,6 +37,9 @@ export default function ImportPersonaModal({
   const [error, setError] = useState(null);
   const [folderStructure, setFolderStructure] = useState({});
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  // null = browsing; { persona } = editing it, { persona: null } = creating one
+  const [editor, setEditor] = useState(null);
+  const myPersonas = usePersonaList() || [];
 
   const { notifySuccess, notifyError } = useToast();
   const importConversation = useImportConversation();
@@ -192,8 +203,33 @@ export default function ImportPersonaModal({
       setFolderStructure({});
       setError(null);
       setSidebarOpen(false);
+      setEditor(null);
     }
   }, [isOpen]);
+
+  const handleMyPersonasClick = () => {
+    setSelectedPath(selectedPath === MY_PERSONAS ? null : MY_PERSONAS);
+    setSidebarOpen(false);
+  };
+
+  // Own personas are stored in the same shape as the repo's JSON files.
+  const handleMyPersonaStart = async (persona) => {
+    try {
+      setLoading(true);
+      await importConversation(persona, false, topicId);
+      onClose();
+    } catch (err) {
+      console.error("Import error:", err);
+      if (onError) onError("Failed to import persona");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const closeEditor = () => {
+    setEditor(null);
+    setSelectedPath(MY_PERSONAS);
+  };
 
   const handleFolderClick = (folder) => {
     // If clicking the same folder, toggle visibility
@@ -300,7 +336,51 @@ export default function ImportPersonaModal({
     </div>
   );
 
+  const renderMyPersonas = () => (
+    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-3 p-4">
+      {myPersonas.map((persona) => (
+        <div
+          key={persona.id}
+          onClick={() => handleMyPersonaStart(persona)}
+          className="relative flex flex-col items-center p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg cursor-pointer transition-all hover:shadow-md group"
+        >
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditor({ persona });
+            }}
+            aria-label={i18n.t("persona.editPersona")}
+            title={i18n.t("persona.editPersona")}
+            className="absolute top-1.5 right-1.5 p-1 rounded-lg opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition cursor-pointer"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+          <UserRound className="w-10 h-10 mb-2 text-blue-500 dark:text-blue-400 group-hover:scale-110 transition-transform" />
+          <p className="text-xs font-medium text-gray-900 dark:text-white text-center line-clamp-2">
+            {persona.title}
+          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center line-clamp-1">
+            {persona.subtitle || persona["model-name"] || ""}
+          </p>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() => setEditor({ persona: null })}
+        className="flex flex-col items-center justify-center p-3 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-pointer transition-all"
+      >
+        <Plus className="w-10 h-10 mb-2" />
+        <p className="text-xs font-medium text-center">
+          <Trans i18nKey="persona.newPersona" />
+        </p>
+      </button>
+    </div>
+  );
+
   const renderContentGrid = () => {
+    if (selectedPath === MY_PERSONAS) return renderMyPersonas();
+
     if (loadingFolder) {
       return (
         <div className="flex items-center justify-center h-full">
@@ -373,15 +453,31 @@ export default function ImportPersonaModal({
           </button>
           <div>
             <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-              <Trans i18nKey="persona.personaLibrary" />
+              <Trans
+                i18nKey={
+                  !editor
+                    ? "persona.personaLibrary"
+                    : editor.persona
+                      ? "persona.editPersona"
+                      : "persona.newPersona"
+                }
+              />
             </h2>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              <Trans i18nKey="persona.browsePersonas" />
+              <Trans i18nKey={editor ? "persona.editorDescription" : "persona.browsePersonas"} />
             </p>
           </div>
         </div>
       </div>
 
+      {editor ? (
+        <PersonaEditor
+          key={editor.persona?.id ?? "new"}
+          persona={editor.persona}
+          onDone={closeEditor}
+        />
+      ) : (
+      <>
       {/* Main Content Area */}
       <div className="flex h-[400px] sm:h-[450px] relative overflow-hidden">
         {/* Sidebar */}
@@ -396,6 +492,24 @@ export default function ImportPersonaModal({
           overflow-y-auto
         `}
         >
+          <div className="p-3 pb-0">
+            <div
+              onClick={handleMyPersonasClick}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded cursor-pointer transition-colors ${
+                selectedPath === MY_PERSONAS
+                  ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+                  : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+              }`}
+            >
+              <UserRound className="w-4 h-4 text-blue-500 dark:text-blue-400 flex-shrink-0" />
+              <span className="text-xs font-medium truncate flex-1">
+                <Trans i18nKey="persona.myPersonas" />
+              </span>
+              <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                {myPersonas.length}
+              </span>
+            </div>
+          </div>
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
@@ -467,12 +581,7 @@ export default function ImportPersonaModal({
               <Trans i18nKey="persona.importFromClipboard" />
             </button>
             <button
-              onClick={() =>
-                window.open(
-                  `https://github.com/${repoOwner}/${repoName}`,
-                  "_blank"
-                )
-              }
+              onClick={() => setEditor({ persona: null })}
               className="cursor-pointer px-3 py-1.5 bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-xs"
             >
               <Trans i18nKey="persona.createOwn" />
@@ -489,6 +598,8 @@ export default function ImportPersonaModal({
           </p>
         </div>
       </div>
+      </>
+      )}
     </BaseModal>
   );
 }
