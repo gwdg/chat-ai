@@ -6,7 +6,10 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
 
-import { SaiaRagProvider } from "../providers/saiaRag";
+import {
+  SaiaRagProvider,
+  resetSaiaRagCollectionCache,
+} from "../providers/saiaRag";
 
 /**
  * The provider over a real streamable-HTTP MCP session.
@@ -196,6 +199,10 @@ afterEach(async () => {
 });
 
 describe("SaiaRagProvider over a real MCP transport", () => {
+  beforeEach(() => {
+    resetSaiaRagCollectionCache();
+  });
+
   it("uploads a file larger than one chunk and stores the exact bytes", async () => {
     const provider = new SaiaRagProvider("real-transport", baseUrl);
     const bytes = new Uint8Array(4 * 1024 * 1024 + 12345);

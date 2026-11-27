@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { readAll, streamOf, toBase64 } from "../bytes";
-import { SaiaRagProvider } from "../providers/saiaRag";
+import {
+  SaiaRagProvider,
+  resetSaiaRagCollectionCache,
+} from "../providers/saiaRag";
 
 // The provider talks MCP through the SDK. These mocks replace both the client
 // and the transport with an in-memory saia-rag that answers the same tools the
@@ -350,6 +353,9 @@ const sharedReadOnly = {
 
 describe("SaiaRagProvider", () => {
   beforeEach(() => {
+    // The collection list is cached across instances for the page, so every
+    // test starts from a cold one.
+    resetSaiaRagCollectionCache();
     rag.tools = [...ALL_TOOLS];
     rag.collections = [{ ...ownCollection }, { ...sharedReadOnly }];
     rag.files = new Map([
@@ -388,6 +394,32 @@ describe("SaiaRagProvider", () => {
     expect(page.entries[1]).toMatchObject({ kind: "dir", path: "/bob__papers" });
     // A reader-only collection is marked read-only, so the tree locks it.
     expect(page.entries[1].readOnly).toBe(true);
+  });
+
+  it("reuses the list a closed provider read, so a re-opened dialog does not re-list", async () => {
+    const first = provider();
+    await first.listCollections();
+    first.close();
+
+    const second = provider();
+    await expect(second.listCollections()).resolves.toHaveLength(2);
+    // One list read served both providers: opening "Manage workspace" again
+    // must not pay the service's slowest call a second time.
+    expect(listCalls()).toBe(1);
+  });
+
+  it("serves the list a create wrote, not the one it replaced", async () => {
+    const first = provider();
+    await first.listCollections();
+    await first.createCollection("drafts");
+    first.close();
+
+    const second = provider();
+    const rows = await second.listCollections();
+    // The create refreshed the shared copy, so the second provider answers
+    // without another call — and already carries the new collection.
+    expect(listCalls()).toBe(2);
+    expect(rows.map((row) => row.name)).toContain("drafts");
   });
 
   it("lists the files of one collection", async () => {

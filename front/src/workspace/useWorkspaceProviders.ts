@@ -9,101 +9,196 @@ import { WorkspaceError } from "./providers/types";
 const signature = (source: WorkspaceSourceRow) =>
   `${source.id}|${source.kind}|${source.readOnly === true ? "ro" : "rw"}|${JSON.stringify(source.config ?? {})}`;
 
+/**
+ * One provider per connected source, shared by every hook instance.
+ *
+ * A workspace dialog mounts the same source in several places at once (the
+ * Sources rail, the source browser and the storage tree), and each of those
+ * connects it. For saia-rag that connect is a network round trip that lists
+ * every collection, so three instances meant three concurrent reads and the
+ * click that opened a drive waited for whichever one it happened to join.
+ * Sharing the instance means one connect and one provider-side cache for the
+ * whole page.
+ */
+type SharedEntry = {
+  key: string;
+  sourceId: string;
+  signature: string;
+  source: WorkspaceSourceRow;
+  provider: FileProvider;
+  refs: number;
+  /** Bumped when `reconnect` swaps the provider, so a late answer is ignored. */
+  epoch: number;
+  connecting?: Promise<void>;
+};
+
+const entries = new Map<string, SharedEntry>();
+const listeners = new Set<() => void>();
+
+const notify = () => {
+  for (const listener of [...listeners]) listener();
+};
+
+const statusFor = (error: unknown) => {
+  const code = error instanceof WorkspaceError ? error.code : "PROVIDER_ERROR";
+  return code === "PERMISSION_DENIED" ? "needs-permission" : "error";
+};
+
+const connectEntry = (entry: SharedEntry) => {
+  if (entry.connecting) return entry.connecting;
+  const epoch = entry.epoch;
+  let promise: Promise<void> | undefined;
+  promise = (async () => {
+    const stillWanted = () =>
+      entries.get(entry.key) === entry && entry.epoch === epoch;
+    try {
+      await entry.provider.connect();
+      if (!stillWanted()) return;
+      await updateSource(entry.source.id, {
+        status: "connected",
+        capabilities: entry.provider.capabilities,
+        error: undefined,
+      });
+    } catch (error) {
+      if (!stillWanted()) return;
+      await updateSource(entry.source.id, {
+        status: statusFor(error),
+        error: error instanceof Error ? error.message : String(error),
+      }).catch(() => {});
+    } finally {
+      if (entry.connecting === promise) entry.connecting = undefined;
+      notify();
+    }
+  })();
+  entry.connecting = promise;
+  return promise;
+};
+
+const acquire = (source: WorkspaceSourceRow) => {
+  const key = signature(source);
+  const existing = entries.get(key);
+  if (existing) {
+    existing.refs += 1;
+    return existing;
+  }
+  const entry: SharedEntry = {
+    key,
+    sourceId: source.id,
+    signature: key,
+    source,
+    provider: createProvider(source),
+    refs: 1,
+    epoch: 0,
+  };
+  entries.set(key, entry);
+  notify();
+  void connectEntry(entry);
+  return entry;
+};
+
+const release = (key: string) => {
+  const entry = entries.get(key);
+  if (!entry) return;
+  entry.refs -= 1;
+  if (entry.refs > 0) return;
+  entries.delete(key);
+  entry.provider.close?.();
+  notify();
+};
+
+const sameProviders = (
+  left: Map<string, FileProvider>,
+  right: Map<string, FileProvider>,
+) => {
+  if (left.size !== right.size) return false;
+  for (const [id, provider] of left) {
+    if (right.get(id) !== provider) return false;
+  }
+  return true;
+};
+
 export function useWorkspaceProviders(sources: WorkspaceSourceRow[]) {
-  const providersRef = useRef<Map<string, FileProvider>>(new Map());
-  const signaturesRef = useRef<Map<string, string>>(new Map());
-  const [providers, setProviders] = useState<Map<string, FileProvider>>(new Map());
-  const connectingRef = useRef<Set<string>>(new Set());
-
-  const publish = useCallback(() => {
-    setProviders(new Map(providersRef.current));
-  }, []);
-
-  const connect = useCallback(
-    async (source: WorkspaceSourceRow) => {
-      if (connectingRef.current.has(source.id)) return;
-      connectingRef.current.add(source.id);
-      const provider = createProvider(source);
-      providersRef.current.set(source.id, provider);
-      signaturesRef.current.set(source.id, signature(source));
-      publish();
-      try {
-        await provider.connect();
-        await updateSource(source.id, {
-          status: "connected",
-          capabilities: provider.capabilities,
-          error: undefined,
-        });
-      } catch (error) {
-        const code = error instanceof WorkspaceError ? error.code : "PROVIDER_ERROR";
-        const status =
-          code === "PERMISSION_DENIED"
-            ? "needs-permission"
-            : code === "AUTH_EXPIRED"
-              ? "error"
-              : "error";
-        await updateSource(source.id, {
-          status,
-          error: error instanceof Error ? error.message : String(error),
-        }).catch(() => {});
-      } finally {
-        connectingRef.current.delete(source.id);
-        publish();
-      }
-    },
-    [publish],
+  const sourcesRef = useRef(sources);
+  sourcesRef.current = sources;
+  const ownedRef = useRef<Set<string>>(new Set());
+  const [providers, setProviders] = useState<Map<string, FileProvider>>(
+    () => new Map(),
   );
 
-  useEffect(() => {
-    const wanted = new Set(sources.map(signature));
-    for (const [id, provider] of providersRef.current) {
-      const source = sources.find((item) => item.id === id);
-      if (!source) {
-        provider.close?.();
-        providersRef.current.delete(id);
-        signaturesRef.current.delete(id);
-        continue;
-      }
-      if (signaturesRef.current.get(id) !== signature(source)) {
-        provider.close?.();
-        providersRef.current.delete(id);
-        signaturesRef.current.delete(id);
-      }
+  const publish = useCallback(() => {
+    const current = new Map(
+      sourcesRef.current.map((source) => [source.id, signature(source)]),
+    );
+    const next = new Map<string, FileProvider>();
+    for (const key of ownedRef.current) {
+      const entry = entries.get(key);
+      if (!entry) continue;
+      // A stale signature is still held by another hook; the fresh key wins.
+      const wanted = current.get(entry.sourceId);
+      if (wanted && wanted !== entry.signature) continue;
+      next.set(entry.sourceId, entry.provider);
     }
-    for (const source of sources) {
-      if (providersRef.current.has(source.id)) continue;
-      if (!wanted.has(signature(source))) continue;
-      void connect(source);
+    setProviders((previous) => (sameProviders(previous, next) ? previous : next));
+  }, []);
+
+  const reconcile = useCallback(() => {
+    const wanted = new Map<string, WorkspaceSourceRow>();
+    for (const source of sourcesRef.current) {
+      wanted.set(signature(source), source);
+    }
+    for (const key of [...ownedRef.current]) {
+      if (wanted.has(key)) continue;
+      ownedRef.current.delete(key);
+      release(key);
+    }
+    for (const [key, source] of wanted) {
+      if (ownedRef.current.has(key)) continue;
+      ownedRef.current.add(key);
+      acquire(source);
     }
     publish();
+  }, [publish]);
+
+  useEffect(() => {
+    listeners.add(publish);
+    publish();
     return () => {
-      // Providers stay alive across source status updates; page unmount closes them.
+      listeners.delete(publish);
     };
-  }, [sources, connect, publish]);
+  }, [publish]);
+
+  useEffect(() => {
+    reconcile();
+  }, [sources, reconcile]);
 
   useEffect(
     () => () => {
-      for (const provider of providersRef.current.values()) provider.close?.();
-      providersRef.current.clear();
-      signaturesRef.current.clear();
+      for (const key of ownedRef.current) release(key);
+      ownedRef.current.clear();
     },
     [],
   );
 
   const reconnect = useCallback(
     async (sourceId: string) => {
-      const provider = providersRef.current.get(sourceId);
-      const source = sources.find((item) => item.id === sourceId);
-      if (!source) return;
-      if (provider && "requestAccess" in provider) {
+      const key = [...ownedRef.current].find(
+        (candidate) => entries.get(candidate)?.sourceId === sourceId,
+      );
+      const entry = key ? entries.get(key) : undefined;
+      if (!key || !entry) return;
+      if ("requestAccess" in entry.provider) {
         try {
-          await (provider as unknown as { requestAccess: () => Promise<void> }).requestAccess();
+          await (
+            entry.provider as unknown as {
+              requestAccess: () => Promise<void>;
+            }
+          ).requestAccess();
           await updateSource(sourceId, {
             status: "connected",
-            capabilities: provider.capabilities,
+            capabilities: entry.provider.capabilities,
             error: undefined,
           });
-          publish();
+          notify();
           return;
         } catch (error) {
           await updateSource(sourceId, {
@@ -112,10 +207,16 @@ export function useWorkspaceProviders(sources: WorkspaceSourceRow[]) {
           }).catch(() => {});
         }
       }
-      providersRef.current.delete(sourceId);
-      await connect(source);
+      // Replace in place so every hook that holds this source sees the new
+      // instance, instead of only the one that asked for the reconnect.
+      entry.provider.close?.();
+      entry.provider = createProvider(entry.source);
+      entry.epoch += 1;
+      entry.connecting = undefined;
+      notify();
+      await connectEntry(entry);
     },
-    [connect, publish, sources],
+    [],
   );
 
   return { providers, reconnect };

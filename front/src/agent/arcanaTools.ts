@@ -4,20 +4,31 @@ import { agentEndpoint, agentRequestHeaders } from "../apis/agentEndpoints";
  * A readable message from an error response. The upstream (or the gateway in front of it) answers
  * with a JSON body such as `{"detail":"Not Found"}`; showing that verbatim in the UI is noise, so
  * only its message field is used and anything else becomes a status message.
+ *
+ * A bare 404 is called out by name: `/arcana-tools/*` exists only in `back`, so a deployment whose
+ * `backendPath` is a SAIA engine (or any other OpenAI-compatible endpoint) has no such API. Without
+ * this, the workspace row for an old Arcana source read "Not Found", which names neither the cause
+ * nor what to use instead.
  */
-async function failureMessage(response: Response) {
+async function failureMessage(response: Response, path: string) {
   const text = await response.text().catch(() => "");
+  let detail = "";
   if (text) {
     try {
       const body = JSON.parse(text);
-      const detail = [body?.detail, body?.error, body?.message].find(
+      const found = [body?.detail, body?.error, body?.message].find(
         (value: unknown) => typeof value === "string" && value.trim()
       );
-      if (detail) return detail as string;
+      detail = typeof found === "string" ? found : "";
     } catch {
       // Not JSON: a proxy error page is not worth showing.
     }
   }
+  const routeMiss = /^not found$/i.test(detail.trim());
+  if (response.status === 404 && (!detail || routeMiss)) {
+    return `Arcana Tools is not available on this deployment: ${agentEndpoint()}${path} answered 404, because no /arcana-tools API is served there. Use the Arcanas drive (saia-rag) instead.`;
+  }
+  if (detail) return detail;
   return `Arcana Tools request failed (${response.status})`;
 }
 
@@ -34,7 +45,7 @@ async function request(path: string, init?: RequestInit) {
     : init;
   const response = await fetch(`${agentEndpoint()}${path}`, requestInit);
   if (!response.ok) {
-    throw new Error(await failureMessage(response));
+    throw new Error(await failureMessage(response, path));
   }
   if (response.status === 204) return null;
   const type = response.headers.get("content-type") ?? "";

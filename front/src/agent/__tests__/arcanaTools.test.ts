@@ -8,6 +8,7 @@ vi.mock("../../apis/agentEndpoints", () => ({
 import {
   addArcanaMember,
   createArcana,
+  getArcana,
   getArcanaIndexStatus,
   listArcanas,
   readArcanaFile,
@@ -120,7 +121,7 @@ describe("Arcana Tools API", () => {
     );
   });
 
-  it("reports the message of a JSON error body instead of the raw body", async () => {
+  it("explains a bare 404 as a deployment without an Arcana Tools API", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(
@@ -132,9 +133,31 @@ describe("Arcana Tools API", () => {
       )
     );
 
-    // The upstream answers a missing route with FastAPI's `{"detail":"Not Found"}`; that body must
-    // not reach the UI (the folder picker printed it verbatim).
-    await expect(listArcanas()).rejects.toThrow(/^Not Found$/);
+    // `back` serves /arcana-tools; a deployment pointed straight at a SAIA
+    // engine (or any OpenAI-compatible endpoint) answers 404 for it. The row
+    // used to show "Not Found", which named neither the cause nor the fix.
+    await expect(listArcanas()).rejects.toThrow(
+      /Arcana Tools is not available on this deployment/
+    );
+    await expect(listArcanas()).rejects.toThrow(
+      /http:\/\/backend\.test\/arcana-tools\/arcanas answered 404/
+    );
+    await expect(listArcanas()).rejects.toThrow(/Arcanas drive \(saia-rag\)/);
+  });
+
+  it("keeps a specific 404 detail instead of blaming the deployment", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ detail: "Arcana 'notes' not found" }), {
+            status: 404,
+            headers: { "content-type": "application/json" },
+          })
+      )
+    );
+
+    await expect(getArcana("notes")).rejects.toThrow("Arcana 'notes' not found");
   });
 
   it("falls back to a status message when the error body is not JSON", async () => {

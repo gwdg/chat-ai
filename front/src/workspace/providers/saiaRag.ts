@@ -110,6 +110,31 @@ const MCP_CALL_TIMEOUT_MS = 60_000;
 const COLLECTIONS_TTL_MS = 5_000;
 
 /**
+ * How long a listed collection set is reused by a *different* provider instance.
+ *
+ * The sidebar keeps one provider for the whole session, but the workspace dialog
+ * builds providers while it is open and closes them when it closes. Without this
+ * window, every re-open of "Manage workspace" pays another `list_collections`,
+ * which is the slowest call the service has. The rows are read-only metadata, so
+ * a minute of staleness costs nothing; creating or deleting a collection
+ * invalidates the entry, and `refreshArcanas` reads past it on purpose.
+ */
+const SHARED_COLLECTIONS_TTL_MS = 60_000;
+
+type SharedCollections = { at: number; rows: RagCollection[] };
+const sharedCollections = new Map<string, SharedCollections>();
+
+/**
+ * Forget the collection lists cached across provider instances.
+ *
+ * Only tests need this: the cache lives for the page, and production code clears
+ * it through `invalidateCollections` when it knows the list is out of date.
+ */
+export function resetSaiaRagCollectionCache(): void {
+  sharedCollections.clear();
+}
+
+/**
  * How long saving an edited Markdown may take.
  *
  * The save rebuilds the file's chunks instead of only storing text, so a large
@@ -497,7 +522,9 @@ export class SaiaRagProvider implements FileProvider {
       // its answer seeds the cache instead of being thrown away. It deliberately
       // bypasses the shared promise: a reconnect after a dropped session starts
       // from inside that promise, and awaiting it there would wait on itself.
-      await this.fetchCollections();
+      // It may, however, adopt a list another provider of this deployment just
+      // read: that is what makes re-opening the dialog cheap.
+      await this.fetchCollections(undefined, true);
     } catch (error) {
       if (error instanceof WorkspaceError && error.code === "AUTH_EXPIRED") {
         throw error;
@@ -642,6 +669,9 @@ export class SaiaRagProvider implements FileProvider {
     this.collectionsLoaded = false;
     this.collectionsAt = 0;
     this.collectionsEpoch += 1;
+    // The list is shared with every other provider of this endpoint, so an
+    // explicit refresh, a create and a delete have to drop that copy too.
+    sharedCollections.delete(this.endpoint);
     // Do not join a read that started before the invalidation: its answer is
     // the one this call says is out of date.
     this.collectionsPromise = null;
@@ -664,7 +694,23 @@ export class SaiaRagProvider implements FileProvider {
 
   private async fetchCollections(
     epoch: number = this.collectionsEpoch,
+    allowShared = false,
   ): Promise<RagCollection[]> {
+    // A list read by another provider of this deployment answers the
+    // handshake's session check, so opening the dialog again does not pay the
+    // service's most expensive call a second time. An explicit read does not
+    // take this shortcut: it is what revalidates the rows after the instance's
+    // own cache window has passed.
+    const shared = sharedCollections.get(this.endpoint);
+    if (
+      allowShared &&
+      epoch === this.collectionsEpoch &&
+      shared &&
+      Date.now() - shared.at < SHARED_COLLECTIONS_TTL_MS
+    ) {
+      this.adoptCollections(shared.rows, Date.now());
+      return [...shared.rows];
+    }
     const text = await this.call(LIST_COLLECTIONS_TOOL, {});
     const payload = parseJson(text);
     const rows = Array.isArray(payload?.collections)
@@ -672,22 +718,34 @@ export class SaiaRagProvider implements FileProvider {
       : Array.isArray(payload)
         ? payload
         : [];
-    const next = new Map<string, RagCollection>();
     const result: RagCollection[] = [];
     for (const row of rows) {
       const collection = collectionOf(row);
       if (!collection) continue;
-      next.set(ragCollectionDisplayName(collection), collection);
       result.push(collection);
     }
     // A read from before an invalidation describes a list the caller already
     // knows is stale, so it answers its own caller without replacing the cache.
     if (epoch === this.collectionsEpoch) {
-      this.collections = next;
-      this.collectionsLoaded = true;
-      this.collectionsAt = Date.now();
+      const at = Date.now();
+      this.adoptCollections(result, at);
+      sharedCollections.set(this.endpoint, { at, rows: result });
     }
     return result;
+  }
+
+  /** Make a collection list this instance's own, without another request. */
+  private adoptCollections(rows: RagCollection[], at: number): void {
+    const next = new Map<string, RagCollection>();
+    for (const collection of rows) {
+      next.set(ragCollectionDisplayName(collection), collection);
+    }
+    this.collections = next;
+    this.collectionsLoaded = true;
+    // Deliberately "now", not the shared record's timestamp: the caller just
+    // got this list, and the 5 s window stops the click that follows the
+    // handshake from asking the service again for the same rows.
+    this.collectionsAt = at;
   }
 
   /**

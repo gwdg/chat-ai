@@ -926,6 +926,13 @@ reading/uploading/replacing/deleting files, starting/checking/deleting indexes, 
 listing/adding/removing members.
 The user identity is read from the incoming `x-auth-claim-uid` header (falling back to
 `x-consumer-custom-id`, `oidc_claim_uid`, then `inference-id`) and forwarded as `x-auth-claim-uid`.
+**`/arcana-tools/*` exists only in `back`.** `agent/arcanaTools.ts` builds it from
+`agentEndpoint()`, which is `backendPath`; a deployment pointed straight at a SAIA engine (the
+`saia-engine` local stack) has no such route and answers `404 {"detail":"Not Found"}`. An
+`arcana-filesystem` source row from an older workspace then showed "Not Found" on the row, which named
+neither the cause nor what to use instead, so a bare 404 is reported as "Arcana Tools is not available
+on this deployment … use the Arcanas drive (saia-rag) instead". Only a bare `Not Found` is rewritten;
+a specific detail such as `Arcana 'notes' not found` still reaches the caller.
 
 The legacy `/remote-files` routes use the same backend but store generic files in the dedicated
 Arcana `remoteFilesArcana` (default `remote-files`), which is created on first write. Remote paths
@@ -1109,12 +1116,18 @@ empty placeholder cannot prune sources, and it deletes the derived source when t
 or no longer exists (a source for a bridged-only agent is kept). It uses the same `/fs/list` and
 `/fs/read` endpoints as the agent file panel. Providers declare `capabilities`, and the UI must offer
 only what a provider reports.
-`useWorkspaceProviders(sources)` builds one provider **per call site**, so the three consumers a page
-can mount for the same source (the Sources rail, the source browser and the storage tree) each connect
-it: three handshakes, and for `saia-rag` three `list_collections` requests — the call that makes the
-service open every collection it can see. `SaiaRagProvider` therefore caches the collection list for
-5 s per instance, lets concurrent reads share one request, and seeds that cache from the handshake's
-own session check, so a connect costs one read instead of two; `invalidateCollections()` is what an
+`useWorkspaceProviders(sources)` keeps **one provider per source for the whole page**, shared by every
+call site through a module-level registry keyed `${source.id}|${kind}|${readOnly}|${config}` and
+ref-counted: the three consumers a page can mount for the same source (the Sources rail, the source
+browser and the storage tree) used to each build and connect their own, which meant three handshakes
+and, for `saia-rag`, three `list_collections` requests — the call that makes the service open every
+collection it can see, and the reason clicking the drive waited. `reconnect(sourceId)` swaps the
+provider in place so every holder sees it, and the last release closes it. `SaiaRagProvider` caches
+the collection list for 5 s per instance, lets concurrent reads share one request, and seeds that
+cache from the handshake's own session check, so a connect costs one read instead of two; on top of
+that a **60 s list is shared between instances of one endpoint** (`sharedCollections`), which only the
+session check may adopt — an explicit read revalidates — so closing and re-opening "Manage workspace"
+within a minute paints the collections without another request. `invalidateCollections()` is what an
 explicit refresh, a create and a delete call first (a read that started before it must not store its
 answer).
 `append(path, data)` and `rename(path, newName)` are optional `FileProvider` methods with their own
