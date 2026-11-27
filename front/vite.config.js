@@ -5,11 +5,17 @@ import fs from "fs";
 import path from "path";
 import { createRequire } from "module";
 import { servePrecompressed, staticAssetsBuild } from "./vite-plugins/staticAssets.js";
+import { assertInstalledDependencies } from "./vite-plugins/installedDeps.js";
 
 const require = createRequire(import.meta.url);
 const fasterLatexRoot = path.dirname(
   require.resolve("faster-latex/package.json")
 );
+
+// Reading the config happens before Vite empties the output directory, so a
+// dependency tree older than the lockfile stops the build here instead of
+// leaving a bundle whose dynamic imports the browser cannot resolve.
+assertInstalledDependencies(__dirname);
 
 const TIKZ_CONTENT_TYPES = {
   ".css": "text/css; charset=utf-8",
