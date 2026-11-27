@@ -2,11 +2,9 @@
 import { useTranslation } from "react-i18next";
 import { CircleHelp } from "lucide-react";
 import { useModal } from "../../modals/ModalContext";
-import { useDispatch } from "react-redux";
 import getModelDefaults from "../../config/getModelDefaults";
 
 const ReasoningEffortContainer = ({ localState, setLocalState }) => {
-  const dispatch = useDispatch();
   const { t } = useTranslation();
   const { openModal } = useModal();
   const settings = localState?.settings || {};
@@ -58,7 +56,7 @@ const ReasoningEffortContainer = ({ localState, setLocalState }) => {
               key={index}
               type="button"
               aria-pressed={selected}
-              onClick={() => dispatch(setReasoningEffort(index))}
+              onClick={() => setReasoningEffort(index)}
               className={`min-w-0 rounded-md px-2 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50 ${
                 selected
                   ? "bg-white text-tertiary shadow-sm dark:bg-gray-700 dark:text-white"
