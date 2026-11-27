@@ -18,6 +18,7 @@ import { useModal } from "../../../modals/ModalContext";
 import MetaBox from "./MetaBox";
 import PersonaCard from "../../Others/PersonaCard";
 import MetaActionCard from "./MetaActionCard";
+import ArcanaActionCard from "./ArcanaActionCard";
 import FeedbackButtons from "./FeedbackButtons";
 import ForkButton from "./ForkButton";
 import SpeakButton from "./SpeakButton";
@@ -28,6 +29,7 @@ import { getFeatureGuideMarker } from "../../../config/featureGuides";
 import { getUseCaseMarker } from "../../../config/useCases";
 import { getPersonaMarkers } from "../../../utils/personaCatalog";
 import { getMetaActionProposals } from "../../../utils/metaActions";
+import { getArcanaActionProposals } from "../../../utils/arcanaActions";
 import {
   enrichedFeedbackMessagesFromConversation,
   feedbackTextOf,
@@ -111,6 +113,20 @@ export default React.memo(({ localState, setLocalState, message_index, modelsDat
   const metaActions = loading
     ? []
     : getMetaActionProposals(message?.content?.[0]?.text);
+  // The Arcana chat is not a conversation row; its id carries the collection.
+  // A marker in an ordinary chat therefore never reaches the approval card.
+  const arcanaCollection = String(localState?.id || "").startsWith(
+    "arcana-chat:",
+  )
+    ? localState.id.slice("arcana-chat:".length)
+    : null;
+  const arcanaActions =
+    arcanaCollection && !loading
+      ? getArcanaActionProposals(
+          message?.content?.[0]?.text,
+          arcanaCollection,
+        )
+      : [];
   const [renderMode, setRenderMode] = useState("Default");
   // Define render modes with better styling
   const renderModes = ["Default", "Markdown", "Plaintext"];
@@ -490,6 +506,14 @@ export default React.memo(({ localState, setLocalState, message_index, modelsDat
                   localState={localState}
                   setLocalState={setLocalState}
                   modelsData={modelsData}
+                  message_index={message_index}
+                />
+              )}
+              {arcanaActions.length > 0 && (
+                <ArcanaActionCard
+                  actions={arcanaActions}
+                  localState={localState}
+                  setLocalState={setLocalState}
                   message_index={message_index}
                 />
               )}

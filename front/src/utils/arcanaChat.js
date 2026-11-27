@@ -2,11 +2,17 @@
 //
 // The page selects the collection, so no tool takes a collection argument and a
 // prompt cannot point a call at somebody else's Arcana. Reads run as soon as the
-// model asks for them; every write (upload, overwrite, delete, index, tags) is
-// shown to the user as a confirmation dialog first and only runs when it is
-// accepted. The tool result is what the model sees, so a refused confirmation
-// is reported back as "cancelled" instead of being silently skipped.
+// model asks for them. Writes (upload, overwrite, delete, index, tags) never
+// run here: the tool validates the request, captures what undoing it would need
+// and returns a proposal, which the app turns into the approval card below the
+// assistant's answer. The tool result is what the model sees, so it is told
+// plainly that nothing was written and that the user has to accept.
 import { formatBytes } from "./formatBytes";
+import {
+  MAX_ARCANA_RESTORE_BYTES,
+  arcanaActionKey,
+  normalizeArcanaAction,
+} from "./arcanaActions";
 import {
   arcanasProvider,
   arcanaFailureReason,
@@ -82,7 +88,7 @@ const READ_TOOLS = [
 const WRITE_TOOLS = [
   tool(
     "upload_attachment",
-    "Store one file the user attached to this chat in the Arcana. The service converts and indexes it in the background. Asks the user before writing.",
+    "Propose storing one file the user attached to this chat in the Arcana. Nothing is written: the user accepts the approval card below your answer, and the service then converts and indexes the file in the background.",
     {
       filename: {
         type: "string",
@@ -93,7 +99,7 @@ const WRITE_TOOLS = [
   ),
   tool(
     "write_text_file",
-    "Create or overwrite a text file in the Arcana with the given content. Asks the user before writing.",
+    "Propose creating or overwriting a text file in the Arcana with the given content. Nothing is written until the user accepts the approval card below your answer.",
     {
       filename: { type: "string", description: "File name, no folders" },
       content: { type: "string", description: "Complete UTF-8 text" },
@@ -102,17 +108,17 @@ const WRITE_TOOLS = [
   ),
   tool(
     "delete_file",
-    "Remove a file and its index entries from the Arcana. Asks the user first.",
+    "Propose removing a file and its index entries from the Arcana. Nothing is deleted until the user accepts the approval card below your answer.",
     { filename: { type: "string", description: "Exact file name" } },
     ["filename"],
   ),
   tool(
     "start_index",
-    "Convert and index every stored file of the Arcana. Asks the user first.",
+    "Propose converting and indexing every stored file of the Arcana. Nothing starts until the user accepts the approval card below your answer.",
   ),
   tool(
     "set_file_tags",
-    "Replace the tag list of one file. Asks the user first.",
+    "Propose replacing the tag list of one file. Nothing changes until the user accepts the approval card below your answer.",
     {
       filename: { type: "string", description: "Exact file name" },
       tags: {
@@ -147,7 +153,7 @@ The collection's contents are not embedded in this prompt. Use the tools for eve
 
 ${
   canWrite
-    ? `You may change the collection, but only when the user explicitly asks for that change: upload_attachment stores a file the user attached to this chat, write_text_file creates or overwrites a text file, delete_file removes one, start_index converts and indexes the stored files, and set_file_tags replaces one file's tags. Every one of those opens a confirmation dialog that the user must accept; never say an action is done before its tool result arrives, and report a cancelled confirmation as cancelled.`
+    ? `You may propose changes to the collection, but only when the user explicitly asks for one: upload_attachment stores a file the user attached to this chat, write_text_file creates or overwrites a text file, delete_file removes one, start_index converts and indexes the stored files, and set_file_tags replaces one file's tags. Those tools do not write anything. Each one validates the request and returns a proposal, and the app shows it as an approval card below your answer; the user's click is what changes the collection. After a successful proposal, say in one sentence what you proposed, tell the user to accept it in the card, and stop. Never repeat the same call, never claim the change is done, and never ask the user to confirm in their reply.`
     : `This collection is read-only for the user, so no write tools are available. Explain that the owner has to change files or access instead of offering an upload.`
 }
 
@@ -160,15 +166,6 @@ const truncate = (text, limit) => {
   if (text.length <= limit) return text;
   return `${text.slice(0, limit)}\n… (truncated at ${limit} characters)`;
 };
-
-/** One-shot byte stream for `provider.write`. */
-const streamOf = (bytes) =>
-  new ReadableStream({
-    start(controller) {
-      controller.enqueue(bytes);
-      controller.close();
-    },
-  });
 
 const findFile = (files, filename) => {
   const wanted = String(filename ?? "").trim();
@@ -258,31 +255,36 @@ async function readFileText(provider, display, file) {
 }
 
 /**
- * Run one tool call for `collection`.
+ * The text that would restore an existing file, or null when the proposal can
+ * not undo writing over it.
  *
- * `confirm` resolves to true only after the user accepted the dialog. The
- * runner never writes without it and never invents a result the service did not
- * return. `attachments` are the files attached to the current chat, so
- * `upload_attachment` can store them without the model ever seeing their bytes.
+ * Only a plain text file is restorable: a converted document's indexed Markdown
+ * is not its original bytes, and a binary or oversized file would either come
+ * back corrupted or fill the stored thread.
  */
-export function createArcanaChatToolRunner({
-  collection,
-  attachments = [],
-  confirm,
-  onChange,
-}) {
+async function restoreTextFor(provider, display, file) {
+  if (!file || file.markdown || !isTextFileName(file.name)) return null;
+  const { blob } = await provider.downloadFile(display, file);
+  if (blob.size > MAX_ARCANA_RESTORE_BYTES) return null;
+  return blob.text();
+}
+
+/**
+ * The Arcana tools, plus the proposals they produced.
+ *
+ * `run(name, args)` is what the model sees. `takeProposals()` hands the app the
+ * changes to put into the approval card and resets the list, so a repeated call
+ * is proposed once. Nothing here writes to the collection.
+ */
+export function createArcanaChatToolRunner({ collection, attachments = [] }) {
   const display = ragCollectionDisplayName(collection);
   const provider = arcanasProvider();
+  const proposals = [];
 
   const listFiles = () =>
     provider.listFiles(display, { includeTags: true }).then((files) =>
       Array.isArray(files) ? files : [],
     );
-
-  const ask = async (props) => {
-    if (!confirm) return false;
-    return Boolean(await confirm(props));
-  };
 
   const requireWrite = () => {
     if (!collection.can_write) {
@@ -298,9 +300,20 @@ export function createArcanaChatToolRunner({
     return name;
   };
 
-  const changed = () => onChange?.();
+  const propose = (value) => {
+    const action = normalizeArcanaAction({ ...value, collection: display });
+    if (!action) throw new Error("That change could not be proposed.");
+    const key = arcanaActionKey(action);
+    if (!proposals.some((entry) => arcanaActionKey(entry) === key)) {
+      proposals.push(action);
+    }
+    return action;
+  };
 
-  return async function runTool(name, args = {}) {
+  const proposed = (what) =>
+    `Proposed: ${what}. Nothing has been written yet. Tell the user to accept it in the approval card below your answer, then stop; do not call this tool again for the same change.`;
+
+  const run = async (name, args = {}) => {
     switch (name) {
       case "list_files":
         return describeFiles(await listFiles());
@@ -380,77 +393,62 @@ export function createArcanaChatToolRunner({
             .map((entry) => entry.name)
             .join(", ")}`;
         }
-        const accepted = await ask({
-          messageKey: "arcana_chat.confirm_upload",
-          messageValues: {
-            name: attachment.name,
-            size: formatBytes(attachment.file.size),
-            collection: collection.name,
-          },
-          confirmKey: "arcana_chat.confirm_upload_yes",
-          danger: false,
+        const files = await listFiles();
+        propose({
+          op: "upload_attachment",
+          filename: attachment.name,
+          fileId: attachment.fileId,
+          size: attachment.file.size,
+          existed: Boolean(findFile(files, attachment.name)),
         });
-        if (!accepted) return "The upload was cancelled; nothing was stored.";
-        await provider.uploadFile(display, attachment.file);
-        changed();
-        return `Stored "${attachment.name}" in "${collection.name}". The service converts and indexes it in the background, so use get_index_status or search to follow it.`;
+        return proposed(
+          `store "${attachment.name}" (${formatBytes(attachment.file.size)}) in "${collection.name}"`,
+        );
       }
 
       case "write_text_file": {
         requireWrite();
         const filename = safeName(args.filename);
         const content = String(args.content ?? "");
-        const accepted = await ask({
-          messageKey: "arcana_chat.confirm_write",
-          messageValues: {
-            name: filename,
-            size: formatBytes(new TextEncoder().encode(content).byteLength),
-          },
-          confirmKey: "arcana_chat.confirm_write_yes",
-          danger: false,
+        const size = new TextEncoder().encode(content).byteLength;
+        const files = await listFiles();
+        const existing = findFile(files, filename);
+        propose({
+          op: "write_text_file",
+          filename,
+          content,
+          size,
+          existed: Boolean(existing),
+          previousText: await restoreTextFor(provider, display, existing),
         });
-        if (!accepted) return "The write was cancelled; nothing changed.";
-        const bytes = new TextEncoder().encode(content);
-        await provider.write(
-          `/${display}/${filename}`,
-          streamOf(bytes),
-          { size: bytes.byteLength, overwrite: true },
+        return proposed(
+          `write "${filename}" (${formatBytes(size)}) into "${collection.name}"${existing ? ", overwriting the stored file" : ""}`,
         );
-        changed();
-        return `Wrote "${filename}" (${formatBytes(bytes.byteLength)}) into "${collection.name}". The service indexes it in the background.`;
       }
 
       case "delete_file": {
         requireWrite();
         const filename = safeName(args.filename);
         const files = await listFiles();
-        if (!findFile(files, filename)) {
-          return `No file named "${filename}" exists, so nothing was deleted.`;
+        const file = findFile(files, filename);
+        if (!file) {
+          return `No file named "${filename}" exists, so there is nothing to delete.`;
         }
-        const accepted = await ask({
-          messageKey: "arcana_chat.confirm_delete",
-          messageValues: { name: filename },
-          confirmKey: "arcana_chat.confirm_delete_yes",
-          danger: true,
+        propose({
+          op: "delete_file",
+          filename,
+          size: file.size,
+          restoreText: await restoreTextFor(provider, display, file),
         });
-        if (!accepted) return "The deletion was cancelled; nothing was removed.";
-        await provider.removeFile(display, filename);
-        changed();
-        return `Removed "${filename}" and its index entries.`;
+        return proposed(`delete "${filename}" and its index entries`);
       }
 
       case "start_index": {
         requireWrite();
-        const accepted = await ask({
-          messageKey: "arcana_chat.confirm_index",
-          messageValues: { collection: collection.name },
-          confirmKey: "arcana_chat.confirm_index_yes",
-          danger: false,
-        });
-        if (!accepted) return "Indexing was cancelled; nothing was started.";
-        const jobId = await provider.indexCollection(display);
-        changed();
-        return `Indexing started${jobId ? ` (job ${jobId})` : ""}. Large documents take longer; use get_index_status to follow the rows.`;
+        propose({ op: "start_index" });
+        return proposed(
+          `index every stored file of "${collection.name}". Large documents take longer; get_index_status follows the rows`,
+        );
       }
 
       case "set_file_tags": {
@@ -460,26 +458,30 @@ export function createArcanaChatToolRunner({
           ? args.tags.map((tag) => String(tag).trim()).filter(Boolean)
           : [];
         const files = await listFiles();
-        if (!findFile(files, filename)) {
-          return `No file named "${filename}" exists, so no tags were changed.`;
+        const file = findFile(files, filename);
+        if (!file) {
+          return `No file named "${filename}" exists, so there are no tags to change.`;
         }
-        const accepted = await ask({
-          messageKey: "arcana_chat.confirm_tags",
-          messageValues: {
-            name: filename,
-            tags: tags.length ? tags.join(", ") : "—",
-          },
-          confirmKey: "arcana_chat.confirm_tags_yes",
-          danger: false,
+        propose({
+          op: "set_file_tags",
+          filename,
+          tags,
+          previousTags: Array.isArray(file.tags) ? file.tags : [],
         });
-        if (!accepted) return "The tag change was cancelled; nothing changed.";
-        await provider.setFileTags(display, filename, tags);
-        changed();
-        return `Set the tags of "${filename}" to: ${tags.length ? tags.join(", ") : "(none)"}.`;
+        return proposed(
+          `set the tags of "${filename}" to ${tags.length ? tags.join(", ") : "(none)"}`,
+        );
       }
 
       default:
         throw new Error(`Unknown Arcana tool: ${name}`);
     }
+  };
+
+  return {
+    run,
+    takeProposals() {
+      return proposals.splice(0, proposals.length);
+    },
   };
 }

@@ -28,7 +28,7 @@ type ArcanaChatPanelProps = {
 
 /**
  * The Arcana chat: a thread about one collection, with tools to inspect and
- * (after a confirmation) change it.
+ * (after an approval card) change it.
  *
  * It is the middle column of the collection's page, so it reuses the ordinary
  * chat shell. The head panel is the page's only header — the Meta chat's

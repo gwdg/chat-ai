@@ -3755,12 +3755,15 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           <tr>
             <td>Arcana chat</td>
             <td>The middle column: a banner naming the collection, the ephemeral thread, its
-                <code>sessionStorage</code> store, the send loop with the confirmed tool runner, and
-                the confirmation-gated write tools.</td>
+                <code>sessionStorage</code> store, the send loop that appends each captured proposal
+                as an invisible marker, and the approval card that is the only thing that writes.</td>
             <td><span class="mono">front/src/components/Arcana/ArcanaChatPanel.tsx</span>,
                 <span class="mono">hooks/useArcanaChatSend.js</span>,
                 <span class="mono">utils/arcanaChat.js</span>,
-                <span class="mono">utils/arcanaChatStore.js</span></td>
+                <span class="mono">utils/arcanaActions.js</span>,
+                <span class="mono">utils/arcanaActionApply.js</span>,
+                <span class="mono">utils/arcanaChatStore.js</span>,
+                <span class="mono">components/Conversation/MessageAssistant/ArcanaActionCard.jsx</span></td>
           </tr>
           <tr>
             <td>Share link and list</td>
@@ -3840,17 +3843,21 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
             (<code>settings.arcana.id</code> and <code>settings.arcana_share</code>); access is still
             the member list, and the collection reference is fixed in the setting so the tools cannot
             be aimed elsewhere.</li>
-        <li><b>The chat tools are read-only.</b> They wrap <code>search_chunks</code>,
+        <li><b>A normal chat's Arcana tools are read-only.</b> They wrap <code>search_chunks</code>,
             <code>list_files</code> and <code>read_file_base64</code> only; upload, tag, index and
-            member changes stay in the editor panel.</li>
+            member changes stay in the editor panel, and the page chat below reaches them only
+            through its approval card.</li>
         <li><b>The page chat never reaches the conversation store.</b> Its thread is
             <code>sessionStorage</code> under the collection reference and its attachments use a
             per-collection file id, so nothing here can appear in the chat list, an export, a backup
             or the sync archive - and no Dexie version had to move.</li>
-        <li><b>Write tools ask first.</b> Upload, write, delete, index and tag calls open
-            <code>confirmAction</code> and are skipped when it is dismissed; every read tool runs
-            immediately. A read-only collection is offered no write tool at all, and the runner
-            refuses a write that still arrives.</li>
+        <li><b>Write tools propose; the card writes.</b> Upload, write, delete, index and tag calls
+            validate the request, capture what undoing it would need and answer the model that the
+            change is only proposed. The app turns each proposal into a
+            <code>[[ARCANA_ACTION:&lt;base64&gt;]]</code> marker the model did not write, and the
+            card below the answer applies the batch on Accept; before that click the collection is
+            unchanged. Every read tool runs immediately. A read-only collection is offered no write
+            tool at all, and the runner refuses a write that still arrives.</li>
       </ul>
 
       <h3>Limits</h3>
@@ -3902,6 +3909,12 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
             <span class="mono">utils/arcanaChat*.js</span> and
             <span class="mono">hooks/useArcanaChatSend.js</span> - the page chat, its tool runner and
             its <code>sessionStorage</code> thread</li>
+        <li><span class="mono">front/src/utils/arcanaActions.js</span>,
+            <span class="mono">front/src/utils/arcanaActionApply.js</span> and
+            <span class="mono">components/Conversation/MessageAssistant/ArcanaActionCard.jsx</span> -
+            the proposal marker, its validation and derived reversibility, the apply/revert path
+            (imported on the first click) and the card itself, which shares
+            <span class="mono">ApprovalCard</span> with the Meta chat</li>
         <li><span class="mono">front/src/utils/arcanaShareLink.ts</span> - the
             <code>?arcana=&lt;owner&gt;/&lt;name&gt;</code> reference (and its
             <code>?arcana_share=</code> alias), its link and its stored binding</li>

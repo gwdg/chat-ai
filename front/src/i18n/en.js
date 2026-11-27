@@ -2591,7 +2591,7 @@ export default {
   },
   arcana_chat: {
     subtitle:
-      "This chat reads the Arcana through SAIA and asks before it changes anything. It is not saved to your chat list.",
+      "This chat reads the Arcana through SAIA and proposes changes for you to approve. It is not saved to your chat list.",
     reset: "New chat",
     prompt_placeholder: "Ask about this Arcana, upload a file or test a search…",
     no_model: "No model is selected for this chat.",
@@ -2599,17 +2599,17 @@ export default {
       "This chat needs a model that supports tools. Pick one in the chat settings.",
     error: "The Arcana chat could not answer.",
     done: "Done.",
-    confirm_upload: "Store “{{name}}” ({{size}}) in “{{collection}}”?",
-    confirm_upload_yes: "Upload file",
-    confirm_write: "Write “{{name}}” ({{size}}) into this Arcana? An existing file is overwritten.",
-    confirm_write_yes: "Write file",
-    confirm_delete:
-      "Delete “{{name}}” from this Arcana and remove its index entries?",
-    confirm_delete_yes: "Delete file",
-    confirm_index: "Index every stored file in “{{collection}}”?",
-    confirm_index_yes: "Start indexing",
-    confirm_tags: "Set the tags of “{{name}}” to: {{tags}}?",
-    confirm_tags_yes: "Set tags",
+    action_title: "Proposed changes",
+    action_warning:
+      "Nothing has changed yet. The Arcana chat only proposes these edits; accepting them is what writes to the collection.",
+    action_upload: "Store “{{name}}” ({{size}}) in “{{collection}}”",
+    action_write: "Write “{{name}}” ({{size}}) into this Arcana",
+    action_delete:
+      "Delete “{{name}}” from this Arcana and remove its index entries",
+    action_index: "Index every stored file in “{{collection}}”",
+    action_tags: "Set the tags of “{{name}}” to: {{tags}}",
+    action_error: "The change could not be applied: {{reason}}",
+    action_partial: "{{applied}} of {{total}} changes were applied. {{reason}}",
   },
   mcp: {
     section_title: "MCP Servers",

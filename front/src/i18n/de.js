@@ -2615,7 +2615,7 @@ export default {
   },
   arcana_chat: {
     subtitle:
-      "Dieser Chat liest die Arcana über SAIA und fragt nach, bevor er etwas ändert. Er wird nicht in deiner Chatliste gespeichert.",
+      "Dieser Chat liest die Arcana über SAIA und schlägt Änderungen zur Bestätigung vor. Er wird nicht in deiner Chatliste gespeichert.",
     reset: "Neuer Chat",
     prompt_placeholder:
       "Frage zu dieser Arcana, lade eine Datei hoch oder teste eine Suche…",
@@ -2624,19 +2624,18 @@ export default {
       "Dieser Chat braucht ein Modell, das Werkzeuge unterstützt. Wähle eines in den Chat-Einstellungen.",
     error: "Der Arcana-Chat konnte nicht antworten.",
     done: "Fertig.",
-    confirm_upload:
-      "„{{name}}“ ({{size}}) in „{{collection}}“ speichern?",
-    confirm_upload_yes: "Datei hochladen",
-    confirm_write:
-      "„{{name}}“ ({{size}}) in diese Arcana schreiben? Eine vorhandene Datei wird überschrieben.",
-    confirm_write_yes: "Datei schreiben",
-    confirm_delete:
-      "„{{name}}“ aus dieser Arcana löschen und die Indexeinträge entfernen?",
-    confirm_delete_yes: "Datei löschen",
-    confirm_index: "Alle gespeicherten Dateien in „{{collection}}“ indexieren?",
-    confirm_index_yes: "Indexierung starten",
-    confirm_tags: "Tags von „{{name}}“ auf {{tags}} setzen?",
-    confirm_tags_yes: "Tags setzen",
+    action_title: "Vorgeschlagene Änderungen",
+    action_warning:
+      "Noch wurde nichts geändert. Der Arcana-Chat schlägt diese Änderungen nur vor; erst das Annehmen schreibt in die Sammlung.",
+    action_upload: "„{{name}}“ ({{size}}) in „{{collection}}“ speichern",
+    action_write: "„{{name}}“ ({{size}}) in diese Arcana schreiben",
+    action_delete:
+      "„{{name}}“ aus dieser Arcana löschen und die Indexeinträge entfernen",
+    action_index: "Alle gespeicherten Dateien in „{{collection}}“ indexieren",
+    action_tags: "Die Tags von „{{name}}“ setzen auf: {{tags}}",
+    action_error: "Die Änderung konnte nicht angewendet werden: {{reason}}",
+    action_partial:
+      "{{applied}} von {{total}} Änderungen wurden angewendet. {{reason}}",
   },
   mcp: {
     section_title: "MCP-Server",

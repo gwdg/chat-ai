@@ -99,19 +99,21 @@ describe("arcana chat tools", () => {
     expect(readOnly).not.toContain("upload_attachment");
   });
 
-  it("names the fixed collection in the system prompt", () => {
+  it("tells the model that writes are only proposed", () => {
     const prompt = buildArcanaChatSystemPrompt(collection);
     expect(prompt).toContain('"Test"');
     expect(prompt).toContain("role: owner");
     expect(prompt).toContain("upload_attachment");
+    expect(prompt).toContain("approval card");
+    expect(prompt).toContain("do not write anything");
     expect(buildArcanaChatSystemPrompt({ ...collection, can_write: false })).toContain(
       "read-only",
     );
   });
 
   it("describes the files with size, status, chunks and tags", async () => {
-    const run = createArcanaChatToolRunner({ collection, confirm: vi.fn() });
-    const answer = await run("list_files");
+    const runner = createArcanaChatToolRunner({ collection });
+    const answer = await runner.run("list_files");
     expect(answer).toContain("a.md");
     expect(answer).toContain("2 chunk(s)");
     expect(answer).toContain("tags: alpha");
@@ -119,77 +121,163 @@ describe("arcana chat tools", () => {
   });
 
   it("returns a converted document's Markdown text for read_file", async () => {
-    const run = createArcanaChatToolRunner({ collection, confirm: vi.fn() });
-    const answer = await run("read_file", { filename: "report.pdf" });
+    const runner = createArcanaChatToolRunner({ collection });
+    const answer = await runner.run("read_file", { filename: "report.pdf" });
     expect(answer).toContain("indexed Markdown");
     expect(answer).toContain("# a");
   });
 
-  it("refuses to write without a confirmation and changes nothing", async () => {
-    const confirm = vi.fn().mockResolvedValue(false);
-    const run = createArcanaChatToolRunner({ collection, confirm });
-    const answer = await run("write_text_file", {
+  it("proposes a new text file and writes nothing", async () => {
+    const runner = createArcanaChatToolRunner({ collection });
+    const answer = await runner.run("write_text_file", {
       filename: "note.md",
       content: "hello",
     });
-    expect(confirm).toHaveBeenCalled();
-    expect(answer).toContain("cancelled");
+
     expect(mocks.provider.write).not.toHaveBeenCalled();
+    expect(answer).toContain("Proposed");
+    expect(answer).toContain("Nothing has been written");
+
+    expect(runner.takeProposals()).toEqual([
+      {
+        op: "write_text_file",
+        collection: "tester__test",
+        filename: "note.md",
+        content: "hello",
+        size: 5,
+        existed: false,
+        previousText: null,
+      },
+    ]);
+    // The list is reset, so a repeated call is proposed once.
+    expect(runner.takeProposals()).toEqual([]);
   });
 
-  it("writes the file after the user confirms and reports the change", async () => {
-    const onChange = vi.fn();
-    const confirm = vi.fn().mockResolvedValue(true);
-    const run = createArcanaChatToolRunner({ collection, confirm, onChange });
-    const answer = await run("write_text_file", {
-      filename: "note.md",
-      content: "hello",
+  it("captures the text an overwrite would have to restore", async () => {
+    const runner = createArcanaChatToolRunner({ collection });
+    await runner.run("write_text_file", {
+      filename: "a.md",
+      content: "replaced",
     });
-    expect(mocks.provider.write).toHaveBeenCalledTimes(1);
-    const [path, , options] = mocks.provider.write.mock.calls[0];
-    expect(path).toBe("/tester__test/note.md");
-    expect(options.overwrite).toBe(true);
-    expect(onChange).toHaveBeenCalled();
-    expect(answer).toContain("note.md");
+
+    const [action] = runner.takeProposals();
+    expect(action.existed).toBe(true);
+    expect(action.previousText).toBe("# a");
   });
 
-  it("uploads an attached file only through the confirmation", async () => {
+  it("cannot restore an overwritten converted document", async () => {
+    const runner = createArcanaChatToolRunner({ collection });
+    await runner.run("write_text_file", {
+      filename: "report.pdf",
+      content: "replaced",
+    });
+
+    const [action] = runner.takeProposals();
+    expect(action.existed).toBe(true);
+    expect(action.previousText).toBeNull();
+  });
+
+  it("proposes a deletion with the text that can restore a text file", async () => {
+    const runner = createArcanaChatToolRunner({ collection });
+    const answer = await runner.run("delete_file", { filename: "a.md" });
+
+    expect(mocks.provider.removeFile).not.toHaveBeenCalled();
+    expect(answer).toContain("delete");
+    const [action] = runner.takeProposals();
+    expect(action).toMatchObject({
+      op: "delete_file",
+      filename: "a.md",
+      restoreText: "# a",
+    });
+  });
+
+  it("cannot restore a deleted binary document", async () => {
+    const runner = createArcanaChatToolRunner({ collection });
+    await runner.run("delete_file", { filename: "report.pdf" });
+
+    const [action] = runner.takeProposals();
+    expect(action.restoreText).toBeNull();
+  });
+
+  it("proposes tags with the list that can restore them", async () => {
+    const runner = createArcanaChatToolRunner({ collection });
+    const answer = await runner.run("set_file_tags", {
+      filename: "a.md",
+      tags: [" beta ", ""],
+    });
+
+    expect(mocks.provider.setFileTags).not.toHaveBeenCalled();
+    expect(answer).toContain("beta");
+    const [action] = runner.takeProposals();
+    expect(action).toMatchObject({
+      op: "set_file_tags",
+      filename: "a.md",
+      tags: ["beta"],
+      previousTags: ["alpha"],
+    });
+  });
+
+  it("proposes an upload without reading or writing the file", async () => {
     const file = new File(["body"], "notes.md", { type: "text/markdown" });
-    const confirm = vi.fn().mockResolvedValue(true);
-    const run = createArcanaChatToolRunner({
+    const runner = createArcanaChatToolRunner({
       collection,
-      confirm,
       attachments: [{ fileId: "f1", name: "notes.md", file }],
     });
-    const answer = await run("upload_attachment", { filename: "notes.md" });
-    expect(confirm).toHaveBeenCalledTimes(1);
-    expect(mocks.provider.uploadFile).toHaveBeenCalledWith(
-      "tester__test",
-      file,
-    );
-    expect(answer).toContain("Stored");
-  });
-
-  it("treats a dismissed confirmation as cancelled for an upload", async () => {
-    const file = new File(["body"], "notes.md", { type: "text/markdown" });
-    const run = createArcanaChatToolRunner({
-      collection,
-      confirm: vi.fn().mockResolvedValue(false),
-      attachments: [{ fileId: "f1", name: "notes.md", file }],
+    const answer = await runner.run("upload_attachment", {
+      filename: "notes.md",
     });
-    const answer = await run("upload_attachment", {});
-    expect(answer).toContain("cancelled");
+
     expect(mocks.provider.uploadFile).not.toHaveBeenCalled();
+    expect(answer).toContain("store");
+    expect(runner.takeProposals()).toEqual([
+      {
+        op: "upload_attachment",
+        collection: "tester__test",
+        filename: "notes.md",
+        fileId: "f1",
+        size: 4,
+        existed: false,
+      },
+    ]);
   });
 
-  it("refuses to write when the collection is read-only", async () => {
-    const run = createArcanaChatToolRunner({
+  it("marks an upload over an existing file as an overwrite", async () => {
+    const file = new File(["body"], "a.md", { type: "text/markdown" });
+    const runner = createArcanaChatToolRunner({
+      collection,
+      attachments: [{ fileId: "f2", name: "a.md", file }],
+    });
+    await runner.run("upload_attachment", {});
+
+    const [action] = runner.takeProposals();
+    expect(action.existed).toBe(true);
+  });
+
+  it("proposes indexing without starting it", async () => {
+    const runner = createArcanaChatToolRunner({ collection });
+    await runner.run("start_index");
+
+    expect(mocks.provider.indexCollection).not.toHaveBeenCalled();
+    expect(runner.takeProposals()).toEqual([
+      { op: "start_index", collection: "tester__test" },
+    ]);
+  });
+
+  it("reports a missing file instead of proposing a deletion", async () => {
+    const runner = createArcanaChatToolRunner({ collection });
+    const answer = await runner.run("delete_file", { filename: "missing.md" });
+
+    expect(answer).toContain("nothing to delete");
+    expect(runner.takeProposals()).toEqual([]);
+  });
+
+  it("refuses to propose a write when the collection is read-only", async () => {
+    const runner = createArcanaChatToolRunner({
       collection: { ...collection, can_write: false },
-      confirm: vi.fn().mockResolvedValue(true),
     });
     await expect(
-      run("delete_file", { filename: "a.md" }),
+      runner.run("delete_file", { filename: "a.md" }),
     ).rejects.toThrow("read-only");
-    expect(mocks.provider.removeFile).not.toHaveBeenCalled();
+    expect(runner.takeProposals()).toEqual([]);
   });
 });

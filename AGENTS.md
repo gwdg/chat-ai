@@ -3015,19 +3015,41 @@ The editor writes through the shared provider and announces `ARCANA_FILES_CHANGE
 (`chatai:arcana-files-changed`), which is how the chat's writes reach the file list, and reports its
 rows through `onFiles` for the header's file count.
 
-**The page chat is ephemeral and it writes only after a confirmation.** It is not a conversation row:
-`utils/arcanaChatStore.js` keeps the thread in `sessionStorage` under
+**The page chat is ephemeral and a write is an approval card, never a dialog.** It is not a
+conversation row: `utils/arcanaChatStore.js` keeps the thread in `sessionStorage` under
 `chatai.arcana-chat:<storage>` (a reload keeps it, a closed tab drops it) and its attachments use the
 files table under the id `arcana-chat:<storage>`, so nothing reaches the sidebar, an export, a backup
 or the sync archive and no Dexie version was needed. `utils/arcanaChat.js` offers
 `list_files`, `read_file`, `search`, `get_index_status` and `list_members`, plus
 `upload_attachment`, `write_text_file`, `delete_file`, `start_index` and `set_file_tags` only while
-the collection has `can_write`; every write tool awaits the `confirmAction` dialog (a dismissal
-resolves false through its `onCancel`) and the runner throws rather than writing for a read-only
-collection, so the model can never mutate a collection the user did not confirm. Reads run
-immediately. `hooks/useArcanaChatSend.js` runs the function-tool loop (six rounds) over the streaming
-`chatCompletions` call and dispatches the change event after a successful write. This is separate from
-the four read-only chat tools of §4.36, which read a normal chat's `arcana_shares` list.
+the collection has `can_write`. Reads run immediately, and the runner throws rather than proposing
+for a read-only collection.
+
+The write tools do not write. Each one validates the request, captures what undoing it would need
+(`previousTags`, the file's previous text, `existed`, the deleted file's text) and returns
+"proposed, nothing written"; the model is told to stop. `hooks/useArcanaChatSend.js` runs the
+function-tool loop (six rounds) over the streaming `chatCompletions` call and appends each proposal to
+the assistant text as a `[[ARCANA_ACTION:<base64>]]` marker, exactly as the Meta chat appends an
+action marker — the **app** writes it, so it costs no tokens and cannot be spelled differently by a
+model. `MessageAssistant` parses it only when the thread id starts with `arcana-chat:` (so a marker
+in an ordinary chat does nothing), `MarkdownRenderer` strips it from the transcript, and the raw text
+in `sessionStorage` keeps it, which is how a stored card can still be reverted after a reload.
+`components/Conversation/MessageAssistant/ArcanaActionCard.jsx` renders the card through the shared
+`ApprovalCard` chrome (§4.16's `MetaActionCard` uses the same component), lists one row per proposal
+and records `meta.actionDecision` (`accepted` / `rejected`).
+
+`utils/arcanaActions.js` is pure: the marker, validation (`normalizeArcanaAction`), dedupe,
+`arcanaActionReversible` (derived, so a crafted payload cannot claim a destructive change is
+undoable) and the row text. `utils/arcanaActionApply.js` performs the writes and is dynamically
+imported on the first Accept/Revert click, so the chat shell does not carry the saia-rag provider or
+the MCP SDK; it is the only place the chat writes to a collection. Accept applies every action and
+the card then offers Revert for what captured enough state: tags go back to `previousTags`, an
+overwritten plain text file goes back to its text, a new file is removed, and a restored deletion is
+re-written. Indexing is never revertible, and neither is anything whose original bytes were not
+readable (a converted document's indexed Markdown is not its upload, and the restore text is capped).
+A failed item does not stop the batch, the successful ones stay applied, and Accept can be retried
+because a repeated apply is idempotent. This is separate from the four read-only chat tools of §4.36,
+which read a normal chat's `arcana_shares` list.
 
 **A file's Markdown is editable in the panel, and a save reindexes in place.** `ArcanaManager`
 shows Edit (`data-guide="arcana-edit-markdown"`) next to Download when `collection.can_write`, the

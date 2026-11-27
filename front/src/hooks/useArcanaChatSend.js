@@ -4,7 +4,6 @@ import { useSelector } from "react-redux";
 
 import { chatCompletions } from "../apis/chatCompletions";
 import { modelSupportsTools } from "../apis/agentEndpoints";
-import { useModal } from "../modals/ModalContext";
 import { useToast } from "./useToast";
 import { extractMessageText } from "../utils/conversationSummary";
 import { getDefaultChatAIModel } from "../utils/conversationUtils";
@@ -13,32 +12,18 @@ import {
   createArcanaChatToolRunner,
   getArcanaChatToolDefinitions,
 } from "../utils/arcanaChat";
+import {
+  appendArcanaActionMarkers,
+  arcanaActionKey,
+  stripArcanaActionMarkers,
+} from "../utils/arcanaActions";
 import { loadFile } from "../db";
 import {
   selectTimeout,
   selectUserSettings,
 } from "../Redux/reducers/userSettingsReducer";
-import { ARCANA_FILES_CHANGED_EVENT } from "../workspace/arcanas";
 
 const MAX_TOOL_ROUNDS = 6;
-
-/**
- * Ask the user before a chat tool writes.
- *
- * `confirmAction` normally runs a callback; the tools need an answer, so this
- * opens the same dialog with a promise around it. A dismissed dialog resolves
- * false, which the tool reports to the model as cancelled.
- */
-function confirmThroughModal(openModal, props) {
-  return new Promise((resolve) => {
-    openModal("confirmAction", {
-      ...props,
-      showDontShowAgain: false,
-      onConfirm: () => resolve(true),
-      onCancel: () => resolve(false),
-    });
-  });
-}
 
 /**
  * Read the files attached to the user's current message.
@@ -69,7 +54,6 @@ export function useArcanaChatSend(collection) {
   const { t } = useTranslation();
   const timeout = useSelector(selectTimeout);
   const userSettings = useSelector(selectUserSettings);
-  const { openModal } = useModal();
   const { notifyError } = useToast();
 
   return useCallback(
@@ -125,7 +109,7 @@ export function useArcanaChatSend(collection) {
         )
         .map((message) => ({
           role: message.role,
-          content: extractMessageText(message).trim(),
+          content: stripArcanaActionMarkers(extractMessageText(message)).trim(),
         }))
         .filter((message) => message.content.length > 0);
 
@@ -144,18 +128,7 @@ export function useArcanaChatSend(collection) {
           .join("\n")}`;
       }
 
-      const runner = createArcanaChatToolRunner({
-        collection,
-        attachments,
-        confirm: (props) => confirmThroughModal(openModal, props),
-        onChange: () => {
-          window.dispatchEvent(
-            new CustomEvent(ARCANA_FILES_CHANGED_EVENT, {
-              detail: { collection: collection.collection },
-            }),
-          );
-        },
-      });
+      const runner = createArcanaChatToolRunner({ collection, attachments });
 
       const payload = {
         settings: {
@@ -197,7 +170,14 @@ export function useArcanaChatSend(collection) {
       });
 
       let accumulated = "";
+      const proposals = [];
+      const proposedKeys = new Set();
       let errorMeta = null;
+
+      // The helper drops any marker-shaped text the model wrote itself, so only
+      // a proposal this app captured can reach the approval card.
+      const composed = () =>
+        appendArcanaActionMarkers(accumulated.trim(), proposals).trim();
 
       const updateAssistant = () =>
         setLocalState((prev) => {
@@ -207,10 +187,25 @@ export function useArcanaChatSend(collection) {
           if (messages[index]?.role !== "assistant") return prev;
           messages[index] = {
             ...messages[index],
-            content: [{ type: "text", text: accumulated }],
+            content: [{ type: "text", text: composed() }],
           };
           return { ...prev, messages };
         });
+
+      // The app, not the model, writes the approval markers, so the proposal a
+      // tool captured is what the card below the answer reads. A model that
+      // repeats a call does not add a second card row.
+      const collectProposals = () => {
+        let added = false;
+        for (const action of runner.takeProposals()) {
+          const key = arcanaActionKey(action);
+          if (proposedKeys.has(key)) continue;
+          proposedKeys.add(key);
+          proposals.push(action);
+          added = true;
+        }
+        if (added) updateAssistant();
+      };
 
       try {
         for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
@@ -261,7 +256,7 @@ export function useArcanaChatSend(collection) {
               const args = call.function.arguments
                 ? JSON.parse(call.function.arguments)
                 : {};
-              result = await runner(call.function.name, args);
+              result = await runner.run(call.function.name, args);
             } catch (toolError) {
               result = `Tool error: ${toolError?.message || String(toolError)}`;
             }
@@ -272,6 +267,8 @@ export function useArcanaChatSend(collection) {
                 typeof result === "string" ? result : JSON.stringify(result),
             });
           }
+
+          collectProposals();
         }
       } catch (error) {
         if (error?.name !== "AbortError") {
@@ -285,7 +282,7 @@ export function useArcanaChatSend(collection) {
           const index = messages.length - 2;
           if (messages[index]?.role !== "assistant") return prev;
           if (!messages[index].loading) return prev;
-          const text = accumulated.trim() || (errorMeta ? "" : t("arcana_chat.done"));
+          const text = composed() || (errorMeta ? "" : t("arcana_chat.done"));
           messages[index] = {
             ...messages[index],
             content: [{ type: "text", text }],
@@ -299,6 +296,6 @@ export function useArcanaChatSend(collection) {
         window.dispatchEvent(new Event("chatai:message-complete"));
       }
     },
-    [collection, notifyError, openModal, t, timeout, userSettings],
+    [collection, notifyError, t, timeout, userSettings],
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
+import ApprovalCard from "./ApprovalCard";
 import {
   Brain,
   Folder,
@@ -9,8 +10,6 @@ import {
   Server,
   Settings,
   SlidersHorizontal,
-  TriangleAlert,
-  Undo2,
 } from "lucide-react";
 import { normalizeMcpUrl } from "../../../agent/mcp";
 import {
@@ -1664,145 +1663,76 @@ export default function MetaActionCard({
 
   if (!Array.isArray(actions) || actions.length === 0) return null;
 
-  return (
-    <div className="rounded-lg border border-warning/40 bg-warning/10 p-2.5">
-      <div className="flex items-start gap-1.5">
-        <TriangleAlert
-          size={16}
-          className="mt-0.5 shrink-0 text-warning"
-          aria-hidden="true"
-        />
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold text-base-content">
-            {t("meta_chat.proposed_changes")}
+  const iconFor = (action) => {
+    if (action.type === "rename") return PencilLine;
+    if (action.type === "move") return Folder;
+    if (
+      action.type === "pin" ||
+      action.type === "pin_topic" ||
+      action.type === "pin_workspace" ||
+      action.type === "pin_agent"
+    ) {
+      return Pin;
+    }
+    if (action.type === "setting") return Settings;
+    if (action.type === "conversation_setting") return SlidersHorizontal;
+    if (action.type === "mcp_server") return Server;
+    return Brain;
+  };
+
+  // The card chrome is shared with the Arcana chat (ApprovalCard), so this only
+  // decides what belongs in it: one row per proposal plus the agent prompt.
+  const prompts = actions
+    .filter(
+      (action) =>
+        action.type === "agent_action" &&
+        action.op === "prompt" &&
+        typeof action.text === "string" &&
+        action.text.length > 0,
+    )
+    .map((action, index) => (
+      <div key={`agent-prompt:${index}`} className="mt-2 min-w-0">
+        <div className="flex items-baseline justify-between gap-2 text-[11px] leading-snug">
+          <p className="font-medium text-base-content">
+            {t("meta_chat.agent_prompt_text_label")}
           </p>
-          <p className="mt-0.5 text-[11px] leading-snug text-base-content/70">
-            {t("meta_chat.mutation_warning")}
+          <p className="shrink-0 text-base-content/70">
+            {t("meta_chat.agent_prompt_meta", {
+              agent: action.agentId,
+              chars: action.text.length,
+            })}
           </p>
-
-          <ul className="mt-1.5 space-y-0.5 text-[11px] leading-snug text-base-content">
-            {actions.map((action, index) => (
-              <li
-                key={`${action.type}:${action.conversationId || action.topicId || action.workspaceId || action.agentId}:${index}`}
-                className="flex items-start gap-1.5"
-              >
-                {action.type === "rename" ? (
-                  <PencilLine
-                    size={12}
-                    className="mt-0.5 shrink-0 text-warning"
-                    aria-hidden="true"
-                  />
-                ) : action.type === "move" ? (
-                  <Folder
-                    size={12}
-                    className="mt-0.5 shrink-0 text-warning"
-                    aria-hidden="true"
-                  />
-                ) : action.type === "pin" ||
-                  action.type === "pin_topic" ||
-                  action.type === "pin_workspace" ||
-                  action.type === "pin_agent" ? (
-                  <Pin
-                    size={12}
-                    className="mt-0.5 shrink-0 text-warning"
-                    aria-hidden="true"
-                  />
-                ) : action.type === "setting" ? (
-                  <Settings
-                    size={12}
-                    className="mt-0.5 shrink-0 text-warning"
-                    aria-hidden="true"
-                  />
-                ) : action.type === "conversation_setting" ? (
-                  <SlidersHorizontal
-                    size={12}
-                    className="mt-0.5 shrink-0 text-warning"
-                    aria-hidden="true"
-                  />
-                ) : action.type === "mcp_server" ? (
-                  <Server
-                    size={12}
-                    className="mt-0.5 shrink-0 text-warning"
-                    aria-hidden="true"
-                  />
-                ) : (
-                  <Brain
-                    size={12}
-                    className="mt-0.5 shrink-0 text-warning"
-                    aria-hidden="true"
-                  />
-                )}
-                <span>{summaryFor(action)}</span>
-              </li>
-            ))}
-          </ul>
-
-          {actions
-            .filter(
-              (action) =>
-                action.type === "agent_action" &&
-                action.op === "prompt" &&
-                typeof action.text === "string" &&
-                action.text.length > 0,
-            )
-            .map((action, index) => (
-              <div key={`agent-prompt:${index}`} className="mt-2 min-w-0">
-                <div className="flex items-baseline justify-between gap-2 text-[11px] leading-snug">
-                  <p className="font-medium text-base-content">
-                    {t("meta_chat.agent_prompt_text_label")}
-                  </p>
-                  <p className="shrink-0 text-base-content/70">
-                    {t("meta_chat.agent_prompt_meta", {
-                      agent: action.agentId,
-                      chars: action.text.length,
-                    })}
-                  </p>
-                </div>
-                <pre className="mt-1 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded border border-base-300 bg-base-200 p-2 font-mono text-xs text-base-content">
-                  {action.text}
-                </pre>
-                <p className="mt-1 text-[11px] leading-snug text-base-content/70">
-                  {t("meta_chat.agent_prompt_notice")}
-                </p>
-              </div>
-            ))}
-
-          {error && <p className="mt-1.5 text-[11px] text-error">{error}</p>}
-
-          <div className="mt-2 flex justify-end gap-1.5">
-            {applied && !reversible ? (
-              <span className="text-[11px] text-base-content/60">
-                {t("meta_chat.applied_not_reversible")}
-              </span>
-            ) : applied ? (
-              <button
-                type="button"
-                className="btn btn-ghost btn-xs gap-1.5"
-                onClick={handleRevert}
-                disabled={reverting}
-              >
-                <Undo2 size={14} aria-hidden="true" />
-                {reverting
-                  ? t("meta_chat.reverting")
-                  : t("meta_chat.revert_changes")}
-              </button>
-            ) : (
-              <button
-                type="button"
-                data-guide="meta-action-accept"
-                className="btn btn-warning btn-xs gap-1.5"
-                onClick={handleAccept}
-                disabled={applying}
-              >
-                <TriangleAlert size={14} aria-hidden="true" />
-                {applying
-                  ? t("meta_chat.applying_changes")
-                  : t("meta_chat.accept_changes")}
-              </button>
-            )}
-          </div>
         </div>
+        <pre className="mt-1 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded border border-base-300 bg-base-200 p-2 font-mono text-xs text-base-content">
+          {action.text}
+        </pre>
+        <p className="mt-1 text-[11px] leading-snug text-base-content/70">
+          {t("meta_chat.agent_prompt_notice")}
+        </p>
       </div>
-    </div>
+    ));
+
+  return (
+    <ApprovalCard
+      rows={actions.map((action, index) => ({
+        key: `${action.type}:${
+          action.conversationId ||
+          action.topicId ||
+          action.workspaceId ||
+          action.agentId
+        }:${index}`,
+        icon: iconFor(action),
+        text: summaryFor(action),
+      }))}
+      preview={prompts}
+      error={error}
+      applied={applied}
+      reversible={reversible}
+      applying={applying}
+      reverting={reverting}
+      onAccept={handleAccept}
+      onRevert={handleRevert}
+      acceptGuide="meta-action-accept"
+    />
   );
 }
