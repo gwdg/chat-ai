@@ -3512,6 +3512,8 @@ export default {
           "Zugangsdaten werden nicht über den öffentlichen CORS-Proxy gesendet. Richte zuerst einen eigenen Proxy ein.",
         empty_commit: "Es ist nichts gestagt, was committet werden könnte.",
         provider_error: "Die Quelle hat einen Fehler gemeldet.",
+        git_unavailable:
+          "Der Git-Client lässt sich nicht laden: In diesem Frontend-Build fehlt die Git-Bibliothek. Nach dem Neubau der Bereitstellung neu laden.",
       },
     },
   },

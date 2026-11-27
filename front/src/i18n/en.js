@@ -3474,6 +3474,8 @@ export default {
           "Credentials are not sent through the public CORS proxy. Configure your own proxy first.",
         empty_commit: "There is nothing staged to commit.",
         provider_error: "The source reported an error.",
+        git_unavailable:
+          "The Git client cannot be loaded: this front-end build is missing its Git library. Reload after the deployment has been rebuilt.",
       },
     },
   },

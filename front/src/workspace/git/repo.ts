@@ -112,7 +112,7 @@ let gitPromise: Promise<LoadedGit> | null = null;
 
 export const loadGit = (): Promise<LoadedGit> => {
   if (!gitPromise) {
-    gitPromise = (async () => {
+    const load = async (): Promise<LoadedGit> => {
       // isomorphic-git's stream reader refuses to run without a global Buffer.
       const { Buffer } = await import("buffer");
       const scope = globalThis as { Buffer?: unknown };
@@ -124,7 +124,19 @@ export const loadGit = (): Promise<LoadedGit> => {
         import("isomorphic-git/http/web"),
       ]);
       return { git, http };
-    })();
+    };
+    gitPromise = load().catch((error) => {
+      // A bundle built without the library keeps the bare specifier, and the
+      // browser throws `Failed to resolve module specifier "isomorphic-git"`
+      // from the import itself. Name the cause instead, and do not pin the
+      // rejected promise: a page reload after the deployment is rebuilt (or a
+      // transient network failure) must be able to retry.
+      gitPromise = null;
+      throw new GitError(
+        "GIT_UNAVAILABLE",
+        error instanceof Error ? error.message : String(error ?? ""),
+      );
+    });
   }
   return gitPromise;
 };
@@ -140,7 +152,8 @@ export class GitError extends Error {
       | "AUTH_REQUIRED"
       | "PROXY_CREDENTIALS"
       | "EMPTY_COMMIT"
-      | "PROVIDER_ERROR",
+      | "PROVIDER_ERROR"
+      | "GIT_UNAVAILABLE",
     message?: string,
   ) {
     super(message ?? code);
