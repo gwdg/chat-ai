@@ -102,8 +102,8 @@ export const useCases = {
   rag_documents: {
     category: "research",
     prompt:
-      "Use Arcana for RAG: connect an Arcana collection and ask questions that should be answered from the user's own documents.",
-    keywords: ["rag", "arcana", "own documents", "knowledge base"],
+      "Use Arcana for RAG: connect an Arcana collection, ask questions that should be answered from the user's own documents, and narrow a search to the files carrying a tag.",
+    keywords: ["rag", "arcana", "own documents", "knowledge base", "tags", "tag filter"],
     steps: [
       {
         textKey: "use_cases.common.start_new_chat",
@@ -135,6 +135,11 @@ export const useCases = {
       },
       {
         textKey: "use_cases.rag_documents.step5",
+        completeOnEvent: "message-complete",
+        target: ".prompt-area",
+      },
+      {
+        textKey: "use_cases.rag_documents.step6",
         completeOnEvent: "message-complete",
         target: ".prompt-area",
       },

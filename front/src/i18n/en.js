@@ -702,6 +702,8 @@ export default {
         "Select Arcana Tools. The separate Arcana row is legacy: it sends one collection id with the request.",
       step4:
         "Add each collection the chat should read: the owner in the first field, the Arcana name in the second (e.g. alice and papers). What a collection is for is edited on its own page, and the agent lists the collections with list_arcanas to pick the matching one.",
+      step5:
+        "Ask your question and name a tag (e.g. “search only the files tagged finance”). The agent passes the tag to the service, so searches and file lists cover only the files carrying it. Leave tags out to use the whole collection.",
     },
     web_search: {
       title: "Use Web Search",
@@ -752,7 +754,7 @@ export default {
       step2:
         "Create a collection with the + button. You become its owner and can share it later.",
       step3:
-        "Click a collection to open its page: upload files, edit per-file tags, start indexing, search inside it and share it. The Arcana chat beside it can inspect the collection, answer questions from its files and — after asking you first — upload, write, delete, index and tag. That chat is not saved to your chat list.",
+        "Click a collection to open its page: upload files, edit per-file tags, start indexing, search inside it and share it. The tag chips above the file list filter it; click one or several tags to show only the files carrying all of them, and the same filter narrows a search in the Search tab. The Arcana chat beside it can inspect the collection, answer questions from its files and — after asking you first — upload, write, delete, index and tag. That chat is not saved to your chat list.",
       step4:
         "Next to a file's download button, Edit Markdown opens the indexed text in the right-hand panel. Saving keeps the uploaded file — a PDF or Word document is not replaced — and rebuilds its index entries, so search returns the new text instead of the old one.",
     },
@@ -1170,6 +1172,8 @@ export default {
       step3: "Add a collection: the owner in the first field, its Arcana name in the second.",
       step4: "Ask: “What does our internal policy say about this?”",
       step5: "Ask: “Which document supports this answer?”",
+      step6:
+        "Narrow it down with a tag: “Search only the files tagged finance and tell me the budget.” The agent passes the tag to the service instead of searching the whole collection.",
     },
     organize_topics: {
       title: "Organize chats by project",

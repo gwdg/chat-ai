@@ -687,8 +687,16 @@ export const featureGuides = {
   arcana: {
     titleKey: "feature_guide.arcana.title",
     prompt:
-      "Use Arcana for retrieval-augmented generation (RAG). Open GWDG Tools, enable tools and select Arcana Tools. Add the collections this chat should read, each with its owner in the first field and its Arcana name in the second; what a collection is for is stored with the collection itself (edit it on the collection's page), and the agent calls list_arcanas to choose between several. The older Arcana row is legacy: it sends one collection id with the request and lets the server run the retrieval.",
-    keywords: ["arcana", "rag", "retrieval", "knowledge base", "knowledge"],
+      "Use Arcana for retrieval-augmented generation (RAG). Open GWDG Tools, enable tools and select Arcana Tools. Add the collections this chat should read, each with its owner in the first field and its Arcana name in the second; what a collection is for is stored with the collection itself (edit it on the collection's page), and the agent calls list_arcanas to choose between several. Files can carry tags: name a tag in your question to search or list only the files that have it, and the agent passes those tags to the service so unrelated files are never searched. The older Arcana row is legacy: it sends one collection id with the request and lets the server run the retrieval.",
+    keywords: [
+      "arcana",
+      "rag",
+      "retrieval",
+      "knowledge base",
+      "knowledge",
+      "tags",
+      "tag filter",
+    ],
     steps: [
       {
         target: '[data-guide="tools"]',
@@ -712,6 +720,10 @@ export const featureGuides = {
         prepare: () => ensureTool("arcana_tools"),
         textKey: "feature_guide.arcana.step4",
         check: arcanaAddIdEntered,
+      },
+      {
+        target: ".prompt-area",
+        textKey: "feature_guide.arcana.step5",
       },
     ],
   },

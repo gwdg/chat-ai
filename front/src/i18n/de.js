@@ -713,6 +713,8 @@ export default {
         "Wählen Sie Arcana Tools. Die separate Zeile Arcana ist veraltet: Sie sendet eine einzelne Collection-ID mit der Anfrage.",
       step4:
         "Fügen Sie jede Sammlung, die der Chat lesen soll, hinzu: den Owner im ersten Feld, den Arcana-Namen im zweiten (z. B. alice und papers). Wofür eine Sammlung gedacht ist, bearbeiten Sie auf ihrer eigenen Seite; der Agent listet die Sammlungen mit list_arcanas auf und wählt die passende.",
+      step5:
+        "Stellen Sie Ihre Frage und nennen Sie einen Tag (z. B. „durchsuche nur die mit finance getaggten Dateien“). Der Agent gibt den Tag an den Dienst weiter, sodass Suche und Dateiliste nur die Dateien mit diesem Tag erfassen. Ohne Tag wird die ganze Sammlung durchsucht.",
     },
     web_search: {
       title: "Websuche verwenden",
@@ -767,7 +769,7 @@ export default {
       step2:
         "Erstellen Sie mit der +-Schaltfläche eine Sammlung. Sie werden ihr Eigentümer und können sie später teilen.",
       step3:
-        "Klicken Sie auf eine Sammlung, um ihre Seite zu öffnen: Dateien hochladen, Tags pro Datei bearbeiten, die Indexierung starten, den Inhalt durchsuchen und die Sammlung teilen. Der Arcana-Chat daneben kann die Sammlung untersuchen, Fragen aus ihren Dateien beantworten und — nach Ihrer Bestätigung — hochladen, schreiben, löschen, indexieren und Tags setzen. Dieser Chat wird nicht in Ihrer Chatliste gespeichert.",
+        "Klicken Sie auf eine Sammlung, um ihre Seite zu öffnen: Dateien hochladen, Tags pro Datei bearbeiten, die Indexierung starten, den Inhalt durchsuchen und die Sammlung teilen. Die Tag-Chips über der Dateiliste filtern sie; klicken Sie einen oder mehrere Tags, um nur die Dateien mit allen diesen Tags zu sehen, und derselbe Filter schränkt eine Suche im Reiter Suchen ein. Der Arcana-Chat daneben kann die Sammlung untersuchen, Fragen aus ihren Dateien beantworten und — nach Ihrer Bestätigung — hochladen, schreiben, löschen, indexieren und Tags setzen. Dieser Chat wird nicht in Ihrer Chatliste gespeichert.",
       step4:
         "Neben der Download-Schaltfläche einer Datei öffnet Markdown bearbeiten den indexierten Text im rechten Panel. Beim Speichern bleibt die hochgeladene Datei erhalten — ein PDF oder Word-Dokument wird nicht ersetzt — und die Indexeinträge werden neu aufgebaut, sodass die Suche den neuen statt des alten Textes liefert.",
     },
@@ -1187,6 +1189,8 @@ export default {
       step3: "Fügen Sie eine Sammlung hinzu: den Owner im ersten Feld, den Arcana-Namen im zweiten.",
       step4: "Fragen Sie: „Was sagt unsere interne Richtlinie dazu?“",
       step5: "Fragen Sie: „Welches Dokument belegt diese Antwort?“",
+      step6:
+        "Schränken Sie mit einem Tag ein: „Durchsuche nur die mit finance getaggten Dateien und nenne mir das Budget.“ Der Agent gibt den Tag an den Dienst weiter, statt die ganze Sammlung zu durchsuchen.",
     },
     organize_topics: {
       title: "Chats nach Projekt organisieren",
