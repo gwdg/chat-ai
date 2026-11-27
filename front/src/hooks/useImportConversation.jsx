@@ -238,6 +238,11 @@ export function useImportConversation() {
       if (top_p && typeof top_p === "number" && top_p > 0 && top_p <= 2.0)
         settings.top_p = top_p;
 
+      // reasoning_effort (index into the model's reasoning_options)
+      const reasoning_effort = extractParameter(data, "reasoning_effort");
+      if (Number.isInteger(reasoning_effort) && reasoning_effort >= 0)
+        settings.reasoning_effort = reasoning_effort;
+
       // model
       let model = {};
       const model_id = extractParameter(data, "model") || extractParameter(data, "model_api") || extractParameter(data, "model-id");
