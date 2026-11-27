@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   uploadFile: vi.fn(),
   uploadTextFile: vi.fn(),
   downloadFile: vi.fn(),
+  removeFile: vi.fn(),
   listMembers: vi.fn(),
   addMember: vi.fn(),
   removeMember: vi.fn(),
@@ -50,6 +51,7 @@ vi.mock("../../../workspace/arcanas", () => {
     uploadFile: (...args) => mocks.uploadFile(...args),
     uploadTextFile: (...args) => mocks.uploadTextFile(...args),
     downloadFile: (...args) => mocks.downloadFile(...args),
+    removeFile: (...args) => mocks.removeFile(...args),
     listMembers: (...args) => mocks.listMembers(...args),
     addMember: (...args) => mocks.addMember(...args),
     removeMember: (...args) => mocks.removeMember(...args),
@@ -91,6 +93,7 @@ describe("ArcanaManager", () => {
     mocks.uploadFile.mockReset();
     mocks.uploadTextFile.mockReset();
     mocks.downloadFile.mockReset();
+    mocks.removeFile.mockReset();
     mocks.listMembers.mockReset();
     mocks.addMember.mockReset();
     mocks.removeMember.mockReset();
@@ -114,6 +117,7 @@ describe("ArcanaManager", () => {
         type: "text/markdown;charset=utf-8",
       }),
     });
+    mocks.removeFile.mockResolvedValue(undefined);
     mocks.listMembers.mockResolvedValue([
       { user: "alice", role: "owner", kind: "user" },
       { user: "bob", role: "editor", kind: "user" },
@@ -526,5 +530,137 @@ describe("ArcanaManager", () => {
     expect(mocks.notifyError.mock.calls[0][0]).toContain("big.pdf");
     await waitFor(() => expect(mocks.listFiles).toHaveBeenCalledTimes(2));
     expect(mocks.notifySuccess).not.toHaveBeenCalled();
+  });
+
+  it("edits a Markdown file in the panel and saves it under its own name", async () => {
+    render(<ArcanaManager collection={collection} />);
+    await screen.findByText("a.md");
+
+    // The editor opens beside the download button and takes over the panel.
+    fireEvent.click(screen.getAllByTitle("arcanas.edit_markdown")[0]);
+    const input = await screen.findByLabelText("arcanas.markdown_editor_label");
+    await waitFor(() =>
+      expect(input).toHaveValue("# Wasserwerksschulung"),
+    );
+    expect(document.querySelector('[data-guide="arcana-markdown-editor"]'))
+      .toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: "# updated" } });
+    fireEvent.click(screen.getByText("arcanas.markdown_save"));
+
+    await waitFor(() =>
+      expect(mocks.uploadTextFile).toHaveBeenCalledWith(
+        "recipes",
+        "a.md",
+        "# updated",
+      ),
+    );
+    // The same name is overwritten, so reindexing replaces the old chunks and
+    // no file has to be removed.
+    expect(mocks.removeFile).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(mocks.notifySuccess).toHaveBeenCalledWith(
+        "arcanas.markdown_saved",
+      ),
+    );
+  });
+
+  it("stores a converted document as Markdown and removes the original", async () => {
+    mocks.listFiles.mockResolvedValue([
+      {
+        name: "report.pdf",
+        status: "indexed",
+        chunks: 3,
+        tags: [],
+        markdown: true,
+      },
+    ]);
+    mocks.downloadFile.mockResolvedValue({
+      name: "report.md",
+      blob: new Blob(["# converted"], { type: "text/markdown;charset=utf-8" }),
+    });
+    render(<ArcanaManager collection={collection} />);
+    await screen.findByText("report.pdf");
+
+    fireEvent.click(screen.getByTitle("arcanas.edit_markdown"));
+    const input = await screen.findByLabelText("arcanas.markdown_editor_label");
+    await waitFor(() => expect(input).toHaveValue("# converted"));
+    expect(
+      document.querySelector('[data-guide="arcana-markdown-editor"]'),
+    ).toHaveAttribute("data-target", "report.md");
+
+    fireEvent.change(input, { target: { value: "# edited" } });
+    fireEvent.click(screen.getByText("arcanas.markdown_save"));
+
+    await waitFor(() =>
+      expect(mocks.uploadTextFile).toHaveBeenCalledWith(
+        "recipes",
+        "report.md",
+        "# edited",
+      ),
+    );
+    // The old file is where the conversion's chunks came from.
+    await waitFor(() =>
+      expect(mocks.removeFile).toHaveBeenCalledWith("recipes", "report.pdf"),
+    );
+  });
+
+  it("refuses to overwrite another file with the converted Markdown", async () => {
+    mocks.listFiles.mockResolvedValue([
+      {
+        name: "report.pdf",
+        status: "indexed",
+        chunks: 3,
+        tags: [],
+        markdown: true,
+      },
+      {
+        name: "report.md",
+        status: "indexed",
+        chunks: 2,
+        tags: [],
+        markdown: false,
+      },
+    ]);
+    mocks.downloadFile.mockResolvedValue({
+      name: "report.md",
+      blob: new Blob(["# converted"], { type: "text/markdown;charset=utf-8" }),
+    });
+    render(<ArcanaManager collection={collection} />);
+    await screen.findByText("report.pdf");
+
+    fireEvent.click(screen.getAllByTitle("arcanas.edit_markdown")[0]);
+    const input = await screen.findByLabelText("arcanas.markdown_editor_label");
+    await waitFor(() => expect(input).toHaveValue("# converted"));
+    fireEvent.change(input, { target: { value: "# edited" } });
+    fireEvent.click(screen.getByText("arcanas.markdown_save"));
+
+    // The name is taken by a file the user put there; nothing is written and
+    // the editor stays open with the reason.
+    await waitFor(() =>
+      expect(screen.getByText("arcanas.markdown_target_exists"))
+        .toBeInTheDocument(),
+    );
+    expect(mocks.uploadTextFile).not.toHaveBeenCalled();
+    expect(mocks.removeFile).not.toHaveBeenCalled();
+  });
+
+  it("offers no Markdown editor for a binary file or on a read-only collection", async () => {
+    mocks.listFiles.mockResolvedValue([
+      { name: "scan.png", status: "indexed", chunks: 0, tags: [], markdown: false },
+    ]);
+    const { unmount } = render(<ArcanaManager collection={collection} />);
+    await screen.findByText("scan.png");
+    expect(screen.queryByTitle("arcanas.edit_markdown")).not.toBeInTheDocument();
+    unmount();
+
+    mocks.listFiles.mockResolvedValue([
+      { name: "a.md", status: "indexed", chunks: 1, tags: [], markdown: false },
+    ]);
+    render(
+      <ArcanaManager collection={{ ...collection, can_write: false }} />,
+    );
+    await screen.findByText("a.md");
+    expect(screen.queryByTitle("arcanas.edit_markdown")).not.toBeInTheDocument();
   });
 });

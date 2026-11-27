@@ -2887,6 +2887,20 @@ immediately. `hooks/useArcanaChatSend.js` runs the function-tool loop (six round
 `chatCompletions` call and dispatches the change event after a successful write. This is separate from
 the four read-only chat tools of §4.36, which read a normal chat's `arcana_shares` list.
 
+**A file's Markdown is editable in the panel, and a save reindexes.** `ArcanaManager` shows Edit
+(`data-guide="arcana-edit-markdown"`) next to Download when `collection.can_write` and the row has
+`markdown` or an `isTextFileName()` name. It reads through `provider.downloadFile` — the indexed
+Markdown for a converted document, the stored text otherwise — and `ArcanaMarkdownEditor` takes the
+panel over until it is closed. saia-rag has no call that replaces only the indexed text, so saving
+uploads the edited Markdown with `uploadTextFile`: under the same name the service's indexer drops the
+old chunks when the text hash changed, and for a converted document the Markdown is stored as
+`<stem>.md` (`markdownFileName`) and the original PDF/Office file is removed afterwards, which is what
+deletes the chunks the conversion produced. The upload comes first so a failed upload cannot lose the
+file, and the save refuses when `<stem>.md` already exists as another file, because uploading would
+replace it. A converted document therefore stops being a PDF in that collection once its Markdown is
+saved. `followSavedIndex` keeps polling `list_files` after the save so the row does not sit at
+"stored".
+
 ## 5. Conventions
 
 - **Gradual TypeScript.** `.jsx` and `.tsx` coexist. `front/tsconfig.json` is `strict: false`,

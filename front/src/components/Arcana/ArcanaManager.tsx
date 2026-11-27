@@ -6,6 +6,7 @@ import {
   Copy,
   Document,
   Download,
+  Edit,
   Launch,
   Renew,
   Search,
@@ -16,6 +17,7 @@ import {
 } from "@carbon/icons-react";
 import { AlertCircle, Loader2 } from "lucide-react";
 
+import ArcanaMarkdownEditor from "./ArcanaMarkdownEditor";
 import { useToast } from "../../hooks/useToast";
 import {
   arcanasProvider,
@@ -25,7 +27,10 @@ import {
   isArcanaIndexed,
   updateArcanaStatus,
 } from "../../workspace/arcanas";
-import { isTextFileName } from "../../workspace/providers/saiaRag";
+import {
+  isTextFileName,
+  markdownFileName,
+} from "../../workspace/providers/saiaRag";
 import type {
   RagCollection,
   RagFile,
@@ -136,6 +141,13 @@ export default function ArcanaManager({
   );
   const [shareCopied, setShareCopied] = useState(false);
 
+  // One file's Markdown, when it is open in the panel's editor.
+  const [markdownFile, setMarkdownFile] = useState<RagFile | null>(null);
+  const [markdownDraft, setMarkdownDraft] = useState("");
+  const [markdownLoading, setMarkdownLoading] = useState(false);
+  const [markdownSaving, setMarkdownSaving] = useState(false);
+  const [markdownError, setMarkdownError] = useState("");
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const aliveRef = useRef(true);
   const stopIndexRef = useRef(false);
@@ -213,6 +225,12 @@ export default function ArcanaManager({
 
   useEffect(() => {
     setTab(initialTab);
+    // Another collection or a new tab request from the page: the open file
+    // belongs to the previous view, so the editor closes instead of writing to
+    // a file this view was not asked about.
+    setMarkdownFile(null);
+    setMarkdownDraft("");
+    setMarkdownError("");
   }, [initialTab, display]);
 
   useEffect(() => {
@@ -546,6 +564,134 @@ export default function ArcanaManager({
   };
 
   /**
+   * Whether this row has Markdown the editor can open.
+   *
+   * A converted document downloads as Markdown although the collection keeps
+   * its original bytes; a plain text file already is text. A PDF without a
+   * converted text has nothing to edit.
+   */
+  const editableMarkdown = (file: RagFile): boolean =>
+    file.markdown || isTextFileName(file.name);
+
+  /** The name the edited Markdown is stored under. */
+  const markdownTarget = (file: RagFile): string =>
+    isTextFileName(file.name) ? file.name : markdownFileName(file.name);
+
+  const openMarkdown = async (file: RagFile) => {
+    setMarkdownFile(file);
+    setMarkdownDraft("");
+    setMarkdownError("");
+    setMarkdownLoading(true);
+    try {
+      const saved = await provider.downloadFile(display, file);
+      const text = await saved.blob.text();
+      if (!aliveRef.current) return;
+      setMarkdownDraft(text);
+    } catch (reason) {
+      if (!aliveRef.current) return;
+      setMarkdownError(
+        reason instanceof Error ? reason.message : String(reason),
+      );
+    } finally {
+      if (aliveRef.current) setMarkdownLoading(false);
+    }
+  };
+
+  const closeMarkdown = () => {
+    if (markdownSaving) return;
+    setMarkdownFile(null);
+    setMarkdownDraft("");
+    setMarkdownError("");
+  };
+
+  /**
+   * Store the edited Markdown and rebuild its index entries.
+   *
+   * saia-rag has no "replace the indexed text" call: `upload_file` stores the
+   * text and indexes it, and its indexer drops the entries of a changed file.
+   * A converted document keeps its original name in storage, so its Markdown is
+   * written as `<stem>.md` and the original upload is removed afterwards - that
+   * removal is what deletes the chunks the conversion produced. A text file is
+   * overwritten under its own name, where reindexing replaces the old chunks.
+   */
+  const saveMarkdown = async () => {
+    const file = markdownFile;
+    if (!file || markdownSaving) return;
+    const target = markdownTarget(file);
+    const previous = file.name;
+    // A converted document is written under a new name. If that name is taken
+    // by another file of the collection, uploading would silently replace it,
+    // so the save stops and says which file is in the way.
+    if (
+      target !== previous &&
+      files.some((row) => row.name === target && row.name !== previous)
+    ) {
+      setMarkdownError(
+        t("arcanas.markdown_target_exists", { target, name: previous }),
+      );
+      return;
+    }
+    setMarkdownSaving(true);
+    setMarkdownError("");
+    try {
+      await provider.uploadTextFile(display, target, markdownDraft);
+      if (target !== previous) {
+        try {
+          await provider.removeFile(display, previous);
+        } catch (reason) {
+          notifyError(
+            t("arcanas.markdown_remove_failed", {
+              name: previous,
+              reason: reason instanceof Error ? reason.message : String(reason),
+            }),
+            { autoClose: 8000 },
+          );
+        }
+      }
+      const refreshed = await reload();
+      notifySuccess(t("arcanas.markdown_saved", { name: target }));
+      setMarkdownFile(null);
+      setMarkdownDraft("");
+      if (refreshed) followSavedIndex(target, refreshed);
+    } catch (reason) {
+      if (!aliveRef.current) return;
+      setMarkdownError(
+        reason instanceof Error ? reason.message : String(reason),
+      );
+    } finally {
+      if (aliveRef.current) setMarkdownSaving(false);
+    }
+  };
+
+  /** Follow the save's index job, so the row does not sit at "stored". */
+  const followSavedIndex = (target: string, baseline: RagFile[]) => {
+    if (!canIndex) return;
+    setIndexing(true);
+    stopIndexRef.current = false;
+    void watchIndex([target], baseline)
+      .then((watched) => {
+        if (!watched?.finished) return;
+        const failed = watched.latest.find(
+          (row) => row.name === target && !isArcanaIndexed(row.status),
+        );
+        if (!failed) return;
+        notifyError(
+          t("arcanas.index_done_failed_one", {
+            name: failed.name,
+            reason: arcanaFailureReason(failed.status) ?? failed.status,
+          }),
+          { autoClose: 8000 },
+        );
+      })
+      .catch(() => {
+        // The list reports its own read failure; the save itself worked.
+      })
+      .finally(() => {
+        if (aliveRef.current) setIndexing(false);
+      });
+  };
+
+  /**
    * Share the collection with a person by username or e-mail.
    *
    * The service validates and normalises the name (an address is stored
@@ -698,13 +844,41 @@ export default function ArcanaManager({
     </button>
   );
 
+  const cardClass = `flex h-full min-h-0 flex-col ${
+    framed
+      ? "rounded-2xl border border-base-300 bg-base-100 p-3 shadow-sm"
+      : ""
+  }`;
+
+  // The editor takes over the panel itself: the page already has a right-hand
+  // panel for this collection, so a second dialog would cover the chat for a
+  // file that belongs beside it.
+  if (markdownFile) {
+    return (
+      <section
+        className={cardClass}
+        data-guide="arcana-manager"
+        data-collection={collection.collection}
+        aria-label={collection.name}
+      >
+        <ArcanaMarkdownEditor
+          name={markdownFile.name}
+          target={markdownTarget(markdownFile)}
+          value={markdownDraft}
+          loading={markdownLoading}
+          saving={markdownSaving}
+          error={markdownError}
+          onChange={setMarkdownDraft}
+          onSave={() => void saveMarkdown()}
+          onClose={closeMarkdown}
+        />
+      </section>
+    );
+  }
+
   return (
     <section
-      className={`flex h-full min-h-0 flex-col ${
-        framed
-          ? "rounded-2xl border border-base-300 bg-base-100 p-3 shadow-sm"
-          : ""
-      }`}
+      className={cardClass}
       data-guide="arcana-manager"
       data-collection={collection.collection}
       aria-label={collection.name}
@@ -936,6 +1110,19 @@ export default function ArcanaManager({
                             <Download size={14} />
                           )}
                         </button>
+                        {editableMarkdown(file) && collection.can_write && (
+                          <button
+                            type="button"
+                            data-guide="arcana-edit-markdown"
+                            className="btn btn-ghost btn-xs btn-square"
+                            onClick={() => void openMarkdown(file)}
+                            disabled={Boolean(busy)}
+                            title={t("arcanas.edit_markdown")}
+                            aria-label={t("arcanas.edit_markdown")}
+                          >
+                            <Edit size={14} />
+                          </button>
+                        )}
                         <button
                           type="button"
                           data-guide="arcana-tags"

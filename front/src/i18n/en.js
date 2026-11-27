@@ -691,6 +691,8 @@ export default {
         "Create a collection with the + button. You become its owner and can share it later.",
       step3:
         "Click a collection to open its page: upload files, edit per-file tags, start indexing, search inside it and share it. The Arcana chat beside it can inspect the collection, answer questions from its files and — after asking you first — upload, write, delete, index and tag. That chat is not saved to your chat list.",
+      step4:
+        "Next to a file's download button, Edit Markdown opens the indexed text in the right-hand panel. Saving uploads the edited Markdown and rebuilds the file's index entries, so search returns the new text instead of the old one. A converted PDF is stored as its Markdown after saving, because the service has no way to swap only the indexed text.",
     },
     arcana_share: {
       title: "Share an Arcana",
@@ -1296,6 +1298,9 @@ export default {
     label_audio_generation: "Audio Generation",
     label_arcana_tools: "Arcana Tools",
     label_arcana: "Arcana",
+    arcana_legacy_badge: "Legacy",
+    arcana_legacy_notice:
+      "Legacy: this row sends a single collection id with the request and lets the server run the retrieval. The chat's collections and the tools that read them now live under Arcana Tools.",
     label_mcp_server: "MCP Server",
     label_write_access: "Allow write",
     label_browser_storage: "Browser storage",
@@ -2453,6 +2458,20 @@ export default {
     edit_tags: "Edit tags",
     download: "Download",
     download_markdown: "Download indexed Markdown",
+    edit_markdown: "Edit Markdown",
+    markdown_close: "Close the editor",
+    markdown_editor_label: "Markdown of {{name}}",
+    markdown_loading: "Loading Markdown…",
+    markdown_save: "Save and reindex",
+    markdown_saved: "Saved {{name}} and reindexed it.",
+    markdown_remove_failed:
+      "Saved the Markdown, but removing {{name}} failed: {{reason}}",
+    markdown_reindex_hint:
+      "Saving replaces {{name}} and rebuilds its index entries, so search stops returning the old text.",
+    markdown_convert_hint:
+      "Saving stores the edited Markdown as {{target}} and removes the original {{name}}, which is where the old index entries come from.",
+    markdown_target_exists:
+      "Not saved: {{target}} already exists in this collection. Remove or rename that file first.",
     remove_file: "Remove file",
     tags_placeholder: "tag-one, tag-two",
     save_tags: "Save tags",

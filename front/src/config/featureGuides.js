@@ -8,6 +8,7 @@ import {
   mcpConfigured,
   openAgentMenu,
   openAgentRecovery,
+  openArcanaFiles,
   openArcanaShare,
   openChatWorkspaces,
   openConversationMenu,
@@ -729,7 +730,7 @@ export const featureGuides = {
   arcana_manager: {
     titleKey: "feature_guide.arcana_manager.title",
     prompt:
-      "The Arcanas section of the sidebar lists your SAIA document collections. Open one to upload files, edit its per-file tags, start indexing and search inside it. Plain text is indexed directly; PDFs, Office documents and images are converted through the docling service while indexing, so they become searchable too.",
+      "The Arcanas section of the sidebar lists your SAIA document collections. Open one to upload files, edit its per-file tags, start indexing and search inside it. Plain text is indexed directly; PDFs, Office documents and images are converted through the docling service while indexing, so they become searchable too. A file's Markdown can be edited next to its download button; saving uploads the edited text and rebuilds the index entries, which replaces the old text in search.",
     keywords: [
       "arcana",
       "arcanas",
@@ -758,6 +759,11 @@ export const featureGuides = {
       {
         target: '[data-guide="arcanas"]',
         textKey: "feature_guide.arcana_manager.step3",
+      },
+      {
+        target: '[data-guide="arcana-edit-markdown"]',
+        prepare: openArcanaFiles,
+        textKey: "feature_guide.arcana_manager.step4",
       },
     ],
   },

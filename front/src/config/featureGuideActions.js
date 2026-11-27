@@ -269,6 +269,37 @@ export function openArcanaShare() {
   );
 }
 
+/**
+ * Open the first Arcana and its Files tab, then wait for an editable row.
+ *
+ * The file rows only exist after the panel has read the collection, and the
+ * Markdown editor button additionally needs a converted or text file. The tour
+ * therefore waits for the button itself instead of the tab, and opens the panel
+ * first on a narrow window.
+ */
+export function openArcanaFiles() {
+  if (!find('[data-guide="arcana-manager"]')) {
+    click('[data-guide="arcana-row"]');
+  }
+  let askedForPanel = false;
+  retry(
+    () => {
+      if (find('[data-guide="arcana-edit-markdown"]')) return true;
+      if (!askedForPanel) {
+        const toggle = find('[data-guide="arcana-editor-toggle"]');
+        if (toggle && toggle.getAttribute("aria-pressed") === "false") {
+          toggle.click();
+          askedForPanel = true;
+          return false;
+        }
+      }
+      find('[data-guide="arcana-tab-files"]')?.click();
+      return false;
+    },
+    80,
+  );
+}
+
 export function mcpConfigured() {
   const input = find('[data-guide="mcp-input"]');
   return !!input?.value?.trim();

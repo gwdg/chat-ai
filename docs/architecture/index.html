@@ -3414,10 +3414,10 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
         The Arcanas section lists the caller's <code>saia-rag</code> collections directly in the
         sidebar, without a workspace. Opening one navigates to that collection's own page
         (<code>/arcana/&lt;storage&gt;</code>), which uses the ordinary chat shell for a chat about
-        this collection and docks its files, per-file tag editor, index button, search box and
-        sharing tab on the right. It is the same service and the same <code>SaiaRagProvider</code>
-        the workspace drive uses, so a file uploaded here is the file a workspace mount sees; only
-        the surface is different.
+        this collection and docks its files, per-file tag editor, Markdown editor, index button,
+        search box and sharing tab on the right. It is the same service and the same
+        <code>SaiaRagProvider</code> the workspace drive uses, so a file uploaded here is the file a
+        workspace mount sees; only the surface is different.
       </p>
 
       <h2>The 100-foot view</h2>
@@ -3436,7 +3436,7 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           <div class="node kind-edge">
             <div class="node-kicker">2 · Page</div>
             <div class="node-title">Chat + editor</div>
-            <div class="node-sub">Chat in the middle; files, tags, search and sharing docked right</div>
+            <div class="node-sub">Chat in the middle; files, tags, Markdown editor, search and sharing docked right</div>
             <span class="sees can">one thread per collection</span>
           </div>
           <div class="flow-arrow" aria-hidden="true"><span>MCP</span></div>
@@ -3585,6 +3585,22 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           on purpose.
         </li>
         <li>
+          <b>Editing that Markdown is a reindex, not a patch.</b> Next to Download, Edit opens the
+          file's Markdown in the same right-hand panel: <code>ArcanaMarkdownEditor</code> replaces
+          the Files/Search/Share tabs until it is closed. It is offered only on a collection the
+          caller can write and only for a row that has Markdown or a text name, because a PDF without
+          a conversion has nothing to edit. Saving cannot patch the index - <code>saia-rag</code> has
+          no "replace the indexed text" call - so the edited text goes through
+          <code>upload_file</code>, which stores it and (re)indexes it; a changed text hash makes the
+          indexer delete that file's old chunks first. A converted document keeps its original name
+          in storage, so its Markdown is written as <code>&lt;stem&gt;.md</code> and the original
+          PDF or Office file is removed right after the upload, which is what deletes the chunks the
+          conversion produced. Upload comes first, so a failed upload cannot lose the file, and the
+          save refuses when that <code>.md</code> name already belongs to another file instead of
+          replacing it. The panel then follows <code>list_files</code> like any other index job, so
+          the row does not stay at <code>stored</code>.
+        </li>
+        <li>
           <b>Removing a file is a file action, not a provider capability.</b>
           <code>remove_file</code> deletes the stored bytes and their index entries for exactly one
           file in one collection. The provider still reports <code>capabilities.delete: false</code>,
@@ -3709,6 +3725,12 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
             <td><span class="mono">front/src/components/Arcana/ArcanaManager.tsx</span></td>
           </tr>
           <tr>
+            <td>Markdown editor</td>
+            <td>One file's text in the panel: load through the provider, edit in a mono textarea, save
+                and reindex, and the hint that names the file which is replaced or removed.</td>
+            <td><span class="mono">front/src/components/Arcana/ArcanaMarkdownEditor.tsx</span></td>
+          </tr>
+          <tr>
             <td>Arcana chat</td>
             <td>The middle column: a banner naming the collection, the ephemeral thread, its
                 <code>sessionStorage</code> store, the send loop with the confirmed tool runner, and
@@ -3755,8 +3777,8 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           <tr>
             <td>Feature guide</td>
             <td><code>arcana_manager</code>, gated on <code>isArcanasEnabled()</code>, targeting the
-                section and its add button; <code>arcana_share</code> targets the page and the
-                editor's Share tab.</td>
+                section, its add button and the Markdown edit action;
+                <code>arcana_share</code> targets the page and the editor's Share tab.</td>
             <td><span class="mono">front/src/config/featureGuides.js</span></td>
           </tr>
         </tbody>
@@ -3776,6 +3798,11 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
         <li><b>Index only text.</b> A stored binary is named as pending, not silently indexed as noise.</li>
         <li><b>No collection Delete on a workspace row.</b> The provider keeps
             <code>delete: false</code>; per-file removal goes through the manager.</li>
+        <li><b>A Markdown save is a reindex.</b> <code>upload_file</code> is the only write: under the
+            same name a changed hash makes the indexer drop the old chunks, and a converted file is
+            stored as <code>&lt;stem&gt;.md</code> with its original removed afterwards, so its
+            identity changes once. Upload precedes removal, and a <code>.md</code> name another file
+            already owns is refused.</li>
         <li><b>The service is the guard.</b> <code>can_write</code> disables controls; the service
             still rejects a write that gets through.</li>
         <li><b>A share link is convenience, never a grant.</b> It only writes the two bindings
@@ -3815,6 +3842,11 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
             speaks the same service and enforces owner-only changes there.</li>
         <li>The page chat is per browser tab: a reload keeps the thread, closing the tab drops it, and
             there is no second copy on another device.</li>
+        <li>Editing a converted document's Markdown replaces it with a <code>.md</code> file: the
+            collection no longer holds the original PDF afterwards, so keep a copy if the layout
+            matters.</li>
+        <li>The Markdown editor has no preview, no diff against the stored text and no undo beyond the
+            textarea; closing it discards unsaved changes without asking.</li>
       </ul>
 
       <h2>Where to look</h2>
@@ -3831,7 +3863,9 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
         <li><span class="mono">front/src/components/Arcana/ArcanaEditorPanel.tsx</span> - the docked,
             resizable editor panel</li>
         <li><span class="mono">front/src/components/Arcana/ArcanaManager.tsx</span> - files, tags,
-            index, search, remove, members and the chat link</li>
+            index, search, remove, members, the chat link and the Markdown edit/save path</li>
+        <li><span class="mono">front/src/components/Arcana/ArcanaMarkdownEditor.tsx</span> - the
+            in-panel text editor and its save hint</li>
         <li><span class="mono">front/src/components/Arcana/ArcanaChatPanel.tsx</span> plus
             <span class="mono">utils/arcanaChat*.js</span> and
             <span class="mono">hooks/useArcanaChatSend.js</span> - the page chat, its tool runner and

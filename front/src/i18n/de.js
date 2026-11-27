@@ -706,6 +706,8 @@ export default {
         "Erstellen Sie mit der +-Schaltfläche eine Sammlung. Sie werden ihr Eigentümer und können sie später teilen.",
       step3:
         "Klicken Sie auf eine Sammlung, um ihre Seite zu öffnen: Dateien hochladen, Tags pro Datei bearbeiten, die Indexierung starten, den Inhalt durchsuchen und die Sammlung teilen. Der Arcana-Chat daneben kann die Sammlung untersuchen, Fragen aus ihren Dateien beantworten und — nach Ihrer Bestätigung — hochladen, schreiben, löschen, indexieren und Tags setzen. Dieser Chat wird nicht in Ihrer Chatliste gespeichert.",
+      step4:
+        "Neben der Download-Schaltfläche einer Datei öffnet Markdown bearbeiten den indexierten Text im rechten Panel. Speichern lädt das bearbeitete Markdown hoch und baut die Indexeinträge der Datei neu auf, sodass die Suche den neuen statt des alten Textes liefert. Aus einem konvertierten PDF wird beim Speichern sein Markdown, weil der Dienst den indexierten Text nicht allein austauschen kann.",
     },
     arcana_share: {
       title: "Eine Arcana teilen",
@@ -1312,6 +1314,9 @@ export default {
     label_audio_generation: "Audiogenerierung",
     label_arcana_tools: "Arcana Tools",
     label_arcana: "Arcana",
+    arcana_legacy_badge: "Veraltet",
+    arcana_legacy_notice:
+      "Veraltet: Diese Zeile sendet eine einzelne Collection-ID mit der Anfrage und lässt die Suche auf dem Server laufen. Die Collections des Chats und die Werkzeuge, die sie lesen, liegen jetzt unter Arcana Tools.",
     label_mcp_server: "MCP-Server",
     label_write_access: "Schreiben erlauben",
     label_browser_storage: "Browserspeicher",
@@ -2477,6 +2482,20 @@ export default {
     edit_tags: "Tags bearbeiten",
     download: "Herunterladen",
     download_markdown: "Indexiertes Markdown herunterladen",
+    edit_markdown: "Markdown bearbeiten",
+    markdown_close: "Editor schließen",
+    markdown_editor_label: "Markdown von {{name}}",
+    markdown_loading: "Markdown wird geladen…",
+    markdown_save: "Speichern und neu indexieren",
+    markdown_saved: "{{name}} gespeichert und neu indexiert.",
+    markdown_remove_failed:
+      "Markdown gespeichert, aber {{name}} konnte nicht entfernt werden: {{reason}}",
+    markdown_reindex_hint:
+      "Speichern ersetzt {{name}} und baut die Indexeinträge neu auf, damit die Suche nicht mehr den alten Text liefert.",
+    markdown_convert_hint:
+      "Speichern legt das bearbeitete Markdown als {{target}} ab und entfernt das Original {{name}}, aus dem die alten Indexeinträge stammen.",
+    markdown_target_exists:
+      "Nicht gespeichert: {{target}} ist in dieser Sammlung bereits vorhanden. Entfernen oder benennen Sie diese Datei zuerst um.",
     remove_file: "Datei entfernen",
     tags_placeholder: "tag-eins, tag-zwei",
     save_tags: "Tags speichern",
