@@ -5,6 +5,7 @@ import Papa from "papaparse";
 import AudioPlayer from "./AudioPlayer";
 import MarkdownRenderer from "../Conversation/MessageAssistant/MarkdownRenderer";
 import SandboxedHtmlPreview from "../Others/SandboxedHtmlPreview";
+import ZoomControls, { useZoom } from "./ZoomControls";
 import { getFileType } from "../../utils/attachments";
 
 // --------------------
@@ -156,14 +157,17 @@ export default function FilePreviewContent({
 }) {
   const { t } = useTranslation();
   const [loadError, setLoadError] = useState(null);
+  const { zoom, zoomIn, zoomOut, reset: resetZoom } = useZoom();
 
   const name = entry?.name ?? "";
   const mime = entry?.mime;
 
-  // A media element that failed for the previous file must not keep that error.
+  // A media element that failed for the previous file must not keep that error,
+  // and neither should a new file inherit the previous preview's zoom.
   useEffect(() => {
     setLoadError(null);
-  }, [resetKey, url]);
+    resetZoom();
+  }, [resetKey, url, resetZoom]);
 
   const fileType = getFileType({ type: mime, name });
   const isHtml =
@@ -253,12 +257,35 @@ export default function FilePreviewContent({
               </p>
             </div>
           )}
-          <iframe
-            src={url}
-            className="w-full flex-1 rounded"
-            title={name}
-            onError={mediaFailed(t("file_preview.pdf_failed"))}
-          />
+          <div className="mb-2 flex shrink-0 items-center justify-end px-1">
+            <ZoomControls
+              zoom={zoom}
+              onZoomIn={zoomIn}
+              onZoomOut={zoomOut}
+              onReset={resetZoom}
+            />
+          </div>
+          {/* The browser's own viewer always fits the page to the iframe, so the
+              only zoom the parent controls is the frame's size: both dimensions
+              grow with the factor, which gives the scroll container its
+              scrollbars and makes the viewer lay the page out again instead of
+              upscaling a bitmap. */}
+          <div className="min-h-0 flex-1 overflow-auto">
+            <div
+              data-testid="pdf-zoom-content"
+              style={{
+                width: `${zoom * 100}%`,
+                height: `${zoom * 100}%`,
+              }}
+            >
+              <iframe
+                src={url}
+                className="h-full w-full rounded"
+                title={name}
+                onError={mediaFailed(t("file_preview.pdf_failed"))}
+              />
+            </div>
+          </div>
         </div>
       );
     }

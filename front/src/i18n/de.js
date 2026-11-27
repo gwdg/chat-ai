@@ -504,10 +504,52 @@ export default {
       title: "Git-Repository importieren",
       step1: "Öffnen Sie „Arbeitsbereich erstellen“, wählen Sie links „Git-Repository“, den lokalen Agenten für den Klon und drücken Sie dann „Erstellen“.",
     },
+    workspace_git: {
+      title: "Dateien mit Git versionieren",
+      step1:
+        "Git lebt im Dateimanager: Öffnen Sie den Reiter Dateien eines Arbeitsbereichs (oder eines damit verknüpften Chats) und klicken Sie den Ordner an, in dem das Repository liegen soll. Ohne Auswahl wirkt die Git-Schaltfläche auf die Wurzel des Arbeitsbereichs. Der eigene Speicher des Arbeitsbereichs, ein Ordner von diesem Gerät und das SAIA-Dateisystem können ein Repository enthalten; schreibgeschützte Quellen und Einhängepunkte nicht.",
+      step2:
+        "Klicken Sie in der Dateileiste auf Git. Es öffnet einen Dialog statt eines Aufklappmenüs, damit die Dateiliste nichts abschneidet.",
+      step3:
+        "Das Menü nennt den Ordner und liest seinen Zustand: den aktuellen Branch und die Zahl geänderter Dateien. Ist der Ordner noch kein Repository, bietet es stattdessen an, eines zu initialisieren oder ein öffentliches Repository in den leeren Ordner zu klonen. Aktualisieren liest den Zustand neu.",
+      step4:
+        "Änderungen stagt, entstagt und verwirft Dateien und schreibt den Commit. Branches legt einen Branch an, wechselt auf einen lokalen oder entfernten Branch und löscht einen, der nicht ausgecheckt ist.",
+      step5:
+        "Remote hält URL und Zugangsdaten und führt Fetch, Pull und Push aus; ein Token bleibt für diese Browsersitzung im Speicher und wird über den öffentlichen CORS-Proxy abgelehnt. Verlauf listet die letzten 50 Commits, den neuesten zuerst.",
+      step6: "Öffnen Sie Änderungen, um den Commit zu schreiben.",
+      step7:
+        "Stagen Sie die Datei in der Liste, tippen Sie die Nachricht und prüfen Sie Name und E-Mail des Autors — beides merkt sich dieser Browser. Commit schreibt ihn, und der Dialog liest seinen Zustand nach jeder Aktion neu.",
+    },
     workspace_upload: {
       title: "Dateien in einen Arbeitsbereich hochladen",
       step1: "Öffnen Sie einen Arbeitsbereich, wählen Sie rechts den Reiter Dateien und dort Datei hinzufügen; der Browser fragt nach einer Datei von diesem Computer.",
       step2: "Die hochgeladene Datei erscheint in dem Ordner, den Sie gerade ansehen.",
+    },
+    workspace_edit_file: {
+      title: "Eine Datei in einem Arbeitsbereich bearbeiten",
+      step1:
+        "Der Reiter Dateien neben einem Chat listet alles, was ein Arbeitsbereich speichert. Dateien und Ordner im eigenen Speicher des Arbeitsbereichs, ein Ordner von diesem Gerät, eine Arcana und das SAIA-Dateisystem erscheinen im selben Baum.",
+      step2:
+        "Klicken Sie eine Text- oder Codedatei an. Sie öffnet sich im Reiter Vorschau, der schreibgeschützt bleibt: Quellcode und reiner Text erscheinen mit Syntaxhervorhebung, Markdown, HTML und CSV werden gerendert.",
+      step3:
+        "Drücken Sie neben Vorschau auf Bearbeiten, um das Tippen freizugeben. Vorschau und Bearbeiten teilen sich einen Editor, die Cursorposition bleibt beim Wechsel erhalten. Eine schreibgeschützte Quelle zeigt stattdessen die Marke „Schreibgeschützt“ und keinen Bearbeiten-Schalter.",
+      step4:
+        "Sobald sich der Text von der gespeicherten Datei unterscheidet, erscheinen der Punkt neben dem Namen und „Änderungen verwerfen“. Verwerfen wirft den Entwurf weg und lädt die gespeicherten Bytes neu; ein ungespeicherter Entwurf bleibt beim Wechsel zu einer anderen Datei erhalten, bis der Tab oder die Seite neu geladen wird.",
+      step5:
+        "Speichern schreibt über den Speicher des Ordners selbst, Strg/Cmd+S ebenso. Ein fehlgeschlagenes Schreiben bleibt über dem Editor sichtbar, statt die Änderung zu verlieren.",
+    },
+    workspace_typst_preview: {
+      title: "Eine Typst-Datei rendern",
+      step1:
+        "Öffnen Sie den Reiter Dateien eines Arbeitsbereichs, der eine Typst-Datei (.typ oder .typst) im eigenen Speicher, auf diesem Gerät oder im SAIA-Dateisystem enthält.",
+      step2:
+        "Klicken Sie die Typst-Datei an. Sie öffnet sich im Reiter Vorschau als Quelltext, und eine Typst-Datei bietet zusätzlich „Typst rendern“ neben dem Modusschalter an.",
+      step3:
+        "Drücken Sie „Typst rendern“. Das kompilierte Dokument öffnet sich in einem eigenen Bereich neben dem Quelltext — Baum, Quelltext und Dokument nebeneinander — und folgt dem Text, während er sich ändert, auch beim Bearbeiten. „Quelltext anzeigen“ wechselt zurück zum reinen Code.",
+      step4:
+        "Das Dokument wird im Browser kompiliert, nichts wird hochgeladen. Dateien, die es einbindet, importiert oder liest, werden relativ zur geöffneten Datei aufgelöst; eine fehlende wird unter dem Dokument gemeldet, statt stillschweigend zu scheitern.",
+      step5:
+        "Zoomen Sie das Dokument mit −, der Prozentangabe und +; die Prozentangabe setzt auf 100 % zurück, eine Stufe sind 25 %. Dieselben Schaltflächen zoomen eine PDF-Vorschau. Der Inhalt wächst, statt skaliert zu werden, damit der Bereich scrollt und nichts abschneidet.",
     },
     workspace_multiselect: {
       title: "Eine Datei aus einem Arbeitsbereich entfernen",
@@ -2897,6 +2939,16 @@ export default {
     downloading: "Dateien werden gespeichert…",
     preview_too_large: "Diese Datei ist zu groß für die Vorschau.",
     preview_unavailable: "Für diesen Dateityp gibt es keine Vorschau.",
+    mode_preview: "Vorschau",
+    mode_edit: "Bearbeiten",
+    render_typst: "Typst rendern",
+    show_source: "Quelltext anzeigen",
+    unsaved_changes: "Ungespeicherte Änderungen",
+    no_unsaved_changes: "Alle Änderungen gespeichert",
+    revert_changes: "Änderungen verwerfen",
+    read_only_file: "Diese Datei ist schreibgeschützt.",
+    read_only_badge: "Schreibgeschützt",
+    save_failed: "Speichern fehlgeschlagen: {{message}}",
     remove_source: "Quelle entfernen",
     remove_source_confirm:
       "Diese Quelle aus dem Arbeitsbereich entfernen? Die Dateien selbst werden nicht gelöscht.",
@@ -2935,6 +2987,115 @@ export default {
     transfer_conflict_many:
       "{{count}} Elemente existieren am Ziel bereits.",
     transfer_multiple_sources: "mehreren Quellen",
+    git: {
+      button: "Git",
+      button_hint: "Git-Aktionen für {{path}}",
+      button_unsupported:
+        "Git braucht einen beschreibbaren Ordner im Browser, auf diesem Gerät oder im SAIA-Dateisystem.",
+      menu_title: "Git",
+      folder_label: "Ordner",
+      reading_status: "Repository wird gelesen…",
+      unsupported_source:
+        "Git funktioniert im eigenen Speicher des Workspace, in einem Ordner dieses Geräts und im SAIA-Dateisystem.",
+      not_a_repository: "Dieser Ordner ist noch kein Git-Repository.",
+      changes: "Änderungen",
+      changes_hint: "Stagen, verwerfen und committen",
+      branches: "Branches",
+      branches_hint: "Branches anlegen, wechseln und löschen",
+      remote: "Remote",
+      remote_hint: "URL, Zugangsdaten, Fetch, Pull und Push",
+      history: "Verlauf",
+      history_hint: "Commits dieses Branches",
+      refresh: "Aktualisieren",
+      refresh_hint: "Status neu lesen",
+      init: "Repository initialisieren",
+      init_hint: "Hier einen neuen .git-Ordner anlegen",
+      init_done: "Repository initialisiert.",
+      clone: "Repository klonen",
+      clone_hint: "Ein vorhandenes Repository in diesen Ordner kopieren",
+      clone_action: "Klonen",
+      clone_done: "Repository geklont.",
+      folder_scope:
+        "Git wirkt auf den im Dateimanager ausgewählten Ordner, nicht auf eine einzelne Datei.",
+      detached: "losgelöster HEAD",
+      clean: "Nichts zu committen, Arbeitsbaum ist sauber.",
+      change_count_one: "{{count}} Änderung",
+      change_count_other: "{{count}} Änderungen",
+      working: "Arbeitet…",
+      staged_section_one: "Gestagt ({{count}})",
+      staged_section_other: "Gestagt ({{count}})",
+      unstaged_section_one: "Änderungen ({{count}})",
+      unstaged_section_other: "Änderungen ({{count}})",
+      stage: "Stagen",
+      unstage: "Unstagen",
+      stage_all: "Alle stagen",
+      unstage_all: "Alle unstagen",
+      nothing_staged: "Nichts gestagt.",
+      nothing_unstaged: "Keine ungestagten Änderungen.",
+      discard: "Verwerfen",
+      discard_confirm: "Die Änderungen in „{{name}}“ verwerfen?",
+      discard_untracked_confirm:
+        "Die unversionierte Datei „{{name}}“ löschen? Das lässt sich nicht rückgängig machen.",
+      commit_message: "Commit-Nachricht",
+      commit_message_placeholder: "Die Änderung beschreiben",
+      author_name: "Name des Autors",
+      author_email: "E-Mail des Autors",
+      commit: "{{count}} committen",
+      commit_done: "Committet.",
+      repository_url: "Repository-URL",
+      branch_optional: "Branch (optional)",
+      shallow: "Flacher Klon",
+      credentials_optional: "Zugangsdaten (optional)",
+      credentials_this_session: "Zugangsdaten für diese Sitzung",
+      credentials_remembered:
+        "Zugangsdaten bleiben im Speicher, bis du die App schließt.",
+      forget_credentials: "Vergessen",
+      credentials_memory_only:
+        "Zugangsdaten bleiben nur für diese Sitzung im Speicher und werden nie gespeichert.",
+      public_proxy_no_credentials:
+        "Es ist ein öffentlicher CORS-Proxy eingestellt, daher können keine Zugangsdaten gesendet werden. Setze gitCorsProxy auf einen eigenen Proxy, um ein Token zu verwenden.",
+      username: "Benutzername",
+      token: "Token oder Passwort",
+      current_branch: "Aktueller Branch:",
+      local_branches: "Lokale Branches",
+      remote_branches: "Remote-Branches",
+      no_branches: "Noch keine lokalen Branches.",
+      head: "aktuell",
+      delete_branch: "Branch löschen",
+      new_branch: "Branch anlegen",
+      create_branch: "Anlegen",
+      checkout_new_branch: "Direkt dorthin wechseln",
+      branch_created: "Branch {{name}} angelegt.",
+      branch_checked_out: "Zu {{name}} gewechselt.",
+      branch_deleted: "Branch {{name}} gelöscht.",
+      remote_url: "Remote-URL",
+      remote_saved: "Remote gespeichert.",
+      no_remote: "Lege eine Remote-URL an, um Fetch, Pull oder Push zu nutzen.",
+      fetch: "Fetch",
+      pull: "Pull",
+      push: "Push",
+      fetch_done: "Remote abgerufen.",
+      pull_done: "Remote gepullt.",
+      push_done: "Branch gepusht.",
+      commit_total_one: "{{count}} Commit",
+      commit_total_other: "{{count}} Commits",
+      history_empty: "Dieser Branch hat noch keine Commits.",
+      no_message: "(keine Nachricht)",
+      unknown_author: "Unbekannter Autor",
+      error: {
+        generic: "Die Git-Operation ist fehlgeschlagen.",
+        unsupported_provider: "Diese Quelle unterstützt kein Git.",
+        read_only_provider:
+          "Dieser Ordner ist schreibgeschützt, Git kann nicht hineinschreiben.",
+        not_a_repository: "Dieser Ordner ist bereits ein Git-Repository.",
+        empty_folder: "Klonen braucht einen leeren Ordner.",
+        auth_required: "Das Remote hat die Zugangsdaten abgelehnt.",
+        proxy_credentials:
+          "Zugangsdaten werden nicht über den öffentlichen CORS-Proxy gesendet. Richte zuerst einen eigenen Proxy ein.",
+        empty_commit: "Es ist nichts gestagt, was committet werden könnte.",
+        provider_error: "Die Quelle hat einen Fehler gemeldet.",
+      },
+    },
   },
 
   // Landing page
@@ -2992,6 +3153,9 @@ export default {
     pdf_original_hint: "Dieses PDF wurde noch nicht verarbeitet. Klicken Sie auf \"Verarbeiten\", um den Text zu extrahieren.",
     pdf_missing_title: "PDF-Inhalt nicht verfügbar",
     pdf_missing_hint: "Die Daten des Original-PDFs sind für die Vorschau nicht verfügbar",
+    zoom_in: "Vergrößern",
+    zoom_out: "Verkleinern",
+    zoom_reset: "Zoom auf 100 % zurücksetzen",
     docx_failed: "Word-Dokument konnte nicht angezeigt werden",
     describe_image: "Bild beschreiben",
     describe_unavailable:
@@ -3010,6 +3174,10 @@ export default {
     rendering: "Typst-Dokument wird gerendert...",
     render_error:
       "Typst-Dokument konnte nicht gerendert werden. Quelle wird stattdessen angezeigt:",
+    missing_files:
+      "Diese referenzierten Dateien konnten nicht gelesen werden: {{files}}",
+    files_truncated:
+      "Einige referenzierte Dateien wurden übersprungen, weil das Dokument zu viele oder zu große Dateien lädt.",
   },
   latex: {
     download_failed: "Das LaTeX-Dokument konnte nicht heruntergeladen werden.",

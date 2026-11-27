@@ -3246,6 +3246,16 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
           beside it.
         </li>
         <li>
+          <b>Git is a browser-side client over the source.</b> The Git button in the toolbar opens a
+          dialog rather than a dropdown (the tree clips its overflow) and acts on the folder selected
+          in the tree. <code>providerFs</code> presents that folder as a Node-style filesystem, so
+          <code>isomorphic-git</code> runs with a repo-relative <code>/</code> over browser storage, a
+          local folder or <code>saia-fs</code>; it is lazy-loaded and needs a global
+          <code>Buffer</code>. Only writable sources of those three kinds are offered; clone refuses a
+          non-empty folder, read-only sources throw, and credentials live in memory only because the
+          default public CORS proxy would see them.
+        </li>
+        <li>
           <b>A failure is shown where it happened.</b> A folder whose listing fails prints the provider's
           reason under its row and is not retried until it is reopened or the tree refreshes, because the
           row's auto-load would otherwise ask an unavailable source forever.
@@ -3293,6 +3303,21 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
             <td><span class="mono">FilePreviewPanel.jsx · WorkspacePreviewTab.jsx</span></td>
           </tr>
           <tr>
+            <td>Editor</td>
+            <td>CodeMirror 6 over the file's text, loaded on demand, grammar picked from the file name,
+                saving through the row's own provider. The Preview tab always opens read-only and
+                highlighted; Edit beside it is what unlocks typing. A Typst file additionally offers
+                Render, which opens the compiled document in a pane beside the source.</td>
+            <td><span class="mono">WorkspaceCodeEditor.tsx · workspace/editor*.ts</span></td>
+          </tr>
+          <tr>
+            <td>Git</td>
+            <td>A Node-style filesystem over one provider folder, the lazy isomorphic-git client, and the
+                menu/changes/branches/remote/history dialogs. Init, clone, stage, commit, discard,
+                branches, fetch, pull and push; credentials stay in memory.</td>
+            <td><span class="mono">workspace/git/ · WorkspaceGitButton.jsx · modals/Workspace/Git*Modal.jsx</span></td>
+          </tr>
+          <tr>
             <td>Mounting</td>
             <td>Two folder pickers, target inspection, path collisions, leaves named after the folder.</td>
             <td><span class="mono">AddMountModal.jsx · mountTarget.ts</span></td>
@@ -3317,6 +3342,25 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
             in every dialog.</li>
         <li><b>A chat's files stay in the chat.</b> Attaching a chat mounts its OPFS folder; it does not
             copy it into the workspace.</li>
+        <li><b>The editor writes through the provider.</b> Saving is the same <code>write</code> the tree
+            uses, so a read-only source and a read-only mount keep their rule; a read-only file has no
+            <code>save</code> at all, only a badge and no Edit toggle.</li>
+        <li><b>A click reads, Edit writes.</b> Opening a file never hands the user a document to type
+            into: the Preview tab is read-only (rendered for Markdown, HTML and CSV, a highlighted
+            CodeMirror for other text), and only Edit switches the same view to writing.</li>
+        <li><b>Typst is rendered on request, never on sight.</b> A <code>.typ</code>/<code>.typst</code>
+            file opens as source and its header button opens the document in a pane beside it, which
+            follows the editor text like <code>typst watch</code>; the compiler, the consent prompt and
+            the SVG cache are the fenced block's own, in <code>TypstDocument.jsx</code>, so the two
+            cannot drift. Zoom on a rendered document or a PDF grows the content's own width, so the
+            pane scrolls to all of it.</li>
+        <li><b>A Typst file compiles at its own root.</b> <code>$typst.svg({ mainContent })</code>
+            mounts the source under <code>/tmp</code>, so every <code>#include</code> or
+            <code>#image</code> was denied as "outside of project root". The compile mounts the file at
+            <code>/main.typ</code>, loads the referenced siblings through the tree's own provider —
+            a synchronous compiler cannot await one — and renders with
+            <code>vector({ mainFilePath, root: "/" })</code>. Missing references are named in the error
+            view, and the SVG cache is keyed by the source plus the loaded bytes.</li>
       </ul>
 
       <h3>Limits</h3>
@@ -3329,6 +3373,10 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
             tree is the root, so the switch is hidden rather than pretending to protect it.</li>
         <li>Deleting a workspace removes its own file tree; files a chat still references survive, and
             other workspaces are untouched.</li>
+        <li>The editor stops at 512 KB. A larger text file keeps the plain <code>&lt;pre&gt;</code>
+            preview, because CodeMirror holds the document and its syntax tree in memory.</li>
+        <li>Unsaved editor text lives only in the tab: it is keyed by workspace, source and provider path
+            so switching files does not lose it, and a reload drops it.</li>
       </ul>
 
       <h2>Where to look</h2>
@@ -3337,6 +3385,9 @@ POST /api/session/&lt;id&gt;/permission/&lt;request&gt;/reply
         <li><span class="mono">front/src/workspace/transfer.ts</span> - the verified move</li>
         <li><span class="mono">front/src/components/Workspace/WorkspaceStorageTree.jsx</span> - the tree</li>
         <li><span class="mono">front/src/components/DocumentPanel/</span> - the shared preview</li>
+        <li><span class="mono">front/src/components/Workspace/WorkspaceCodeEditor.tsx</span> - the editor host</li>
+        <li><span class="mono">front/src/components/Conversation/MessageAssistant/TypstDocument.jsx</span> - the shared Typst compiler, consent and crop</li>
+        <li><span class="mono">front/src/workspace/editorLanguages.ts</span> - file name to grammar, lazily loaded</li>
         <li><span class="mono">AGENTS.md §4.24</span> - the workspace invariants in the developer notes</li>
       </ul>
 
@@ -4615,7 +4666,7 @@ x-saia-bridge-depth: 2
       <p>
         Sources: the repository at <span class="mono">gwdg/chat-ai</span>, its developer notes and the
         feature documents under <span class="mono">docs/</span>. Facts are checked against the code on
-        23 November 2026; this page is a reading aid, not a specification.
+        25 November 2026; this page is a reading aid, not a specification.
       </p>
       <p>
         Not covered here on purpose: visual polish and sidebar work, tutorial copy, and internal

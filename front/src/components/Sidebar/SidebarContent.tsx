@@ -112,12 +112,15 @@ export default function SidebarContent({
   localState,
   setLocalState,
   handleNewConversation,
+  activeWorkspaceId = null,
   userData,
   modelsData,
 }: {
   localState: any;
   setLocalState: (state: any) => void;
   handleNewConversation: (folderId?: string | null) => Promise<void>;
+  /** Workspace the new-chat and import actions create their chat in. */
+  activeWorkspaceId?: string | null;
   userData?: any;
   modelsData?: any;
 }) {
@@ -987,10 +990,12 @@ export default function SidebarContent({
         <div className="flex items-center justify-between gap-1">
           <ImportPersonaButton
             topicId={localState?.folderId}
+            workspaceId={activeWorkspaceId}
             variant={"sidebar"}
           />
           <ImportChatButton
             topicId={localState?.folderId}
+            workspaceId={activeWorkspaceId}
             variant={"sidebar"}
           />
         </div>

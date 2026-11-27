@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { useTranslation } from "react-i18next";
 import {
   ChevronDown,
@@ -41,10 +48,20 @@ import {
   saveProviderEntriesToDirectory,
 } from "../../workspace/download";
 import { WorkspaceError } from "../../workspace/providers/types";
-import { streamOf } from "../../workspace/bytes";
+import { readAll, streamOf } from "../../workspace/bytes";
+import { isTypstFileName } from "../../utils/typstFiles";
 import { runTransfer } from "../../workspace/transfer";
 import { planTransfer } from "../../workspace/transferPlanner";
-import { readProviderPreview } from "../../workspace/filePreview";
+import {
+  MAX_EDIT_BYTES,
+  readProviderPreview,
+} from "../../workspace/filePreview";
+import {
+  editorDraftKey,
+  editorDraftsVersion,
+  hasEditorDraft,
+  subscribeEditorDrafts,
+} from "../../workspace/editorDrafts";
 import { uploadLocalFiles } from "../../workspace/upload";
 import { useWorkspaceProviders } from "../../workspace/useWorkspaceProviders";
 import {
@@ -55,6 +72,7 @@ import {
   createWorkspaceRootProvider,
   emptyStream,
 } from "../../workspace/workspaceRoot";
+import WorkspaceGitButton from "./WorkspaceGitButton";
 
 const errorMessage = (error) =>
   error instanceof Error ? error.message : String(error);
@@ -122,6 +140,7 @@ function StorageRow({ node, depth, api }) {
   const isDir = node.entry.kind === "dir";
   const isSelected = api.isSelected?.(node) ?? false;
   const mark = isDir ? null : api.markFor?.(node);
+  const draft = isDir ? false : (api.hasDraft?.(node) ?? false);
   const draggable = api.canDrag?.(node) ?? false;
   const isDropTarget = api.isDropTarget?.(node) ?? false;
 
@@ -258,6 +277,16 @@ function StorageRow({ node, depth, api }) {
                 className="shrink-0 text-base-content/50"
               />
             )
+          ) : draft ? (
+            // Unsaved editor text in this tab. It stays put, unlike the fading mark a
+            // write leaves behind, because it is the only sign that work is not saved.
+            <span className="flex w-3 shrink-0 items-center justify-center">
+              <span
+                data-guide="file-draft"
+                title={t("workspace.unsaved_changes")}
+                className="pointer-events-none h-1.5 w-1.5 rounded-full bg-primary"
+              />
+            </span>
           ) : mark ? (
             // A new file wears a green dot where a folder's arrow would be, a file the
             // agent changed an amber one; the key restarts the fade on every new write.
@@ -406,6 +435,9 @@ export default function WorkspaceStorageTree({
   // `openFile` is defined below the description writer that uses it; the ref keeps
   // the writer from closing over an uninitialized const.
   const openFileRef = useRef(null);
+  // Unsaved editor text lives outside React so switching files keeps it; this
+  // subscription is what repaints a row when a file gains or loses its dot.
+  useSyncExternalStore(subscribeEditorDrafts, editorDraftsVersion);
 
   const markFile = useCallback((path, kind) => {
     if (!path || (kind !== "create" && kind !== "modify")) return;
@@ -628,6 +660,18 @@ export default function WorkspaceStorageTree({
       : node.entry?.mount
         ? node.entry.mount.sourcePath
         : (node.entry?.path ?? "/");
+
+  // One file in one source. The key uses the provider's path, not the display
+  // path: the same file opened through two mounts is one file and gets one draft,
+  // while a mount at `/Docs` cannot collide with the workspace root's own `/Docs`.
+  const draftKeyForNode = (node) => {
+    const provider = providerForNode(node);
+    // A provider carries its own source id; a mount-only provider in a host that
+    // builds it lazily may not, so the row's own ids are the fallback.
+    const sourceId =
+      provider?.sourceId ?? node.entry?.sourceId ?? node.entry?.mount?.sourceId;
+    return editorDraftKey(workspaceId, sourceId, providerPathForNode(node));
+  };
 
   const entryForNode = (node) => ({
     sourceId: providerForNode(node)?.sourceId ?? node.entry?.sourceId,
@@ -1347,19 +1391,72 @@ export default function WorkspaceStorageTree({
         mime: node.entry.mime,
         size: node.entry.size,
       };
-      onPreview({ entry, loading: true });
+      // Every open is its own mount of the pane: two files can share a name, and a
+      // re-opened file must show the bytes as they are now, not the ones it had
+      // when the tab was first filled. The draft key keeps unsaved text.
+      const previewKey = `${draftKeyForNode(node) ?? node.displayPath}#${sequence}`;
+      onPreview({ entry, loading: true, key: previewKey });
       const mount = node.context?.mount ?? node.entry.mount;
       const provider =
         node.context?.provider ??
         (mount ? providersRef.current.get(mount.sourceId) : null) ??
         rootProvider;
       if (!provider) {
-        onPreview({ entry, error: "This file cannot be previewed" });
+        onPreview({ entry, error: "This file cannot be previewed", key: previewKey });
         return;
       }
       const sourcePath = node.context
         ? node.context.sourcePath
         : node.displayPath;
+      // A Typst document can `#include` or `#image` its siblings, and the browser
+      // compiler reads them synchronously while it compiles — so the pane reads
+      // them up front through this resolver. Its virtual root is the folder the
+      // file sits in, which is also what a `#include "/chapter.typ"` means there.
+      const typst = isTypstFileName(node.entry.name, node.entry.mime)
+        ? {
+            resolveFile: async (virtualPath) => {
+              const relative = String(virtualPath ?? "").replace(/^\/+/, "");
+              if (!relative) return null;
+              if (provider.status !== "connected") await provider.connect();
+              try {
+                return await readAll(
+                  await provider.read(
+                    joinPath(parentPath(sourcePath), relative),
+                  ),
+                );
+              } catch {
+                // A reference the document names but the source does not hold is
+                // reported by the preview instead of overwriting the error.
+                return null;
+              }
+            },
+          }
+        : undefined;
+      // The same file the preview shows is what Save writes back. A read-only
+      // source still opens in the preview, but with no way to write: `save` only
+      // exists when the provider itself reports write access.
+      const readOnly = readOnlyFor(node);
+      // One key, computed the same way the tree's row dot computes it, so the
+      // editor and the dot can never talk about a different file.
+      const draftKey = draftKeyForNode(node);
+      const saveText =
+        !readOnly && provider.capabilities?.write === true
+          ? async (text) => {
+              if (provider.status !== "connected") await provider.connect();
+              const data = new TextEncoder().encode(text);
+              await provider.write(sourcePath, streamOf(data), {
+                size: data.byteLength,
+                overwrite: true,
+              });
+              // The tree re-lists and marks the row from this, and every other view
+              // of the file follows the same event.
+              notifyWorkspaceFilesChanged(workspaceId, {
+                path: node.displayPath,
+                kind: "modify",
+              });
+              return data.byteLength;
+            }
+          : undefined;
       // An image preview offers "Describe": the description is `<name>-description.md`
       // beside the image. Any provider can tell whether it is already there and open
       // it; only a writable one can create it.
@@ -1426,10 +1523,30 @@ export default function WorkspaceStorageTree({
           return;
         }
         if ("error" in result) {
-          onPreview(result);
+          onPreview({ ...result, key: previewKey });
         } else {
+          const size =
+            typeof result.entry.size === "number"
+              ? result.entry.size
+              : result.text?.length;
+          // Only a text file fits the editor, and only up to the edit limit: past
+          // that the plain `<pre>` preview is cheaper than a syntax tree.
+          const editable =
+            typeof result.text === "string" &&
+            (typeof size !== "number" || size <= MAX_EDIT_BYTES);
           onPreview({
             ...result,
+            key: previewKey,
+            ...(typst ? { typst } : {}),
+            ...(editable
+              ? {
+                  editor: {
+                    draftKey,
+                    readOnly,
+                    ...(saveText ? { save: saveText } : {}),
+                  },
+                }
+              : {}),
             descriptionExists,
             openDescription,
             ...(saveDescription ? { saveDescription } : {}),
@@ -1437,7 +1554,7 @@ export default function WorkspaceStorageTree({
         }
       } catch (reason) {
         if (sequence !== previewSeqRef.current) return;
-        onPreview({ entry, error: errorMessage(reason) });
+        onPreview({ entry, error: errorMessage(reason), key: previewKey });
       }
     },
     [onPreview, rootProvider, readOnlyFor, workspaceId, describeNode],
@@ -1503,6 +1620,10 @@ export default function WorkspaceStorageTree({
     isSelected: (node) => selectedKeys.has(nodeKey(node)),
     revision: rootRevision,
     markFor: (node) => marks[node.displayPath] ?? null,
+    hasDraft: (node) => {
+      const key = draftKeyForNode(node);
+      return key ? hasEditorDraft(key) : false;
+    },
     isExpanded: (node) => expandedSet(workspaceId).has(nodeKey(node)),
     setExpanded: (node, value) => {
       const set = expandedSet(workspaceId);
@@ -1552,6 +1673,18 @@ export default function WorkspaceStorageTree({
           </div>
         )}
         <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-base-300 px-2 py-1">
+          <WorkspaceGitButton
+            provider={targetProvider()}
+            path={target.sourcePath ?? target.path ?? "/"}
+            displayPath={target.path ?? "/"}
+            readOnly={
+              target.mount ? readOnlyFor({ context: { mount: target.mount } }) : false
+            }
+            onChanged={() => {
+              bumpRevision();
+              target.reload?.();
+            }}
+          />
           <button
             type="button"
             data-guide="workspace-upload"

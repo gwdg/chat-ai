@@ -106,4 +106,30 @@ describe("FilePreviewPanel", () => {
 
     expect(screen.getByText("Unsupported file type")).toBeInTheDocument();
   });
+
+  it("zooms a PDF preview and resets it", () => {
+    renderPanel({
+      entry: { name: "paper.pdf", mime: "application/pdf" },
+      url: "blob:paper",
+    });
+
+    expect(screen.getByTitle("paper.pdf").tagName).toBe("IFRAME");
+    const scaled = screen.getByTestId("pdf-zoom-content");
+    // The frame grows instead of being transformed, so the pane can scroll to
+    // the whole page and the viewer re-lays it out at the larger size.
+    expect(scaled.style.width).toBe("100%");
+    expect(scaled.style.height).toBe("100%");
+
+    fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
+
+    expect(scaled.style.width).toBe("125%");
+    expect(scaled.style.height).toBe("125%");
+    expect(
+      screen.getByRole("button", { name: "Reset zoom to 100%" }),
+    ).toHaveTextContent("125%");
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset zoom to 100%" }));
+
+    expect(scaled.style.width).toBe("100%");
+  });
 });

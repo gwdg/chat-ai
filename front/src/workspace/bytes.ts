@@ -1,3 +1,20 @@
+/**
+ * One chunk as bytes. The stream is typed `Uint8Array`, but a provider can still
+ * hand over a `Blob`/`File` at runtime, and `Blob.length` is `undefined`: the
+ * total then became `NaN` and the result an empty array instead of the content.
+ * Anything else is an error rather than a silent zero-length chunk.
+ */
+const chunkBytes = async (value: unknown): Promise<Uint8Array> => {
+  if (ArrayBuffer.isView(value)) {
+    return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+  }
+  if (value instanceof ArrayBuffer) return new Uint8Array(value);
+  if (typeof Blob !== "undefined" && value instanceof Blob) {
+    return new Uint8Array(await value.arrayBuffer());
+  }
+  throw new TypeError("readAll received a chunk that is not bytes");
+};
+
 export const readAll = async (
   stream: ReadableStream<Uint8Array>,
 ): Promise<Uint8Array> => {
@@ -8,8 +25,9 @@ export const readAll = async (
     const { done, value } = await reader.read();
     if (done) break;
     if (value) {
-      chunks.push(value);
-      length += value.length;
+      const chunk = await chunkBytes(value);
+      chunks.push(chunk);
+      length += chunk.length;
     }
   }
   const data = new Uint8Array(length);

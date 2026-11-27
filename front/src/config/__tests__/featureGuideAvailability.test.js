@@ -29,7 +29,9 @@ vi.mock("../deployment.js", () => ({
 }));
 
 const {
+  FEATURE_CATEGORIES,
   buildFeatureGuidePrompt,
+  featureGuides,
   getFeatureGuideMarker,
   isFeatureGuideAvailable,
 } = await import("../featureGuides.js");
@@ -213,5 +215,60 @@ describe("feature guide availability", () => {
     expect(guide).not.toBeNull();
     expect(guide.steps).toHaveLength(4);
     expect(buildUseCasePrompt()).toContain("backup_migration:");
+  });
+
+  it("gates the workspace editor, Git and Typst guides on workspaces", () => {
+    for (const id of [
+      "workspace_edit_file",
+      "workspace_git",
+      "workspace_typst_preview",
+    ]) {
+      expect(isFeatureGuideAvailable(id)).toBe(true);
+      expect(FEATURE_CATEGORIES.workspace).toContain(id);
+    }
+
+    state.features = { workspaces: false };
+    for (const id of [
+      "workspace_edit_file",
+      "workspace_git",
+      "workspace_typst_preview",
+    ]) {
+      expect(isFeatureGuideAvailable(id)).toBe(false);
+    }
+  });
+
+  it("walks through the editor and the Typst preview step by step", () => {
+    expect(featureGuides.workspace_edit_file.steps.map((step) => step.target)).toEqual([
+      '[data-guide="meta-tab-files"]',
+      '[data-guide="workspace-row"]',
+      '[data-guide="workspace-edit-toggle"]',
+      '[data-guide="workspace-dirty"]',
+      '[data-guide="workspace-save"]',
+    ]);
+
+    expect(
+      featureGuides.workspace_typst_preview.steps.map((step) => step.target),
+    ).toEqual([
+      '[data-guide="meta-tab-files"]',
+      '[data-guide="workspace-row"]',
+      '[data-guide="workspace-render-typst"]',
+      '[data-guide="workspace-typst-panel"]',
+      '[data-guide="preview-zoom"]',
+    ]);
+  });
+
+  it("covers the Git menu, its dialogs and the commit box", () => {
+    const targets = featureGuides.workspace_git.steps.map((step) => step.target);
+    expect(targets).toContain('[data-guide="workspace-git"]');
+    expect(targets).toContain('[data-guide="git-menu"]');
+    expect(targets).toContainEqual([
+      '[data-guide="git-menu-changes"]',
+      '[data-guide="git-menu-branches"]',
+    ]);
+    expect(targets).toContainEqual([
+      '[data-guide="git-menu-remote"]',
+      '[data-guide="git-menu-history"]',
+    ]);
+    expect(targets[targets.length - 1]).toBe('[data-guide="git-commit-box"]');
   });
 });
